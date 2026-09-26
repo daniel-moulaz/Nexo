@@ -4,7 +4,7 @@ import 'package:provider/provider.dart';
 import '../providers/app_provider.dart';
 import '../l10n/app_localizations.dart';
 import 'home_screen.dart';
-import 'transactions_screen.dart';
+import 'expenses_screen.dart';
 import 'recurring_screen.dart';
 import 'accounts_screen.dart';
 import 'budget_screen.dart';
@@ -22,7 +22,7 @@ class _MainShellState extends State<MainShell> {
 
   static const _screens = [
     HomeScreen(),
-    TransactionsScreen(),
+    ExpensesScreen(),
     RecurringScreen(),
     AccountsScreen(),
     BudgetScreen(),
@@ -101,10 +101,10 @@ class _MainShellState extends State<MainShell> {
                         icon: const Icon(Icons.home_outlined),
                         selectedIcon: const Icon(Icons.home),
                         label: l10n.main_home),
-                    NavigationDestination(
-                        icon: const Icon(Icons.receipt_long_outlined),
-                        selectedIcon: const Icon(Icons.receipt_long),
-                        label: l10n.main_transactions),
+                    const NavigationDestination(
+                        icon: Icon(Icons.receipt_long_outlined),
+                        selectedIcon: Icon(Icons.receipt_long),
+                        label: 'Despesas'),
                     NavigationDestination(
                         icon: const Icon(Icons.repeat_rounded),
                         selectedIcon: const Icon(Icons.repeat_rounded),
