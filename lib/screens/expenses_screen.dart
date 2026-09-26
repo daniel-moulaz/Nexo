@@ -4,10 +4,12 @@ import 'package:provider/provider.dart';
 
 import '../models/models.dart';
 import '../providers/app_provider.dart';
+import '../services/finance_rules.dart';
 import '../services/transaction_metadata_service.dart';
 import '../theme/app_theme.dart';
 import 'add_transaction_screen.dart';
 import 'finance_export_screen.dart';
+import 'incomes_screen.dart';
 import 'statement_import_screen.dart';
 
 class ExpensesScreen extends StatefulWidget {
@@ -28,6 +30,9 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
     _selectedMonth = DateTime(now.year, now.month);
   }
 
+  bool _sameMonth(DateTime date) =>
+      date.year == _selectedMonth.year && date.month == _selectedMonth.month;
+
   void _changeMonth(int delta) {
     setState(() {
       _selectedMonth = DateTime(
@@ -37,13 +42,34 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
     });
   }
 
-  bool _sameMonth(DateTime date) =>
-      date.year == _selectedMonth.year && date.month == _selectedMonth.month;
+  Future<void> _pickMonth() async {
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: _selectedMonth,
+      firstDate: DateTime(2000, 1, 1),
+      lastDate: DateTime(2100, 12, 31),
+      helpText: 'Escolha uma data do mês desejado',
+      cancelText: 'Cancelar',
+      confirmText: 'Selecionar mês',
+    );
+    if (picked == null || !mounted) return;
+    setState(() => _selectedMonth = DateTime(picked.year, picked.month));
+  }
 
   String _monthLabel(DateTime date) {
     const months = [
-      'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
-      'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro',
+      'Janeiro',
+      'Fevereiro',
+      'Março',
+      'Abril',
+      'Maio',
+      'Junho',
+      'Julho',
+      'Agosto',
+      'Setembro',
+      'Outubro',
+      'Novembro',
+      'Dezembro',
     ];
     return '${months[date.month - 1]} ${date.year}';
   }
@@ -108,6 +134,18 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
     if (mounted) setState(() {});
   }
 
+  void _openImport() {
+    Navigator.of(context).push(
+      MaterialPageRoute(builder: (_) => const StatementImportScreen()),
+    );
+  }
+
+  void _openExport() {
+    Navigator.of(context).push(
+      MaterialPageRoute(builder: (_) => const FinanceExportScreen()),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final app = context.watch<AppProvider>();
@@ -118,30 +156,48 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Despesas',
-            style: TextStyle(fontWeight: FontWeight.w900)),
+        title: const Text(
+          'Despesas',
+          style: TextStyle(fontWeight: FontWeight.w900),
+        ),
         actions: [
-          IconButton(
-            tooltip: 'Importar extrato',
-            icon: const Icon(Icons.upload_file_outlined),
+          TextButton.icon(
+            tooltip: 'Abrir receitas',
             onPressed: () => Navigator.of(context).push(
-              MaterialPageRoute(builder: (_) => const StatementImportScreen()),
+              MaterialPageRoute(builder: (_) => const IncomesScreen()),
             ),
+            icon: const Icon(Icons.savings_outlined, size: 19),
+            label: const Text('Receitas'),
           ),
           IconButton(
-            tooltip: 'Exportar Excel',
-            icon: const Icon(Icons.table_view_outlined),
-            onPressed: () => Navigator.of(context).push(
-              MaterialPageRoute(builder: (_) => const FinanceExportScreen()),
-            ),
+            tooltip: 'Escolher mês',
+            icon: const Icon(Icons.calendar_month_rounded),
+            onPressed: _pickMonth,
           ),
-          IconButton(
-            tooltip: 'Mês atual',
-            icon: const Icon(Icons.today_outlined),
-            onPressed: () {
-              final now = DateTime.now();
-              setState(() => _selectedMonth = DateTime(now.year, now.month));
+          PopupMenuButton<String>(
+            tooltip: 'Mais opções',
+            onSelected: (value) {
+              if (value == 'import') _openImport();
+              if (value == 'export') _openExport();
             },
+            itemBuilder: (_) => const [
+              PopupMenuItem(
+                value: 'import',
+                child: ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  leading: Icon(Icons.upload_file_outlined),
+                  title: Text('Importar extrato'),
+                ),
+              ),
+              PopupMenuItem(
+                value: 'export',
+                child: ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  leading: Icon(Icons.table_view_outlined),
+                  title: Text('Exportar Excel'),
+                ),
+              ),
+            ],
           ),
         ],
       ),
@@ -157,7 +213,8 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
         future: TransactionMetadataService.instance
             .getForMany(expenses.map((e) => e.id)),
         builder: (context, snapshot) {
-          final metadata = snapshot.data ?? const <String, TransactionMetadata>{};
+          final metadata =
+              snapshot.data ?? const <String, TransactionMetadata>{};
           return _buildBody(app, expenses, metadata);
         },
       ),
@@ -179,9 +236,10 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
     int overdue = 0;
 
     for (final tx in expenses) {
-      final meta = metadata[tx.id] ?? TransactionMetadata(transactionId: tx.id);
+      final meta =
+          metadata[tx.id] ?? TransactionMetadata(transactionId: tx.id);
       final amount = _mainAmount(app, tx);
-      if (meta.excludeFromSpending) {
+      if (FinanceRules.isNeutral(tx, meta)) {
         neutral += amount;
         continue;
       }
@@ -196,16 +254,18 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
 
     final committed = paid + pending;
     final visible = expenses.where((tx) {
-      final meta = metadata[tx.id] ?? TransactionMetadata(transactionId: tx.id);
+      final meta =
+          metadata[tx.id] ?? TransactionMetadata(transactionId: tx.id);
+      final neutralTx = FinanceRules.isNeutral(tx, meta);
       switch (_filter) {
         case 'pending':
-          return meta.status == 'pending' && !meta.isOverdue;
+          return !neutralTx && meta.status == 'pending' && !meta.isOverdue;
         case 'overdue':
-          return meta.isOverdue;
+          return !neutralTx && meta.isOverdue;
         case 'extra':
-          return meta.expenseClass == 'extraordinary' && !meta.excludeFromSpending;
+          return !neutralTx && meta.expenseClass == 'extraordinary';
         case 'neutral':
-          return meta.excludeFromSpending;
+          return neutralTx;
         default:
           return true;
       }
@@ -234,27 +294,40 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
                 Row(
                   children: [
                     IconButton.filledTonal(
+                      tooltip: 'Mês anterior',
                       onPressed: () => _changeMonth(-1),
                       icon: const Icon(Icons.chevron_left_rounded),
                     ),
                     Expanded(
-                      child: Text(
-                        _monthLabel(_selectedMonth),
-                        textAlign: TextAlign.center,
-                        style: theme.textTheme.titleMedium
-                            ?.copyWith(fontWeight: FontWeight.w900),
+                      child: InkWell(
+                        onTap: _pickMonth,
+                        borderRadius: BorderRadius.circular(12),
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 8),
+                          child: Text(
+                            _monthLabel(_selectedMonth),
+                            textAlign: TextAlign.center,
+                            style: theme.textTheme.titleMedium?.copyWith(
+                              fontWeight: FontWeight.w900,
+                            ),
+                          ),
+                        ),
                       ),
                     ),
                     IconButton.filledTonal(
+                      tooltip: 'Próximo mês',
                       onPressed: () => _changeMonth(1),
                       icon: const Icon(Icons.chevron_right_rounded),
                     ),
                   ],
                 ),
                 const SizedBox(height: 8),
-                Text('Total comprometido',
-                    style: theme.textTheme.labelLarge
-                        ?.copyWith(color: cs.onSurfaceVariant)),
+                Text(
+                  'Total comprometido',
+                  style: theme.textTheme.labelLarge?.copyWith(
+                    color: cs.onSurfaceVariant,
+                  ),
+                ),
                 Text(
                   formatAmount(committed, app.settings.currency),
                   style: theme.textTheme.headlineMedium?.copyWith(
@@ -275,7 +348,9 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
                     const SizedBox(width: 8),
                     Expanded(
                       child: _SummaryStat(
-                        label: overdue > 0 ? 'Pendente • $overdue atraso' : 'Pendente',
+                        label: overdue > 0
+                            ? 'Pendente • $overdue atraso${overdue == 1 ? '' : 's'}'
+                            : 'Pendente',
                         value: formatAmount(pending, app.settings.currency),
                         icon: Icons.schedule_rounded,
                         danger: overdue > 0,
@@ -309,24 +384,50 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
             ),
           ),
         ),
-        SizedBox(
-          height: 42,
-          child: ListView(
-            scrollDirection: Axis.horizontal,
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            children: [
-              _FilterChip(label: 'Todos', value: 'all', current: _filter, onTap: _setFilter),
-              _FilterChip(label: 'Pendentes', value: 'pending', current: _filter, onTap: _setFilter),
-              _FilterChip(label: 'Atrasados', value: 'overdue', current: _filter, onTap: _setFilter),
-              _FilterChip(label: 'Extraordinários', value: 'extra', current: _filter, onTap: _setFilter),
-              _FilterChip(label: 'Transfer./Reserva', value: 'neutral', current: _filter, onTap: _setFilter),
-            ],
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 0, 16, 4),
+          child: Align(
+            alignment: Alignment.centerLeft,
+            child: Wrap(
+              spacing: 7,
+              runSpacing: 7,
+              children: [
+                _FilterChip(
+                    label: 'Todos',
+                    value: 'all',
+                    current: _filter,
+                    onTap: _setFilter),
+                _FilterChip(
+                    label: 'Pendentes',
+                    value: 'pending',
+                    current: _filter,
+                    onTap: _setFilter),
+                _FilterChip(
+                    label: 'Atrasados',
+                    value: 'overdue',
+                    current: _filter,
+                    onTap: _setFilter),
+                _FilterChip(
+                    label: 'Extraordinários',
+                    value: 'extra',
+                    current: _filter,
+                    onTap: _setFilter),
+                _FilterChip(
+                    label: 'Transfer./Reserva',
+                    value: 'neutral',
+                    current: _filter,
+                    onTap: _setFilter),
+              ],
+            ),
           ),
         ),
-        const SizedBox(height: 6),
+        const SizedBox(height: 4),
         Expanded(
           child: visible.isEmpty
-              ? _EmptyState(month: _monthLabel(_selectedMonth), filter: _filter)
+              ? _EmptyState(
+                  month: _monthLabel(_selectedMonth),
+                  filter: _filter,
+                )
               : ListView.builder(
                   padding: const EdgeInsets.fromLTRB(12, 2, 12, 170),
                   itemCount: days.length,
@@ -344,7 +445,9 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
                             6,
                           ),
                           child: Text(
-                            DateFormat('dd MMM', 'pt_BR').format(day).toUpperCase(),
+                            DateFormat('dd MMM', 'pt_BR')
+                                .format(day)
+                                .toUpperCase(),
                             style: theme.textTheme.labelMedium?.copyWith(
                               color: cs.primary,
                               fontWeight: FontWeight.w900,
@@ -357,9 +460,14 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
                           return _ExpenseTile(
                             tx: tx,
                             meta: meta,
+                            neutral: FinanceRules.isNeutral(tx, meta),
                             account: app.accountById(tx.accountId),
-                            categoryLabel: _categoryLabel(app.categoryById(tx.categoryId)),
-                            amount: formatAmount(tx.amount, _currencyFor(app, tx)),
+                            categoryLabel:
+                                _categoryLabel(app.categoryById(tx.categoryId)),
+                            amount: formatAmount(
+                              tx.amount,
+                              _currencyFor(app, tx),
+                            ),
                             onTap: () => _openTransaction(tx),
                             onAction: (action) async {
                               switch (action) {
@@ -370,16 +478,32 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
                                   await _updateMeta(tx, meta, status: 'pending');
                                   break;
                                 case 'normal':
-                                  await _updateMeta(tx, meta, expenseClass: 'normal');
+                                  await _updateMeta(
+                                    tx,
+                                    meta,
+                                    expenseClass: 'normal',
+                                  );
                                   break;
                                 case 'extra':
-                                  await _updateMeta(tx, meta, expenseClass: 'extraordinary');
+                                  await _updateMeta(
+                                    tx,
+                                    meta,
+                                    expenseClass: 'extraordinary',
+                                  );
                                   break;
                                 case 'exclude':
-                                  await _updateMeta(tx, meta, excludeFromSpending: true);
+                                  await _updateMeta(
+                                    tx,
+                                    meta,
+                                    excludeFromSpending: true,
+                                  );
                                   break;
                                 case 'include':
-                                  await _updateMeta(tx, meta, excludeFromSpending: false);
+                                  await _updateMeta(
+                                    tx,
+                                    meta,
+                                    excludeFromSpending: false,
+                                  );
                                   break;
                               }
                             },
@@ -427,14 +551,18 @@ class _SummaryStat extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(value,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(fontWeight: FontWeight.w900)),
-                Text(label,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: Theme.of(context).textTheme.labelSmall),
+                Text(
+                  value,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(fontWeight: FontWeight.w900),
+                ),
+                Text(
+                  label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: Theme.of(context).textTheme.labelSmall,
+                ),
               ],
             ),
           ),
@@ -459,13 +587,10 @@ class _FilterChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(right: 7),
-      child: ChoiceChip(
-        label: Text(label),
-        selected: current == value,
-        onSelected: (_) => onTap(value),
-      ),
+    return ChoiceChip(
+      label: Text(label),
+      selected: current == value,
+      onSelected: (_) => onTap(value),
     );
   }
 }
@@ -473,6 +598,7 @@ class _FilterChip extends StatelessWidget {
 class _ExpenseTile extends StatelessWidget {
   final AppTransaction tx;
   final TransactionMetadata meta;
+  final bool neutral;
   final Account? account;
   final String categoryLabel;
   final String amount;
@@ -482,6 +608,7 @@ class _ExpenseTile extends StatelessWidget {
   const _ExpenseTile({
     required this.tx,
     required this.meta,
+    required this.neutral,
     required this.account,
     required this.categoryLabel,
     required this.amount,
@@ -493,115 +620,115 @@ class _ExpenseTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final cs = theme.colorScheme;
-    final title = tx.description.trim().isEmpty ? categoryLabel : tx.description.trim();
-    final statusLabel = meta.excludeFromSpending
+    final title =
+        tx.description.trim().isEmpty ? categoryLabel : tx.description.trim();
+    final statusLabel = neutral
         ? 'Não conta como gasto'
         : meta.isOverdue
             ? 'Atrasado'
             : meta.status == 'pending'
                 ? 'Pendente'
                 : 'Pago';
-    final statusColor = meta.excludeFromSpending
-        ? cs.tertiary
-        : meta.isOverdue
-            ? cs.error
-            : meta.status == 'pending'
-                ? cs.secondary
-                : Colors.green;
+
+    final details = <String>[
+      if (account != null) account!.name,
+      if (meta.subcategory.isNotEmpty)
+        '$categoryLabel › ${meta.subcategory}'
+      else
+        categoryLabel,
+      if (meta.installmentLabel.isNotEmpty) 'Parcela ${meta.installmentLabel}',
+    ];
 
     return Card(
-      margin: const EdgeInsets.only(bottom: 8),
       elevation: 0,
+      margin: const EdgeInsets.only(bottom: 8),
       child: InkWell(
         onTap: onTap,
         borderRadius: BorderRadius.circular(16),
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(12, 11, 6, 11),
+          padding: const EdgeInsets.fromLTRB(14, 12, 8, 12),
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               CircleAvatar(
-                backgroundColor: statusColor.withValues(alpha: 0.12),
+                backgroundColor: neutral
+                    ? cs.surfaceContainerHighest
+                    : cs.errorContainer.withValues(alpha: 0.55),
                 child: Icon(
-                  meta.excludeFromSpending
+                  neutral
                       ? Icons.swap_horiz_rounded
-                      : meta.isOverdue
-                          ? Icons.priority_high_rounded
-                          : Icons.receipt_long_rounded,
-                  color: statusColor,
-                  size: 20,
+                      : Icons.arrow_upward_rounded,
+                  color: neutral ? cs.onSurfaceVariant : cs.error,
                 ),
               ),
-              const SizedBox(width: 10),
+              const SizedBox(width: 12),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Row(
-                      children: [
-                        Expanded(
-                          child: Text(
-                            title,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(fontWeight: FontWeight.w900),
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Text(
-                          amount,
-                          style: TextStyle(
-                            fontWeight: FontWeight.w900,
-                            color: meta.excludeFromSpending ? cs.onSurface : cs.error,
-                          ),
-                        ),
-                      ],
+                    Text(
+                      title,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(fontWeight: FontWeight.w900),
                     ),
                     const SizedBox(height: 3),
                     Text(
-                      account?.name ?? 'Conta',
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        color: cs.onSurfaceVariant,
-                      ),
+                      details.join(' • '),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: theme.textTheme.bodySmall,
                     ),
                     const SizedBox(height: 7),
                     Wrap(
                       spacing: 6,
-                      runSpacing: 6,
+                      runSpacing: 5,
                       children: [
-                        _Badge(label: categoryLabel, color: cs.primary),
-                        if (meta.subcategory.isNotEmpty)
-                          _Badge(label: meta.subcategory, color: cs.secondary),
-                        _Badge(label: statusLabel, color: statusColor),
+                        _Badge(
+                          label: statusLabel,
+                          danger: meta.isOverdue,
+                        ),
                         if (meta.expenseClass == 'extraordinary')
-                          _Badge(label: 'Extraordinário', color: cs.tertiary),
-                        if (meta.installmentLabel.isNotEmpty)
-                          _Badge(label: 'Parcela ${meta.installmentLabel}', color: cs.primary),
-                        if (meta.dueDate != null && meta.status == 'pending')
-                          _Badge(
-                            label: 'Vence ${DateFormat('dd/MM').format(meta.dueDate!)}',
-                            color: meta.isOverdue ? cs.error : cs.secondary,
-                          ),
+                          const _Badge(label: 'Extraordinário'),
                       ],
                     ),
                   ],
                 ),
               ),
-              PopupMenuButton<String>(
-                onSelected: onAction,
-                itemBuilder: (_) => [
-                  if (meta.status == 'pending')
-                    const PopupMenuItem(value: 'paid', child: Text('Marcar como pago'))
-                  else
-                    const PopupMenuItem(value: 'pending', child: Text('Marcar como pendente')),
-                  if (meta.expenseClass == 'extraordinary')
-                    const PopupMenuItem(value: 'normal', child: Text('Classificar como normal'))
-                  else
-                    const PopupMenuItem(value: 'extra', child: Text('Marcar extraordinário')),
-                  if (meta.excludeFromSpending)
-                    const PopupMenuItem(value: 'include', child: Text('Voltar a contar como gasto'))
-                  else
-                    const PopupMenuItem(value: 'exclude', child: Text('Não contar como gasto')),
+              const SizedBox(width: 8),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Text(
+                    amount,
+                    style: const TextStyle(fontWeight: FontWeight.w900),
+                  ),
+                  PopupMenuButton<String>(
+                    tooltip: 'Ações rápidas',
+                    onSelected: onAction,
+                    itemBuilder: (_) => [
+                      PopupMenuItem(
+                        value: meta.status == 'pending' ? 'paid' : 'pending',
+                        child: Text(meta.status == 'pending'
+                            ? 'Marcar como pago'
+                            : 'Marcar como pendente'),
+                      ),
+                      PopupMenuItem(
+                        value: meta.expenseClass == 'extraordinary'
+                            ? 'normal'
+                            : 'extra',
+                        child: Text(meta.expenseClass == 'extraordinary'
+                            ? 'Marcar como normal'
+                            : 'Marcar como extraordinário'),
+                      ),
+                      PopupMenuItem(
+                        value: neutral ? 'include' : 'exclude',
+                        child: Text(neutral
+                            ? 'Voltar a contar como gasto'
+                            : 'Não contar como gasto'),
+                      ),
+                    ],
+                  ),
                 ],
               ),
             ],
@@ -614,23 +741,26 @@ class _ExpenseTile extends StatelessWidget {
 
 class _Badge extends StatelessWidget {
   final String label;
-  final Color color;
+  final bool danger;
 
-  const _Badge({required this.label, required this.color});
+  const _Badge({required this.label, this.danger = false});
 
   @override
   Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.10),
+        color: danger
+            ? cs.errorContainer
+            : cs.surfaceContainerHighest.withValues(alpha: 0.7),
         borderRadius: BorderRadius.circular(999),
       ),
       child: Text(
         label,
         style: Theme.of(context).textTheme.labelSmall?.copyWith(
-              color: color,
               fontWeight: FontWeight.w800,
+              color: danger ? cs.error : null,
             ),
       ),
     );
@@ -645,24 +775,32 @@ class _EmptyState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final cs = theme.colorScheme;
     final filtered = filter != 'all';
     return Center(
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(32, 0, 32, 100),
+        padding: const EdgeInsets.all(28),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.receipt_long_outlined, size: 54),
-            const SizedBox(height: 14),
+            Icon(
+              filtered ? Icons.filter_alt_off_outlined : Icons.receipt_long_outlined,
+              size: 64,
+              color: cs.onSurfaceVariant.withValues(alpha: 0.55),
+            ),
+            const SizedBox(height: 16),
             Text(
-              filtered ? 'Nenhum lançamento neste filtro' : 'Nenhuma despesa em $month',
+              filtered ? 'Nenhuma despesa neste filtro' : 'Nenhuma despesa em $month',
               textAlign: TextAlign.center,
-              style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 17),
+              style: theme.textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.w900,
+              ),
             ),
             const SizedBox(height: 6),
             Text(
               filtered
-                  ? 'Troque o filtro para ver os demais lançamentos.'
+                  ? 'Escolha outro filtro para ver os lançamentos do mês.'
                   : 'Use + Despesa ou importe um extrato para começar.',
               textAlign: TextAlign.center,
             ),
