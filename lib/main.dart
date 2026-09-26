@@ -16,6 +16,7 @@ import 'services/lended_notification_service.dart';
 import 'services/quick_add_service.dart';
 import 'services/loan_reminder_service.dart';
 import 'services/credit_reminder_service.dart';
+import 'services/finance_bootstrap_service.dart';
 
 final GlobalKey<NavigatorState> rootNavigatorKey = GlobalKey<NavigatorState>();
 
@@ -30,6 +31,7 @@ void main() async {
 
   final provider = AppProvider();
   await provider.load();
+  await FinanceBootstrapService.apply(provider);
 
   runApp(
     ChangeNotifierProvider.value(
@@ -115,7 +117,7 @@ class _ExpensyAppState extends State<ExpensyApp> {
         return MediaQuery(
           data: mediaQueryData,
           child: MaterialApp(
-            title: 'Expensy',
+            title: 'Minhas Finanças',
             navigatorKey: rootNavigatorKey,
             debugShowCheckedModeBanner: false,
             localizationsDelegates: AppLocalizations.localizationsDelegates,
