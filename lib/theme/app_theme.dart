@@ -4,7 +4,6 @@ import 'package:flutter/cupertino.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 
-// ── Seed colors ─────────────────────────────────────────────────────────────
 const Map<String, Color> kSeedColors = {
   'violet': Color(0xFF6750A4),
   'blue': Color(0xFF0061A4),
@@ -20,17 +19,14 @@ const Map<String, Color> kSeedColors = {
   'deep_purple': Color(0xFF4527A0),
   'crimson': Color(0xFFB71C1C),
   'midnight': Color(0xFF1A237E),
-  // Greens
   'forest': Color(0xFF1B5E20),
   'mint': Color(0xFF00695C),
   'olive': Color(0xFF827717),
   'sage': Color(0xFF33691E),
-  // Blues
   'sky': Color(0xFF0277BD),
   'navy': Color(0xFF0D47A1),
   'cobalt': Color(0xFF1565C0),
   'ocean': Color(0xFF006064),
-  // Others
   'coral': Color(0xFFD84315),
   'gold': Color(0xFFF9A825),
   'slate': Color(0xFF37474F),
@@ -41,43 +37,41 @@ const Map<String, Color> kSeedColors = {
 };
 
 const Map<String, String> kSeedLabels = {
-  'violet': 'Violet',
-  'blue': 'Blue',
-  'green': 'Green',
-  'rose': 'Rose',
-  'amber': 'Amber',
-  'teal': 'Teal',
-  'orange': 'Orange',
-  'indigo': 'Indigo',
-  'cyan': 'Cyan',
-  'pink': 'Pink',
-  'lime': 'Lime',
-  'deep_purple': 'Deep Purple',
-  'crimson': 'Crimson',
-  'midnight': 'Midnight',
-  'forest': 'Forest',
-  'mint': 'Mint',
-  'olive': 'Olive',
-  'sage': 'Sage',
-  'sky': 'Sky Blue',
-  'navy': 'Navy',
-  'cobalt': 'Cobalt',
-  'ocean': 'Ocean',
+  'violet': 'Violeta',
+  'blue': 'Azul',
+  'green': 'Verde',
+  'rose': 'Rosa',
+  'amber': 'Âmbar',
+  'teal': 'Verde-azulado',
+  'orange': 'Laranja',
+  'indigo': 'Índigo',
+  'cyan': 'Ciano',
+  'pink': 'Rosa forte',
+  'lime': 'Lima',
+  'deep_purple': 'Roxo profundo',
+  'crimson': 'Carmesim',
+  'midnight': 'Azul meia-noite',
+  'forest': 'Verde floresta',
+  'mint': 'Menta',
+  'olive': 'Oliva',
+  'sage': 'Sálvia',
+  'sky': 'Azul céu',
+  'navy': 'Azul-marinho',
+  'cobalt': 'Cobalto',
+  'ocean': 'Oceano',
   'coral': 'Coral',
-  'gold': 'Gold',
-  'slate': 'Slate',
+  'gold': 'Dourado',
+  'slate': 'Ardósia',
   'magenta': 'Magenta',
-  'turquoise': 'Turquoise',
-  'brown': 'Brown',
-  'lavender': 'Lavender',
+  'turquoise': 'Turquesa',
+  'brown': 'Marrom',
+  'lavender': 'Lavanda',
 };
 
 Color seedColor(String key) => kSeedColors[key] ?? const Color(0xFF6750A4);
 
-// ── Fonts ─────────────────────────────────────────────────────────────────────
-/// Key stored in AppSettings.appFont → display label shown in Settings UI.
 const Map<String, String> kFonts = {
-  'default': 'System Default',
+  'default': 'Padrão do sistema',
   'plus_jakarta_sans': 'Plus Jakarta Sans',
   'dm_sans': 'DM Sans',
   'inter': 'Inter',
@@ -110,12 +104,10 @@ TextTheme _applyFont(String font, TextTheme base) {
     case 'nunito':
       return GoogleFonts.nunitoTextTheme(base);
     default:
-      return base; // Flutter/Roboto default
+      return base;
   }
 }
 
-/// themeMode: 'system' | 'light' | 'dark'
-/// AMOLED is now a separate bool (amoledSurfaces) decoupled from the mode.
 ThemeMode resolveThemeMode(String mode) {
   switch (mode) {
     case 'light':
@@ -127,9 +119,6 @@ ThemeMode resolveThemeMode(String mode) {
   }
 }
 
-/// [dynamicScheme] — when provided (Android 12+ with themeMode='system'),
-/// uses the device's wallpaper-extracted palette instead of [seed].
-/// [amoled]        — forces pure-black surfaces on any dark theme.
 ThemeData buildTheme({
   required String seed,
   required bool dark,
@@ -138,9 +127,7 @@ ThemeData buildTheme({
   ColorScheme? dynamicScheme,
 }) {
   final ColorScheme base;
-
   if (dynamicScheme != null) {
-    // Device palette: apply AMOLED surface override if requested.
     base = (dark && amoled)
         ? dynamicScheme.copyWith(
             surface: Colors.black,
@@ -166,19 +153,16 @@ ThemeData buildTheme({
           )
         : seeded;
   }
-
   return _base(base, appFont);
 }
 
 ThemeData _base(ColorScheme cs, String appFont) {
   final baseTextTheme = ThemeData(brightness: cs.brightness).textTheme;
   final fontTextTheme = _applyFont(appFont, baseTextTheme);
-
   return ThemeData(
     colorScheme: cs,
     useMaterial3: true,
     textTheme: fontTextTheme,
-    // Android 15+ predictive back gesture support with smooth transitions.
     pageTransitionsTheme: const PageTransitionsTheme(builders: {
       TargetPlatform.android: CupertinoPageTransitionsBuilder(),
       TargetPlatform.iOS: CupertinoPageTransitionsBuilder(),
@@ -219,22 +203,14 @@ ThemeData _base(ColorScheme cs, String appFont) {
   );
 }
 
-/// Drop-in replacement for [MaterialPageRoute] that inherits default
-/// system-aware transition durations (300ms) which respect the device's
-/// Animator Duration Scale setting.
 class ExpensyRoute<T> extends MaterialPageRoute<T> {
   ExpensyRoute({required super.builder, super.settings});
 }
 
-/// Slide-up + fade route specifically for add/edit forms.
-/// Keeps the familiar bottom-to-top animation for full-screen forms.
-/// Uses default system-aware durations (300ms) that respect the device's
-/// Animator Duration Scale setting.
 class ExpensySlideUpRoute<T> extends PageRouteBuilder<T> {
   ExpensySlideUpRoute({required WidgetBuilder builder, super.settings})
       : super(
-          pageBuilder: (context, animation, secondaryAnimation) =>
-              builder(context),
+          pageBuilder: (context, animation, secondaryAnimation) => builder(context),
           transitionsBuilder: (context, animation, secondaryAnimation, child) {
             final curved = CurvedAnimation(
               parent: animation,
@@ -255,75 +231,74 @@ class ExpensySlideUpRoute<T> extends PageRouteBuilder<T> {
         );
 }
 
-// ── Currency ─────────────────────────────────────────────────────────────────
 class CurrencyInfo {
   final String code, symbol, name;
   const CurrencyInfo(this.code, this.symbol, this.name);
 }
 
 const List<CurrencyInfo> kCurrencies = [
-  CurrencyInfo('USD', r'$', 'US Dollar'),
+  CurrencyInfo('USD', r'$', 'Dólar americano'),
   CurrencyInfo('EUR', '€', 'Euro'),
-  CurrencyInfo('GBP', '£', 'British Pound'),
-  CurrencyInfo('BRL', r'R$', 'Brazilian Real'),
-  CurrencyInfo('CAD', r'C$', 'Canadian Dollar'),
-  CurrencyInfo('AUD', r'A$', 'Australian Dollar'),
-  CurrencyInfo('EGP', 'EGP', 'Egyptian Pound'),
-  CurrencyInfo('SAR', 'SR', 'Saudi Riyal'),
-  CurrencyInfo('AED', 'د.إ', 'UAE Dirham'),
-  CurrencyInfo('KWD', 'KD', 'Kuwaiti Dinar'),
-  CurrencyInfo('QAR', 'QR', 'Qatari Riyal'),
-  CurrencyInfo('BHD', 'BD', 'Bahraini Dinar'),
-  CurrencyInfo('OMR', 'OMR', 'Omani Rial'),
-  CurrencyInfo('JOD', 'JD', 'Jordanian Dinar'),
-  CurrencyInfo('MAD', 'MAD', 'Moroccan Dirham'),
-  CurrencyInfo('TND', 'DT', 'Tunisian Dinar'),
-  CurrencyInfo('LYD', 'LD', 'Libyan Dinar'),
-  CurrencyInfo('DZD', 'DA', 'Algerian Dinar'),
-  CurrencyInfo('SDG', 'SDG', 'Sudanese Pound'),
-  CurrencyInfo('NGN', '₦', 'Nigerian Naira'),
-  CurrencyInfo('GHS', 'GH₵', 'Ghanaian Cedi'),
-  CurrencyInfo('KES', 'KSh', 'Kenyan Shilling'),
-  CurrencyInfo('ZAR', 'R', 'South African Rand'),
-  CurrencyInfo('ETB', 'Br', 'Ethiopian Birr'),
-  CurrencyInfo('TZS', 'TSh', 'Tanzanian Shilling'),
-  CurrencyInfo('UGX', 'USh', 'Ugandan Shilling'),
-  CurrencyInfo('RWF', 'RF', 'Rwandan Franc'),
-  CurrencyInfo('XOF', 'CFA', 'West African CFA'),
-  CurrencyInfo('XAF', 'FCFA', 'Central African CFA'),
-  CurrencyInfo('MZN', 'MT', 'Mozambican Metical'),
-  CurrencyInfo('ZMW', 'ZK', 'Zambian Kwacha'),
-  CurrencyInfo('JPY', '¥', 'Japanese Yen'),
-  CurrencyInfo('CNY', '¥', 'Chinese Yuan'),
-  CurrencyInfo('INR', '₹', 'Indian Rupee'),
-  CurrencyInfo('KRW', '₩', 'South Korean Won'),
-  CurrencyInfo('IDR', 'Rp', 'Indonesian Rupiah'),
-  CurrencyInfo('MYR', 'RM', 'Malaysian Ringgit'),
-  CurrencyInfo('SGD', r'S$', 'Singapore Dollar'),
-  CurrencyInfo('THB', '฿', 'Thai Baht'),
-  CurrencyInfo('VND', '₫', 'Vietnamese Dong'),
-  CurrencyInfo('PHP', '₱', 'Philippine Peso'),
-  CurrencyInfo('PKR', 'Rs', 'Pakistani Rupee'),
-  CurrencyInfo('BDT', '৳', 'Bangladeshi Taka'),
-  CurrencyInfo('LKR', 'Rs', 'Sri Lankan Rupee'),
-  CurrencyInfo('NPR', 'Rs', 'Nepali Rupee'),
-  CurrencyInfo('MMK', 'K', 'Myanmar Kyat'),
-  CurrencyInfo('TWD', r'NT$', 'Taiwan Dollar'),
-  CurrencyInfo('HKD', r'HK$', 'Hong Kong Dollar'),
-  CurrencyInfo('ILS', '₪', 'Israeli Shekel'),
-  CurrencyInfo('TRY', '₺', 'Turkish Lira'),
-  CurrencyInfo('CHF', 'Fr', 'Swiss Franc'),
-  CurrencyInfo('SEK', 'kr', 'Swedish Krona'),
-  CurrencyInfo('NOK', 'kr', 'Norwegian Krone'),
-  CurrencyInfo('DKK', 'kr', 'Danish Krone'),
-  CurrencyInfo('PLN', 'zł', 'Polish Zloty'),
-  CurrencyInfo('CZK', 'Kč', 'Czech Koruna'),
-  CurrencyInfo('HUF', 'Ft', 'Hungarian Forint'),
-  CurrencyInfo('RON', 'lei', 'Romanian Leu'),
-  CurrencyInfo('BGN', 'лв', 'Bulgarian Lev'),
-  CurrencyInfo('RUB', '₽', 'Russian Ruble'),
-  CurrencyInfo('UAH', '₴', 'Ukrainian Hryvnia'),
-  CurrencyInfo('GEL', '₾', 'Georgian Lari'),
+  CurrencyInfo('GBP', '£', 'Libra esterlina'),
+  CurrencyInfo('BRL', r'R$', 'Real brasileiro'),
+  CurrencyInfo('CAD', r'C$', 'Dólar canadense'),
+  CurrencyInfo('AUD', r'A$', 'Dólar australiano'),
+  CurrencyInfo('EGP', 'EGP', 'Libra egípcia'),
+  CurrencyInfo('SAR', 'SR', 'Rial saudita'),
+  CurrencyInfo('AED', 'د.إ', 'Dirham dos Emirados'),
+  CurrencyInfo('KWD', 'KD', 'Dinar kuwaitiano'),
+  CurrencyInfo('QAR', 'QR', 'Rial catariano'),
+  CurrencyInfo('BHD', 'BD', 'Dinar bareinita'),
+  CurrencyInfo('OMR', 'OMR', 'Rial omanense'),
+  CurrencyInfo('JOD', 'JD', 'Dinar jordaniano'),
+  CurrencyInfo('MAD', 'MAD', 'Dirham marroquino'),
+  CurrencyInfo('TND', 'DT', 'Dinar tunisiano'),
+  CurrencyInfo('LYD', 'LD', 'Dinar líbio'),
+  CurrencyInfo('DZD', 'DA', 'Dinar argelino'),
+  CurrencyInfo('SDG', 'SDG', 'Libra sudanesa'),
+  CurrencyInfo('NGN', '₦', 'Naira nigeriana'),
+  CurrencyInfo('GHS', 'GH₵', 'Cedi ganês'),
+  CurrencyInfo('KES', 'KSh', 'Xelim queniano'),
+  CurrencyInfo('ZAR', 'R', 'Rand sul-africano'),
+  CurrencyInfo('ETB', 'Br', 'Birr etíope'),
+  CurrencyInfo('TZS', 'TSh', 'Xelim tanzaniano'),
+  CurrencyInfo('UGX', 'USh', 'Xelim ugandense'),
+  CurrencyInfo('RWF', 'RF', 'Franco ruandês'),
+  CurrencyInfo('XOF', 'CFA', 'Franco CFA Ocidental'),
+  CurrencyInfo('XAF', 'FCFA', 'Franco CFA Central'),
+  CurrencyInfo('MZN', 'MT', 'Metical moçambicano'),
+  CurrencyInfo('ZMW', 'ZK', 'Kwacha zambiano'),
+  CurrencyInfo('JPY', '¥', 'Iene japonês'),
+  CurrencyInfo('CNY', '¥', 'Yuan chinês'),
+  CurrencyInfo('INR', '₹', 'Rupia indiana'),
+  CurrencyInfo('KRW', '₩', 'Won sul-coreano'),
+  CurrencyInfo('IDR', 'Rp', 'Rupia indonésia'),
+  CurrencyInfo('MYR', 'RM', 'Ringgit malaio'),
+  CurrencyInfo('SGD', r'S$', 'Dólar de Singapura'),
+  CurrencyInfo('THB', '฿', 'Baht tailandês'),
+  CurrencyInfo('VND', '₫', 'Dong vietnamita'),
+  CurrencyInfo('PHP', '₱', 'Peso filipino'),
+  CurrencyInfo('PKR', 'Rs', 'Rupia paquistanesa'),
+  CurrencyInfo('BDT', '৳', 'Taka bengalês'),
+  CurrencyInfo('LKR', 'Rs', 'Rupia do Sri Lanka'),
+  CurrencyInfo('NPR', 'Rs', 'Rupia nepalesa'),
+  CurrencyInfo('MMK', 'K', 'Kyat de Mianmar'),
+  CurrencyInfo('TWD', r'NT$', 'Dólar taiwanês'),
+  CurrencyInfo('HKD', r'HK$', 'Dólar de Hong Kong'),
+  CurrencyInfo('ILS', '₪', 'Novo shekel israelense'),
+  CurrencyInfo('TRY', '₺', 'Lira turca'),
+  CurrencyInfo('CHF', 'Fr', 'Franco suíço'),
+  CurrencyInfo('SEK', 'kr', 'Coroa sueca'),
+  CurrencyInfo('NOK', 'kr', 'Coroa norueguesa'),
+  CurrencyInfo('DKK', 'kr', 'Coroa dinamarquesa'),
+  CurrencyInfo('PLN', 'zł', 'Złoty polonês'),
+  CurrencyInfo('CZK', 'Kč', 'Coroa tcheca'),
+  CurrencyInfo('HUF', 'Ft', 'Forint húngaro'),
+  CurrencyInfo('RON', 'lei', 'Leu romeno'),
+  CurrencyInfo('BGN', 'лв', 'Lev búlgaro'),
+  CurrencyInfo('RUB', '₽', 'Rublo russo'),
+  CurrencyInfo('UAH', '₴', 'Hryvnia ucraniana'),
+  CurrencyInfo('GEL', '₾', 'Lari georgiano'),
 ];
 
 CurrencyInfo currencyInfo(String code) => kCurrencies
@@ -333,9 +308,11 @@ final Map<String, NumberFormat> _numberFormatCache = {};
 
 String formatAmount(double amount, String code) {
   final info = currencyInfo(code);
+  final cacheKey = '$code:${code == 'BRL' ? 'pt_BR' : 'default'}';
   final fmt = _numberFormatCache.putIfAbsent(
-    code,
+    cacheKey,
     () => NumberFormat.currency(
+      locale: code == 'BRL' ? 'pt_BR' : null,
       symbol: '${info.symbol} ',
       decimalDigits: 2,
     ),
