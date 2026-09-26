@@ -1,13 +1,12 @@
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
 import '../models/models.dart';
 import '../providers/app_provider.dart';
 import '../services/transaction_metadata_service.dart';
 import '../theme/app_theme.dart';
-import '../utils/haptics.dart';
-import '../widgets/shared_widgets.dart';
+import '../utils/finance_input.dart';
+import 'transfer_screen.dart';
 
 class AddTransactionScreen extends StatefulWidget {
   final AppTransaction? existing;
@@ -24,51 +23,49 @@ class AddTransactionScreen extends StatefulWidget {
 }
 
 class _AddTransactionScreenState extends State<AddTransactionScreen> {
-  final _amtCtrl = TextEditingController();
-  final _descCtrl = TextEditingController();
+  final _amountCtrl = TextEditingController();
+  final _descriptionCtrl = TextEditingController();
   final _noteCtrl = TextEditingController();
   final _installmentCurrentCtrl = TextEditingController();
   final _installmentTotalCtrl = TextEditingController();
 
-  bool _submitted = false;
-  bool _dupeWarningDismissed = false;
-
-  late String _type = widget.existing?.type ?? widget.initialType;
+  late String _type;
   String? _accountId;
   String? _categoryId;
   DateTime _date = DateTime.now();
   String _currency = '';
 
   String _status = 'paid';
-  String _subcategory = '';
   DateTime? _dueDate;
+  String _subcategory = '';
   String _expenseClass = 'normal';
   bool _excludeFromSpending = false;
   bool _isInstallment = false;
   String _source = 'manual';
+
+  bool _submitted = false;
+  bool _saving = false;
+  bool _duplicateAccepted = false;
 
   bool get isEdit => widget.existing != null;
 
   @override
   void initState() {
     super.initState();
+    _type = widget.existing?.type ?? widget.initialType;
     final app = context.read<AppProvider>();
     final accounts = app.accounts.where((a) => !a.isGold).toList();
-
     if (accounts.isNotEmpty) {
       _accountId = accounts.first.id;
       _currency = accounts.first.currency;
     }
-
-    final cats = app.categories.where((c) => c.type == _type).toList();
-    if (cats.isNotEmpty) _categoryId = cats.first.id;
+    _selectFirstCategory(app, _type);
 
     final existing = widget.existing;
     if (existing != null) {
-      _amtCtrl.text = existing.amount.toStringAsFixed(2).replaceAll('.', ',');
-      _descCtrl.text = existing.description;
+      _amountCtrl.text = existing.amount.toStringAsFixed(2).replaceAll('.', ',');
+      _descriptionCtrl.text = existing.description;
       _noteCtrl.text = existing.note;
-      _type = existing.type;
       _accountId = existing.accountId;
       _categoryId = existing.categoryId;
       _date = existing.date;
@@ -80,30 +77,33 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
     }
   }
 
-  Future<void> _loadMetadata(String transactionId) async {
-    final metadata =
-        await TransactionMetadataService.instance.getFor(transactionId);
+  void _selectFirstCategory(AppProvider app, String type) {
+    final categories = app.categories.where((c) => c.type == type).toList();
+    _categoryId = categories.firstOrNull?.id;
+  }
+
+  Future<void> _loadMetadata(String id) async {
+    final metadata = await TransactionMetadataService.instance.getFor(id);
     if (!mounted) return;
     setState(() {
       _status = metadata.status;
-      _subcategory = metadata.subcategory;
       _dueDate = metadata.dueDate;
+      _subcategory = metadata.subcategory;
       _expenseClass = metadata.expenseClass;
       _excludeFromSpending = metadata.excludeFromSpending;
       _source = metadata.source;
-      if (metadata.installmentCurrent != null &&
-          metadata.installmentTotal != null) {
+      if (metadata.installmentCurrent != null && metadata.installmentTotal != null) {
         _isInstallment = true;
-        _installmentCurrentCtrl.text = metadata.installmentCurrent.toString();
-        _installmentTotalCtrl.text = metadata.installmentTotal.toString();
+        _installmentCurrentCtrl.text = '${metadata.installmentCurrent}';
+        _installmentTotalCtrl.text = '${metadata.installmentTotal}';
       }
     });
   }
 
   @override
   void dispose() {
-    _amtCtrl.dispose();
-    _descCtrl.dispose();
+    _amountCtrl.dispose();
+    _descriptionCtrl.dispose();
     _noteCtrl.dispose();
     _installmentCurrentCtrl.dispose();
     _installmentTotalCtrl.dispose();
@@ -129,8 +129,8 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
     return labels[category.id] ?? category.name;
   }
 
-  List<String> _subcategoryOptions(String? categoryId) {
-    const options = <String, List<String>>{
+  List<String> _subcategories(String? categoryId) {
+    const values = <String, List<String>>{
       'food_exp': ['Mercado', 'Lanche', 'Restaurante', 'Delivery'],
       'transport': [
         'Combustível',
@@ -142,23 +142,33 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
       'shopping': ['Roupas', 'Eletrônicos', 'Casa', 'Pessoal', 'Outros'],
       'bills': ['Água', 'Luz', 'Internet', 'Telefone', 'Assinaturas', 'Aluguel'],
       'health': ['Farmácia', 'Consulta', 'Exames', 'Academia'],
-      'entertainment': ['Streaming', 'Cinema', 'Jogos', 'Lazer'],
+      'entertainment': ['Streaming', 'Cinema', 'Jogos', 'Passeio'],
       'education': ['Faculdade', 'Cursos', 'Livros', 'Material'],
       'other_exp': ['Outros'],
+      'salary': ['Salário'],
+      'freelance': ['Freelance', 'Bônus', 'Reembolso', 'Outros'],
+      'business': ['Negócios'],
+      'investment': ['Rendimentos', 'Dividendos', 'Juros'],
+      'gift': ['Presente', 'Doação recebida'],
     };
-    return options[categoryId] ?? const [];
+    return values[categoryId] ?? const [];
   }
 
   void _setType(String type) {
+    if (type == 'transfer') {
+      Navigator.of(context).push(
+        MaterialPageRoute(builder: (_) => const TransferScreen()),
+      );
+      return;
+    }
     final app = context.read<AppProvider>();
-    final cats = app.categories.where((c) => c.type == type).toList();
     setState(() {
       _type = type;
-      _categoryId = cats.isNotEmpty ? cats.first.id : null;
+      _selectFirstCategory(app, type);
       _subcategory = '';
-      if (type != 'expense') {
-        _status = 'paid';
-        _dueDate = null;
+      _status = 'paid';
+      _dueDate = null;
+      if (type == 'income') {
         _expenseClass = 'normal';
         _excludeFromSpending = false;
         _isInstallment = false;
@@ -166,144 +176,132 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
     });
   }
 
-  void _onAccountSelected(String? id) {
-    if (id == null) return;
-    final app = context.read<AppProvider>();
-    final account = app.accountById(id);
-    setState(() {
-      _accountId = id;
-      _currency = account?.currency ?? app.settings.currency;
-    });
-  }
-
-  void _onCategorySelected(String id) {
-    final validSubcategories = _subcategoryOptions(id);
-    setState(() {
-      _categoryId = id;
-      if (!validSubcategories.contains(_subcategory)) _subcategory = '';
-    });
-  }
-
-  Future<bool?> _showDuplicateWarningDialog(List<AppTransaction> dupes) {
-    return showDialog<bool>(
+  Future<bool> _confirmDuplicate(List<AppTransaction> duplicates) async {
+    final result = await showDialog<bool>(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Possível lançamento duplicado'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              dupes.length == 1
-                  ? 'Já existe um lançamento parecido:'
-                  : 'Já existem ${dupes.length} lançamentos parecidos:',
-            ),
-            const SizedBox(height: 8),
-            ...dupes.take(3).map(
-                  (d) => Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 4),
-                    child: Text(
-                      '• ${formatAmount(d.amount, d.currency)} em ${DateFormat('dd/MM').format(d.date)}${d.description.isNotEmpty ? ' — ${d.description}' : ''}',
-                      style: const TextStyle(fontSize: 13),
-                    ),
-                  ),
-                ),
-          ],
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Possível duplicidade'),
+        content: Text(
+          duplicates.length == 1
+              ? 'Já existe um lançamento parecido. Deseja salvar mesmo assim?'
+              : 'Existem ${duplicates.length} lançamentos parecidos. Deseja salvar mesmo assim?',
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Voltar'),
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: const Text('Revisar'),
           ),
           FilledButton(
-            onPressed: () => Navigator.pop(ctx, true),
+            onPressed: () => Navigator.pop(dialogContext, true),
             child: const Text('Salvar mesmo assim'),
           ),
         ],
       ),
     );
+    return result == true;
   }
 
-  Future<void> _submit() async {
+  Future<void> _save() async {
     setState(() => _submitted = true);
+    final amount = parseMoney(_amountCtrl.text);
+    final currentInstallment = int.tryParse(_installmentCurrentCtrl.text.trim());
+    final totalInstallments = int.tryParse(_installmentTotalCtrl.text.trim());
+    final installmentValid = !_isInstallment ||
+        (currentInstallment != null &&
+            totalInstallments != null &&
+            currentInstallment > 0 &&
+            totalInstallments > 0 &&
+            currentInstallment <= totalInstallments);
 
-    final normalizedAmount = _amtCtrl.text.trim().replaceAll(',', '.');
-    final amount = double.tryParse(normalizedAmount);
-    if (amount == null || amount <= 0) return;
-    if (_accountId == null || _categoryId == null) return;
-
-    int? installmentCurrent;
-    int? installmentTotal;
-    if (_type == 'expense' && _isInstallment) {
-      installmentCurrent = int.tryParse(_installmentCurrentCtrl.text.trim());
-      installmentTotal = int.tryParse(_installmentTotalCtrl.text.trim());
-      if (installmentCurrent == null ||
-          installmentTotal == null ||
-          installmentCurrent <= 0 ||
-          installmentTotal <= 0 ||
-          installmentCurrent > installmentTotal) {
-        return;
-      }
+    if (amount == null ||
+        amount <= 0 ||
+        _accountId == null ||
+        _categoryId == null ||
+        !installmentValid) {
+      return;
     }
 
     final app = context.read<AppProvider>();
     final account = app.accountById(_accountId!);
-    final accountCurrency = account?.currency ?? app.settings.currency;
-    final storeCurrency = _currency == accountCurrency ? '' : _currency;
-    final transactionId = isEdit ? widget.existing!.id : app.newId();
+    if (account == null) return;
+    final txCurrency = _currency.isEmpty ? account.currency : _currency;
+    final storedCurrency = txCurrency == account.currency ? '' : txCurrency;
+    final id = widget.existing?.id ?? app.newId();
 
-    final targetTx = AppTransaction(
-      id: transactionId,
+    final transaction = AppTransaction(
+      id: id,
       type: _type,
       amount: amount,
-      description: _descCtrl.text.trim(),
+      description: _descriptionCtrl.text.trim(),
       accountId: _accountId!,
       categoryId: _categoryId!,
       date: _date,
       note: _noteCtrl.text.trim(),
-      currency: storeCurrency,
+      currency: storedCurrency,
     );
 
-    final dupes =
-        app.findPossibleDuplicates(targetTx, excludeId: widget.existing?.id);
-    if (dupes.isNotEmpty && !_dupeWarningDismissed) {
-      final proceed = await _showDuplicateWarningDialog(dupes);
-      if (proceed != true) return;
-      _dupeWarningDismissed = true;
+    final duplicates = app.findPossibleDuplicates(
+      transaction,
+      excludeId: widget.existing?.id,
+    );
+    if (duplicates.isNotEmpty && !_duplicateAccepted) {
+      if (!await _confirmDuplicate(duplicates)) return;
+      _duplicateAccepted = true;
     }
 
+    setState(() => _saving = true);
     if (isEdit) {
-      await app.updateTransaction(targetTx, widget.existing!);
+      await app.updateTransaction(transaction, widget.existing!);
     } else {
-      await app.addTransaction(targetTx);
+      await app.addTransaction(transaction);
     }
 
-    if (_type == 'expense') {
-      await TransactionMetadataService.instance.save(
-        TransactionMetadata(
-          transactionId: transactionId,
-          subcategory: _subcategory,
-          status: _status,
-          dueDate: _status == 'pending' ? (_dueDate ?? _date) : null,
-          expenseClass: _expenseClass,
-          excludeFromSpending: _excludeFromSpending,
-          installmentCurrent: installmentCurrent,
-          installmentTotal: installmentTotal,
-          source: _source,
-        ),
-      );
-    } else {
-      await TransactionMetadataService.instance.delete(transactionId);
-    }
+    await TransactionMetadataService.instance.save(
+      TransactionMetadata(
+        transactionId: id,
+        subcategory: _subcategory,
+        status: _status,
+        dueDate: _status == 'pending' ? (_dueDate ?? _date) : null,
+        expenseClass: _type == 'expense' ? _expenseClass : 'normal',
+        excludeFromSpending: _type == 'expense' && _excludeFromSpending,
+        installmentCurrent: _type == 'expense' && _isInstallment
+            ? currentInstallment
+            : null,
+        installmentTotal:
+            _type == 'expense' && _isInstallment ? totalInstallments : null,
+        source: _source,
+      ),
+    );
 
-    if (mounted) Navigator.pop(context);
+    if (!mounted) return;
+    Navigator.pop(context);
   }
 
-  String _screenTitle() {
-    if (_type == 'expense') {
-      return isEdit ? 'Editar despesa' : 'Nova despesa';
-    }
-    return isEdit ? 'Editar receita' : 'Nova receita';
+  Future<void> _delete() async {
+    final existing = widget.existing;
+    if (existing == null) return;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Excluir lançamento?'),
+        content: const Text('Essa ação também desfaz o efeito deste lançamento no saldo da conta.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: const Text('Cancelar'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: const Text('Excluir'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+    final app = context.read<AppProvider>();
+    await app.deleteTransaction(existing.id);
+    await TransactionMetadataService.instance.delete(existing.id);
+    if (mounted) Navigator.pop(context);
   }
 
   @override
@@ -311,46 +309,46 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
     final app = context.watch<AppProvider>();
     final theme = Theme.of(context);
     final cs = theme.colorScheme;
-    final cats = app.categories.where((c) => c.type == _type).toList();
     final accounts = app.accounts.where((a) => !a.isGold).toList();
+    final categories = app.categories.where((c) => c.type == _type).toList();
+    final subcategories = _subcategories(_categoryId);
+    final amount = parseMoney(_amountCtrl.text);
+    final currentInstallment = int.tryParse(_installmentCurrentCtrl.text.trim());
+    final totalInstallments = int.tryParse(_installmentTotalCtrl.text.trim());
 
     final selectedAccount = app.accountById(_accountId ?? '');
-    final accountCurrency = selectedAccount?.currency ?? app.settings.currency;
-    final effectiveCurrency = _currency.isNotEmpty ? _currency : accountCurrency;
-    final symbol = currencyInfo(effectiveCurrency).symbol;
-    final parsedInput =
-        double.tryParse(_amtCtrl.text.trim().replaceAll(',', '.'));
-
-    final amountInvalid = _submitted && (parsedInput ?? 0) <= 0;
-    final accountInvalid = _submitted && _accountId == null;
-    final categoryInvalid = _submitted && _categoryId == null;
-    final installmentCurrent = int.tryParse(_installmentCurrentCtrl.text.trim());
-    final installmentTotal = int.tryParse(_installmentTotalCtrl.text.trim());
-    final installmentInvalid = _submitted &&
-        _type == 'expense' &&
-        _isInstallment &&
-        (installmentCurrent == null ||
-            installmentTotal == null ||
-            installmentCurrent <= 0 ||
-            installmentTotal <= 0 ||
-            installmentCurrent > installmentTotal);
-    final subcategories = _subcategoryOptions(_categoryId);
+    final effectiveCurrency = _currency.isNotEmpty
+        ? _currency
+        : (selectedAccount?.currency ?? app.settings.currency);
 
     return Scaffold(
       appBar: AppBar(
         title: Text(
-          _screenTitle(),
-          style: const TextStyle(fontWeight: FontWeight.w800),
+          isEdit
+              ? (_type == 'income' ? 'Editar receita' : 'Editar despesa')
+              : (_type == 'income' ? 'Nova receita' : 'Nova despesa'),
+          style: const TextStyle(fontWeight: FontWeight.w900),
         ),
+        actions: [
+          if (isEdit)
+            IconButton(
+              tooltip: 'Excluir lançamento',
+              onPressed: _delete,
+              icon: const Icon(Icons.delete_outline_rounded),
+            ),
+        ],
       ),
       bottomNavigationBar: SafeArea(
         minimum: const EdgeInsets.fromLTRB(16, 8, 16, 12),
         child: FilledButton.icon(
-          onPressed: () {
-            AppHaptics.tap(context, HapticStrength.light);
-            _submit();
-          },
-          icon: Icon(isEdit ? Icons.save_outlined : Icons.check_rounded),
+          onPressed: _saving ? null : _save,
+          icon: _saving
+              ? const SizedBox(
+                  width: 18,
+                  height: 18,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
+              : const Icon(Icons.check_rounded),
           label: Text(isEdit ? 'Salvar alterações' : 'Salvar lançamento'),
           style: FilledButton.styleFrom(
             minimumSize: const Size.fromHeight(54),
@@ -360,498 +358,377 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
           ),
         ),
       ),
-      body: SafeArea(
-        bottom: false,
-        child: ListView(
-          padding: const EdgeInsets.fromLTRB(16, 8, 16, 28),
-          children: [
-            _TypeSelector(type: _type, onChanged: _setType),
-            const SizedBox(height: 16),
-            Container(
-              padding: const EdgeInsets.fromLTRB(18, 18, 18, 16),
-              decoration: BoxDecoration(
-                color: _type == 'expense'
-                    ? cs.errorContainer.withValues(alpha: 0.32)
-                    : cs.primaryContainer.withValues(alpha: 0.45),
-                borderRadius: BorderRadius.circular(24),
+      body: ListView(
+        padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
+        children: [
+          SegmentedButton<String>(
+            segments: [
+              const ButtonSegment(
+                value: 'expense',
+                label: Text('Despesa'),
+                icon: Icon(Icons.north_east_rounded),
               ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Valor',
-                    style: theme.textTheme.labelLarge?.copyWith(
-                      color: cs.onSurfaceVariant,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Row(
-                    children: [
-                      Text(
-                        symbol,
-                        style: theme.textTheme.headlineSmall?.copyWith(
-                          fontWeight: FontWeight.w800,
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: TextField(
-                          controller: _amtCtrl,
-                          autofocus: !isEdit,
-                          keyboardType: const TextInputType.numberWithOptions(
-                            decimal: true,
-                          ),
-                          decoration: const InputDecoration(
-                            hintText: '0,00',
-                            border: InputBorder.none,
-                            enabledBorder: InputBorder.none,
-                            focusedBorder: InputBorder.none,
-                            isDense: true,
-                            contentPadding: EdgeInsets.zero,
-                          ),
-                          style: theme.textTheme.headlineMedium?.copyWith(
-                            fontWeight: FontWeight.w900,
-                          ),
-                          onChanged: (_) => setState(() => _submitted = false),
-                        ),
-                      ),
-                      TextButton.icon(
-                        onPressed: () async {
-                          final picked = await showCurrencyPicker(
-                            context,
-                            current: effectiveCurrency,
-                          );
-                          if (picked != null) setState(() => _currency = picked);
-                        },
-                        icon: const Icon(Icons.expand_more_rounded, size: 18),
-                        iconAlignment: IconAlignment.end,
-                        label: Text(
-                          effectiveCurrency,
-                          style: const TextStyle(fontWeight: FontWeight.w800),
-                        ),
-                      ),
-                    ],
-                  ),
-                  if (amountInvalid) ...[
-                    const SizedBox(height: 8),
+              const ButtonSegment(
+                value: 'income',
+                label: Text('Receita'),
+                icon: Icon(Icons.south_west_rounded),
+              ),
+              if (!isEdit)
+                const ButtonSegment(
+                  value: 'transfer',
+                  label: Text('Transferir'),
+                  icon: Icon(Icons.swap_horiz_rounded),
+                ),
+            ],
+            selected: {_type},
+            onSelectionChanged: (selection) => _setType(selection.first),
+          ),
+          const SizedBox(height: 16),
+          Container(
+            padding: const EdgeInsets.all(18),
+            decoration: BoxDecoration(
+              color: _type == 'expense'
+                  ? cs.errorContainer.withValues(alpha: .28)
+                  : cs.primaryContainer.withValues(alpha: .48),
+              borderRadius: BorderRadius.circular(24),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('Valor', style: theme.textTheme.labelLarge),
+                const SizedBox(height: 4),
+                Row(
+                  children: [
                     Text(
-                      'Informe um valor maior que zero.',
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        color: cs.error,
-                        fontWeight: FontWeight.w700,
+                      currencyInfo(effectiveCurrency).symbol,
+                      style: theme.textTheme.headlineSmall?.copyWith(
+                        fontWeight: FontWeight.w900,
                       ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: TextField(
+                        controller: _amountCtrl,
+                        autofocus: !isEdit,
+                        keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                        decoration: const InputDecoration(
+                          hintText: '0,00',
+                          filled: false,
+                          border: InputBorder.none,
+                          enabledBorder: InputBorder.none,
+                          focusedBorder: InputBorder.none,
+                          contentPadding: EdgeInsets.zero,
+                        ),
+                        style: theme.textTheme.headlineMedium?.copyWith(
+                          fontWeight: FontWeight.w900,
+                        ),
+                        onChanged: (_) => setState(() {}),
+                      ),
+                    ),
+                    TextButton.icon(
+                      onPressed: () async {
+                        final picked = await showCurrencyPicker(
+                          context,
+                          current: effectiveCurrency,
+                        );
+                        if (picked != null) setState(() => _currency = picked);
+                      },
+                      icon: const Icon(Icons.expand_more_rounded),
+                      iconAlignment: IconAlignment.end,
+                      label: Text(effectiveCurrency),
                     ),
                   ],
-                ],
-              ),
-            ),
-            const SizedBox(height: 18),
-            TextField(
-              controller: _descCtrl,
-              textInputAction: TextInputAction.next,
-              textCapitalization: TextCapitalization.sentences,
-              decoration: InputDecoration(
-                labelText: 'Descrição',
-                hintText: 'Ex.: almoço, mercado, internet...',
-                prefixIcon: const Icon(Icons.edit_note_rounded),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(16),
                 ),
-              ),
+                if (_submitted && (amount == null || amount <= 0))
+                  Text(
+                    'Informe um valor maior que zero.',
+                    style: TextStyle(color: cs.error, fontWeight: FontWeight.w700),
+                  ),
+              ],
             ),
-            const SizedBox(height: 22),
-            _SectionTitle(
+          ),
+          const SizedBox(height: 16),
+          TextField(
+            controller: _descriptionCtrl,
+            textCapitalization: TextCapitalization.sentences,
+            decoration: InputDecoration(
+              labelText: 'Descrição',
+              hintText: _type == 'income'
+                  ? 'Ex.: salário, reembolso, freelance...'
+                  : 'Ex.: mercado, almoço, internet...',
+              prefixIcon: const Icon(Icons.edit_note_rounded),
+            ),
+          ),
+          const SizedBox(height: 20),
+          _SectionTitle(
+            icon: Icons.account_balance_wallet_outlined,
+            title: 'Conta',
+            subtitle: _type == 'income'
+                ? 'Onde o dinheiro entrou'
+                : 'De onde saiu o dinheiro',
+          ),
+          const SizedBox(height: 8),
+          if (accounts.isEmpty)
+            _WarningCard(
+              text: 'Cadastre uma conta antes de salvar um lançamento.',
               icon: Icons.account_balance_wallet_outlined,
-              title: 'Conta',
-              subtitle: _type == 'expense'
-                  ? 'De onde saiu o dinheiro'
-                  : 'Onde o dinheiro entrou',
+            )
+          else
+            DropdownButtonFormField<String>(
+              initialValue: accounts.any((a) => a.id == _accountId) ? _accountId : null,
+              decoration: InputDecoration(
+                labelText: 'Conta ou cartão',
+                errorText: _submitted && _accountId == null
+                    ? 'Escolha uma conta.'
+                    : null,
+              ),
+              items: accounts.map((account) {
+                final type = switch (account.type) {
+                  'bank' => 'Banco',
+                  'cash' => 'Dinheiro',
+                  'savings' => 'Poupança',
+                  'wallet' => 'Carteira',
+                  'credit' => 'Cartão de crédito',
+                  'debit' => 'Cartão de débito',
+                  _ => 'Conta',
+                };
+                return DropdownMenuItem(
+                  value: account.id,
+                  child: Text('${account.name} • $type'),
+                );
+              }).toList(),
+              onChanged: (id) {
+                if (id == null) return;
+                final account = app.accountById(id);
+                setState(() {
+                  _accountId = id;
+                  _currency = account?.currency ?? app.settings.currency;
+                });
+              },
             ),
-            const SizedBox(height: 10),
-            AccountCardPicker(
-              accounts: accounts,
-              selectedId: _accountId,
-              onSelected: _onAccountSelected,
-            ),
-            if (accountInvalid) ...[
-              const SizedBox(height: 8),
-              Text('Escolha uma conta.', style: TextStyle(color: cs.error)),
-            ],
-            const SizedBox(height: 22),
-            const _SectionTitle(
+          const SizedBox(height: 20),
+          const _SectionTitle(
+            icon: Icons.category_outlined,
+            title: 'Categoria',
+            subtitle: 'Organize para entender para onde o dinheiro vai',
+          ),
+          const SizedBox(height: 8),
+          if (categories.isEmpty)
+            _WarningCard(
+              text: _type == 'income'
+                  ? 'Cadastre uma categoria de receita.'
+                  : 'Cadastre uma categoria de despesa.',
               icon: Icons.category_outlined,
-              title: 'Categoria',
-              subtitle: 'Como este lançamento deve ser classificado',
-            ),
-            const SizedBox(height: 10),
+            )
+          else
             Wrap(
               spacing: 8,
               runSpacing: 8,
-              children: cats.map((category) {
-                final selected = _categoryId == category.id;
-                final color = Color(category.colorValue);
-                return FilterChip(
-                  selected: selected,
+              children: categories.map((category) {
+                return ChoiceChip(
+                  selected: _categoryId == category.id,
                   label: Text(_categoryLabel(category)),
-                  avatar: CircleAvatar(backgroundColor: color, radius: 4),
-                  onSelected: (_) => _onCategorySelected(category.id),
+                  avatar: CircleAvatar(
+                    radius: 4,
+                    backgroundColor: Color(category.colorValue),
+                  ),
+                  onSelected: (_) {
+                    setState(() {
+                      _categoryId = category.id;
+                      if (!_subcategories(category.id).contains(_subcategory)) {
+                        _subcategory = '';
+                      }
+                    });
+                  },
                 );
               }).toList(),
             ),
-            if (categoryInvalid) ...[
-              const SizedBox(height: 8),
-              Text('Escolha uma categoria.', style: TextStyle(color: cs.error)),
-            ],
-            if (_type == 'expense' && subcategories.isNotEmpty) ...[
-              const SizedBox(height: 22),
-              const _SectionTitle(
-                icon: Icons.subdirectory_arrow_right_rounded,
-                title: 'Subcategoria',
-                subtitle: 'Detalhe melhor onde esse gasto entrou',
-              ),
-              const SizedBox(height: 10),
-              Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: subcategories.map((item) {
-                  return ChoiceChip(
-                    label: Text(item),
-                    selected: _subcategory == item,
-                    onSelected: (selected) {
-                      setState(() => _subcategory = selected ? item : '');
-                    },
-                  );
-                }).toList(),
-              ),
-            ],
-            if (_type == 'expense') ...[
-              const SizedBox(height: 22),
-              const _SectionTitle(
-                icon: Icons.fact_check_outlined,
-                title: 'Situação',
-                subtitle: 'Controle o que já foi pago e o que ainda vence',
-              ),
-              const SizedBox(height: 10),
-              _StatusSelector(
-                status: _status,
-                onChanged: (value) {
-                  setState(() {
-                    _status = value;
-                    if (value == 'pending') _dueDate ??= _date;
-                  });
-                },
-              ),
-              if (_status == 'pending') ...[
-                const SizedBox(height: 12),
-                _DatePickerTile(
-                  icon: Icons.event_busy_outlined,
-                  label: 'Vencimento',
-                  date: _dueDate ?? _date,
-                  onTap: () async {
-                    final picked = await showDatePicker(
-                      context: context,
-                      initialDate: _dueDate ?? _date,
-                      firstDate: DateTime(2000),
-                      lastDate: DateTime(2100),
-                    );
-                    if (picked != null) setState(() => _dueDate = picked);
-                  },
-                ),
-              ],
-              const SizedBox(height: 22),
-              const _SectionTitle(
-                icon: Icons.tune_rounded,
-                title: 'Classificação financeira',
-                subtitle: 'Separe custo normal de gastos fora da rotina',
-              ),
-              const SizedBox(height: 10),
-              Row(
-                children: [
-                  Expanded(
-                    child: ChoiceChip(
-                      label: const Text('Normal'),
-                      selected: _expenseClass == 'normal',
-                      onSelected: (_) => setState(() => _expenseClass = 'normal'),
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: ChoiceChip(
-                      label: const Text('Extraordinário'),
-                      selected: _expenseClass == 'extraordinary',
-                      onSelected: (_) =>
-                          setState(() => _expenseClass = 'extraordinary'),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 8),
-              SwitchListTile.adaptive(
-                contentPadding: EdgeInsets.zero,
-                value: _excludeFromSpending,
-                onChanged: (value) =>
-                    setState(() => _excludeFromSpending = value),
-                title: const Text('Não contar como gasto'),
-                subtitle: const Text(
-                  'Use para transferência, reserva, pagamento de fatura ou outro movimento neutro.',
-                ),
-              ),
-              const SizedBox(height: 8),
-              SwitchListTile.adaptive(
-                contentPadding: EdgeInsets.zero,
-                value: _isInstallment,
-                onChanged: (value) => setState(() => _isInstallment = value),
-                title: const Text('Compra parcelada'),
-                subtitle: const Text('Guarde a posição da parcela, ex.: 3 de 12.'),
-              ),
-              if (_isInstallment) ...[
-                const SizedBox(height: 8),
-                Row(
-                  children: [
-                    Expanded(
-                      child: TextField(
-                        controller: _installmentCurrentCtrl,
-                        keyboardType: TextInputType.number,
-                        decoration: const InputDecoration(
-                          labelText: 'Parcela atual',
-                          hintText: '3',
-                          border: OutlineInputBorder(),
-                        ),
-                      ),
-                    ),
-                    const Padding(
-                      padding: EdgeInsets.symmetric(horizontal: 10),
-                      child: Text('de'),
-                    ),
-                    Expanded(
-                      child: TextField(
-                        controller: _installmentTotalCtrl,
-                        keyboardType: TextInputType.number,
-                        decoration: const InputDecoration(
-                          labelText: 'Total',
-                          hintText: '12',
-                          border: OutlineInputBorder(),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-                if (installmentInvalid) ...[
-                  const SizedBox(height: 6),
-                  Text(
-                    'Informe uma parcela válida, por exemplo 3 de 12.',
-                    style: TextStyle(color: cs.error, fontWeight: FontWeight.w700),
-                  ),
-                ],
-              ],
-            ],
-            const SizedBox(height: 22),
-            const _SectionTitle(
-              icon: Icons.event_outlined,
-              title: 'Data',
-              subtitle: 'Quando o lançamento aconteceu',
+          if (_submitted && _categoryId == null)
+            Padding(
+              padding: const EdgeInsets.only(top: 6),
+              child: Text('Escolha uma categoria.', style: TextStyle(color: cs.error)),
             ),
+          if (subcategories.isNotEmpty) ...[
+            const SizedBox(height: 16),
+            Text('Subcategoria', style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w900)),
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: subcategories.map((value) {
+                return ChoiceChip(
+                  label: Text(value),
+                  selected: _subcategory == value,
+                  onSelected: (selected) {
+                    setState(() => _subcategory = selected ? value : '');
+                  },
+                );
+              }).toList(),
+            ),
+          ],
+          const SizedBox(height: 20),
+          _SectionTitle(
+            icon: Icons.fact_check_outlined,
+            title: _type == 'income' ? 'Situação da receita' : 'Situação da despesa',
+            subtitle: _type == 'income'
+                ? 'Separe o que já recebeu do que ainda está previsto'
+                : 'Separe o que já foi pago do que ainda está pendente',
+          ),
+          const SizedBox(height: 8),
+          SegmentedButton<String>(
+            segments: [
+              ButtonSegment(
+                value: 'paid',
+                label: Text(_type == 'income' ? 'Recebida' : 'Paga'),
+                icon: const Icon(Icons.check_circle_outline_rounded),
+              ),
+              ButtonSegment(
+                value: 'pending',
+                label: Text(_type == 'income' ? 'Prevista' : 'Pendente'),
+                icon: const Icon(Icons.schedule_rounded),
+              ),
+            ],
+            selected: {_status},
+            onSelectionChanged: (selection) {
+              setState(() {
+                _status = selection.first;
+                if (_status == 'pending') _dueDate ??= _date;
+              });
+            },
+          ),
+          if (_status == 'pending') ...[
             const SizedBox(height: 10),
-            _DatePickerTile(
-              icon: Icons.calendar_month_rounded,
-              label: 'Data do lançamento',
-              date: _date,
+            _DateTile(
+              title: _type == 'income' ? 'Data prevista' : 'Vencimento',
+              date: _dueDate ?? _date,
+              icon: Icons.event_outlined,
               onTap: () async {
                 final picked = await showDatePicker(
                   context: context,
-                  initialDate: _date,
+                  initialDate: _dueDate ?? _date,
                   firstDate: DateTime(2000),
                   lastDate: DateTime(2100),
+                  cancelText: 'Cancelar',
+                  confirmText: 'Selecionar',
                 );
-                if (picked != null) {
-                  setState(() {
-                    _date = picked;
-                    if (_status == 'pending' && _dueDate == null) {
-                      _dueDate = picked;
-                    }
-                  });
-                }
+                if (picked != null) setState(() => _dueDate = picked);
               },
             ),
-            const SizedBox(height: 22),
-            TextField(
-              controller: _noteCtrl,
-              maxLines: 3,
-              minLines: 2,
-              textCapitalization: TextCapitalization.sentences,
-              decoration: InputDecoration(
-                labelText: 'Observação (opcional)',
-                hintText: 'Algum detalhe que você queira lembrar depois',
-                alignLabelWithHint: true,
-                prefixIcon: const Icon(Icons.sticky_note_2_outlined),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(16),
-                ),
+          ],
+          if (_type == 'expense') ...[
+            const SizedBox(height: 20),
+            const _SectionTitle(
+              icon: Icons.tune_rounded,
+              title: 'Classificação',
+              subtitle: 'Separe o custo normal dos gastos fora da rotina',
+            ),
+            const SizedBox(height: 8),
+            SegmentedButton<String>(
+              segments: const [
+                ButtonSegment(value: 'normal', label: Text('Normal')),
+                ButtonSegment(value: 'extraordinary', label: Text('Extraordinária')),
+              ],
+              selected: {_expenseClass},
+              onSelectionChanged: (selection) {
+                setState(() => _expenseClass = selection.first);
+              },
+            ),
+            const SizedBox(height: 6),
+            SwitchListTile.adaptive(
+              contentPadding: EdgeInsets.zero,
+              value: _excludeFromSpending,
+              onChanged: (value) => setState(() => _excludeFromSpending = value),
+              title: const Text('Não contar como gasto'),
+              subtitle: const Text(
+                'Use para movimentos neutros, ajustes, reserva ou casos especiais. Para transferências entre contas, prefira “Transferir”.',
               ),
             ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _TypeSelector extends StatelessWidget {
-  final String type;
-  final ValueChanged<String> onChanged;
-
-  const _TypeSelector({required this.type, required this.onChanged});
-
-  @override
-  Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-    return Container(
-      padding: const EdgeInsets.all(4),
-      decoration: BoxDecoration(
-        color: cs.surfaceContainerHighest,
-        borderRadius: BorderRadius.circular(18),
-      ),
-      child: Row(
-        children: [
-          Expanded(
-            child: _TypeButton(
-              selected: type == 'expense',
-              icon: Icons.arrow_upward_rounded,
-              label: 'Despesa',
-              color: cs.error,
-              onTap: () => onChanged('expense'),
+            SwitchListTile.adaptive(
+              contentPadding: EdgeInsets.zero,
+              value: _isInstallment,
+              onChanged: (value) => setState(() => _isInstallment = value),
+              title: const Text('Compra parcelada'),
+              subtitle: const Text('Registre em qual parcela você está, por exemplo 3 de 12.'),
             ),
+            if (_isInstallment) ...[
+              const SizedBox(height: 6),
+              Row(
+                children: [
+                  Expanded(
+                    child: TextField(
+                      controller: _installmentCurrentCtrl,
+                      keyboardType: TextInputType.number,
+                      decoration: const InputDecoration(labelText: 'Parcela atual'),
+                    ),
+                  ),
+                  const Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 10),
+                    child: Text('de'),
+                  ),
+                  Expanded(
+                    child: TextField(
+                      controller: _installmentTotalCtrl,
+                      keyboardType: TextInputType.number,
+                      decoration: const InputDecoration(labelText: 'Total'),
+                    ),
+                  ),
+                ],
+              ),
+              if (_submitted &&
+                  (currentInstallment == null ||
+                      totalInstallments == null ||
+                      currentInstallment <= 0 ||
+                      totalInstallments <= 0 ||
+                      currentInstallment > totalInstallments))
+                Padding(
+                  padding: const EdgeInsets.only(top: 6),
+                  child: Text(
+                    'Informe uma parcela válida, como 3 de 12.',
+                    style: TextStyle(color: cs.error),
+                  ),
+                ),
+            ],
+          ],
+          const SizedBox(height: 20),
+          const _SectionTitle(
+            icon: Icons.calendar_month_outlined,
+            title: 'Data do lançamento',
+            subtitle: 'Quando a movimentação aconteceu',
           ),
-          Expanded(
-            child: _TypeButton(
-              selected: type == 'income',
-              icon: Icons.arrow_downward_rounded,
-              label: 'Receita',
-              color: Colors.green,
-              onTap: () => onChanged('income'),
+          const SizedBox(height: 8),
+          _DateTile(
+            title: 'Data',
+            date: _date,
+            icon: Icons.event_available_outlined,
+            onTap: () async {
+              final picked = await showDatePicker(
+                context: context,
+                initialDate: _date,
+                firstDate: DateTime(2000),
+                lastDate: DateTime(2100),
+                cancelText: 'Cancelar',
+                confirmText: 'Selecionar',
+              );
+              if (picked != null) {
+                setState(() {
+                  _date = picked;
+                  if (_status == 'pending' && _dueDate == null) _dueDate = picked;
+                });
+              }
+            },
+          ),
+          const SizedBox(height: 16),
+          TextField(
+            controller: _noteCtrl,
+            minLines: 2,
+            maxLines: 4,
+            textCapitalization: TextCapitalization.sentences,
+            decoration: const InputDecoration(
+              labelText: 'Observação (opcional)',
+              prefixIcon: Icon(Icons.sticky_note_2_outlined),
             ),
           ),
         ],
-      ),
-    );
-  }
-}
-
-class _TypeButton extends StatelessWidget {
-  final bool selected;
-  final IconData icon;
-  final String label;
-  final Color color;
-  final VoidCallback onTap;
-
-  const _TypeButton({
-    required this.selected,
-    required this.icon,
-    required this.label,
-    required this.color,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(14),
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 160),
-        padding: const EdgeInsets.symmetric(vertical: 13),
-        decoration: BoxDecoration(
-          color: selected ? color.withValues(alpha: 0.24) : Colors.transparent,
-          borderRadius: BorderRadius.circular(14),
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(icon, color: selected ? color : null, size: 20),
-            const SizedBox(width: 7),
-            Text(
-              label,
-              style: TextStyle(
-                fontWeight: FontWeight.w800,
-                color: selected ? color : null,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _StatusSelector extends StatelessWidget {
-  final String status;
-  final ValueChanged<String> onChanged;
-
-  const _StatusSelector({required this.status, required this.onChanged});
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: [
-        Expanded(
-          child: _StatusButton(
-            selected: status == 'paid',
-            icon: Icons.check_circle_outline_rounded,
-            label: 'Pago',
-            onTap: () => onChanged('paid'),
-          ),
-        ),
-        const SizedBox(width: 10),
-        Expanded(
-          child: _StatusButton(
-            selected: status == 'pending',
-            icon: Icons.schedule_rounded,
-            label: 'Pendente',
-            onTap: () => onChanged('pending'),
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _StatusButton extends StatelessWidget {
-  final bool selected;
-  final IconData icon;
-  final String label;
-  final VoidCallback onTap;
-
-  const _StatusButton({
-    required this.selected,
-    required this.icon,
-    required this.label,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(15),
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 13),
-        decoration: BoxDecoration(
-          color: selected ? cs.primaryContainer : cs.surfaceContainerLow,
-          borderRadius: BorderRadius.circular(15),
-          border: Border.all(
-            color: selected ? cs.primary : cs.outlineVariant,
-          ),
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(icon, size: 19),
-            const SizedBox(width: 7),
-            Text(label, style: const TextStyle(fontWeight: FontWeight.w800)),
-          ],
-        ),
       ),
     );
   }
@@ -870,8 +747,7 @@ class _SectionTitle extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final cs = theme.colorScheme;
+    final cs = Theme.of(context).colorScheme;
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -889,14 +765,9 @@ class _SectionTitle extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(title, style: const TextStyle(fontWeight: FontWeight.w800)),
+              Text(title, style: const TextStyle(fontWeight: FontWeight.w900)),
               const SizedBox(height: 2),
-              Text(
-                subtitle,
-                style: theme.textTheme.bodySmall?.copyWith(
-                  color: cs.onSurfaceVariant,
-                ),
-              ),
+              Text(subtitle, style: Theme.of(context).textTheme.bodySmall),
             ],
           ),
         ),
@@ -905,28 +776,27 @@ class _SectionTitle extends StatelessWidget {
   }
 }
 
-class _DatePickerTile extends StatelessWidget {
-  final IconData icon;
-  final String label;
+class _DateTile extends StatelessWidget {
+  final String title;
   final DateTime date;
+  final IconData icon;
   final VoidCallback onTap;
 
-  const _DatePickerTile({
-    required this.icon,
-    required this.label,
+  const _DateTile({
+    required this.title,
     required this.date,
+    required this.icon,
     required this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final cs = theme.colorScheme;
+    final cs = Theme.of(context).colorScheme;
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(16),
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
         decoration: BoxDecoration(
           color: cs.surfaceContainerLow,
           borderRadius: BorderRadius.circular(16),
@@ -940,25 +810,41 @@ class _DatePickerTile extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    label,
-                    style: theme.textTheme.labelSmall?.copyWith(
-                      color: cs.onSurfaceVariant,
-                    ),
-                  ),
+                  Text(title, style: Theme.of(context).textTheme.labelSmall),
                   const SizedBox(height: 2),
-                  Text(
-                    DateFormat('dd/MM/yyyy').format(date),
-                    style: theme.textTheme.bodyLarge?.copyWith(
-                      fontWeight: FontWeight.w800,
-                    ),
-                  ),
+                  Text(ptDate(date), style: const TextStyle(fontWeight: FontWeight.w900)),
                 ],
               ),
             ),
             const Icon(Icons.chevron_right_rounded),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _WarningCard extends StatelessWidget {
+  final String text;
+  final IconData icon;
+
+  const _WarningCard({required this.text, required this.icon});
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: cs.errorContainer.withValues(alpha: .35),
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: Row(
+        children: [
+          Icon(icon, color: cs.error),
+          const SizedBox(width: 10),
+          Expanded(child: Text(text)),
+        ],
       ),
     );
   }
