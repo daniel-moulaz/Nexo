@@ -30,12 +30,17 @@ void main() {
 
   test('expired suggestion tombstones are scrubbed then pruned after 90 days',
       () async {
-    final start = DateTime(2026, 1, 1, 12);
+    // Keep the initial row inside the real 7-day production window. The
+    // explicit `now` values below then advance cleanup deterministically.
+    final start = DateTime.now().subtract(const Duration(minutes: 1));
     await NotificationInbox.ingest([suggestion('old', start)], now: start);
-    expect(await NotificationInbox.pending(), hasLength(1));
+    final db = await DBHelper.database;
+    expect(
+        await db.query('notification_suggestions',
+            where: 'id = ?', whereArgs: ['old']),
+        hasLength(1));
 
     await NotificationInbox.ingest([], now: start.add(const Duration(days: 8)));
-    final db = await DBHelper.database;
     final scrubbed = (await db.query('notification_suggestions',
             where: 'id = ?', whereArgs: ['old']))
         .single;
