@@ -1,39 +1,22 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
-    <!-- Internet access for fetching daily exchange rates -->
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.VIBRATE" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
-
-    <!-- Notification permissions -->
-    <!-- Required for Android 13+ (API 33+) to post notifications -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
-    <!-- Schedule exact alarms for precise notification timing (Android 12+) -->
     <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM"/>
-    <!-- Fallback exact alarm permission for Android 13+ devices that grant it by default -->
     <uses-permission android:name="android.permission.USE_EXACT_ALARM"/>
-    <!-- Reschedule notifications after device reboot -->
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED"/>
     <uses-permission android:name="android.permission.WAKE_LOCK"/>
-
-    <!-- Storage permissions for export/backup on Android 12 and below -->
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"
         android:maxSdkVersion="32" />
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"
         android:maxSdkVersion="29" />
-
-    <!-- Media permissions for Android 13+ -->
     <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
 
-    <!-- Push notification permissions -->
-    <!-- Required for Android 13+ (API 33+) -->
-    <!-- Schedule exact alarms for precise notification timing (Android 12+) -->
-    <!-- Keep device awake to deliver notifications -->
-    <!-- Receive boot completed to reschedule notifications after reboot -->
-
     <application
-        android:label="Expensy"
+        android:label="Meu Fluxo"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher"
         android:roundIcon="@mipmap/ic_launcher_round"
@@ -61,14 +44,10 @@
             </intent-filter>
         </activity>
 
-
-
-        <!-- flutter_local_notifications: alarm receiver -->
         <receiver
             android:name="com.dexterous.flutterlocalnotifications.ScheduledNotificationReceiver"
             android:exported="false" />
 
-        <!-- flutter_local_notifications: reschedule alarms after device reboot -->
         <receiver
             android:name="com.dexterous.flutterlocalnotifications.ScheduledNotificationBootReceiver"
             android:exported="false">
@@ -84,10 +63,6 @@
             android:name="flutterEmbedding"
             android:value="2" />
 
-        <!-- Quick Add Transaction home screen widget (App Widget, see
-             HOMESCREEN_WIDGET.md). Only ever invoked by the launcher/OS via
-             the standard APPWIDGET_UPDATE broadcast, never by another app
-             directly, so exported="false" is correct and safe here. -->
         <receiver
             android:name=".QuickAddWidgetProvider"
             android:exported="true"
@@ -100,26 +75,24 @@
                 android:resource="@xml/quick_add_widget_info" />
         </receiver>
 
-        <receiver android:name=".BudgetWidgetProvider" android:exported="true" android:label="Budgets">
+        <receiver android:name=".BudgetWidgetProvider" android:exported="true" android:label="Orçamentos">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
             </intent-filter>
             <meta-data android:name="android.appwidget.provider" android:resource="@xml/budget_widget_info" />
         </receiver>
 
-        <!-- Accounts Widget -->
-        <receiver android:name=".AccountsWidgetProvider" android:exported="true" android:label="Accounts">
+        <receiver android:name=".AccountsWidgetProvider" android:exported="true" android:label="Contas">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
             </intent-filter>
             <meta-data android:name="android.appwidget.provider" android:resource="@xml/accounts_widget_info" />
         </receiver>
 
-        <!-- New Nothing Style Add Transaction Widget -->
         <receiver
             android:name=".AddTransactionWidgetProvider"
             android:exported="true"
-            android:label="Quick Add - Nothing Style">
+            android:label="Adicionar lançamento">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
             </intent-filter>
@@ -128,7 +101,6 @@
                 android:resource="@xml/widget_add_transaction_info" />
         </receiver>
 
-        <!-- FileProvider for share_plus -->
         <provider
             android:name="androidx.core.content.FileProvider"
             android:authorities="${applicationId}.fileprovider"
@@ -140,13 +112,11 @@
         </provider>
     </application>
 
-    <!-- Allow file picker and share to query installed apps -->
     <queries>
         <intent>
             <action android:name="android.intent.action.VIEW" />
             <data android:scheme="content" />
         </intent>
-        <!-- Allow url_launcher to open https links in browser -->
         <intent>
             <action android:name="android.intent.action.VIEW" />
             <data android:scheme="https" />
