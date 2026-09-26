@@ -1,148 +1,193 @@
-// lib/screens/more_screen.dart
 import 'package:flutter/material.dart';
-import '../l10n/app_localizations.dart';
 import 'package:provider/provider.dart';
+
 import '../providers/app_provider.dart';
 import '../theme/app_theme.dart';
-import 'statistics_screen.dart';
-import 'insights_screen.dart';
-import 'yearly_analysis_screen.dart';
-
-import 'currency_converter_screen.dart';
-import 'wishlist_screen.dart';
-import 'lended_screen.dart';
 import 'assets_screen.dart';
-import 'categories_screen.dart';
-import 'loans_screen.dart';
-import 'export_screen.dart';
 import 'backup_screen.dart';
+import 'categories_screen.dart';
+import 'currency_converter_screen.dart';
+import 'finance_export_screen.dart';
+import 'financial_planning_screen.dart';
+import 'insights_screen.dart';
+import 'lended_screen.dart';
+import 'loans_screen.dart';
 import 'settings_screen.dart';
+import 'statement_import_screen.dart';
+import 'statistics_screen.dart';
+import 'transaction_search_screen.dart';
+import 'wishlist_screen.dart';
+import 'yearly_analysis_screen.dart';
 
 class MoreScreen extends StatelessWidget {
   const MoreScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context)!;
     final cs = Theme.of(context).colorScheme;
+    final app = context.watch<AppProvider>();
+    final wishlistLen = app.wishlist.where((w) => !w.isPurchased).length;
+    final lendedLen = app.lended.where((l) => !l.isSettled).length;
+    final assetsLen = app.assets.length;
+    final categoriesLen = app.categories.length;
+    final loansLen = app.loans.where((l) => !l.isSettled).length;
 
-    final wishlistLen = context.select<AppProvider, int>((a) => a.wishlist.where((w) => !w.isPurchased).length);
-    final lendedLen = context.select<AppProvider, int>((a) => a.lended.where((l) => !l.isSettled).length);
-    final assetsLen = context.select<AppProvider, int>((a) => a.assets.length);
-    final categoriesLen = context.select<AppProvider, int>((a) => a.categories.length);
-    final loansLen = context.select<AppProvider, int>((a) => a.loans.where((l) => !l.isSettled).length);
-
-    final items = [
+    final items = <_Item>[
+      const _Item(
+        icon: Icons.auto_graph_rounded,
+        label: 'Planejamento',
+        sub: 'Previsão de caixa, assinaturas, reserva e alertas',
+        color: Color(0xFF6750A4),
+        screen: FinancialPlanningScreen(),
+      ),
+      const _Item(
+        icon: Icons.search_rounded,
+        label: 'Buscar lançamentos',
+        sub: 'Encontre despesas e receitas por nome, conta ou categoria',
+        color: Color(0xFF0061A4),
+        screen: TransactionSearchScreen(),
+      ),
+      const _Item(
+        icon: Icons.upload_file_rounded,
+        label: 'Importar extrato',
+        sub: 'Mercado Pago, Nubank e CSV genérico',
+        color: Color(0xFF00897B),
+        screen: StatementImportScreen(),
+      ),
+      const _Item(
+        icon: Icons.table_view_rounded,
+        label: 'Relatório financeiro',
+        sub: 'Excel completo para análise e backup externo',
+        color: Color(0xFF2E7D32),
+        screen: FinanceExportScreen(),
+      ),
+      const _Item(
+        icon: Icons.bar_chart_outlined,
+        label: 'Estatísticas',
+        sub: 'Gráficos e resumo mensal',
+        color: Color(0xFF1565C0),
+        screen: StatisticsScreen(),
+      ),
+      const _Item(
+        icon: Icons.insights_outlined,
+        label: 'Informações e tendências',
+        sub: 'Médias, categorias e padrões de gastos',
+        color: Color(0xFF00838F),
+        screen: InsightsScreen(),
+      ),
+      const _Item(
+        icon: Icons.calendar_month_outlined,
+        label: 'Análise anual',
+        sub: 'Fluxo de caixa e visão mês a mês',
+        color: Color(0xFF2E7D32),
+        screen: YearlyAnalysisScreen(),
+      ),
+      const _Item(
+        icon: Icons.currency_exchange_rounded,
+        label: 'Conversor de moeda',
+        sub: 'Converta valores entre moedas',
+        color: Color(0xFF6750A4),
+        screen: CurrencyConverterScreen(),
+      ),
       _Item(
-          icon: Icons.bar_chart_outlined,
-          label: l10n.more_statistics,
-          sub: l10n.more_statisticsSub,
-          color: const Color(0xFF1565C0),
-          screen: const StatisticsScreen()),
+        icon: Icons.star_outline_rounded,
+        label: 'Lista de desejos',
+        sub: '$wishlistLen ${wishlistLen == 1 ? 'item pendente' : 'itens pendentes'}',
+        color: const Color(0xFF7D5260),
+        screen: const WishlistScreen(),
+      ),
       _Item(
-          icon: Icons.insights_outlined,
-          label: l10n.more_insights,
-          sub: l10n.more_insightsSub,
-          color: const Color(0xFF00838F),
-          screen: const InsightsScreen()),
+        icon: Icons.handshake_outlined,
+        label: 'Dinheiro emprestado',
+        sub: '$lendedLen ${lendedLen == 1 ? 'registro em aberto' : 'registros em aberto'}',
+        color: const Color(0xFFE65140),
+        screen: const LendedScreen(),
+      ),
       _Item(
-          icon: Icons.calendar_month_outlined,
-          label: l10n.more_yearlyAnalysis,
-          sub: l10n.more_yearlyAnalysisSub,
-          color: const Color(0xFF2E7D32),
-          screen: const YearlyAnalysisScreen()),
+        icon: Icons.inventory_2_outlined,
+        label: 'Ativos',
+        sub: '$assetsLen ${assetsLen == 1 ? 'item cadastrado' : 'itens cadastrados'}',
+        color: const Color(0xFF1565C0),
+        screen: const AssetsScreen(),
+      ),
       _Item(
-          icon: Icons.currency_exchange_rounded,
-          label: l10n.more_currencyConverter,
-          sub: l10n.more_currencyConverterSub,
-          color: const Color(0xFF6750A4),
-          screen: const CurrencyConverterScreen()),
+        icon: Icons.account_balance_outlined,
+        label: 'Empréstimos',
+        sub: '$loansLen ${loansLen == 1 ? 'empréstimo ativo' : 'empréstimos ativos'}',
+        color: const Color(0xFF4A148C),
+        screen: const LoansScreen(),
+      ),
       _Item(
-          icon: Icons.star_outline_rounded,
-          label: l10n.more_wishlist,
-          sub: l10n.more_wishlistSub(wishlistLen),
-          color: const Color(0xFF7D5260),
-          screen: const WishlistScreen()),
-      _Item(
-          icon: Icons.handshake_outlined,
-          label: l10n.more_lentMoney,
-          sub: l10n.more_lentMoneySub(lendedLen),
-          color: const Color(0xFFE65140),
-          screen: const LendedScreen()),
-      _Item(
-          icon: Icons.inventory_2_outlined,
-          label: l10n.more_assets,
-          sub: l10n.more_assetsSub(assetsLen),
-          color: const Color(0xFF1565C0),
-          screen: const AssetsScreen()),
-      _Item(
-          icon: Icons.account_balance_outlined,
-          label: l10n.more_loans,
-          sub: l10n.more_loansSub(loansLen),
-          color: const Color(0xFF4A148C),
-          screen: const LoansScreen()),
-      _Item(
-          icon: Icons.label_outline_rounded,
-          label: l10n.more_categories,
-          sub: l10n.more_categoriesSub(categoriesLen),
-          color: const Color(0xFF00897B),
-          screen: const CategoriesScreen()),
-      _Item(
-          icon: Icons.save_alt_outlined,
-          label: l10n.more_exportTransactions,
-          sub: l10n.more_exportTransactionsSub,
-          color: const Color(0xFF00838F),
-          screen: const ExportScreen()),
-      _Item(
-          icon: Icons.backup_outlined,
-          label: l10n.more_backupRestore,
-          sub: l10n.more_backupRestoreSub,
-          color: const Color(0xFF37474F),
-          screen: const BackupScreen()),
-      _Item(
-          icon: Icons.settings_outlined,
-          label: l10n.more_settings,
-          sub: l10n.more_settingsSub,
-          color: const Color(0xFF4A148C),
-          screen: const SettingsScreen()),
+        icon: Icons.label_outline_rounded,
+        label: 'Categorias',
+        sub: '$categoriesLen categorias cadastradas',
+        color: const Color(0xFF00897B),
+        screen: const CategoriesScreen(),
+      ),
+      const _Item(
+        icon: Icons.backup_outlined,
+        label: 'Backup e restauração',
+        sub: 'Salve ou recupere todos os dados do aplicativo',
+        color: Color(0xFF37474F),
+        screen: BackupScreen(),
+      ),
+      const _Item(
+        icon: Icons.settings_outlined,
+        label: 'Configurações',
+        sub: 'Tema, privacidade, moeda, alertas e preferências',
+        color: Color(0xFF4A148C),
+        screen: SettingsScreen(),
+      ),
     ];
 
     return Scaffold(
       appBar: AppBar(
         automaticallyImplyLeading: false,
-        title: Text(l10n.more_more,
-            style: const TextStyle(fontWeight: FontWeight.w800)),
-        backgroundColor: cs.primary,
-        foregroundColor: cs.onPrimary,
+        title: const Text('Mais',
+            style: TextStyle(fontWeight: FontWeight.w900)),
+        backgroundColor: cs.primaryContainer,
+        foregroundColor: cs.onPrimaryContainer,
       ),
       body: ListView.separated(
-        padding: const EdgeInsets.fromLTRB(14, 14, 14, 140),
+        padding: const EdgeInsets.fromLTRB(14, 14, 14, 150),
         itemCount: items.length,
         separatorBuilder: (_, __) => const SizedBox(height: 8),
         itemBuilder: (_, i) {
           final item = items[i];
           return Card(
-              child: ListTile(
-            shape:
-                RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-            leading: Container(
-              width: 44,
-              height: 44,
-              decoration: BoxDecoration(
+            child: ListTile(
+              contentPadding:
+                  const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+              leading: Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(
                   color: item.color.withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(12)),
-              child: Icon(item.icon, color: item.color, size: 22),
-            ),
-            title: Text(item.label,
-                style:
-                    const TextStyle(fontWeight: FontWeight.w700, fontSize: 15)),
-            subtitle: Text(item.sub,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(item.icon, color: item.color, size: 22),
+              ),
+              title: Text(
+                item.label,
+                style: const TextStyle(
+                  fontWeight: FontWeight.w800,
+                  fontSize: 15,
+                ),
+              ),
+              subtitle: Text(
+                item.sub,
                 style: TextStyle(
-                    fontSize: 12, color: cs.onSurface.withValues(alpha: 0.55))),
-            trailing: const Icon(Icons.chevron_right_rounded),
-            onTap: () => Navigator.push(
-                context, ExpensyRoute(builder: (_) => item.screen)),
-          ));
+                  fontSize: 12,
+                  color: cs.onSurface.withValues(alpha: 0.62),
+                ),
+              ),
+              trailing: const Icon(Icons.chevron_right_rounded),
+              onTap: () => Navigator.push(
+                context,
+                ExpensyRoute(builder: (_) => item.screen),
+              ),
+            ),
+          );
         },
       ),
     );
@@ -151,14 +196,16 @@ class MoreScreen extends StatelessWidget {
 
 class _Item {
   final IconData icon;
-  final String label, sub;
+  final String label;
+  final String sub;
   final Color color;
   final Widget screen;
-  const _Item(
-      {required this.icon,
-      required this.label,
-      required this.sub,
-      required this.color,
-      required this.screen});
-}
 
+  const _Item({
+    required this.icon,
+    required this.label,
+    required this.sub,
+    required this.color,
+    required this.screen,
+  });
+}
