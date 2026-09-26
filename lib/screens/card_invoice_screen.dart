@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 
 import '../models/models.dart';
 import '../providers/app_provider.dart';
+import '../services/card_invoice_service.dart';
 import '../services/finance_rules.dart';
 import '../services/transaction_metadata_service.dart';
 import '../theme/app_theme.dart';
@@ -127,8 +128,12 @@ class _CardInvoiceScreenState extends State<CardInvoiceScreen> {
     if (mounted) setState(() {});
   }
 
-  Future<void> _payInvoice(Account card, double total) async {
-    if (total <= 0) return;
+  Future<void> _payInvoice(
+    Account card,
+    DateTime cycleEnd,
+    double remaining,
+  ) async {
+    if (remaining <= 0) return;
     final app = context.read<AppProvider>();
     final linked = card.linkedAccountId == null
         ? null
@@ -141,15 +146,16 @@ class _CardInvoiceScreenState extends State<CardInvoiceScreen> {
     }
 
     final fromAmount = linked.currency == card.currency
-        ? total
-        : (app.convertBetween(total, card.currency, linked.currency) ?? total);
+        ? remaining
+        : (app.convertBetween(remaining, card.currency, linked.currency) ??
+            remaining);
 
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('Pagar fatura'),
         content: Text(
-          'Registrar ${formatAmount(total, card.currency)} na fatura, saindo ${formatAmount(fromAmount, linked.currency)} de ${linked.name}?\n\nO pagamento será tratado como transferência e não será contado novamente como despesa.',
+          'Registrar ${formatAmount(remaining, card.currency)} na fatura, saindo ${formatAmount(fromAmount, linked.currency)} de ${linked.name}?\n\nO pagamento será tratado como transferência e não será contado novamente como despesa.',
         ),
         actions: [
           TextButton(
@@ -169,8 +175,14 @@ class _CardInvoiceScreenState extends State<CardInvoiceScreen> {
       fromId: linked.id,
       toId: card.id,
       fromAmount: fromAmount,
-      toAmount: total,
+      toAmount: remaining,
       note: 'Pagamento da fatura ${card.name}',
+    );
+    await CardInvoiceService.instance.recordPayment(
+      id: app.newId(),
+      cardId: card.id,
+      cycleEnd: cycleEnd,
+      amount: remaining,
     );
     if (!mounted) return;
     _snack('Pagamento registrado sem duplicar seus gastos.');
@@ -201,18 +213,29 @@ class _CardInvoiceScreenState extends State<CardInvoiceScreen> {
     _metadata ??= TransactionMetadataService.instance
         .getForMany(allCycleTx.map((e) => e.id));
 
-    return FutureBuilder<Map<String, TransactionMetadata>>(
-      future: _metadata,
+    return FutureBuilder<List<dynamic>>(
+      future: Future.wait<dynamic>([
+        _metadata!,
+        CardInvoiceService.instance.paidForCycle(card.id, cycle.end),
+      ]),
       builder: (context, snapshot) {
-        final meta = snapshot.data ?? const <String, TransactionMetadata>{};
+        final values = snapshot.data;
+        final meta = values == null
+            ? const <String, TransactionMetadata>{}
+            : values[0] as Map<String, TransactionMetadata>;
+        final alreadyPaid = values == null ? 0.0 : values[1] as double;
         final purchases = allCycleTx
             .where((t) => !FinanceRules.isNeutral(t, meta[t.id]))
             .toList()
           ..sort((a, b) => b.date.compareTo(a.date));
         final total = purchases.fold<double>(0, (s, t) => s + t.amount);
+        final remaining =
+            (total - alreadyPaid).clamp(0.0, double.infinity).toDouble();
         final freeLimit = card.creditLimit == null
             ? null
-            : (card.creditLimit! - total).clamp(0.0, double.infinity).toDouble();
+            : (card.creditLimit! - total)
+                .clamp(0.0, double.infinity)
+                .toDouble();
 
         return Scaffold(
           appBar: AppBar(
@@ -252,6 +275,14 @@ class _CardInvoiceScreenState extends State<CardInvoiceScreen> {
                     ),
                     if (cycle.due != null)
                       Text('Vencimento ${DateFormat('dd/MM/yyyy').format(cycle.due!)}'),
+                    if (alreadyPaid > 0)
+                      Text('Já pago ${formatAmount(alreadyPaid, card.currency)}'),
+                    Text(
+                      remaining <= 0
+                          ? 'Situação: paga'
+                          : 'Em aberto ${formatAmount(remaining, card.currency)}',
+                      style: const TextStyle(fontWeight: FontWeight.w800),
+                    ),
                     if (freeLimit != null)
                       Text('Limite disponível ${formatAmount(freeLimit, card.currency)}'),
                   ],
@@ -269,12 +300,16 @@ class _CardInvoiceScreenState extends State<CardInvoiceScreen> {
                     onTap: () => _editSettings(card),
                   ),
                 ),
-              if (total > 0) ...[
+              if (remaining > 0) ...[
                 const SizedBox(height: 8),
                 FilledButton.icon(
-                  onPressed: () => _payInvoice(card, total),
+                  onPressed: () => _payInvoice(card, cycle.end, remaining),
                   icon: const Icon(Icons.payments_outlined),
-                  label: const Text('Registrar pagamento da fatura'),
+                  label: Text(
+                    alreadyPaid > 0
+                        ? 'Pagar restante da fatura'
+                        : 'Registrar pagamento da fatura',
+                  ),
                 ),
               ],
               const SizedBox(height: 24),
