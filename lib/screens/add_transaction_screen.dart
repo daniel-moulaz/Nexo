@@ -27,6 +27,8 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
   final _amtCtrl = TextEditingController();
   final _descCtrl = TextEditingController();
   final _noteCtrl = TextEditingController();
+  final _installmentCurrentCtrl = TextEditingController();
+  final _installmentTotalCtrl = TextEditingController();
 
   bool _submitted = false;
   bool _dupeWarningDismissed = false;
@@ -40,6 +42,10 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
   String _status = 'paid';
   String _subcategory = '';
   DateTime? _dueDate;
+  String _expenseClass = 'normal';
+  bool _excludeFromSpending = false;
+  bool _isInstallment = false;
+  String _source = 'manual';
 
   bool get isEdit => widget.existing != null;
 
@@ -82,6 +88,15 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
       _status = metadata.status;
       _subcategory = metadata.subcategory;
       _dueDate = metadata.dueDate;
+      _expenseClass = metadata.expenseClass;
+      _excludeFromSpending = metadata.excludeFromSpending;
+      _source = metadata.source;
+      if (metadata.installmentCurrent != null &&
+          metadata.installmentTotal != null) {
+        _isInstallment = true;
+        _installmentCurrentCtrl.text = metadata.installmentCurrent.toString();
+        _installmentTotalCtrl.text = metadata.installmentTotal.toString();
+      }
     });
   }
 
@@ -90,6 +105,8 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
     _amtCtrl.dispose();
     _descCtrl.dispose();
     _noteCtrl.dispose();
+    _installmentCurrentCtrl.dispose();
+    _installmentTotalCtrl.dispose();
     super.dispose();
   }
 
@@ -107,7 +124,7 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
       'freelance': 'Freelancer',
       'business': 'Negócios',
       'investment': 'Investimentos',
-      'gift': 'Presente',
+      'gift': 'Presentes',
     };
     return labels[category.id] ?? category.name;
   }
@@ -142,6 +159,9 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
       if (type != 'expense') {
         _status = 'paid';
         _dueDate = null;
+        _expenseClass = 'normal';
+        _excludeFromSpending = false;
+        _isInstallment = false;
       }
     });
   }
@@ -212,6 +232,20 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
     if (amount == null || amount <= 0) return;
     if (_accountId == null || _categoryId == null) return;
 
+    int? installmentCurrent;
+    int? installmentTotal;
+    if (_type == 'expense' && _isInstallment) {
+      installmentCurrent = int.tryParse(_installmentCurrentCtrl.text.trim());
+      installmentTotal = int.tryParse(_installmentTotalCtrl.text.trim());
+      if (installmentCurrent == null ||
+          installmentTotal == null ||
+          installmentCurrent <= 0 ||
+          installmentTotal <= 0 ||
+          installmentCurrent > installmentTotal) {
+        return;
+      }
+    }
+
     final app = context.read<AppProvider>();
     final account = app.accountById(_accountId!);
     final accountCurrency = account?.currency ?? app.settings.currency;
@@ -251,6 +285,11 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
           subcategory: _subcategory,
           status: _status,
           dueDate: _status == 'pending' ? (_dueDate ?? _date) : null,
+          expenseClass: _expenseClass,
+          excludeFromSpending: _excludeFromSpending,
+          installmentCurrent: installmentCurrent,
+          installmentTotal: installmentTotal,
+          source: _source,
         ),
       );
     } else {
@@ -285,6 +324,16 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
     final amountInvalid = _submitted && (parsedInput ?? 0) <= 0;
     final accountInvalid = _submitted && _accountId == null;
     final categoryInvalid = _submitted && _categoryId == null;
+    final installmentCurrent = int.tryParse(_installmentCurrentCtrl.text.trim());
+    final installmentTotal = int.tryParse(_installmentTotalCtrl.text.trim());
+    final installmentInvalid = _submitted &&
+        _type == 'expense' &&
+        _isInstallment &&
+        (installmentCurrent == null ||
+            installmentTotal == null ||
+            installmentCurrent <= 0 ||
+            installmentTotal <= 0 ||
+            installmentCurrent > installmentTotal);
     final subcategories = _subcategoryOptions(_categoryId);
 
     return Scaffold(
@@ -509,6 +558,92 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
                     if (picked != null) setState(() => _dueDate = picked);
                   },
                 ),
+              ],
+              const SizedBox(height: 22),
+              const _SectionTitle(
+                icon: Icons.tune_rounded,
+                title: 'Classificação financeira',
+                subtitle: 'Separe custo normal de gastos fora da rotina',
+              ),
+              const SizedBox(height: 10),
+              Row(
+                children: [
+                  Expanded(
+                    child: ChoiceChip(
+                      label: const Text('Normal'),
+                      selected: _expenseClass == 'normal',
+                      onSelected: (_) => setState(() => _expenseClass = 'normal'),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: ChoiceChip(
+                      label: const Text('Extraordinário'),
+                      selected: _expenseClass == 'extraordinary',
+                      onSelected: (_) =>
+                          setState(() => _expenseClass = 'extraordinary'),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              SwitchListTile.adaptive(
+                contentPadding: EdgeInsets.zero,
+                value: _excludeFromSpending,
+                onChanged: (value) =>
+                    setState(() => _excludeFromSpending = value),
+                title: const Text('Não contar como gasto'),
+                subtitle: const Text(
+                  'Use para transferência, reserva, pagamento de fatura ou outro movimento neutro.',
+                ),
+              ),
+              const SizedBox(height: 8),
+              SwitchListTile.adaptive(
+                contentPadding: EdgeInsets.zero,
+                value: _isInstallment,
+                onChanged: (value) => setState(() => _isInstallment = value),
+                title: const Text('Compra parcelada'),
+                subtitle: const Text('Guarde a posição da parcela, ex.: 3 de 12.'),
+              ),
+              if (_isInstallment) ...[
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    Expanded(
+                      child: TextField(
+                        controller: _installmentCurrentCtrl,
+                        keyboardType: TextInputType.number,
+                        decoration: const InputDecoration(
+                          labelText: 'Parcela atual',
+                          hintText: '3',
+                          border: OutlineInputBorder(),
+                        ),
+                      ),
+                    ),
+                    const Padding(
+                      padding: EdgeInsets.symmetric(horizontal: 10),
+                      child: Text('de'),
+                    ),
+                    Expanded(
+                      child: TextField(
+                        controller: _installmentTotalCtrl,
+                        keyboardType: TextInputType.number,
+                        decoration: const InputDecoration(
+                          labelText: 'Total',
+                          hintText: '12',
+                          border: OutlineInputBorder(),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                if (installmentInvalid) ...[
+                  const SizedBox(height: 6),
+                  Text(
+                    'Informe uma parcela válida, por exemplo 3 de 12.',
+                    style: TextStyle(color: cs.error, fontWeight: FontWeight.w700),
+                  ),
+                ],
               ],
             ],
             const SizedBox(height: 22),
