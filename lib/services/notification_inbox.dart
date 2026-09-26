@@ -15,8 +15,12 @@ class NotificationInbox {
   };
   static Future<void> ingest(List<dynamic> rows, {DateTime? now}) async {
     final db = await DBHelper.database;
-    final cutoff = (now ?? DateTime.now())
+    final reference = now ?? DateTime.now();
+    final cutoff = reference
         .subtract(const Duration(days: 7))
+        .millisecondsSinceEpoch;
+    final tombstoneCutoff = reference
+        .subtract(const Duration(days: 90))
         .millisecondsSinceEpoch;
     await db.transaction((txn) async {
       for (final raw in rows) {
@@ -46,11 +50,17 @@ class NotificationInbox {
             },
             conflictAlgorithm: ConflictAlgorithm.ignore);
       }
-      // Retain only the fingerprint tombstone after seven days, so replay cannot
-      // resurrect an ignored/confirmed item, without retaining merchant data.
+      // After seven days retain only the fingerprint tombstone, so replay cannot
+      // resurrect an ignored/confirmed item without retaining merchant data.
       await txn.rawUpdate(
           "UPDATE notification_suggestions SET status = CASE WHEN status = 'pending' THEN 'expired' ELSE status END, description = '', amount_cents = 0 WHERE occurred_at < ?",
           [cutoff]);
+      // Native intake already rejects notifications older than seven days. A
+      // 90-day tombstone window is therefore enough to bound DB growth while
+      // retaining a generous replay-protection horizon.
+      await txn.delete('notification_suggestions',
+          where: "status != 'pending' AND occurred_at < ?",
+          whereArgs: [tombstoneCutoff]);
     });
   }
 
