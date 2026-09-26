@@ -95,7 +95,21 @@ class CashForecast {
         warnings.add('Revise a frequência de ${original.name}.');
         continue;
       }
-      final r = RecurringPayment.fromMap(original.toMap());
+      final r = RecurringPayment.fromMap(original.toMap(),
+          skippedOccurrences: original.skippedOccurrences);
+      if (r.hasSkippedInstallments) {
+        for (final missed in r.skippedOccurrences) {
+          if (day(missed.date).isAfter(end) || ids.contains(missed.id)) continue;
+          final amount = r.paymentType == 'income' ? missed.amount : -missed.amount;
+          if (a.type == 'credit') {
+            cardPurchase(a, missed.date, -amount);
+          } else {
+            events.add(ForecastEvent(date: day(missed.date), title: r.name,
+                accountId: a.id, kind: 'recurring', id: r.id,
+                currency: a.currency, amount: amount));
+          }
+        }
+      }
       var count = 0;
       while (!day(r.nextDate).isAfter(end) &&
           (r.endDate == null || !day(r.nextDate).isAfter(day(r.endDate!)))) {

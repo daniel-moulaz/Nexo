@@ -1015,20 +1015,32 @@ class AppProvider extends ChangeNotifier {
       final rows = await txn.query('recurring_payments',
           where: 'id = ?', whereArgs: [expected.id]);
       if (rows.isEmpty) return;
-      final r = RecurringPayment.fromMap(rows.first);
+      final skipped = await txn.query('recurring_history',
+          where: 'recurring_id = ? AND action = ?',
+          whereArgs: [expected.id, 'skipped'], orderBy: 'date ASC');
+      final r = RecurringPayment.fromMap(rows.first,
+          skippedOccurrences: skipped.map(RecurringHistoryEntry.fromMap).toList());
+      if (skip && !r.canSkip) {
+        throw StateError('Uma parcela continua devida e não pode ser pulada.');
+      }
       // A stale screen or double tap must never complete another occurrence.
       if (r.nextDate != expected.nextDate ||
-          (r.endDate != null && r.nextDate.isAfter(r.endDate!))) return;
-      final occurrenceId = 'recurring:${r.id}:${r.nextDate.toIso8601String()}';
+          r.nextActionDate != expected.nextActionDate || !r.canComplete) return;
+      // Old skipped installments remain debts. Explicit payment repairs only
+      // that occurrence, without advancing or consuming the schedule twice.
+      final recovery = r.hasSkippedInstallments ? r.skippedOccurrences.first : null;
+      final date = recovery?.date ?? r.nextDate;
+      final amount = recovery?.amount ?? r.amount;
+      final occurrenceId = recovery?.id ?? 'recurring:${r.id}:${date.toIso8601String()}';
       if (!skip) {
         final tx = AppTransaction(
             id: occurrenceId,
             type: r.paymentType,
-            amount: r.amount,
+            amount: amount,
             description: r.name,
             accountId: r.accountId,
             categoryId: r.categoryId,
-            date: r.nextDate,
+            date: date,
             note: r.notes);
         await txn.insert('transactions', tx.toMap());
         await txn.insert(
@@ -1037,7 +1049,7 @@ class AppProvider extends ChangeNotifier {
               transactionId: tx.id,
               source: 'recurring',
               installmentCurrent:
-                  r.recurringType == 'installment' ? r.paidPayments + 1 : null,
+                  r.recurringType == 'installment' ? r.installmentNumberAt(date) : null,
               installmentTotal:
                   r.recurringType == 'installment' ? r.totalPayments : null,
             ).toMap());
@@ -1045,6 +1057,10 @@ class AppProvider extends ChangeNotifier {
             'UPDATE accounts SET balance = balance + ? WHERE id = ?',
             [_txDelta(tx), tx.accountId]);
       }
+      if (recovery != null) {
+        await txn.update('recurring_history', {'action': 'paid'},
+            where: 'id = ?', whereArgs: [recovery.id]);
+      } else {
       await txn.insert(
           'recurring_history',
           RecurringHistoryEntry(
@@ -1060,10 +1076,11 @@ class AppProvider extends ChangeNotifier {
           'recurring_payments',
           {
             'next_date': next.toIso8601String(),
-            'paid_payments': r.paidPayments + 1
+            'paid_payments': r.completedOccurrences + 1
           },
           where: 'id = ?',
           whereArgs: [r.id]);
+      }
     });
     _historyCache.remove(expected.id);
     recurring = await DBHelper.getRecurring();

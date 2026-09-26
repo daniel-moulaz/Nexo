@@ -65,11 +65,11 @@ class _RecurringScreenState extends State<RecurringScreen>
     final expenses = app.recurring
         .where((r) => r.paymentType == 'expense')
         .toList()
-      ..sort((a, b) => a.nextDate.compareTo(b.nextDate));
+      ..sort((a, b) => a.nextActionDate.compareTo(b.nextActionDate));
     final incomes = app.recurring
         .where((r) => r.paymentType == 'income')
         .toList()
-      ..sort((a, b) => a.nextDate.compareTo(b.nextDate));
+      ..sort((a, b) => a.nextActionDate.compareTo(b.nextActionDate));
     final filteredExpenses =
         expenses.where((r) => r.recurringType == _expenseFilter).toList();
     final shown = _tabs.index == 0 ? filteredExpenses : incomes;
@@ -314,15 +314,15 @@ class _RecurringTile extends StatelessWidget {
     final today = DateTime.now();
     final now = DateTime(today.year, today.month, today.day);
     final due = DateTime(
-      recurring.nextDate.year,
-      recurring.nextDate.month,
-      recurring.nextDate.day,
+      recurring.nextActionDate.year,
+      recurring.nextActionDate.month,
+      recurring.nextActionDate.day,
     );
     final days = due.difference(now).inDays;
     final overdue = days < 0;
     final total = recurring.totalPayments;
     final progress = total != null && total > 0
-        ? (recurring.paidPayments / total).clamp(0.0, 1.0)
+        ? recurring.progress
         : null;
 
     final dueLabel = overdue
@@ -395,7 +395,7 @@ class _RecurringTile extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.end,
                     children: [
                       Text(
-                        formatAmount(recurring.amount, currency),
+                        formatAmount(recurring.nextActionAmount, currency),
                         style: const TextStyle(fontWeight: FontWeight.w900),
                       ),
                       Text(
@@ -419,7 +419,7 @@ class _RecurringTile extends StatelessWidget {
                 Align(
                   alignment: Alignment.centerRight,
                   child: Text(
-                    '${recurring.paidPayments}/$total • ${(progress * 100).toStringAsFixed(0)}%',
+                    '${recurring.progressPayments}/$total ${recurring.canSkip ? 'concluídas' : 'pagas'} • ${(progress * 100).toStringAsFixed(0)}%',
                     style: Theme.of(context).textTheme.labelSmall,
                   ),
                 ),
@@ -428,9 +428,8 @@ class _RecurringTile extends StatelessWidget {
               Row(
                 mainAxisAlignment: MainAxisAlignment.end,
                 children: [
-                  TextButton.icon(
-                    onPressed: recurring.endDate != null &&
-                            recurring.nextDate.isAfter(recurring.endDate!)
+                  if (recurring.canSkip) TextButton.icon(
+                    onPressed: !recurring.canComplete
                         ? null
                         : () async {
                             await app.skipNextRecurring(recurring);
@@ -440,8 +439,7 @@ class _RecurringTile extends StatelessWidget {
                   ),
                   const SizedBox(width: 4),
                   FilledButton.tonalIcon(
-                    onPressed: recurring.endDate != null &&
-                            recurring.nextDate.isAfter(recurring.endDate!)
+                    onPressed: !recurring.canComplete
                         ? null
                         : () async {
                             await app.markRecurringPaid(recurring);
@@ -660,11 +658,12 @@ class _RecurringEditorState extends State<_RecurringEditor> {
       freqVal: frequency,
       freqUnit: _frequencyUnit,
       startDate: _firstDate,
-      nextDate: existing == null || existing.paidPayments == 0
+      nextDate: existing == null || existing.completedOccurrences == 0
           ? _firstDate
           : existing.nextDate,
       endDate: endDate,
       paidPayments: existing?.paidPayments ?? 0,
+      skippedOccurrences: existing?.skippedOccurrences ?? const [],
       reminderEnabled: _reminder,
       reminderTime: reminderText,
       earlyReminderEnabled: _reminder && _earlyReminder,

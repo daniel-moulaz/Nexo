@@ -317,6 +317,22 @@ class RecurringPayment {
   DateTime nextDate;
   DateTime? endDate; // last payment (null = ongoing)
   int paidPayments;
+  // Derived from existing history; never persisted as a new column.
+  final List<RecurringHistoryEntry> skippedOccurrences;
+  int get skippedPayments => skippedOccurrences.length;
+  int get completedOccurrences => paidPayments + skippedPayments;
+  bool get canSkip => recurringType != 'installment';
+  bool get hasSkippedInstallments => !canSkip && skippedOccurrences.isNotEmpty;
+  DateTime get nextActionDate =>
+      hasSkippedInstallments ? skippedOccurrences.first.date : nextDate;
+  double get nextActionAmount =>
+      hasSkippedInstallments ? skippedOccurrences.first.amount : amount;
+  bool get canComplete => hasSkippedInstallments ||
+      endDate == null || !nextDate.isAfter(endDate!);
+  int get progressPayments => canSkip ? completedOccurrences : paidPayments;
+  double get progress => totalPayments == null || totalPayments == 0
+      ? 0 : (progressPayments / totalPayments!).clamp(0.0, 1.0);
+  int installmentNumberAt(DateTime date) => _countPayments(startDate, date);
   bool reminderEnabled;
 
   /// Time of day for the reminder in 'HH:mm' format, e.g. '09:00'.
@@ -341,6 +357,7 @@ class RecurringPayment {
     required this.nextDate,
     this.endDate,
     this.paidPayments = 0,
+    this.skippedOccurrences = const [],
     this.reminderEnabled = false,
     this.reminderTime = '09:00',
     this.earlyReminderEnabled = false,
@@ -356,7 +373,7 @@ class RecurringPayment {
 
   int? get remainingPayments {
     if (endDate == null) return null;
-    final rem = (totalPayments ?? 0) - paidPayments;
+    final rem = (totalPayments ?? 0) - progressPayments;
     return rem < 0 ? 0 : rem;
   }
 
@@ -428,7 +445,8 @@ class RecurringPayment {
         'start_date': startDate.toIso8601String(),
         'next_date': nextDate.toIso8601String(),
         'end_date': endDate?.toIso8601String(),
-        'paid_payments': paidPayments,
+        // Legacy storage counts consumed occurrences, including skips.
+        'paid_payments': completedOccurrences,
         'reminder_enabled': reminderEnabled ? 1 : 0,
         'reminder_time': reminderTime,
         'early_reminder_enabled': earlyReminderEnabled ? 1 : 0,
@@ -436,7 +454,8 @@ class RecurringPayment {
         'recurring_type': recurringType,
       };
 
-  static RecurringPayment fromMap(Map<String, dynamic> m) => RecurringPayment(
+  static RecurringPayment fromMap(Map<String, dynamic> m,
+          {List<RecurringHistoryEntry> skippedOccurrences = const []}) => RecurringPayment(
         id: (m['id'] as String?) ?? '',
         name: (m['name'] as String?) ?? '',
         accountId: (m['account_id'] as String?) ?? '',
@@ -454,7 +473,9 @@ class RecurringPayment {
         endDate: m['end_date'] != null
             ? DateTime.parse(m['end_date'] as String)
             : null,
-        paidPayments: m['paid_payments'] as int? ?? 0,
+        paidPayments: ((m['paid_payments'] as int? ?? 0) - skippedOccurrences.length).clamp(0, 2147483647),
+        skippedOccurrences: List.unmodifiable(
+            [...skippedOccurrences]..sort((a, b) => a.date.compareTo(b.date))),
         reminderEnabled: (m['reminder_enabled'] as int? ?? 0) == 1,
         reminderTime: (m['reminder_time'] as String?) ?? '09:00',
         earlyReminderEnabled: (m['early_reminder_enabled'] as int? ?? 0) == 1,

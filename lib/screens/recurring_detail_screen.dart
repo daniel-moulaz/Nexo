@@ -69,11 +69,11 @@ class _RecurringDetailScreenState extends State<RecurringDetailScreen> {
     final currency = account?.currency ?? app.settings.currency;
     final total = r.totalPayments;
     final progress = total != null && total > 0
-        ? (r.paidPayments / total).clamp(0.0, 1.0)
+        ? r.progress
         : null;
     final today = DateTime.now();
     final startToday = DateTime(today.year, today.month, today.day);
-    final next = DateTime(r.nextDate.year, r.nextDate.month, r.nextDate.day);
+    final next = DateTime(r.nextActionDate.year, r.nextActionDate.month, r.nextActionDate.day);
     final days = next.difference(startToday).inDays;
     final overdue = days < 0;
 
@@ -142,13 +142,16 @@ class _RecurringDetailScreenState extends State<RecurringDetailScreen> {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  formatAmount(r.amount, currency),
+                  formatAmount(r.nextActionAmount, currency),
                   style: Theme.of(context).textTheme.headlineMedium?.copyWith(
                         fontWeight: FontWeight.w900,
                       ),
                 ),
                 const SizedBox(height: 4),
-                Text('${_frequency(r)} • próxima em ${ptDate(r.nextDate)}'),
+                Text('${_frequency(r)} • próxima em ${ptDate(r.nextActionDate)}'),
+                Text('${r.paidPayments} pagas • ${r.skippedPayments} puladas'),
+                if (r.hasSkippedInstallments)
+                  const Text('Parcelas puladas anteriormente continuam devidas. Pagar regulariza a mais antiga sem avançar o cronograma.'),
                 if (progress != null) ...[
                   const SizedBox(height: 14),
                   ClipRRect(
@@ -157,7 +160,7 @@ class _RecurringDetailScreenState extends State<RecurringDetailScreen> {
                   ),
                   const SizedBox(height: 5),
                   Text(
-                    '${r.paidPayments} de $total • ${(progress * 100).toStringAsFixed(0)}%',
+                    '${r.progressPayments} de $total ${r.canSkip ? 'ocorrências concluídas' : 'parcelas pagas'} • ${(progress * 100).toStringAsFixed(0)}%',
                     style: Theme.of(context).textTheme.labelMedium,
                   ),
                 ],
@@ -207,9 +210,9 @@ class _RecurringDetailScreenState extends State<RecurringDetailScreen> {
           const SizedBox(height: 14),
           Row(
             children: [
-              Expanded(
+              if (r.canSkip) Expanded(
                 child: OutlinedButton.icon(
-                  onPressed: r.endDate != null && r.nextDate.isAfter(r.endDate!) ? null : () async {
+                  onPressed: !r.canComplete ? null : () async {
                     await app.skipNextRecurring(r);
                     await _loadHistory();
                   },
@@ -217,10 +220,10 @@ class _RecurringDetailScreenState extends State<RecurringDetailScreen> {
                   label: const Text('Pular próxima'),
                 ),
               ),
-              const SizedBox(width: 10),
+              if (r.canSkip) const SizedBox(width: 10),
               Expanded(
                 child: FilledButton.icon(
-                  onPressed: r.endDate != null && r.nextDate.isAfter(r.endDate!) ? null : () async {
+                  onPressed: !r.canComplete ? null : () async {
                     await app.markRecurringPaid(r);
                     await _loadHistory();
                   },
@@ -249,7 +252,7 @@ class _RecurringDetailScreenState extends State<RecurringDetailScreen> {
               ),
             )
           else
-            ..._history!.map((entry) => _HistoryTile(entry: entry)),
+            ..._history!.map((entry) => _HistoryTile(entry: entry, installment: !r.canSkip)),
         ],
       ),
     );
@@ -313,8 +316,9 @@ class _InfoTile extends StatelessWidget {
 
 class _HistoryTile extends StatelessWidget {
   final RecurringHistoryEntry entry;
+  final bool installment;
 
-  const _HistoryTile({required this.entry});
+  const _HistoryTile({required this.entry, required this.installment});
 
   @override
   Widget build(BuildContext context) {
@@ -326,7 +330,7 @@ class _HistoryTile extends StatelessWidget {
           child: Icon(paid ? Icons.check_rounded : Icons.skip_next_rounded),
         ),
         title: Text(
-          paid ? 'Registrada como paga' : 'Ocorrência pulada',
+          paid ? 'Registrada como paga' : installment ? 'Parcela não paga' : 'Ocorrência pulada',
           style: const TextStyle(fontWeight: FontWeight.w800),
         ),
         subtitle: Text(ptDate(entry.date)),

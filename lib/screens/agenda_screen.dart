@@ -64,9 +64,9 @@ class _AgendaScreenState extends State<AgendaScreen> {
     try {
       if (event.kind == 'recurring') {
         final r = app.recurring.firstWhere((r) => r.id == event.id);
-        if (r.nextDate.year != event.date.year ||
-            r.nextDate.month != event.date.month ||
-            r.nextDate.day != event.date.day) return;
+        if (r.nextActionDate.year != event.date.year ||
+            r.nextActionDate.month != event.date.month ||
+            r.nextActionDate.day != event.date.day) return;
         if (action == 'skip') {
           await app.skipNextRecurring(r);
         } else {
@@ -223,11 +223,11 @@ class _AgendaScreenState extends State<AgendaScreen> {
                                           (event.kind == 'recurring' &&
                                               app.recurring.any((r) =>
                                                   r.id == event.id &&
-                                                  r.nextDate.year ==
+                                                  r.nextActionDate.year ==
                                                       event.date.year &&
-                                                  r.nextDate.month ==
+                                                  r.nextActionDate.month ==
                                                       event.date.month &&
-                                                  r.nextDate.day ==
+                                                  r.nextActionDate.day ==
                                                       event.date.day))) ...[
                                         TextButton(
                                             onPressed: _busy
@@ -236,7 +236,7 @@ class _AgendaScreenState extends State<AgendaScreen> {
                                             child: Text(event.amount >= 0
                                                 ? 'Receber'
                                                 : 'Pagar')),
-                                        if (event.kind == 'recurring')
+                                        if (event.kind == 'recurring' && app.recurring.any((r) => r.id == event.id && r.canSkip))
                                           TextButton(
                                               onPressed: _busy
                                                   ? null

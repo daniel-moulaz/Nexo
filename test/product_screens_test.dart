@@ -17,6 +17,8 @@ import 'package:expensy/screens/import_rules_screen.dart';
 import 'package:expensy/screens/transaction_search_screen.dart';
 import 'package:expensy/screens/finance_export_screen.dart';
 import 'package:expensy/screens/financial_planning_screen.dart';
+import 'package:expensy/screens/recurring_screen.dart';
+import 'package:expensy/screens/recurring_detail_screen.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -35,6 +37,44 @@ void main() {
       await loader.load();
     }
   });
+  for (final installment in [false, true]) {
+    for (final screen in ['list', 'detail', 'agenda']) {
+      testWidgets('$screen only offers skip for non-installment recurring', (tester) async {
+        tester.view.physicalSize = const Size(360, 800);
+        tester.view.devicePixelRatio = 1;
+        addTearDown(tester.view.resetPhysicalSize);
+        addTearDown(tester.view.resetDevicePixelRatio);
+        final today = DateTime.now();
+        final date = DateTime(today.year, today.month, today.day);
+        final r = RecurringPayment(id: 'skip-ui', name: 'Internet',
+            accountId: 'bank', categoryId: 'bills', amount: 100,
+            freqVal: 1, freqUnit: 'months', startDate: date, nextDate: date,
+            endDate: DateTime(date.year, date.month + 2, date.day),
+            recurringType: installment ? 'installment' : 'subscription');
+        final app = AppProvider();
+        app.settings.currency = 'BRL';
+        app.recurring = [r];
+        app.accounts = [Account(id: 'bank', name: 'Banco', type: 'bank',
+            balance: 1000, currency: 'BRL', colorValue: 0)];
+        final Widget home = switch (screen) {
+          'list' => const RecurringScreen(),
+          'detail' => RecurringDetailScreen(recurring: r, fmt: (v) => '$v'),
+          _ => const AgendaScreen(),
+        };
+        await tester.pumpWidget(ChangeNotifierProvider.value(value: app,
+            child: MaterialApp(home: home)));
+        await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 100)));
+        await tester.pumpAndSettle();
+        if (screen == 'list' && installment) {
+          await tester.tap(find.text('Parceladas'));
+          await tester.pumpAndSettle();
+        }
+        expect(find.textContaining('Pular'), installment ? findsNothing : findsOneWidget);
+        expect(tester.takeException(), isNull);
+        await tester.pumpWidget(const SizedBox());
+      });
+    }
+  }
   for (final scenario in ['empty', 'many', 'dark']) {
     for (final entry in <String, Widget>{
       'forecast': const AgendaScreen(),

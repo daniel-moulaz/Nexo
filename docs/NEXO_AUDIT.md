@@ -107,3 +107,15 @@ SHA-256 dos artefatos locais em `build/app/outputs/flutter-apk/`:
 - `app-release.apk`: `3982562097caef8debfe08a4dfa8efd613ed5a5e8b056cf75a1f0826202a63f5`.
 
 `android/local.properties`, registrador gerado, logs, build e capturas ficaram fora dos commits. A main não foi alterada.
+
+### Revisão de “pular ocorrência” — 1.3.0
+
+- Assinaturas/recorrentes comuns: pular consome uma ocorrência e avança a próxima data, sem lançamento nem alteração de saldo. `paidPayments` conta pagamentos; `skippedPayments` conta pulos; o progresso e `remainingPayments` consideram ambas as ocorrências concluídas. O detalhe mostra os dois contadores separadamente.
+- Parcelamentos: “Pular” foi removido da lista, detalhe e agenda. O provider também rejeita a operação, inclusive quando chamado diretamente, antes de qualquer gravação. Progresso e parcelas restantes consideram somente pagamentos.
+- Compatibilidade sem migração: schema permanece **22**. A coluna legada `paid_payments` continua armazenando ocorrências consumidas. O modelo desconta as entradas `skipped` de `recurring_history` ao ler; edição e backup/restauração preservam essa codificação. Não houve recálculo automático de saldos nem reescrita de dados antigos.
+- Parcelas puladas anteriormente permanecem devidas e entram na previsão/agenda. A ação de pagamento regulariza primeiro a parcela pulada mais antiga, usando sua data, valor e ID históricos; muda sua ação no histórico para `paid`, gera somente um lançamento e não avança novamente `nextDate` nem o contador persistido. `installmentCurrent` usa a posição no cronograma, não o número de pagamentos realizados. Toques repetidos com estado antigo não quitam a próxima parcela.
+- O histórico antigo não registra a conta de cada ocorrência: a regularização usa a conta atualmente cadastrada no recorrente, visível no detalhe. Não é possível inferir pulos cujo histórico tenha sido removido externamente. A versão anterior permanece documentada acima; os hashes daquele APK não identificam este novo build.
+
+Testes adicionados cobrem pagamento e pulo de recorrente comum, pagamento e rejeição de pulo em parcelamento, progresso/restante, fim do cronograma, concorrência, recuperação de pulos legados, numeração das parcelas, backup/restauração, previsão e a presença/ausência da ação nas três telas.
+
+Validação desta correção: `flutter analyze` sem problemas; `flutter test --concurrency=1 --dart-define=CAPTURE_REVIEW=true` com **66 testes aprovados**; `flutter build apk --release` concluído (69.888.480 bytes). Permanecem somente os avisos preexistentes de atualização futura de Gradle/AGP/Kotlin. SHA-256 do novo `app-release.apk`: `c79ee6f0b522bcfd7dbf06cf66fec0b2ff35596953280e87ed167c9b6dd70b4f`.

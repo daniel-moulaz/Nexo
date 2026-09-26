@@ -811,7 +811,15 @@ class DBHelper {
     final db = await database;
     final rows =
         await db.query('recurring_payments', orderBy: 'start_date ASC');
-    return rows.map(RecurringPayment.fromMap).toList();
+    final skipped = await db.query('recurring_history',
+        where: 'action = ?', whereArgs: ['skipped'], orderBy: 'date ASC');
+    final byRecurring = <String, List<RecurringHistoryEntry>>{};
+    for (final row in skipped) {
+      final entry = RecurringHistoryEntry.fromMap(row);
+      (byRecurring[entry.recurringId] ??= []).add(entry);
+    }
+    return rows.map((row) => RecurringPayment.fromMap(row,
+        skippedOccurrences: byRecurring[row['id']] ?? const [])).toList();
   }
 
   static Future<void> insertRecurring(RecurringPayment r) async =>

@@ -249,7 +249,58 @@ void main() {
     await app.deleteTransaction(t.id);
     expect(app.accountById('bank')!.balance, 1000);
   });
-  test('Recurring double tap, skip, history and final installment', () async {
+  RecurringPayment recurringFixture({String type = 'subscription'}) => RecurringPayment(
+      id: 'r', name: 'Internet', accountId: 'bank', categoryId: 'bills',
+      amount: 100, freqVal: 1, freqUnit: 'months',
+      startDate: DateTime(2026, 1, 31), nextDate: DateTime(2026, 1, 31),
+      endDate: DateTime(2026, 3, 31), recurringType: type);
+
+  void expectProgress(RecurringPayment r, {required int paid,
+      required int skipped, required int remaining, required double progress}) {
+    expect(r.totalPayments, 3);
+    expect(r.paidPayments, paid);
+    expect(r.skippedPayments, skipped);
+    expect(r.completedOccurrences, paid + skipped);
+    expect(r.remainingPayments, remaining);
+    expect(r.remainingAmount, remaining * 100);
+    expect(r.progress, closeTo(progress, .000001));
+  }
+
+  test('Normal recurring payment counts as paid and consumes one occurrence', () async {
+    final r = recurringFixture();
+    await DBHelper.insertRecurring(r);
+    await Future.wait([app.markRecurringPaid(r), app.markRecurringPaid(r)]);
+    expectProgress(app.recurring.single, paid: 1, skipped: 0, remaining: 2, progress: 1/3);
+    expect(app.accountById('bank')!.balance, 900);
+    expect(app.transactions, hasLength(1));
+    expect((await DBHelper.getRecurringHistory('r')).single.action, 'paid');
+    expect(app.recurring.single.nextDate, DateTime(2026, 2, 28));
+  });
+
+  test('Normal skip consumes an occurrence without payment, including after edit and restore', () async {
+    final r = recurringFixture();
+    await DBHelper.insertRecurring(r);
+    await Future.wait([app.skipNextRecurring(r), app.skipNextRecurring(r)]);
+    expectProgress(app.recurring.single, paid: 0, skipped: 1, remaining: 2, progress: 1/3);
+    expect(app.transactions, isEmpty);
+    expect(app.accountById('bank')!.balance, 1000);
+    expect((await DBHelper.getRecurringHistory('r')).single.action, 'skipped');
+    await DBHelper.updateRecurring(app.recurring.single);
+    await DBHelper.importAll(await DBHelper.exportAll());
+    final restored = (await DBHelper.getRecurring()).single;
+    expectProgress(restored, paid: 0, skipped: 1, remaining: 2, progress: 1/3);
+    expect(restored.nextDate, DateTime(2026, 2, 28));
+    await app.markRecurringPaid(restored);
+    expectProgress(app.recurring.single, paid: 1, skipped: 1, remaining: 1, progress: 2/3);
+    await app.skipNextRecurring(app.recurring.single);
+    expectProgress(app.recurring.single, paid: 1, skipped: 2, remaining: 0, progress: 1);
+    expect(app.recurring.single.canComplete, false);
+    await app.markRecurringPaid(app.recurring.single);
+    expect(app.transactions, hasLength(1));
+    expect(app.accountById('bank')!.balance, 900);
+  });
+
+  test('Installment payment advances progress; skip is rejected without any writes', () async {
     final r = RecurringPayment(
         id: 'r',
         name: 'Internet',
@@ -268,13 +319,57 @@ void main() {
     expect(app.accountById('bank')!.balance, 900);
     expect(app.recurring.single.recurringType, 'installment');
     expect(app.recurring.single.nextDate, DateTime(2026, 2, 28));
-    await app.skipNextRecurring(app.recurring.single);
+    expectProgress(app.recurring.single, paid: 1, skipped: 0, remaining: 2, progress: 1/3);
+    final before = await DBHelper.exportAll();
+    await expectLater(app.skipNextRecurring(app.recurring.single), throwsStateError);
+    expect(await DBHelper.exportAll(), before);
+    expectProgress(app.recurring.single, paid: 1, skipped: 0, remaining: 2, progress: 1/3);
     expect(app.transactions, hasLength(1));
-    expect(app.recurring.single.nextDate, DateTime(2026, 3, 31));
+    expect(app.recurring.single.nextDate, DateTime(2026, 2, 28));
+    await app.markRecurringPaid(app.recurring.single);
+    expectProgress(app.recurring.single, paid: 2, skipped: 0, remaining: 1, progress: 2/3);
     await app.markRecurringPaid(app.recurring.single);
     await app.markRecurringPaid(app.recurring.single);
-    expect(app.transactions, hasLength(2));
+    expectProgress(app.recurring.single, paid: 3, skipped: 0, remaining: 0, progress: 1);
+    expect(app.transactions, hasLength(3));
+    expect(app.accountById('bank')!.balance, 700);
     expect(await DBHelper.getRecurringHistoryCount(), 3);
+  });
+
+  test('Legacy skipped installment stays owed and explicit recovery preserves schedule and ordinal', () async {
+    final r = recurringFixture(type: 'installment');
+    final db = await DBHelper.database;
+    // Exact old encoding: all three occurrences consumed, none actually paid.
+    await db.insert('recurring_payments', {...r.toMap(), 'paid_payments': 3,
+      'next_date': DateTime(2026, 4, 30).toIso8601String()});
+    for (final date in [DateTime(2026, 1, 31), DateTime(2026, 2, 28), DateTime(2026, 3, 31)]) {
+      await DBHelper.insertRecurringHistory(RecurringHistoryEntry(
+          id: 'recurring:r:${date.toIso8601String()}', recurringId: 'r',
+          action: 'skipped', date: date, amount: 100, currency: 'BRL'));
+    }
+    await DBHelper.importAll(await DBHelper.exportAll());
+    final legacy = (await DBHelper.getRecurring()).single;
+    expectProgress(legacy, paid: 0, skipped: 3, remaining: 3, progress: 0);
+    expect(legacy.canComplete, true);
+    expect(legacy.canSkip, false);
+    await expectLater(app.skipNextRecurring(legacy), throwsStateError);
+    for (var ordinal = 1; ordinal <= 3; ordinal++) {
+      final current = (await DBHelper.getRecurring()).single;
+      await Future.wait([app.markRecurringPaid(current), app.markRecurringPaid(current)]);
+      final result = app.recurring.single;
+      expectProgress(result, paid: ordinal, skipped: 3-ordinal, remaining: 3-ordinal, progress: ordinal/3);
+      expect(result.nextDate, DateTime(2026, 4, 30));
+      expect(app.transactions, hasLength(ordinal));
+      expect(app.accountById('bank')!.balance, 1000 - ordinal * 100);
+      final id = 'recurring:r:${current.nextActionDate.toIso8601String()}';
+      final metadata = await db.query('transaction_metadata', where: 'transaction_id = ?', whereArgs: [id]);
+      expect(metadata.single['installment_current'], ordinal);
+      expect(metadata.single['installment_total'], 3);
+      expect((await db.query('recurring_payments')).single['paid_payments'], 3);
+    }
+    expect(app.recurring.single.canComplete, false);
+    expect(await DBHelper.getRecurringHistoryCount(), 3);
+    expect((await DBHelper.getRecurringHistory('r')).every((e) => e.action == 'paid'), true);
   });
   test('Monthly budget excludes future periods and neutral transfers',
       () async {

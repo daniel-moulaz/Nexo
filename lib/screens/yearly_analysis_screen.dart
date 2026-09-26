@@ -63,6 +63,13 @@ Map<int, Map<int, YearlyMonthData>> buildYearlyAnalysis(AppProvider app) {
         app.accountById(r.accountId)?.currency ?? app.settings.currency;
     final convertedAmount = app.convertToMain(r.amount, currency);
     final cap = r.endDate ?? openEndedHorizon;
+    if (r.hasSkippedInstallments) {
+      for (final missed in r.skippedOccurrences) {
+        final item = YearlyLineItem(r.name, app.convertToMain(missed.amount, currency));
+        final b = bucket(missed.date);
+        (r.paymentType == 'income' ? b.recurringIncome : b.recurringExpense).add(item);
+      }
+    }
     var cursor = r.nextDate;
     var guard = 0;
     while (!cursor.isAfter(cap) && guard < 2000) {
@@ -87,6 +94,7 @@ Map<int, Map<int, YearlyMonthData>> buildYearlyAnalysis(AppProvider app) {
         nextDate: cursor,
         endDate: r.endDate,
         paidPayments: r.paidPayments,
+        skippedOccurrences: r.skippedOccurrences,
         reminderEnabled: r.reminderEnabled,
         reminderTime: r.reminderTime,
         earlyReminderEnabled: r.earlyReminderEnabled,
