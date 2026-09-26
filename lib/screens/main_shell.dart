@@ -4,7 +4,7 @@ import 'package:provider/provider.dart';
 import '../providers/app_provider.dart';
 import '../l10n/app_localizations.dart';
 import 'finance_home_screen.dart';
-import 'expenses_screen.dart';
+import 'expenses_v2_screen.dart';
 import 'recurring_screen.dart';
 import 'accounts_screen.dart';
 import 'budget_screen.dart';
