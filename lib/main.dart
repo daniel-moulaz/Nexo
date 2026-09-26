@@ -117,7 +117,7 @@ class _ExpensyAppState extends State<ExpensyApp> {
         return MediaQuery(
           data: mediaQueryData,
           child: MaterialApp(
-            title: 'Minhas Finanças',
+            title: 'Meu Fluxo',
             navigatorKey: rootNavigatorKey,
             debugShowCheckedModeBanner: false,
             localizationsDelegates: AppLocalizations.localizationsDelegates,
