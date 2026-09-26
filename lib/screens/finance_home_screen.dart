@@ -7,6 +7,7 @@ import '../providers/app_provider.dart';
 import '../services/finance_rules.dart';
 import '../services/transaction_metadata_service.dart';
 import '../theme/app_theme.dart';
+import 'card_invoice_screen.dart';
 import 'finance_export_screen.dart';
 import 'statement_import_screen.dart';
 
@@ -341,7 +342,7 @@ class _Dashboard extends StatelessWidget {
             const SizedBox(height: 22),
             const _SectionHeader(
               title: 'Cartões',
-              trailing: 'Faturas estimadas',
+              trailing: 'Toque para abrir a fatura',
             ),
             const SizedBox(height: 8),
             ...cards.map((card) => _CardInvoiceTile(
@@ -454,7 +455,11 @@ class _CardInvoiceTile extends StatelessWidget {
           formatAmount(total, card.currency),
           style: const TextStyle(fontWeight: FontWeight.w900),
         ),
-        onTap: () => app.tabIndexNotifier.value = 3,
+        onTap: () => Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (_) => CardInvoiceScreen(cardId: card.id),
+          ),
+        ),
       ),
     );
   }
