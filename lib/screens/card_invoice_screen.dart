@@ -140,12 +140,16 @@ class _CardInvoiceScreenState extends State<CardInvoiceScreen> {
       return;
     }
 
+    final fromAmount = linked.currency == card.currency
+        ? total
+        : (app.convertBetween(total, card.currency, linked.currency) ?? total);
+
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('Pagar fatura'),
         content: Text(
-          'Registrar pagamento de ${formatAmount(total, card.currency)} saindo de ${linked.name}?\n\nO pagamento será tratado como transferência e não será contado novamente como despesa.',
+          'Registrar ${formatAmount(total, card.currency)} na fatura, saindo ${formatAmount(fromAmount, linked.currency)} de ${linked.name}?\n\nO pagamento será tratado como transferência e não será contado novamente como despesa.',
         ),
         actions: [
           TextButton(
@@ -164,7 +168,8 @@ class _CardInvoiceScreenState extends State<CardInvoiceScreen> {
     await app.addTransfer(
       fromId: linked.id,
       toId: card.id,
-      fromAmount: total,
+      fromAmount: fromAmount,
+      toAmount: total,
       note: 'Pagamento da fatura ${card.name}',
     );
     if (!mounted) return;
