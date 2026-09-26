@@ -35,6 +35,7 @@ class PinVerifier {
 class NexoSecurity extends ChangeNotifier {
   static final instance = NexoSecurity();
   static const channel = MethodChannel('com.ma.expensy/automation');
+  static const storageKey = 'nexo_security_v1';
   final FlutterSecureStorage storage;
   final LocalAuthentication auth;
   NexoSecurity({FlutterSecureStorage? storage, LocalAuthentication? auth})
@@ -60,7 +61,7 @@ class NexoSecurity extends ChangeNotifier {
   Stopwatch? _background;
   Future<void> load() async {
     try {
-      final text = await storage.read(key: 'nexo_security_v1');
+      final text = await storage.read(key: storageKey);
       _data = text == null ? {} : Map<String, dynamic>.from(jsonDecode(text));
       storageError = false;
       locked = enabled;
@@ -75,7 +76,7 @@ class NexoSecurity extends ChangeNotifier {
   }
 
   Future<void> _save() =>
-      storage.write(key: 'nexo_security_v1', value: jsonEncode(_data));
+      storage.write(key: storageKey, value: jsonEncode(_data));
   Future<bool> recoverStorage() async {
     if (!storageError || authenticating) return false;
     authenticating = true;
@@ -84,10 +85,9 @@ class NexoSecurity extends ChangeNotifier {
           localizedReason:
               'Confirme sua identidade para redefinir somente a proteção do Nexo.'))
         return false;
-      // Explicit recovery after OS authentication. Never touches the financial DB.
-      await const FlutterSecureStorage(
-              aOptions: AndroidOptions(resetOnError: true))
-          .deleteAll();
+      // Explicit recovery after OS authentication. Only the Nexo app-lock key
+      // is reset; unrelated secure-storage entries must never be removed.
+      await storage.delete(key: storageKey);
       _data = {};
       await _save();
       storageError = false;
