@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 
 import '../models/models.dart';
 import '../providers/app_provider.dart';
+import '../services/finance_rules.dart';
 import '../services/transaction_metadata_service.dart';
 import '../theme/app_theme.dart';
 import 'finance_export_screen.dart';
@@ -19,10 +20,17 @@ class FinanceHomeScreen extends StatefulWidget {
 class _FinanceHomeScreenState extends State<FinanceHomeScreen> {
   Future<Map<String, TransactionMetadata>>? _metaFuture;
   int _lastTxCount = -1;
+  int _lastMetaRevision = -1;
 
-  Future<Map<String, TransactionMetadata>> _metadata(AppProvider app) {
-    if (_metaFuture == null || _lastTxCount != app.transactions.length) {
+  Future<Map<String, TransactionMetadata>> _metadata(
+    AppProvider app,
+    int revision,
+  ) {
+    if (_metaFuture == null ||
+        _lastTxCount != app.transactions.length ||
+        _lastMetaRevision != revision) {
       _lastTxCount = app.transactions.length;
+      _lastMetaRevision = revision;
       _metaFuture = TransactionMetadataService.instance
           .getForMany(app.transactions.map((e) => e.id));
     }
@@ -32,11 +40,17 @@ class _FinanceHomeScreenState extends State<FinanceHomeScreen> {
   @override
   Widget build(BuildContext context) {
     final app = context.watch<AppProvider>();
-    return FutureBuilder<Map<String, TransactionMetadata>>(
-      future: _metadata(app),
-      builder: (context, snapshot) {
-        final metadata = snapshot.data ?? const <String, TransactionMetadata>{};
-        return _Dashboard(app: app, metadata: metadata);
+    return ValueListenableBuilder<int>(
+      valueListenable: TransactionMetadataService.instance.revision,
+      builder: (context, revision, _) {
+        return FutureBuilder<Map<String, TransactionMetadata>>(
+          future: _metadata(app, revision),
+          builder: (context, snapshot) {
+            final metadata =
+                snapshot.data ?? const <String, TransactionMetadata>{};
+            return _Dashboard(app: app, metadata: metadata);
+          },
+        );
       },
     );
   }
@@ -63,8 +77,18 @@ class _Dashboard extends StatelessWidget {
 
   String _monthLabel(DateTime date) {
     const months = [
-      'janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho',
-      'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro',
+      'janeiro',
+      'fevereiro',
+      'março',
+      'abril',
+      'maio',
+      'junho',
+      'julho',
+      'agosto',
+      'setembro',
+      'outubro',
+      'novembro',
+      'dezembro',
     ];
     return '${months[date.month - 1]} de ${date.year}';
   }
@@ -83,13 +107,13 @@ class _Dashboard extends StatelessWidget {
     int overdueCount = 0;
 
     for (final tx in monthTx) {
+      final meta = metadata[tx.id] ?? TransactionMetadata(transactionId: tx.id);
+      if (FinanceRules.isNeutral(tx, meta)) continue;
       final amount = _mainAmount(tx);
       if (tx.type == 'income') {
         income += amount;
         continue;
       }
-      final meta = metadata[tx.id] ?? TransactionMetadata(transactionId: tx.id);
-      if (meta.excludeFromSpending) continue;
       if (meta.status == 'pending') {
         pending += amount;
         if (meta.isOverdue) overdueCount++;
@@ -110,6 +134,7 @@ class _Dashboard extends StatelessWidget {
     final pendingTx = monthTx.where((t) {
       if (t.type != 'expense') return false;
       final meta = metadata[t.id];
+      if (FinanceRules.isNeutral(t, meta)) return false;
       return meta?.status == 'pending';
     }).toList()
       ..sort((a, b) {
@@ -157,206 +182,202 @@ class _Dashboard extends StatelessWidget {
           ),
         ],
       ),
-      body: RefreshIndicator(
-        onRefresh: () async {
-          await Future<void>.delayed(const Duration(milliseconds: 250));
-        },
-        child: ListView(
-          padding: const EdgeInsets.fromLTRB(16, 8, 16, 130),
-          children: [
-            Container(
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                color: cs.primaryContainer.withValues(alpha: 0.55),
-                borderRadius: BorderRadius.circular(26),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('Disponível após compromissos',
-                      style: theme.textTheme.labelLarge?.copyWith(
-                        color: cs.onSurfaceVariant,
-                      )),
-                  const SizedBox(height: 4),
-                  Text(
-                    formatAmount(available, app.settings.currency),
-                    style: theme.textTheme.headlineLarge?.copyWith(
-                      fontWeight: FontWeight.w900,
-                      letterSpacing: -1,
-                      color: available < 0 ? cs.error : null,
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: _MiniStat(
-                          label: 'Receitas',
-                          value: formatAmount(income, app.settings.currency),
-                          icon: Icons.arrow_downward_rounded,
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: _MiniStat(
-                          label: 'Pago',
-                          value: formatAmount(paid, app.settings.currency),
-                          icon: Icons.check_circle_outline_rounded,
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: _MiniStat(
-                          label: 'Pendente',
-                          value: formatAmount(pending, app.settings.currency),
-                          icon: Icons.schedule_rounded,
-                          danger: overdueCount > 0,
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
+      body: ListView(
+        padding: const EdgeInsets.fromLTRB(16, 8, 16, 130),
+        children: [
+          Container(
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              color: cs.primaryContainer.withValues(alpha: 0.55),
+              borderRadius: BorderRadius.circular(26),
             ),
-            const SizedBox(height: 14),
-            Row(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Expanded(
-                  child: _InsightCard(
-                    title: 'Ritmo seguro',
-                    main: '${formatAmount(safeDaily, app.settings.currency)}/dia',
-                    subtitle: '${formatAmount(safeWeekly, app.settings.currency)}/semana',
-                    icon: Icons.speed_rounded,
+                Text('Disponível após compromissos',
+                    style: theme.textTheme.labelLarge?.copyWith(
+                      color: cs.onSurfaceVariant,
+                    )),
+                const SizedBox(height: 4),
+                Text(
+                  formatAmount(available, app.settings.currency),
+                  style: theme.textTheme.headlineLarge?.copyWith(
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: -1,
+                    color: available < 0 ? cs.error : null,
                   ),
                 ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: _InsightCard(
-                    title: 'Custo normal',
-                    main: formatAmount(normalCost, app.settings.currency),
-                    subtitle: extraordinary > 0
-                        ? 'Extra: ${formatAmount(extraordinary, app.settings.currency)}'
-                        : 'Sem extras no mês',
-                    icon: Icons.home_work_outlined,
-                  ),
+                const SizedBox(height: 16),
+                Row(
+                  children: [
+                    Expanded(
+                      child: _MiniStat(
+                        label: 'Receitas',
+                        value: formatAmount(income, app.settings.currency),
+                        icon: Icons.arrow_downward_rounded,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: _MiniStat(
+                        label: 'Pago',
+                        value: formatAmount(paid, app.settings.currency),
+                        icon: Icons.check_circle_outline_rounded,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: _MiniStat(
+                        label: 'Pendente',
+                        value: formatAmount(pending, app.settings.currency),
+                        icon: Icons.schedule_rounded,
+                        danger: overdueCount > 0,
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),
-            const SizedBox(height: 18),
-            const _SectionHeader(
-              title: 'Atalhos',
-              trailing: 'Organize tudo por aqui',
+          ),
+          const SizedBox(height: 14),
+          Row(
+            children: [
+              Expanded(
+                child: _InsightCard(
+                  title: 'Ritmo seguro',
+                  main: '${formatAmount(safeDaily, app.settings.currency)}/dia',
+                  subtitle:
+                      '${formatAmount(safeWeekly, app.settings.currency)}/semana',
+                  icon: Icons.speed_rounded,
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: _InsightCard(
+                  title: 'Custo normal',
+                  main: formatAmount(normalCost, app.settings.currency),
+                  subtitle: extraordinary > 0
+                      ? 'Extra: ${formatAmount(extraordinary, app.settings.currency)}'
+                      : 'Sem extras no mês',
+                  icon: Icons.home_work_outlined,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 18),
+          const _SectionHeader(
+            title: 'Atalhos',
+            trailing: 'Organize tudo por aqui',
+          ),
+          const SizedBox(height: 8),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              _QuickAction(
+                label: 'Despesas',
+                icon: Icons.receipt_long_rounded,
+                onTap: () => app.tabIndexNotifier.value = 1,
+              ),
+              _QuickAction(
+                label: 'Recorrentes',
+                icon: Icons.repeat_rounded,
+                onTap: () => app.tabIndexNotifier.value = 2,
+              ),
+              _QuickAction(
+                label: 'Contas e cartões',
+                icon: Icons.credit_card_rounded,
+                onTap: () => app.tabIndexNotifier.value = 3,
+              ),
+              _QuickAction(
+                label: 'Orçamento',
+                icon: Icons.pie_chart_rounded,
+                onTap: () => app.tabIndexNotifier.value = 4,
+              ),
+            ],
+          ),
+          if (pendingTx.isNotEmpty) ...[
+            const SizedBox(height: 22),
+            _SectionHeader(
+              title: overdueCount > 0
+                  ? 'Pendências • $overdueCount atrasada${overdueCount == 1 ? '' : 's'}'
+                  : 'Próximos vencimentos',
+              trailing: '${pendingTx.length} no mês',
             ),
             const SizedBox(height: 8),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: [
-                _QuickAction(
-                  label: 'Despesas',
-                  icon: Icons.receipt_long_rounded,
-                  onTap: () => app.tabIndexNotifier.value = 1,
-                ),
-                _QuickAction(
-                  label: 'Recorrentes',
-                  icon: Icons.repeat_rounded,
-                  onTap: () => app.tabIndexNotifier.value = 2,
-                ),
-                _QuickAction(
-                  label: 'Contas e cartões',
-                  icon: Icons.credit_card_rounded,
-                  onTap: () => app.tabIndexNotifier.value = 3,
-                ),
-                _QuickAction(
-                  label: 'Orçamento',
-                  icon: Icons.pie_chart_rounded,
-                  onTap: () => app.tabIndexNotifier.value = 4,
-                ),
-              ],
-            ),
-            if (pendingTx.isNotEmpty) ...[
-              const SizedBox(height: 22),
-              _SectionHeader(
-                title: overdueCount > 0
-                    ? 'Pendências • $overdueCount atrasada${overdueCount == 1 ? '' : 's'}'
-                    : 'Próximos vencimentos',
-                trailing: '${pendingTx.length} no mês',
-              ),
-              const SizedBox(height: 8),
-              ...pendingTx.take(5).map((tx) {
-                final meta = metadata[tx.id]!;
-                final due = meta.dueDate;
-                return Card(
-                  elevation: 0,
-                  child: ListTile(
-                    leading: CircleAvatar(
-                      child: Icon(meta.isOverdue
-                          ? Icons.priority_high_rounded
-                          : Icons.schedule_rounded),
-                    ),
-                    title: Text(
-                      tx.description.trim().isEmpty
-                          ? (app.categoryById(tx.categoryId)?.name ?? 'Despesa')
-                          : tx.description,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    subtitle: Text(due == null
-                        ? 'Sem vencimento'
-                        : '${meta.isOverdue ? 'Atrasada' : 'Vence'} em ${DateFormat('dd/MM').format(due)}'),
-                    trailing: Text(
-                      formatAmount(_mainAmount(tx), app.settings.currency),
-                      style: TextStyle(
-                        fontWeight: FontWeight.w900,
-                        color: meta.isOverdue ? cs.error : null,
-                      ),
+            ...pendingTx.take(5).map((tx) {
+              final meta = metadata[tx.id]!;
+              final due = meta.dueDate;
+              return Card(
+                elevation: 0,
+                child: ListTile(
+                  leading: CircleAvatar(
+                    child: Icon(meta.isOverdue
+                        ? Icons.priority_high_rounded
+                        : Icons.schedule_rounded),
+                  ),
+                  title: Text(
+                    tx.description.trim().isEmpty
+                        ? (app.categoryById(tx.categoryId)?.name ?? 'Despesa')
+                        : tx.description,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  subtitle: Text(due == null
+                      ? 'Sem vencimento'
+                      : '${meta.isOverdue ? 'Atrasada' : 'Vence'} em ${DateFormat('dd/MM').format(due)}'),
+                  trailing: Text(
+                    formatAmount(_mainAmount(tx), app.settings.currency),
+                    style: TextStyle(
+                      fontWeight: FontWeight.w900,
+                      color: meta.isOverdue ? cs.error : null,
                     ),
                   ),
-                );
-              }),
-            ],
-            if (cards.isNotEmpty) ...[
-              const SizedBox(height: 22),
-              const _SectionHeader(
-                title: 'Cartões',
-                trailing: 'Faturas estimadas',
-              ),
-              const SizedBox(height: 8),
-              ...cards.map((card) => _CardInvoiceTile(
-                    app: app,
-                    card: card,
-                    metadata: metadata,
-                  )),
-            ],
+                ),
+              );
+            }),
+          ],
+          if (cards.isNotEmpty) ...[
             const SizedBox(height: 22),
             const _SectionHeader(
-              title: 'Seu patrimônio',
-              trailing: 'Contas + bens',
+              title: 'Cartões',
+              trailing: 'Faturas estimadas',
             ),
             const SizedBox(height: 8),
-            Card(
-              elevation: 0,
-              child: ListTile(
-                leading: const CircleAvatar(
-                  child: Icon(Icons.account_balance_rounded),
+            ...cards.map((card) => _CardInvoiceTile(
+                  app: app,
+                  card: card,
+                  metadata: metadata,
+                )),
+          ],
+          const SizedBox(height: 22),
+          const _SectionHeader(
+            title: 'Seu patrimônio',
+            trailing: 'Contas + bens',
+          ),
+          const SizedBox(height: 8),
+          Card(
+            elevation: 0,
+            child: ListTile(
+              leading: const CircleAvatar(
+                child: Icon(Icons.account_balance_rounded),
+              ),
+              title: const Text('Saldo total'),
+              subtitle: Text(
+                app.totalSaved > 0
+                    ? 'Reservas/metas: ${formatAmount(app.totalSaved, app.settings.currency)}'
+                    : 'Acompanhe contas, reservas e bens',
+              ),
+              trailing: Text(
+                formatAmount(
+                  app.totalBalanceAll + app.totalAssetsValue,
+                  app.settings.currency,
                 ),
-                title: const Text('Saldo total'),
-                subtitle: Text(
-                  app.totalSaved > 0
-                      ? 'Reservas/metas: ${formatAmount(app.totalSaved, app.settings.currency)}'
-                      : 'Acompanhe contas, reservas e bens',
-                ),
-                trailing: Text(
-                  formatAmount(
-                    app.totalBalanceAll + app.totalAssetsValue,
-                    app.settings.currency,
-                  ),
-                  style: const TextStyle(fontWeight: FontWeight.w900),
-                ),
+                style: const TextStyle(fontWeight: FontWeight.w900),
               ),
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
@@ -398,8 +419,7 @@ class _CardInvoiceTile extends StatelessWidget {
     final purchases = app.transactions.where((t) {
       if (t.accountId != card.id || t.type != 'expense') return false;
       if (t.date.isBefore(cycleStart) || t.date.isAfter(cycleEnd)) return false;
-      final meta = metadata[t.id];
-      return !(meta?.excludeFromSpending ?? false);
+      return !FinanceRules.isNeutral(t, metadata[t.id]);
     });
     final total = purchases.fold<double>(0, (sum, t) => sum + t.amount);
     final limit = card.creditLimit;
@@ -422,11 +442,13 @@ class _CardInvoiceTile extends StatelessWidget {
           backgroundColor: Color(card.colorValue).withValues(alpha: 0.16),
           child: Icon(Icons.credit_card_rounded, color: Color(card.colorValue)),
         ),
-        title: Text(card.name, style: const TextStyle(fontWeight: FontWeight.w800)),
+        title: Text(card.name,
+            style: const TextStyle(fontWeight: FontWeight.w800)),
         subtitle: Text([
           'Fecha ${DateFormat('dd/MM').format(cycleEnd)}',
           if (due != null) 'vence ${DateFormat('dd/MM').format(due)}',
-          if (available != null) 'limite livre ${formatAmount(available, card.currency)}',
+          if (available != null)
+            'limite livre ${formatAmount(available, card.currency)}',
         ].join(' • ')),
         trailing: Text(
           formatAmount(total, card.currency),
@@ -508,7 +530,8 @@ class _InsightCard extends StatelessWidget {
           Text(main,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 17)),
+              style:
+                  const TextStyle(fontWeight: FontWeight.w900, fontSize: 17)),
           const SizedBox(height: 2),
           Text(subtitle,
               maxLines: 1,
