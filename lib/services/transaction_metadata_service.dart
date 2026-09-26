@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:path/path.dart';
 import 'package:sqflite/sqflite.dart';
 
@@ -75,6 +76,7 @@ class TransactionMetadataService {
   static final TransactionMetadataService instance =
       TransactionMetadataService._();
 
+  final ValueNotifier<int> revision = ValueNotifier<int>(0);
   Database? _db;
 
   Future<Database> get _database async {
@@ -172,6 +174,7 @@ class TransactionMetadataService {
       metadata.toMap(),
       conflictAlgorithm: ConflictAlgorithm.replace,
     );
+    revision.value++;
   }
 
   Future<void> markAsPaid(String transactionId) async {
@@ -198,5 +201,6 @@ class TransactionMetadataService {
       where: 'transaction_id = ?',
       whereArgs: [transactionId],
     );
+    revision.value++;
   }
 }
