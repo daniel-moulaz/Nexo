@@ -64,7 +64,7 @@ class MoreScreen extends StatelessWidget {
       const _Item(
         icon: Icons.table_view_rounded,
         label: 'Relatório financeiro',
-        sub: 'Excel completo para análise e backup externo',
+        sub: 'Excel e CSV para análise e portabilidade',
         color: Color(0xFF2E7D32),
         screen: FinanceExportScreen(),
       ),

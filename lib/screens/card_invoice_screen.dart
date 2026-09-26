@@ -13,8 +13,10 @@ import '../utils/finance_input.dart';
 
 class CardInvoiceScreen extends StatefulWidget {
   final String cardId;
+  final DateTime? initialCycleEnd;
 
-  const CardInvoiceScreen({super.key, required this.cardId});
+  const CardInvoiceScreen(
+      {super.key, required this.cardId, this.initialCycleEnd});
 
   @override
   State<CardInvoiceScreen> createState() => _CardInvoiceScreenState();
@@ -26,9 +28,12 @@ class _CardInvoiceScreenState extends State<CardInvoiceScreen> {
   bool _paying = false;
 
   ({DateTime start, DateTime end, DateTime? due}) _cycle(Account card) {
+    final initial = widget.initialCycleEnd;
     final cycle = BillingCycle.forDate(
-        BillingCycle.date(DateTime.now().year,
-            DateTime.now().month + _monthOffset, DateTime.now().day),
+        BillingCycle.date(
+            initial?.year ?? DateTime.now().year,
+            (initial?.month ?? DateTime.now().month) + _monthOffset,
+            initial?.day ?? DateTime.now().day),
         card.statementDay,
         card.dueDay);
     return (start: cycle.start, end: cycle.end, due: cycle.due);

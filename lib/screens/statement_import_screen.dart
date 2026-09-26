@@ -11,6 +11,8 @@ import '../providers/app_provider.dart';
 import '../services/transaction_metadata_service.dart';
 import '../services/ofx_parser.dart';
 import '../utils/finance_input.dart';
+import '../services/import_rules_service.dart';
+import 'import_rules_screen.dart';
 
 class StatementImportScreen extends StatefulWidget {
   const StatementImportScreen({super.key});
@@ -26,8 +28,18 @@ class _StatementImportScreenState extends State<StatementImportScreen> {
   bool _busy = false;
   bool _applyToBalance = false;
   String? _message;
+  List<ImportRule> _customRules = [];
 
   Future<void> _pickFile() async {
+    try {
+      _customRules = await ImportRulesService.load();
+    } catch (_) {
+      if (mounted)
+        setState(() =>
+            _message = 'Não foi possível carregar as regras. Tente novamente.');
+      return;
+    }
+    if (!mounted) return;
     final result = await FilePicker.platform.pickFiles(
       type: FileType.custom,
       allowedExtensions: const ['csv', 'txt', 'ofx'],
@@ -101,7 +113,6 @@ class _StatementImportScreenState extends State<StatementImportScreen> {
     );
 
     final result = <_ImportedRow>[];
-    final seen = <String>{};
     for (var i = headerIndex + 1; i < rawLines.length; i++) {
       final cols = _splitCsv(rawLines[i], separator);
       final maxRequired =
@@ -133,8 +144,6 @@ class _StatementImportScreenState extends State<StatementImportScreen> {
       final type = looksIncome && !looksExpense ? 'income' : 'expense';
       final absoluteAmount = amount.abs();
       final rule = _ruleFor(description, type);
-      final key = _duplicateKey(date, description, absoluteAmount, type);
-      if (!seen.add(key)) continue;
 
       result.add(
         _ImportedRow(
@@ -150,14 +159,6 @@ class _StatementImportScreenState extends State<StatementImportScreen> {
     }
     return result;
   }
-
-  String _duplicateKey(
-    DateTime date,
-    String description,
-    double amount,
-    String type,
-  ) =>
-      '${DateFormat('yyyy-MM-dd').format(date)}|${description.trim().toLowerCase()}|${amount.toStringAsFixed(2)}|$type';
 
   String _detectSeparator(String line) {
     final semi = ';'.allMatches(line).length;
@@ -278,6 +279,11 @@ class _StatementImportScreenState extends State<StatementImportScreen> {
   _ImportRule _ruleFor(String description, String type) {
     final d = description.toLowerCase();
     final neutral = _looksNeutral(d);
+    final custom = ImportRulesService.match(_customRules, description, type,
+        context.read<AppProvider>().categories);
+    if (custom != null)
+      return _ImportRule(custom.categoryId, custom.subcategory,
+          excludeFromSpending: neutral);
     if (neutral) {
       return _ImportRule(
         type == 'income' ? 'freelance' : 'other_exp',
@@ -329,26 +335,58 @@ class _StatementImportScreenState extends State<StatementImportScreen> {
   }
 
   Future<void> _importRows() async {
-    if (_accountId == null || _rows.isEmpty) return;
+    if (_accountId == null || _rows.isEmpty) {
+      setState(() => _message = 'Selecione a conta de destino e um arquivo.');
+      return;
+    }
     final app = context.read<AppProvider>();
     setState(() {
       _busy = true;
       _message = null;
     });
 
-    final existing = app.transactions
-        .where((t) => t.accountId == _accountId)
-        .map((t) => _duplicateKey(t.date, t.description, t.amount, t.type))
-        .toSet();
     var imported = 0;
     var skipped = 0;
 
-    for (final row in _rows.where((e) => e.selected)) {
-      final key =
-          _duplicateKey(row.date, row.description, row.amount, row.type);
-      if (!existing.add(key)) {
-        skipped++;
-        continue;
+    for (final row in _rows.where((e) => e.selected).toList()) {
+      if (!mounted) return;
+
+      final candidates = ImportRulesService.candidates(app.transactions,
+          accountId: _accountId!,
+          date: row.date,
+          amount: row.amount,
+          type: row.type);
+      if (candidates.isNotEmpty) {
+        final keep = await showDialog<bool>(
+            context: context,
+            barrierDismissible: false,
+            builder: (ctx) => AlertDialog(
+                    title: const Text('Pode ser o mesmo lançamento'),
+                    content: SingleChildScrollView(
+                        child: Text(
+                            'Arquivo: ${row.description}\n${DateFormat('dd/MM/yyyy').format(row.date)}\n\nJá registrados na mesma conta, com o mesmo valor e até 3 dias de diferença:\n${candidates.map((t) => '${DateFormat('dd/MM/yyyy').format(t.date)} • ${t.description}').join('\n')}\n\nIgnorar esta linha mantém os registros e saldos existentes. Se o registro está pendente, confirme o pagamento pela agenda.')),
+                    actions: [
+                      TextButton(
+                          onPressed: () => Navigator.pop(ctx, false),
+                          child: const Text('Ignorar esta linha')),
+                      FilledButton(
+                          onPressed: () => Navigator.pop(ctx, true),
+                          child: const Text('São diferentes: importar'))
+                    ]));
+        if (!mounted) return;
+        if (keep == null) {
+          setState(() {
+            _busy = false;
+            _message =
+                'Importação interrompida. Os registros já salvos foram preservados.';
+          });
+          return;
+        }
+        if (!keep) {
+          skipped++;
+          row.selected = false;
+          continue;
+        }
       }
 
       final fallbackCategory =
@@ -357,7 +395,10 @@ class _StatementImportScreenState extends State<StatementImportScreen> {
       if (category == null || category.type != row.type) {
         category = fallbackCategory;
       }
-      if (category == null) continue;
+      if (category == null) {
+        setState(() { _busy = false; _message = 'Cadastre uma categoria de ${row.type == 'income' ? 'receita' : 'despesa'} antes de importar.'; });
+        return;
+      }
 
       final tx = AppTransaction(
         id: app.newId(),
@@ -384,18 +425,19 @@ class _StatementImportScreenState extends State<StatementImportScreen> {
           setState(() {
             _busy = false;
             _message =
-                '$imported lançamentos salvos. Não foi possível concluir; tente novamente. Os registros já salvos serão reconhecidos como duplicados.';
+                '$imported lançamentos salvos. Não foi possível concluir; tente novamente. Os registros já salvos foram desmarcados da prévia.';
           });
         return;
       }
       imported++;
+      row.selected = false;
     }
 
     if (!mounted) return;
     setState(() {
       _busy = false;
       _message = skipped > 0
-          ? '$imported importados • $skipped duplicados ignorados.'
+          ? '$imported importados • $skipped linhas ignoradas por sua escolha.'
           : '$imported lançamentos importados com sucesso.';
       _rows = [];
     });
@@ -427,7 +469,17 @@ class _StatementImportScreenState extends State<StatementImportScreen> {
             'Reconhece data, descrição e valor, tenta categorizar automaticamente e separa transferências/reserva dos gastos reais.',
           ),
           const SizedBox(height: 18),
+          OutlinedButton.icon(
+              onPressed: _busy
+                  ? null
+                  : () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                          builder: (_) => const ImportRulesScreen())),
+              icon: const Icon(Icons.rule),
+              label: const Text('Regras de categorização')),
           DropdownButtonFormField<String>(
+            isExpanded: true,
             initialValue: _accountId,
             decoration: const InputDecoration(
               labelText: 'Conta/cartão de destino',
@@ -436,13 +488,15 @@ class _StatementImportScreenState extends State<StatementImportScreen> {
             items: accounts
                 .map((a) => DropdownMenuItem(value: a.id, child: Text(a.name)))
                 .toList(),
-            onChanged: (v) => setState(() => _accountId = v),
+            onChanged: _busy ? null : (v) => setState(() => _accountId = v),
           ),
           const SizedBox(height: 10),
           SwitchListTile.adaptive(
             contentPadding: EdgeInsets.zero,
             value: _applyToBalance,
-            onChanged: (value) => setState(() => _applyToBalance = value),
+            onChanged: _busy
+                ? null
+                : (value) => setState(() => _applyToBalance = value),
             title: const Text('Ajustar saldo da conta com a importação'),
             subtitle: const Text(
               'Desligado por padrão. Para extratos históricos, os lançamentos entram sem alterar o saldo atual.',
@@ -470,7 +524,9 @@ class _StatementImportScreenState extends State<StatementImportScreen> {
             ..._rows.map(
               (row) => CheckboxListTile(
                 value: row.selected,
-                onChanged: (v) => setState(() => row.selected = v ?? true),
+                onChanged: _busy
+                    ? null
+                    : (v) => setState(() => row.selected = v ?? true),
                 contentPadding: EdgeInsets.zero,
                 title: Text(row.description,
                     maxLines: 1, overflow: TextOverflow.ellipsis),

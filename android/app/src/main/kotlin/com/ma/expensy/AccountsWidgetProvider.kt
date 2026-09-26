@@ -59,7 +59,7 @@ class AccountsWidgetProvider : HomeWidgetProvider() {
                             setTextViewText(balanceId, balance)
                         }
                     } catch (e: Exception) {
-                        e.printStackTrace()
+                        // Do not log financial widget payloads.
                     }
                 }
             }

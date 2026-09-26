@@ -8,7 +8,7 @@ import '../models/models.dart';
 class DBHelper {
   static Database? _db;
   static const String _dbName = 'expensy.db';
-  static const int _version = 21;
+  static const int _version = 22;
 
   /// Public accessor for the current DB/backup schema version, so UI code
   /// (e.g. the Backup screen) never has to hardcode a copy that can drift
@@ -474,6 +474,7 @@ class DBHelper {
       }
     }
     if (oldV < 21) await _ensureFinanceSchema(db);
+    if (oldV < 22) await _createImportRules(db);
     if (oldV < 20) {
       try {
         await db
@@ -539,6 +540,13 @@ class DBHelper {
       AFTER DELETE ON transactions BEGIN
         DELETE FROM transaction_metadata WHERE transaction_id = OLD.id;
       END''');
+  }
+
+  static Future<void> _createImportRules(Database db) async {
+    await db.execute('''CREATE TABLE IF NOT EXISTS import_rules (
+      id TEXT PRIMARY KEY, pattern TEXT NOT NULL, type TEXT NOT NULL,
+      category_id TEXT NOT NULL, subcategory TEXT NOT NULL DEFAULT ''
+    )''');
   }
 
   static Future<void> _onCreate(Database db, int version) async {
@@ -701,6 +709,7 @@ class DBHelper {
     await db.execute('CREATE INDEX idx_lp_loan_id ON loan_payments(loan_id)');
 
     await _ensureFinanceSchema(db);
+    await _createImportRules(db);
     await _insertDefaults(db);
   }
 
@@ -1102,6 +1111,7 @@ class DBHelper {
       db.query('transaction_metadata'),
       db.query('card_invoice_payments'),
       db.query('net_worth_snapshots'),
+      db.query('import_rules'),
     ]);
     return {
       'accounts': results[0],
@@ -1121,6 +1131,7 @@ class DBHelper {
       'transaction_metadata': results[14],
       'card_invoice_payments': results[15],
       'net_worth_snapshots': results[16],
+      'import_rules': results[17],
       'version': _version,
     };
   }
@@ -1148,6 +1159,7 @@ class DBHelper {
         'transaction_metadata',
         'card_invoice_payments',
         'net_worth_snapshots',
+        'import_rules',
       ]) {
         await txn.delete(table);
         final rows = (data[table] as List?)?.cast<Map<String, dynamic>>() ?? [];

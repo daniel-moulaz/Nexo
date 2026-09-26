@@ -281,8 +281,10 @@ class AppProvider extends ChangeNotifier {
       final accountsJson = jsonEncode(pinnedAccounts
           .map((a) => {
                 'name': a.name,
-                'balance': formatAmount(a.balance,
-                    a.currency.isNotEmpty ? a.currency : settings.currency),
+                'balance': settings.hideBalance
+                    ? '••••'
+                    : formatAmount(a.balance,
+                        a.currency.isNotEmpty ? a.currency : settings.currency),
               })
           .toList());
       await HomeWidget.saveWidgetData('accounts_widget_data', accountsJson);
@@ -291,11 +293,15 @@ class AppProvider extends ChangeNotifier {
       final budgetData = budgets.map((b) {
         final spent = budgetSpent(b);
         return {
-          'category': categoryById(b.categoryId)?.name ?? 'Budget',
-          'spent': spent,
-          'amount': b.amount,
-          'progress': b.amount > 0 ? spent / b.amount : 0.0,
-          'exceeded': spent > b.amount,
+          'hidden': settings.hideBalance,
+          'category': settings.hideBalance
+              ? 'Valores ocultos'
+              : categoryById(b.categoryId)?.name ?? 'Orçamento',
+          'spent': settings.hideBalance ? 0.0 : spent,
+          'amount': settings.hideBalance ? 0.0 : b.amount,
+          'progress':
+              !settings.hideBalance && b.amount > 0 ? spent / b.amount : 0.0,
+          'exceeded': !settings.hideBalance && spent > b.amount,
           'currency': settings.currency,
         };
       }).toList();
@@ -490,6 +496,8 @@ class AppProvider extends ChangeNotifier {
 
     _saveSettings();
     notifyListeners();
+    if (key == 'hideBalance' || key == 'pinnedWidgetAccountIds')
+      await updateHomeWidgets();
 
     if (oldLang != settings.languageCode) {
       // Handled in main by restarting or notifying.
@@ -719,6 +727,7 @@ class AppProvider extends ChangeNotifier {
         .getForMany(transactions.map((t) => t.id));
     TransactionMetadataService.instance.revision.value++;
     notifyListeners();
+    await updateHomeWidgets();
   }
 
   Future<void> addTransaction(AppTransaction t,

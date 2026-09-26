@@ -7,18 +7,176 @@ import '../providers/app_provider.dart';
 import '../services/transaction_metadata_service.dart';
 import '../theme/app_theme.dart';
 import 'add_transaction_screen.dart';
+import '../services/transaction_filter.dart';
+import '../utils/finance_input.dart';
 
 class TransactionSearchScreen extends StatefulWidget {
   const TransactionSearchScreen({super.key});
 
   @override
-  State<TransactionSearchScreen> createState() => _TransactionSearchScreenState();
+  State<TransactionSearchScreen> createState() =>
+      _TransactionSearchScreenState();
 }
 
 class _TransactionSearchScreenState extends State<TransactionSearchScreen> {
   final _controller = TextEditingController();
   String _query = '';
   String _type = 'all';
+  TransactionFilter _filter = TransactionFilter();
+
+  Future<void> _filters() async {
+    final previous = _filter.copy();
+    var applied = false;
+    final app = context.read<AppProvider>();
+    final min = TextEditingController(
+        text: _filter.minimum?.toString().replaceAll('.', ',') ?? '');
+    final max = TextEditingController(
+        text: _filter.maximum?.toString().replaceAll('.', ',') ?? '');
+    String? error;
+    await showDialog<void>(
+        context: context,
+        builder: (ctx) => StatefulBuilder(builder: (ctx, update) {
+              Widget choice(
+                      String label,
+                      String? value,
+                      Map<String, String> options,
+                      void Function(String?) change) =>
+                  DropdownButtonFormField<String>(
+                      key: ValueKey('$label:$value'),
+                      initialValue: options.containsKey(value) ? value : null,
+                      isExpanded: true,
+                      decoration: InputDecoration(labelText: label),
+                      items: [
+                        const DropdownMenuItem<String>(
+                            value: null, child: Text('Todos')),
+                        ...options.entries.map((e) => DropdownMenuItem(
+                            value: e.key,
+                            child:
+                                Text(e.value, overflow: TextOverflow.ellipsis)))
+                      ],
+                      onChanged: (v) => update(() => change(v)));
+              return AlertDialog(
+                  title: const Text('Filtrar lançamentos'),
+                  content: SingleChildScrollView(
+                      child: Column(mainAxisSize: MainAxisSize.min, children: [
+                    choice(
+                        'Conta ou cartão',
+                        _filter.accountId,
+                        {for (final a in app.accounts) a.id: a.name},
+                        (v) => _filter.accountId = v),
+                    choice(
+                        'Categoria',
+                        _filter.categoryId,
+                        {for (final c in app.categories) c.id: c.name},
+                        (v) => _filter.categoryId = v),
+                    choice(
+                        'Situação',
+                        _filter.status,
+                        {
+                          'paid': 'Pago / recebido',
+                          'pending': 'Pendente / previsto'
+                        },
+                        (v) => _filter.status = v),
+                    choice(
+                        'Origem',
+                        _filter.source,
+                        {
+                          'manual': 'Manual',
+                          'import': 'Importação',
+                          'recurring': 'Recorrente',
+                          'installment': 'Parcelamento'
+                        },
+                        (v) => _filter.source = v),
+                    choice(
+                        'Classe',
+                        _filter.expenseClass,
+                        {'normal': 'Normal', 'extraordinary': 'Extraordinária'},
+                        (v) => _filter.expenseClass = v),
+                    CheckboxListTile(
+                        contentPadding: EdgeInsets.zero,
+                        title: const Text('Somente parcelados'),
+                        value: _filter.installmentsOnly,
+                        onChanged: (v) =>
+                            update(() => _filter.installmentsOnly = v!)),
+                    TextButton.icon(
+                        icon: const Icon(Icons.date_range),
+                        label: Text(_filter.from == null
+                            ? 'Escolher período'
+                            : '${ptDate(_filter.from!)} a ${ptDate(_filter.to!)}'),
+                        onPressed: () async {
+                          final range = await showDateRangePicker(
+                              context: ctx,
+                              firstDate: DateTime(1900),
+                              lastDate: DateTime(2200),
+                              initialDateRange: _filter.from == null
+                                  ? null
+                                  : DateTimeRange(
+                                      start: _filter.from!, end: _filter.to!));
+                          if (range != null && ctx.mounted)
+                            update(() {
+                              _filter.from = range.start;
+                              _filter.to = range.end;
+                            });
+                        }),
+                    const Text('Valores na moeda original de cada lançamento.'),
+                    TextField(
+                        controller: min,
+                        keyboardType: const TextInputType.numberWithOptions(
+                            decimal: true),
+                        decoration:
+                            const InputDecoration(labelText: 'Valor mínimo')),
+                    TextField(
+                        controller: max,
+                        keyboardType: const TextInputType.numberWithOptions(
+                            decimal: true),
+                        decoration:
+                            const InputDecoration(labelText: 'Valor máximo')),
+                    if (error != null)
+                      Text(error!,
+                          style: TextStyle(
+                              color: Theme.of(ctx).colorScheme.error)),
+                  ])),
+                  actions: [
+                    TextButton(
+                        onPressed: () {
+                          update(() {
+                            _filter = TransactionFilter();
+                            min.clear();
+                            max.clear();
+                            error = null;
+                          });
+                        },
+                        child: const Text('Limpar')),
+                    FilledButton(
+                        onPressed: () {
+                          final low = min.text.trim().isEmpty
+                              ? null
+                              : parseMoney(min.text);
+                          final high = max.text.trim().isEmpty
+                              ? null
+                              : parseMoney(max.text);
+                          if ((min.text.trim().isNotEmpty && low == null) ||
+                              (max.text.trim().isNotEmpty && high == null) ||
+                              (low != null && low < 0) ||
+                              (high != null && high < 0) ||
+                              (low != null && high != null && low > high)) {
+                            update(() => error =
+                                'Informe valores válidos; o mínimo deve ser menor ou igual ao máximo.');
+                            return;
+                          }
+                          _filter.minimum = low;
+                          _filter.maximum = high;
+                          applied = true;
+                          Navigator.pop(ctx);
+                        },
+                        child: const Text('Aplicar'))
+                  ]);
+            }));
+    min.dispose();
+    max.dispose();
+    if (!applied) _filter = previous;
+    if (mounted) setState(() {});
+  }
 
   @override
   void dispose() {
@@ -34,16 +192,22 @@ class _TransactionSearchScreenState extends State<TransactionSearchScreen> {
 
     return Scaffold(
       appBar: AppBar(
+        actions: [
+          IconButton(
+              tooltip: 'Filtros',
+              onPressed: _filters,
+              icon: const Icon(Icons.filter_alt_outlined))
+        ],
         title: const Text('Buscar lançamentos',
             style: TextStyle(fontWeight: FontWeight.w900)),
       ),
-      body: FutureBuilder<Map<String, TransactionMetadata>>(
-        future: TransactionMetadataService.instance
-            .getForMany(transactions.map((e) => e.id)),
-        builder: (context, snapshot) {
-          final meta = snapshot.data ?? const <String, TransactionMetadata>{};
+      body: Builder(
+        builder: (context) {
+          final meta = app.transactionMetadata;
           final filtered = transactions.where((tx) {
-            if (_type != 'all' && tx.type != _type) return false;
+            final m = meta[tx.id] ?? TransactionMetadata(transactionId: tx.id);
+            if (!TransactionFilter.matchesType(tx, m, _type) ||
+                !_filter.matches(tx, m)) return false;
             if (_query.trim().isEmpty) return true;
             final q = _query.toLowerCase().trim();
             final account = app.accountById(tx.accountId)?.name ?? '';
@@ -80,11 +244,9 @@ class _TransactionSearchScreenState extends State<TransactionSearchScreen> {
                   ),
                 ),
               ),
-              SizedBox(
-                height: 44,
-                child: ListView(
-                  scrollDirection: Axis.horizontal,
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: Wrap(
                   children: [
                     _TypeChip(
                       label: 'Todos',
@@ -104,6 +266,11 @@ class _TransactionSearchScreenState extends State<TransactionSearchScreen> {
                       current: _type,
                       onTap: (v) => setState(() => _type = v),
                     ),
+                    _TypeChip(
+                        label: 'Neutros',
+                        value: 'neutral',
+                        current: _type,
+                        onTap: (v) => setState(() => _type = v)),
                   ],
                 ),
               ),
@@ -139,28 +306,34 @@ class _TransactionSearchScreenState extends State<TransactionSearchScreen> {
                           final currency = tx.currency.isNotEmpty
                               ? tx.currency
                               : (account?.currency ?? app.settings.currency);
-                          final status = tx.type == 'income' && txMeta?.isPending != true
-                              ? 'Recebido'
-                              : (txMeta?.isOverdue == true
-                                  ? 'Atrasado'
-                                  : txMeta?.status == 'pending'
-                                      ? 'Pendente'
-                                      : 'Pago');
+                          final status =
+                              tx.type == 'income' && txMeta?.isPending != true
+                                  ? 'Recebido'
+                                  : (txMeta?.isOverdue == true
+                                      ? 'Atrasado'
+                                      : txMeta?.status == 'pending'
+                                          ? 'Pendente'
+                                          : 'Pago');
 
                           return Card(
                             child: ListTile(
-                              leading: CircleAvatar(
-                                child: Icon(tx.type == 'income'
-                                    ? Icons.arrow_downward_rounded
-                                    : Icons.arrow_upward_rounded),
-                              ),
-                              title: Text(
-                                tx.description.trim().isEmpty
-                                    ? (category?.name ?? 'Lançamento')
-                                    : tx.description,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                              ),
+                              title: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      tx.description.trim().isEmpty
+                                          ? (category?.name ?? 'Lançamento')
+                                          : tx.description,
+                                      maxLines: 2,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                    Text(
+                                        app.settings.hideBalance
+                                            ? '••••'
+                                            : '${tx.type == 'income' ? '+' : '-'}${formatAmount(tx.amount, currency)}',
+                                        style: const TextStyle(
+                                            fontWeight: FontWeight.w800))
+                                  ]),
                               subtitle: Text(
                                 [
                                   DateFormat('dd/MM/yyyy').format(tx.date),
@@ -172,15 +345,6 @@ class _TransactionSearchScreenState extends State<TransactionSearchScreen> {
                                 ].join(' • '),
                                 maxLines: 2,
                                 overflow: TextOverflow.ellipsis,
-                              ),
-                              trailing: Text(
-                                '${tx.type == 'income' ? '+' : '-'}${formatAmount(tx.amount, currency)}',
-                                style: TextStyle(
-                                  fontWeight: FontWeight.w900,
-                                  color: tx.type == 'income'
-                                      ? Colors.green
-                                      : Theme.of(context).colorScheme.error,
-                                ),
                               ),
                               onTap: () async {
                                 await Navigator.of(context).push(

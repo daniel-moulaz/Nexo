@@ -1,4 +1,6 @@
 import 'dart:io';
+import 'dart:convert';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:expensy/database/db_helper.dart';
@@ -8,10 +10,81 @@ import 'package:expensy/services/transaction_metadata_service.dart';
 import 'package:expensy/services/card_invoice_service.dart';
 import 'package:expensy/services/finance_export_service.dart';
 import 'package:excel/excel.dart' hide Border;
+import 'package:expensy/services/import_rules_service.dart';
 
 void main() {
-  TestWidgetsFlutterBinding.ensureInitialized();
   late AppProvider app;
+  test('Private widgets never persist balances or budget values', () async {
+    final payloads=<String,dynamic>{};
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger.setMockMethodCallHandler(const MethodChannel('home_widget'),(call) async {
+      if(call.method=='saveWidgetData') payloads[call.arguments['id']]=jsonDecode(call.arguments['data']);
+      return true;
+    });
+    app.budgets=[Budget(id:'b',categoryId:'bills',amount:1500,period:'monthly',createdAt:DateTime.now())];
+    app.settings.hideBalance=true;
+    await app.updateHomeWidgets();
+    expect((payloads['accounts_widget_data'] as List).first['balance'],'••••');
+    final budget=(payloads['budget_widget_data'] as List).single;
+    expect(budget['hidden'],true);expect(budget['amount'],0);expect(budget['spent'],0);expect(budget['progress'],0);
+  });
+  test('CSV export preserves text identifiers, metadata and original decimals',
+      () async {
+    final t = AppTransaction(
+        id: 'csv',
+        type: 'expense',
+        amount: 1234.56,
+        description: '00123',
+        accountId: 'bank',
+        categoryId: 'bills',
+        date: DateTime(2026, 9, 20),
+        note: '=SUM(A1)');
+    await app.addTransaction(t,
+        metadata: const TransactionMetadata(
+            transactionId: 'csv',
+            subcategory: 'Transporte',
+            status: 'pending'));
+    final csv = await FinanceExportService.buildCsv(app,
+        from: DateTime(2026, 9, 20), to: DateTime(2026, 9, 20));
+    expect(csv, contains('"00123"'));
+    expect(csv, contains('1234.56'));
+    expect(csv, contains('Transporte'));
+    expect(csv, contains('Pendente'));
+    expect(csv, contains("'=SUM(A1)"));
+    expect(csv.startsWith('\uFEFF'), isTrue);
+  });
+  test('v21 upgrade preserves ledger and rules survive backup restore',
+      () async {
+    final db = await DBHelper.database;
+    await db.execute('DROP TABLE import_rules');
+    await db.setVersion(21);
+    await DBHelper.close();
+    final upgraded = await DBHelper.database;
+    expect(await upgraded.getVersion(), 22);
+    expect((await upgraded.query('accounts')).length, 3);
+    await upgraded.insert('categories', {
+      'id': 'rulecat',
+      'name': 'Transporte',
+      'type': 'expense',
+      'color_value': 0
+    });
+    const rule = ImportRule(
+        id: 'rule',
+        pattern: 'uber',
+        type: 'expense',
+        categoryId: 'rulecat',
+        subcategory: 'Aplicativo');
+    await ImportRulesService.save(rule);
+    final backup = await DBHelper.exportAll();
+    await DBHelper.importAll(backup);
+    expect((await ImportRulesService.load()).single.subcategory, 'Aplicativo');
+    await ImportRulesService.delete('rule');
+    expect(await ImportRulesService.load(), isEmpty);
+    await expectLater(
+        ImportRulesService.save(const ImportRule(
+            id: 'bad', pattern: '', type: 'expense', categoryId: 'rulecat')),
+        throwsArgumentError);
+  });
+  TestWidgetsFlutterBinding.ensureInitialized();
   setUpAll(() async {
     sqfliteFfiInit();
     databaseFactory = databaseFactoryFfi;
@@ -19,6 +92,7 @@ void main() {
     await databaseFactory.setDatabasesPath(dir.path);
   });
   setUp(() async {
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger.setMockMethodCallHandler(const MethodChannel('home_widget'),(call) async => true);
     await DBHelper.importAll({'version': DBHelper.schemaVersion});
     app = AppProvider();
     app.settings.budgetAlertsEnabled = false;

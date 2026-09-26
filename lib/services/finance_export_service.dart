@@ -1,4 +1,5 @@
 import 'dart:typed_data';
+import 'dart:convert';
 
 import 'package:excel/excel.dart';
 import 'package:file_picker/file_picker.dart';
@@ -10,6 +11,30 @@ import 'finance_rules.dart';
 import 'transaction_metadata_service.dart';
 
 class FinanceExportService {
+  static String csvCell(String value, {bool numeric = false}) {
+    var text = value;
+    if (!numeric && RegExp(r'^[\s]*[=+@\-]').hasMatch(text)) text = "'$text";
+    return '"${text.replaceAll('"', '""')}"';
+  }
+
+  static Future<String> buildCsv(AppProvider app,
+      {required DateTime from, required DateTime to}) async {
+    final workbook = await buildWorkbook(app, from: from, to: to);
+    return '\uFEFF${workbook['Transações'].rows.map((row) => row.map((cell) => csvCell(cell?.value?.toString() ?? '', numeric: cell?.value is DoubleCellValue || cell?.value is IntCellValue)).join(',')).join('\r\n')}\r\n';
+  }
+
+  static Future<String?> exportCsv(AppProvider app,
+      {required DateTime from, required DateTime to}) async {
+    final csv = await buildCsv(app, from: from, to: to);
+    return FilePicker.platform.saveFile(
+        dialogTitle: 'Salvar lançamentos CSV',
+        fileName:
+            'nexo_${DateFormat('yyyy-MM-dd').format(from)}_${DateFormat('yyyy-MM-dd').format(to)}.csv',
+        type: FileType.custom,
+        allowedExtensions: const ['csv'],
+        bytes: Uint8List.fromList(utf8.encode(csv)));
+  }
+
   static Future<String?> exportWorkbook(
     AppProvider app, {
     required DateTime from,
@@ -204,8 +229,8 @@ class FinanceExportService {
       for (var c = 0; c < values.length; c++) {
         sheet
             .cell(CellIndex.indexByColumnRow(columnIndex: c, rowIndex: i + 1))
-            .value = double.tryParse(values[c]) != null &&
-                c != 0
+            .value = c ==
+                3
             ? DoubleCellValue(double.parse(values[c]))
             : TextCellValue(values[c]);
       }

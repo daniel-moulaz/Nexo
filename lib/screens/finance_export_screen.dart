@@ -38,13 +38,15 @@ class _FinanceExportScreenState extends State<FinanceExportScreen> {
     });
   }
 
-  Future<void> _export() async {
+  Future<void> _export({bool csv = false}) async {
     setState(() {
       _busy = true;
       _message = null;
     });
     try {
-      final path = await FinanceExportService.exportWorkbook(
+      final path = await (csv
+          ? FinanceExportService.exportCsv
+          : FinanceExportService.exportWorkbook)(
         context.read<AppProvider>(),
         from: _from,
         to: _to,
@@ -79,7 +81,7 @@ class _FinanceExportScreenState extends State<FinanceExportScreen> {
           ),
           const SizedBox(height: 8),
           const Text(
-            'O arquivo inclui Resumo, Transações, Contas, Cartões e Orçamento. Também leva subcategoria, situação, vencimento e classificação do gasto.',
+            'Excel inclui Resumo, Transações, Contas, Cartões, Orçamentos e Objetivos. CSV exporta os lançamentos com subcategoria, situação, vencimento e classificação. Os arquivos contêm valores mesmo no modo privado; escolha onde salvá-los. Para restaurar todos os dados, use Backup.',
           ),
           const SizedBox(height: 24),
           Row(
@@ -103,11 +105,12 @@ class _FinanceExportScreenState extends State<FinanceExportScreen> {
           ),
           const SizedBox(height: 20),
           if (_message != null) ...[
-            Text(_message!, style: const TextStyle(fontWeight: FontWeight.w700)),
+            Text(_message!,
+                style: const TextStyle(fontWeight: FontWeight.w700)),
             const SizedBox(height: 12),
           ],
           FilledButton.icon(
-            onPressed: _busy ? null : _export,
+            onPressed: _busy ? null : () => _export(),
             icon: _busy
                 ? const SizedBox(
                     width: 18,
@@ -120,6 +123,11 @@ class _FinanceExportScreenState extends State<FinanceExportScreen> {
               minimumSize: const Size.fromHeight(54),
             ),
           ),
+          const SizedBox(height: 12),
+          OutlinedButton.icon(
+              onPressed: _busy ? null : () => _export(csv: true),
+              icon: const Icon(Icons.description_outlined),
+              label: const Text('Exportar .csv')),
         ],
       ),
     );

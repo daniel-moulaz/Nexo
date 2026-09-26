@@ -320,7 +320,16 @@ class _Dashboard extends StatelessWidget {
                     color: available < 0 ? cs.error : null,
                   ),
                 ),
-                Text('Após pendências e cartões: ${_money(available)}'),
+                Text(
+                    'Após pendências do mês e dívida total dos cartões: ${_money(available)}'),
+                TextButton.icon(
+                    onPressed: () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                            builder: (_) => const AgendaScreen())),
+                    icon: const Icon(Icons.event_note),
+                    label: const Text(
+                        'Ver saldo previsto e próximos compromissos')),
                 const SizedBox(height: 12),
                 Row(
                   children: [

@@ -90,7 +90,7 @@ class BudgetWidgetProvider : HomeWidgetProvider() {
                         
                         setViewVisibility(containerId, View.VISIBLE)
                         setTextViewText(nameId, category)
-                        setTextViewText(amountId, "${String.format("%.0f", spent)} / ${String.format("%.0f", amount)} $currency")
+                        setTextViewText(amountId, if (budgetObj.optBoolean("hidden", false)) "••••" else "${String.format("%.0f", spent)} / ${String.format("%.0f", amount)} $currency")
                         
                         val progressInt = (progress * 100).toInt().coerceIn(0, 100)
                         setProgressBar(progressId, 100, progressInt, false)
@@ -103,7 +103,7 @@ class BudgetWidgetProvider : HomeWidgetProvider() {
                         setTextColor(amountId, context.getColor(colorRes))
                     }
                 } catch (e: Exception) {
-                    e.printStackTrace()
+                    // Do not log financial widget payloads.
                 }
             }
         }

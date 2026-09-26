@@ -7,47 +7,44 @@ import '../providers/app_provider.dart';
 import '../services/finance_rules.dart';
 import '../services/transaction_metadata_service.dart';
 import '../theme/app_theme.dart';
+import '../database/db_helper.dart';
+import '../services/cash_forecast.dart';
+import 'agenda_screen.dart';
 
-class FinancialPlanningScreen extends StatefulWidget {
+class FinancialPlanningScreen extends StatelessWidget {
   const FinancialPlanningScreen({super.key});
-
-  @override
-  State<FinancialPlanningScreen> createState() => _FinancialPlanningScreenState();
-}
-
-class _FinancialPlanningScreenState extends State<FinancialPlanningScreen> {
-  Future<Map<String, TransactionMetadata>>? _metadataFuture;
-  int _lastCount = -1;
-
-  Future<Map<String, TransactionMetadata>> _metadata(AppProvider app) {
-    if (_metadataFuture == null || _lastCount != app.transactions.length) {
-      _lastCount = app.transactions.length;
-      _metadataFuture = TransactionMetadataService.instance
-          .getForMany(app.transactions.map((e) => e.id));
-    }
-    return _metadataFuture!;
-  }
-
+  Future<List<Map<String, dynamic>>> _payments() async =>
+      (await DBHelper.database).query('card_invoice_payments');
   @override
   Widget build(BuildContext context) {
     final app = context.watch<AppProvider>();
-    return FutureBuilder<Map<String, TransactionMetadata>>(
-      future: _metadata(app),
-      builder: (context, snapshot) {
-        return _PlanningBody(
-          app: app,
-          metadata: snapshot.data ?? const <String, TransactionMetadata>{},
-        );
-      },
-    );
+    return FutureBuilder<List<Map<String, dynamic>>>(
+        future: _payments(),
+        builder: (context, snapshot) {
+          if (snapshot.hasError)
+            return Scaffold(
+                appBar: AppBar(title: const Text('Planejamento')),
+                body: const Center(
+                    child: Text(
+                        'Não foi possível carregar. Reabra o planejamento.')));
+          if (!snapshot.hasData)
+            return const Scaffold(
+                body: Center(child: CircularProgressIndicator()));
+          return _PlanningBody(
+              app: app,
+              metadata: app.transactionMetadata,
+              payments: snapshot.data!);
+        });
   }
 }
 
 class _PlanningBody extends StatelessWidget {
   final AppProvider app;
   final Map<String, TransactionMetadata> metadata;
+  final List<Map<String, dynamic>> payments;
 
-  const _PlanningBody({required this.app, required this.metadata});
+  const _PlanningBody(
+      {required this.app, required this.metadata, required this.payments});
 
   String _currencyFor(AppTransaction tx) {
     if (tx.currency.isNotEmpty) return tx.currency;
@@ -85,79 +82,29 @@ class _PlanningBody extends StatelessWidget {
     return total;
   }
 
-  DateTime _advance(DateTime date, RecurringPayment r) {
-    switch (r.freqUnit) {
-      case 'days':
-        return date.add(Duration(days: r.freqVal));
-      case 'weeks':
-        return date.add(Duration(days: r.freqVal * 7));
-      case 'years':
-        return DateTime(date.year + r.freqVal, date.month, date.day);
-      case 'months':
-      default:
-        final m = date.month + r.freqVal;
-        final y = date.year + (m - 1) ~/ 12;
-        final month = ((m - 1) % 12) + 1;
-        final day = date.day.clamp(1, DateTime(y, month + 1, 0).day);
-        return DateTime(y, month, day);
-    }
-  }
-
   List<_ForecastItem> _forecast(DateTime now, DateTime horizon) {
-    final result = <_ForecastItem>[];
-
-    for (final r in app.recurring) {
-      var next = r.nextDate;
-      var guard = 0;
-      while (next.isBefore(now) && guard < 120) {
-        next = _advance(next, r);
-        guard++;
-      }
-      while (!next.isAfter(horizon) && guard < 180) {
-        if (r.endDate == null || !next.isAfter(r.endDate!)) {
-          result.add(_ForecastItem(
-            date: next,
-            name: r.name,
-            amount: app.convertToMain(
-              r.amount,
-              app.accountById(r.accountId)?.currency ?? app.settings.currency,
-            ),
-            type: r.paymentType,
-            source: r.recurringType == 'subscription'
-                ? 'Assinatura'
-                : 'Recorrente',
-          ));
-        }
-        next = _advance(next, r);
-        guard++;
-      }
-    }
-
-    for (final tx in app.transactions) {
-      if (tx.type != 'expense') continue;
-      final meta = metadata[tx.id];
-      if (meta == null || meta.status != 'pending' || meta.dueDate == null) {
-        continue;
-      }
-      if (FinanceRules.isNeutral(tx, meta)) continue;
-      final due = meta.dueDate!;
-      if (due.isBefore(DateTime(now.year, now.month, now.day)) ||
-          due.isAfter(horizon)) {
-        continue;
-      }
-      result.add(_ForecastItem(
-        date: due,
-        name: tx.description.trim().isEmpty
-            ? (app.categoryById(tx.categoryId)?.name ?? 'Despesa pendente')
-            : tx.description,
-        amount: _mainAmount(tx),
-        type: 'expense',
-        source: 'Pendente',
-      ));
-    }
-
-    result.sort((a, b) => a.date.compareTo(b.date));
-    return result;
+    final result = CashForecast.calculate(
+        now: now,
+        until: horizon,
+        accounts: app.accounts,
+        transactions: app.transactions,
+        recurring: app.recurring,
+        metadata: metadata,
+        invoicePayments: payments,
+        convert: app.convertToMain);
+    return result.events
+        .where((e) => e.amount != 0)
+        .map((e) => _ForecastItem(
+            date: e.date,
+            name: e.title,
+            amount: app.convertToMain(e.amount.abs(), e.currency),
+            type: e.amount > 0 ? 'income' : 'expense',
+            source: e.kind == 'invoice'
+                ? 'Fatura'
+                : e.kind == 'recurring'
+                    ? 'Recorrente'
+                    : 'Pendente'))
+        .toList();
   }
 
   double _monthlyEquivalent(RecurringPayment r) {
@@ -211,16 +158,15 @@ class _PlanningBody extends StatelessWidget {
       final recent = list.length > 4 ? list.sublist(list.length - 4) : list;
       final intervals = <int>[];
       for (var i = 1; i < recent.length; i++) {
-        intervals.add(recent[i].date.difference(recent[i - 1].date).inDays.abs());
+        intervals
+            .add(recent[i].date.difference(recent[i - 1].date).inDays.abs());
       }
       if (intervals.isEmpty) continue;
       final monthlyLike = intervals.every((days) => days >= 20 && days <= 40);
       if (!monthlyLike) continue;
 
-      final avgAmount = recent
-              .map(_mainAmount)
-              .reduce((a, b) => a + b) /
-          recent.length;
+      final avgAmount =
+          recent.map(_mainAmount).reduce((a, b) => a + b) / recent.length;
       final maxDiff = recent
           .map((tx) => (_mainAmount(tx) - avgAmount).abs())
           .fold<double>(0, (a, b) => a > b ? a : b);
@@ -344,7 +290,7 @@ class _PlanningBody extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Próximos 30 dias',
+                  'Fluxo dos próximos 30 dias',
                   style: theme.textTheme.titleMedium?.copyWith(
                     fontWeight: FontWeight.w900,
                   ),
@@ -390,6 +336,11 @@ class _PlanningBody extends StatelessWidget {
               ],
             ),
           ),
+          TextButton.icon(
+              onPressed: () => Navigator.push(context,
+                  MaterialPageRoute(builder: (_) => const AgendaScreen())),
+              icon: const Icon(Icons.event_note),
+              label: const Text('Ver saldo previsto, detalhes e avisos')),
           const SizedBox(height: 18),
           const _SectionTitle('Inteligência do mês'),
           const SizedBox(height: 8),
@@ -417,7 +368,8 @@ class _PlanningBody extends StatelessWidget {
           _InsightTile(
             icon: Icons.autorenew_rounded,
             title: 'Assinaturas',
-            value: '${subscriptions.length} ativa${subscriptions.length == 1 ? '' : 's'}',
+            value:
+                '${subscriptions.length} ativa${subscriptions.length == 1 ? '' : 's'}',
             subtitle: '${_money(subscriptionsMonthly)}/mês estimado',
           ),
           _InsightTile(
@@ -488,7 +440,8 @@ class _PlanningBody extends StatelessWidget {
                           Expanded(
                             child: Text(
                               category?.name ?? 'Orçamento',
-                              style: const TextStyle(fontWeight: FontWeight.w800),
+                              style:
+                                  const TextStyle(fontWeight: FontWeight.w800),
                             ),
                           ),
                           Text(
@@ -530,31 +483,32 @@ class _PlanningBody extends StatelessWidget {
             )
           else
             ...forecast.take(14).map(
-              (item) => Card(
-                child: ListTile(
-                  leading: CircleAvatar(
-                    child: Icon(item.type == 'income'
-                        ? Icons.arrow_downward_rounded
-                        : Icons.arrow_upward_rounded),
-                  ),
-                  title: Text(
-                    item.name,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  subtitle: Text(
-                    '${DateFormat('dd/MM/yyyy').format(item.date)} • ${item.source}',
-                  ),
-                  trailing: Text(
-                    '${item.type == 'income' ? '+' : '-'}${_money(item.amount)}',
-                    style: TextStyle(
-                      fontWeight: FontWeight.w900,
-                      color: item.type == 'income' ? Colors.green : cs.error,
+                  (item) => Card(
+                    child: ListTile(
+                      leading: CircleAvatar(
+                        child: Icon(item.type == 'income'
+                            ? Icons.arrow_downward_rounded
+                            : Icons.arrow_upward_rounded),
+                      ),
+                      title: Text(
+                        item.name,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      subtitle: Text(
+                        '${DateFormat('dd/MM/yyyy').format(item.date)} • ${item.source}',
+                      ),
+                      trailing: Text(
+                        '${item.type == 'income' ? '+' : '-'}${_money(item.amount)}',
+                        style: TextStyle(
+                          fontWeight: FontWeight.w900,
+                          color:
+                              item.type == 'income' ? Colors.green : cs.error,
+                        ),
+                      ),
                     ),
                   ),
                 ),
-              ),
-            ),
         ],
       ),
     );
@@ -593,8 +547,7 @@ class _Metric extends StatelessWidget {
               overflow: TextOverflow.ellipsis,
               style: const TextStyle(fontWeight: FontWeight.w900)),
           Text(label,
-              maxLines: 2,
-              style: Theme.of(context).textTheme.labelSmall),
+              maxLines: 2, style: Theme.of(context).textTheme.labelSmall),
         ],
       ),
     );
@@ -622,7 +575,8 @@ class _InsightTile extends StatelessWidget {
     return Card(
       child: ListTile(
         leading: CircleAvatar(
-          backgroundColor: (danger ? cs.error : cs.primary).withValues(alpha: .12),
+          backgroundColor:
+              (danger ? cs.error : cs.primary).withValues(alpha: .12),
           child: Icon(icon, color: danger ? cs.error : cs.primary),
         ),
         title: Text(title, style: const TextStyle(fontWeight: FontWeight.w800)),
