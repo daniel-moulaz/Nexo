@@ -29,19 +29,6 @@ class _FinanceHomeScreenState extends State<FinanceHomeScreen> {
     return _metaFuture!;
   }
 
-  bool _isCurrentMonth(DateTime date) {
-    final now = DateTime.now();
-    return date.year == now.year && date.month == now.month;
-  }
-
-  String _currencyFor(AppProvider app, AppTransaction tx) {
-    if (tx.currency.isNotEmpty) return tx.currency;
-    return app.accountById(tx.accountId)?.currency ?? app.settings.currency;
-  }
-
-  double _mainAmount(AppProvider app, AppTransaction tx) =>
-      app.convertToMain(tx.amount, _currencyFor(app, tx));
-
   @override
   Widget build(BuildContext context) {
     final app = context.watch<AppProvider>();
@@ -72,6 +59,14 @@ class _Dashboard extends StatelessWidget {
   bool _currentMonth(DateTime date) {
     final now = DateTime.now();
     return date.year == now.year && date.month == now.month;
+  }
+
+  String _monthLabel(DateTime date) {
+    const months = [
+      'janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho',
+      'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro',
+    ];
+    return '${months[date.month - 1]} de ${date.year}';
   }
 
   @override
@@ -133,12 +128,12 @@ class _Dashboard extends StatelessWidget {
           children: [
             Text(
               app.settings.userName.trim().isEmpty
-                  ? 'Minhas Finanças'
+                  ? 'Meu Fluxo'
                   : 'Olá, ${app.settings.userName.split(' ').first}',
               style: const TextStyle(fontWeight: FontWeight.w900),
             ),
             Text(
-              DateFormat("MMMM 'de' yyyy", 'pt_BR').format(now),
+              _monthLabel(now),
               style: theme.textTheme.bodySmall?.copyWith(
                 color: cs.onSurfaceVariant,
               ),
@@ -248,7 +243,7 @@ class _Dashboard extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 18),
-            _SectionHeader(
+            const _SectionHeader(
               title: 'Atalhos',
               trailing: 'Organize tudo por aqui',
             ),
@@ -408,7 +403,9 @@ class _CardInvoiceTile extends StatelessWidget {
     });
     final total = purchases.fold<double>(0, (sum, t) => sum + t.amount);
     final limit = card.creditLimit;
-    final available = limit == null ? null : (limit - total).clamp(0.0, double.infinity);
+    final available = limit == null
+        ? null
+        : (limit - total).clamp(0.0, double.infinity).toDouble();
 
     final dueDay = card.dueDay;
     DateTime? due;
