@@ -220,7 +220,7 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get recurring_notificationPermissionDenied =>
-      'Permiso de notificación denegado. Habilítelo en Configuración → Aplicaciones → Expensy → Notificaciones.';
+      'Permiso de notificación denegado. Habilítelo en Configuración → Aplicaciones → Nexo → Notificaciones.';
 
   @override
   String get recurring_remindMeAt => 'Recuérdamelo a';
@@ -404,7 +404,7 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get lended_person_notificationPermissionDenied =>
-      'Permiso de notificación denegado. Habilítelo en Configuración → Aplicaciones → Expensy → Notificaciones.';
+      'Permiso de notificación denegado. Habilítelo en Configuración → Aplicaciones → Nexo → Notificaciones.';
 
   @override
   String get lended_person_remindMeAtPrompt => 'Recuérdamelo a';
@@ -506,7 +506,7 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get onboarding_restoreFailed =>
-      'Error de restauración: el archivo puede estar dañado o no ser una copia de seguridad de Expensy.';
+      'Error de restauración: el archivo puede estar dañado o no ser una copia de seguridad de Nexo.';
 
   @override
   String get onboarding_continue => 'Continuar';
@@ -642,7 +642,7 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get backup_restoreFailedCorrupted =>
-      'Error de restauración: el archivo puede estar dañado o no ser una copia de seguridad de Expensy.';
+      'Error de restauración: el archivo puede estar dañado o no ser una copia de seguridad de Nexo.';
 
   @override
   String get budget_noBudgetsYet => 'Aún no hay presupuestos';
@@ -1416,7 +1416,7 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get onboarding_loadAPreviouslySaved =>
-      'Cargue un archivo JSON Expensy previamente guardado';
+      'Cargue un archivo JSON Nexo previamente guardado';
 
   @override
   String get onboarding_or => 'o';

@@ -506,7 +506,7 @@ class AppLocalizationsIt extends AppLocalizations {
 
   @override
   String get onboarding_restoreFailed =>
-      'Ripristino non riuscito: il file potrebbe essere danneggiato o non essere un backup Expensy.';
+      'Ripristino non riuscito: il file potrebbe essere danneggiato o non essere un backup Nexo.';
 
   @override
   String get onboarding_continue => 'Continua';
@@ -641,7 +641,7 @@ class AppLocalizationsIt extends AppLocalizations {
 
   @override
   String get backup_restoreFailedCorrupted =>
-      'Ripristino non riuscito: il file potrebbe essere danneggiato o non essere un backup Expensy.';
+      'Ripristino non riuscito: il file potrebbe essere danneggiato o non essere un backup Nexo.';
 
   @override
   String get budget_noBudgetsYet => 'Nessun budget ancora';
@@ -1407,14 +1407,14 @@ class AppLocalizationsIt extends AppLocalizations {
   String get onboarding_back => 'Indietro';
 
   @override
-  String get onboarding_welcomeToExpensy => 'Benvenuto in Expensy!';
+  String get onboarding_welcomeToExpensy => 'Benvenuto in Nexo!';
 
   @override
   String get onboarding_restoreABackup => 'Ripristina un Backup';
 
   @override
   String get onboarding_loadAPreviouslySaved =>
-      'Carica un file JSON Expensy salvato in precedenza';
+      'Carica un file JSON Nexo salvato in precedenza';
 
   @override
   String get onboarding_or => 'oppure';

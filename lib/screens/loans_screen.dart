@@ -1,3 +1,4 @@
+import '../utils/finance_input.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
@@ -76,7 +77,7 @@ class _LoansScreenState extends State<LoansScreen> {
             child: app.loans.isEmpty
                 ? Center(
                     child: Text(
-                      'No loans tracked yet',
+                      'Nenhum empréstimo cadastrado',
                       style: TextStyle(
                         color: cs.onSurface.withValues(alpha: 0.5),
                         fontSize: 14,
@@ -203,7 +204,7 @@ class _LoanCard extends StatelessWidget {
     final progress = app.loanProgress(loan);
     final remaining = app.loanRemaining(loan);
 
-    final df = DateFormat('MMM dd, yyyy');
+    final df = DateFormat('dd/MM/yyyy');
 
     return Card(
       margin: const EdgeInsets.only(bottom: 10),
@@ -344,7 +345,7 @@ class _LoanCard extends StatelessWidget {
                             onTap: () async {
                               await app.payLoanInstallment(loan);
                               if (context.mounted) {
-                                showAppSnackbar(context, 'Logged payment of ${formatAmount(loan.monthlyPayment, cur)}');
+                                showAppSnackbar(context, 'Pagamento registrado: ${formatAmount(loan.monthlyPayment, cur)}');
                               }
                             }),
                       ],
@@ -504,11 +505,11 @@ class _LoanSheetState extends State<LoanSheet> {
                 textInputAction: TextInputAction.next,
                 validator: (val) {
                   if (val == null || val.trim().isEmpty) return 'Required';
-                  final num = double.tryParse(val);
+                  final num = parseMoney(val);
                   if (num == null || num <= 0) return 'Invalid';
                   return null;
                 },
-                onChanged: (val) => setState(() => _principal = double.tryParse(val) ?? 0.0),
+                onChanged: (val) => setState(() => _principal = parseMoney(val) ?? 0.0),
               ),
               const SizedBox(height: 16),
 
@@ -571,7 +572,7 @@ class _LoanSheetState extends State<LoanSheet> {
                           labelText: l10n.loans_startDate,
                           prefixIcon: const Icon(Icons.calendar_today_outlined),
                         ),
-                        child: Text(DateFormat('MMM dd, yyyy').format(_startDate)),
+                        child: Text(DateFormat('dd/MM/yyyy').format(_startDate)),
                       ),
                     ),
                   ),
@@ -594,7 +595,7 @@ class _LoanSheetState extends State<LoanSheet> {
                           labelText: l10n.loans_endDate,
                           prefixIcon: const Icon(Icons.event_outlined),
                         ),
-                        child: Text(DateFormat('MMM dd, yyyy').format(_endDate)),
+                        child: Text(DateFormat('dd/MM/yyyy').format(_endDate)),
                       ),
                     ),
                   ),
@@ -603,7 +604,7 @@ class _LoanSheetState extends State<LoanSheet> {
               Padding(
                 padding: const EdgeInsets.only(top: 4, left: 4),
                 child: Text(
-                  'Duration: ${l10n.loans_durationMonths(_durationMonths)}',
+                  'Duração: ${l10n.loans_durationMonths(_durationMonths)}',
                   style: TextStyle(fontSize: 11, color: cs.onSurface.withValues(alpha: 0.6)),
                 ),
               ),
@@ -620,13 +621,13 @@ class _LoanSheetState extends State<LoanSheet> {
                 textInputAction: TextInputAction.next,
                 validator: (val) {
                   if (val != null && val.trim().isNotEmpty) {
-                    final num = double.tryParse(val);
+                    final num = parseMoney(val);
                     if (num == null || num < 0) return 'Invalid';
                   }
                   return null;
                 },
                 onChanged: (val) {
-                  setState(() => _interestRate = double.tryParse(val));
+                  setState(() => _interestRate = parseMoney(val));
                 },
               ),
               const SizedBox(height: 16),

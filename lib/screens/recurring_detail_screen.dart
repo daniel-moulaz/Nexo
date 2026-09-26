@@ -209,7 +209,7 @@ class _RecurringDetailScreenState extends State<RecurringDetailScreen> {
             children: [
               Expanded(
                 child: OutlinedButton.icon(
-                  onPressed: () async {
+                  onPressed: r.endDate != null && r.nextDate.isAfter(r.endDate!) ? null : () async {
                     await app.skipNextRecurring(r);
                     await _loadHistory();
                   },
@@ -220,7 +220,7 @@ class _RecurringDetailScreenState extends State<RecurringDetailScreen> {
               const SizedBox(width: 10),
               Expanded(
                 child: FilledButton.icon(
-                  onPressed: () async {
+                  onPressed: r.endDate != null && r.nextDate.isAfter(r.endDate!) ? null : () async {
                     await app.markRecurringPaid(r);
                     await _loadHistory();
                   },

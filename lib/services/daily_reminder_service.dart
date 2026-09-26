@@ -63,7 +63,7 @@ class DailyReminderService {
 
     const androidDetails = AndroidNotificationDetails(
       'expensy_daily_reminder',
-      'Daily Transaction Reminder',
+      'Lembrete de lançamentos',
       channelDescription: 'Nightly nudge to log your daily spending.',
       importance: Importance.high,
       priority: Priority.high,
@@ -76,8 +76,8 @@ class DailyReminderService {
 
     await _plugin.zonedSchedule(
       dailyReminderId,
-      '📝 Daily Reminder',
-      "Don't forget to log today's spending.",
+      'Lembrete diário',
+      "Lembre-se de registrar os gastos de hoje.",
       scheduledDate,
       details,
       androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,

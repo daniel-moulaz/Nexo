@@ -1,3 +1,4 @@
+import '../utils/finance_input.dart';
 // lib/screens/lended_person_screen.dart
 import 'package:flutter/material.dart';
 import '../utils/snackbar.dart';
@@ -359,7 +360,7 @@ class _EntryCard extends StatelessWidget {
                           : l10n.lended_person_borrowed,
                       style: const TextStyle(
                           fontWeight: FontWeight.w700, fontSize: 15)),
-                  Text(DateFormat('d MMM yyyy').format(l.date),
+                  Text(DateFormat('dd/MM/yyyy').format(l.date),
                       style: TextStyle(
                           fontSize: 11,
                           color: cs.onSurface.withValues(alpha: 0.5))),
@@ -373,7 +374,7 @@ class _EntryCard extends StatelessWidget {
                   isOverdue
                       ? l10n.lended_person_overdue
                       : l10n.lended_person_due(
-                          DateFormat('d MMM yy').format(l.dueDate!)),
+                          DateFormat('dd/MM/yyyy').format(l.dueDate!)),
                   style: TextStyle(
                       fontSize: 10,
                       fontWeight: FontWeight.w600,
@@ -447,10 +448,9 @@ class _EntryCard extends StatelessWidget {
                     size: 18, color: cs.error),
                 onPressed: () async {
                   final app = context.read<AppProvider>();
-                  final person = app.personById(l.personId);
                   final undo = await app.deleteLendedWithUndo(l.id);
                   if (context.mounted) {
-                    showAppSnackbar(context, 'Record deleted', onUndo: undo);
+                    showAppSnackbar(context, 'Registro excluído', onUndo: undo);
                   }
                 }),
           ]),
@@ -567,7 +567,7 @@ class _EntrySheetState extends State<_EntrySheet> {
 
   Future<void> _submit() async {
     setState(() => _submitted = true);
-    final amount = double.tryParse(_amtCtrl.text);
+    final amount = parseMoney(_amtCtrl.text);
     if (amount == null || amount <= 0) return;
     final app = context.read<AppProvider>();
 
@@ -691,7 +691,7 @@ class _EntrySheetState extends State<_EntrySheet> {
               labelText: l10n.lended_person_amount,
               prefixText: '$sym ',
               errorText:
-                  _submitted && (double.tryParse(_amtCtrl.text) ?? 0) <= 0
+                  _submitted && (parseMoney(_amtCtrl.text) ?? 0) <= 0
                       ? l10n.error_required
                       : null,
             ),
@@ -719,7 +719,7 @@ class _EntrySheetState extends State<_EntrySheet> {
             title: Text(
                 _dueDate != null
                     ? l10n.lended_person_dueColon(
-                        DateFormat('d MMM yyyy').format(_dueDate!))
+                        DateFormat('dd/MM/yyyy').format(_dueDate!))
                     : l10n.lended_person_noDueDate,
                 style: const TextStyle(fontWeight: FontWeight.w600)),
             trailing: _dueDate != null
@@ -810,7 +810,7 @@ class _EntrySheetState extends State<_EntrySheet> {
                 _reminderTimeAlreadyPassedToday
                     ? l10n.lended_person_thatTimePassed
                     : l10n.lended_person_notificationFiresOn(
-                        DateFormat('d MMM yyyy').format(_dueDate!),
+                        DateFormat('dd/MM/yyyy').format(_dueDate!),
                         _reminderTime.format(context)),
                 style: TextStyle(
                     fontSize: 11, color: cs.onSurface.withValues(alpha: 0.4)),

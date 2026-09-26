@@ -101,7 +101,7 @@
     }
   },
   "recurring_paymentHistory": "Historique des paiements",
-  "recurring_notificationPermissionDenied": "Permission de notification refusée. Activez-la dans Paramètres → Applications → Expensy → Notifications.",
+  "recurring_notificationPermissionDenied": "Permission de notification refusée. Activez-la dans Paramètres → Applications → Nexo → Notifications.",
   "recurring_remindMeAt": "Me le rappeler à",
   "recurring_editRecurring": "Modifier la récurrence",
   "recurring_addRecurring": "Ajouter un paiement récurrent",
@@ -195,7 +195,7 @@
       "time": {}
     }
   },
-  "lended_person_notificationPermissionDenied": "Permission de notification refusée. Activez-la dans Paramètres → Applications → Expensy → Notifications.",
+  "lended_person_notificationPermissionDenied": "Permission de notification refusée. Activez-la dans Paramètres → Applications → Nexo → Notifications.",
   "lended_person_remindMeAtPrompt": "Me le rappeler à",
   "lended_person_editRecord": "Modifier l'enregistrement",
   "lended_person_addRecord": "Ajouter un enregistrement",
@@ -250,7 +250,7 @@
     }
   },
   "transactions_unsettled": "Non réglé",
-  "onboarding_restoreFailed": "Échec de la restauration : le fichier est peut-être corrompu ou ne correspond pas à une sauvegarde Expensy.",
+  "onboarding_restoreFailed": "Échec de la restauration : le fichier est peut-être corrompu ou ne correspond pas à une sauvegarde Nexo.",
   "onboarding_continue": "Continuer",
   "onboarding_getStarted": "Commencer",
   "onboarding_yourPersonalTracker": "Votre outil de suivi financier personnel 100% hors ligne.\nVous avez déjà une sauvegarde d'un autre appareil ou d'une installation précédente ?",
@@ -290,7 +290,7 @@
   "backup_upgradedFrom": " (mis à jour de la v{originalVersion} → v{schemaVersion})",
   "backup_dataRestoredSuccessfully": "Données restaurées avec succès !{vLabel}",
   "backup_restoreFailed": "Échec de la restauration : {error}",
-  "backup_restoreFailedCorrupted": "Échec de la restauration : le fichier est peut-être corrompu ou ne correspond pas à une sauvegarde Expensy.",
+  "backup_restoreFailedCorrupted": "Échec de la restauration : le fichier est peut-être corrompu ou ne correspond pas à une sauvegarde Nexo.",
   "budget_noBudgetsYet": "Aucun budget",
   "budget_tapToAddBudget": "Appuyez sur + pour définir une limite de dépenses par catégorie",
   "budget_budgeted": "Budgété",
@@ -536,9 +536,9 @@
   "lended_color": "Couleur",
   "more_more": "Plus",
   "onboarding_back": "Retour",
-  "onboarding_welcomeToExpensy": "Bienvenue sur Expensy !",
+  "onboarding_welcomeToExpensy": "Bienvenue sur Nexo !",
   "onboarding_restoreABackup": "Restaurer une sauvegarde",
-  "onboarding_loadAPreviouslySaved": "Charger un fichier JSON Expensy précédemment enregistré",
+  "onboarding_loadAPreviouslySaved": "Charger un fichier JSON Nexo précédemment enregistré",
   "onboarding_or": "ou",
   "onboarding_startFresh": "Commencer à zéro",
   "onboarding_firstWhatShouldWeCal": "Tout d'abord, comment devons-nous vous appeler ?",

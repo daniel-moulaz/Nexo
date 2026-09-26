@@ -5,9 +5,13 @@ import 'package:provider/provider.dart';
 import '../models/models.dart';
 import '../providers/app_provider.dart';
 import '../services/finance_rules.dart';
+import '../services/billing_cycle.dart';
 import '../services/transaction_metadata_service.dart';
 import '../theme/app_theme.dart';
 import 'card_invoice_screen.dart';
+import 'agenda_screen.dart';
+import 'add_transaction_screen.dart';
+import 'transfer_screen.dart';
 import 'finance_export_screen.dart';
 import 'financial_planning_screen.dart';
 import 'incomes_screen.dart';
@@ -127,7 +131,8 @@ class _Dashboard extends StatelessWidget {
     final theme = Theme.of(context);
     final cs = theme.colorScheme;
     final now = DateTime.now();
-    final monthTx = app.transactions.where((t) => _currentMonth(t.date)).toList();
+    final monthTx =
+        app.transactions.where((t) => _currentMonth(t.date)).toList();
 
     double income = 0;
     double paid = 0;
@@ -140,7 +145,7 @@ class _Dashboard extends StatelessWidget {
       if (FinanceRules.isNeutral(tx, meta)) continue;
       final amount = _mainAmount(tx);
       if (tx.type == 'income') {
-        income += amount;
+        if (!meta.isPending) income += amount;
         continue;
       }
       if (meta.status == 'pending') {
@@ -152,13 +157,24 @@ class _Dashboard extends StatelessWidget {
       if (meta.expenseClass == 'extraordinary') extraordinary += amount;
     }
 
-    final committed = paid + pending;
-    final available = income - committed;
+    final cash = app.cashAccounts
+        .where((a) => !a.excludeFromTotal)
+        .fold<double>(
+            0, (sum, a) => sum + app.convertToMain(a.balance, a.currency));
+    final cardDebt = app.accounts.where((a) => a.type == 'credit').fold<double>(
+        0,
+        (sum, a) =>
+            sum +
+            app.convertToMain(
+                -a.balance.clamp(double.negativeInfinity, 0).toDouble(),
+                a.currency));
+    final available = cash - pending - cardDebt;
     final daysInMonth = DateTime(now.year, now.month + 1, 0).day;
     final remainingDays = (daysInMonth - now.day + 1).clamp(1, 31);
     final safeDaily = available > 0 ? available / remainingDays : 0.0;
     final safeWeekly = safeDaily * 7;
-    final normalCost = (paid - extraordinary).clamp(0.0, double.infinity).toDouble();
+    final normalCost =
+        (paid - extraordinary).clamp(0.0, double.infinity).toDouble();
 
     final pendingTx = monthTx.where((t) {
       if (t.type != 'expense') return false;
@@ -207,7 +223,7 @@ class _Dashboard extends StatelessWidget {
           children: [
             Text(
               app.settings.userName.trim().isEmpty
-                  ? 'Meu Fluxo'
+                  ? 'Nexo'
                   : 'Olá, ${app.settings.userName.split(' ').first}',
               style: const TextStyle(fontWeight: FontWeight.w900),
             ),
@@ -220,6 +236,11 @@ class _Dashboard extends StatelessWidget {
           ],
         ),
         actions: [
+          IconButton(
+              tooltip: 'Agenda financeira',
+              icon: const Icon(Icons.event_note),
+              onPressed: () => Navigator.push(context,
+                  MaterialPageRoute(builder: (_) => const AgendaScreen()))),
           IconButton(
             tooltip: app.settings.hideBalance
                 ? 'Mostrar valores'
@@ -236,7 +257,8 @@ class _Dashboard extends StatelessWidget {
             tooltip: 'Buscar lançamentos',
             icon: const Icon(Icons.search_rounded),
             onPressed: () => Navigator.of(context).push(
-              MaterialPageRoute(builder: (_) => const TransactionSearchScreen()),
+              MaterialPageRoute(
+                  builder: (_) => const TransactionSearchScreen()),
             ),
           ),
           PopupMenuButton<String>(
@@ -275,7 +297,7 @@ class _Dashboard extends StatelessWidget {
         padding: const EdgeInsets.fromLTRB(16, 8, 16, 140),
         children: [
           Container(
-            padding: const EdgeInsets.all(20),
+            padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
               color: cs.primaryContainer.withValues(alpha: 0.55),
               borderRadius: BorderRadius.circular(26),
@@ -284,21 +306,22 @@ class _Dashboard extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Disponível após compromissos',
+                  'Saldo em contas',
                   style: theme.textTheme.labelLarge?.copyWith(
                     color: cs.onSurfaceVariant,
                   ),
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  _money(available),
+                  _money(cash),
                   style: theme.textTheme.headlineLarge?.copyWith(
                     fontWeight: FontWeight.w900,
                     letterSpacing: -1,
                     color: available < 0 ? cs.error : null,
                   ),
                 ),
-                const SizedBox(height: 16),
+                Text('Após pendências e cartões: ${_money(available)}'),
+                const SizedBox(height: 12),
                 Row(
                   children: [
                     Expanded(
@@ -311,7 +334,7 @@ class _Dashboard extends StatelessWidget {
                     const SizedBox(width: 8),
                     Expanded(
                       child: _MiniStat(
-                        label: 'Pago',
+                        label: 'Gastos do mês',
                         value: _money(paid),
                         icon: Icons.check_circle_outline_rounded,
                       ),
@@ -332,7 +355,24 @@ class _Dashboard extends StatelessWidget {
               ],
             ),
           ),
-          const SizedBox(height: 14),
+          const SizedBox(height: 12),
+          Wrap(spacing: 8, runSpacing: 8, children: [
+            for (final action in [
+              ('expense', 'Despesa', Icons.remove),
+              ('income', 'Receita', Icons.add),
+              ('transfer', 'Transferência', Icons.swap_horiz)
+            ])
+              FilledButton.tonalIcon(
+                  onPressed: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                          builder: (_) => action.$1 == 'transfer'
+                              ? const TransferScreen()
+                              : AddTransactionScreen(initialType: action.$1))),
+                  icon: Icon(action.$3),
+                  label: Text(action.$2)),
+          ]),
+          const SizedBox(height: 12),
           Row(
             children: [
               Expanded(
@@ -532,11 +572,6 @@ class _CardInvoiceTile extends StatelessWidget {
     required this.metadata,
   });
 
-  DateTime _safeDate(int year, int month, int day) {
-    final max = DateTime(year, month + 1, 0).day;
-    return DateTime(year, month, day.clamp(1, max));
-  }
-
   String _display(double value, String currency) {
     if (app.settings.hideBalance) return '••••••';
     return formatAmount(value, currency);
@@ -544,38 +579,27 @@ class _CardInvoiceTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final now = DateTime.now();
-    final closeDay = card.statementDay ?? 1;
-    final currentClose = _safeDate(now.year, now.month, closeDay);
-    final DateTime cycleEnd;
-    final DateTime cycleStart;
-
-    if (!now.isAfter(currentClose)) {
-      cycleEnd = currentClose;
-      final prevMonthEnd = _safeDate(now.year, now.month - 1, closeDay);
-      cycleStart = prevMonthEnd.add(const Duration(days: 1));
-    } else {
-      cycleStart = currentClose.add(const Duration(days: 1));
-      cycleEnd = _safeDate(now.year, now.month + 1, closeDay);
-    }
-
+    final cycle =
+        BillingCycle.forDate(DateTime.now(), card.statementDay, card.dueDay);
+    final cycleStart = cycle.start;
+    final cycleEnd = cycle.end;
     final purchases = app.transactions.where((t) {
-      if (t.accountId != card.id || t.type != 'expense') return false;
-      if (t.date.isBefore(cycleStart) || t.date.isAfter(cycleEnd)) return false;
-      return !FinanceRules.isNeutral(t, metadata[t.id]);
+      if (t.accountId != card.id) return false;
+      if (t.date.isBefore(cycleStart) ||
+          !t.date.isBefore(cycleEnd.add(const Duration(days: 1)))) return false;
+      return !FinanceRules.isNeutral(t, metadata[t.id]) ||
+          metadata[t.id]?.source == 'opening_balance';
     });
-    final total = purchases.fold<double>(0, (sum, t) => sum + t.amount);
+    final total = purchases.fold<double>(
+        0, (sum, t) => sum + (t.type == 'income' ? -t.amount : t.amount));
     final limit = card.creditLimit;
     final available = limit == null
         ? null
-        : (limit - total).clamp(0.0, double.infinity).toDouble();
+        : (limit + card.balance.clamp(double.negativeInfinity, 0))
+            .clamp(0.0, double.infinity)
+            .toDouble();
 
-    DateTime? due;
-    if (card.dueDay != null) {
-      final dueMonth = cycleEnd.month == 12 ? 1 : cycleEnd.month + 1;
-      final dueYear = cycleEnd.month == 12 ? cycleEnd.year + 1 : cycleEnd.year;
-      due = _safeDate(dueYear, dueMonth, card.dueDay!);
-    }
+    final due = cycle.due;
 
     return Card(
       elevation: 0,
@@ -591,7 +615,8 @@ class _CardInvoiceTile extends StatelessWidget {
         subtitle: Text([
           'Fecha ${DateFormat('dd/MM').format(cycleEnd)}',
           if (due != null) 'vence ${DateFormat('dd/MM').format(due)}',
-          if (available != null) 'limite livre ${_display(available, card.currency)}',
+          if (available != null)
+            'limite livre ${_display(available, card.currency)}',
         ].join(' • ')),
         trailing: Text(
           _display(total, card.currency),

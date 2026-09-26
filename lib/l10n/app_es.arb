@@ -101,7 +101,7 @@
     }
   },
   "recurring_paymentHistory": "Historial de pagos",
-  "recurring_notificationPermissionDenied": "Permiso de notificación denegado. Habilítelo en Configuración → Aplicaciones → Expensy → Notificaciones.",
+  "recurring_notificationPermissionDenied": "Permiso de notificación denegado. Habilítelo en Configuración → Aplicaciones → Nexo → Notificaciones.",
   "recurring_remindMeAt": "Recuérdamelo a",
   "recurring_editRecurring": "Editar recurrente",
   "recurring_addRecurring": "Agregar un pago recurrente",
@@ -195,7 +195,7 @@
       "time": {}
     }
   },
-  "lended_person_notificationPermissionDenied": "Permiso de notificación denegado. Habilítelo en Configuración → Aplicaciones → Expensy → Notificaciones.",
+  "lended_person_notificationPermissionDenied": "Permiso de notificación denegado. Habilítelo en Configuración → Aplicaciones → Nexo → Notificaciones.",
   "lended_person_remindMeAtPrompt": "Recuérdamelo a",
   "lended_person_editRecord": "Editar registro",
   "lended_person_addRecord": "Agregar registro",
@@ -250,7 +250,7 @@
     }
   },
   "transactions_unsettled": "Inestable",
-  "onboarding_restoreFailed": "Error de restauración: el archivo puede estar dañado o no ser una copia de seguridad de Expensy.",
+  "onboarding_restoreFailed": "Error de restauración: el archivo puede estar dañado o no ser una copia de seguridad de Nexo.",
   "onboarding_continue": "Continuar",
   "onboarding_getStarted": "Empezar",
   "onboarding_yourPersonalTracker": "Su rastreador de finanzas personal, 100% fuera de línea.\n¿Ya tienes una copia de seguridad de otro dispositivo o una instalación anterior?",
@@ -290,7 +290,7 @@
   "backup_upgradedFrom": "(actualizado desde v{originalVersion}→ v{schemaVersion})",
   "backup_dataRestoredSuccessfully": "¡Datos restaurados exitosamente!{vLabel}",
   "backup_restoreFailed": "Error de restauración:{error}",
-  "backup_restoreFailedCorrupted": "Error de restauración: el archivo puede estar dañado o no ser una copia de seguridad de Expensy.",
+  "backup_restoreFailedCorrupted": "Error de restauración: el archivo puede estar dañado o no ser una copia de seguridad de Nexo.",
   "budget_noBudgetsYet": "Aún no hay presupuestos",
   "budget_tapToAddBudget": "Toque + para establecer un límite de gasto por categoría",
   "budget_budgeted": "Presupuestado",
@@ -511,7 +511,7 @@
   "onboarding_back": "Atrás",
   "onboarding_welcomeToExpensy": "¡Bienvenido a Caro!",
   "onboarding_restoreABackup": "Restaurar una copia de seguridad",
-  "onboarding_loadAPreviouslySaved": "Cargue un archivo JSON Expensy previamente guardado",
+  "onboarding_loadAPreviouslySaved": "Cargue un archivo JSON Nexo previamente guardado",
   "onboarding_or": "o",
   "onboarding_startFresh": "Empezar de nuevo",
   "onboarding_firstWhatShouldWeCal": "Primero, ¿cómo deberíamos llamarte?",

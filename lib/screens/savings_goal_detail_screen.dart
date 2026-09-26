@@ -1,3 +1,4 @@
+import '../utils/finance_input.dart';
 import 'package:flutter/material.dart';
 import '../l10n/app_localizations.dart';
 import 'package:provider/provider.dart';
@@ -110,9 +111,11 @@ class SavingsGoalDetailScreen extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 12),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                Wrap(
+                  spacing: 16, runSpacing: 8,
                   children: [
+                    if (currentGoal.targetDate != null && currentGoal.currentAmount < currentGoal.targetAmount)
+                      Text('Recomendado por mês: ${formatAmount((currentGoal.targetAmount - currentGoal.currentAmount) / ((currentGoal.targetDate!.difference(DateTime.now()).inDays / 30).ceil().clamp(1, 1200)), currentGoal.currency)}'),
                     Text('${(progress * 100).toStringAsFixed(1)}%',
                         style: TextStyle(
                             fontSize: 14,
@@ -121,7 +124,7 @@ class SavingsGoalDetailScreen extends StatelessWidget {
                     if (currentGoal.targetDate != null)
                       Text(
                           l10n.savings_targetDate(
-                              DateFormat('MMM d, yyyy').format(currentGoal.targetDate!)),
+                              DateFormat('dd/MM/yyyy').format(currentGoal.targetDate!)),
                           style: TextStyle(
                               fontSize: 13,
                               color: cs.onSurface.withValues(alpha: 0.6))),
@@ -168,7 +171,7 @@ class SavingsGoalDetailScreen extends StatelessWidget {
                 if (contributions.isEmpty) {
                   return const EmptyState(
                     icon: Icons.history,
-                    message: 'No contributions yet',
+                    message: 'Nenhum aporte registrado',
                   );
                 }
                 return ListView.builder(
@@ -189,10 +192,10 @@ class SavingsGoalDetailScreen extends StatelessWidget {
                           color: isContrib ? const Color(0xFF2E7D32) : cs.error,
                         ),
                       ),
-                      title: Text(isContrib ? 'Contribution' : 'Withdrawal',
+                      title: Text(isContrib ? 'Aporte' : 'Retirada',
                           style: const TextStyle(fontWeight: FontWeight.w600)),
                       subtitle: Text(
-                          '${DateFormat('MMM d, yyyy').format(c.date)} • ${acc?.name ?? 'Unknown Account'}',
+                          '${DateFormat('dd/MM/yyyy').format(c.date)} • ${acc?.name ?? 'Conta desconhecida'}',
                           style: TextStyle(
                               fontSize: 12,
                               color: cs.onSurface.withValues(alpha: 0.6))),
@@ -247,17 +250,18 @@ class _ContributionSheetState extends State<_ContributionSheet> {
   final _noteCtrl = TextEditingController();
   String? _selectedAccountId;
   bool _submitted = false;
+  bool _saving = false;
 
   @override
   void initState() {
     super.initState();
     // Preselect the primary account or the first one with matching currency
     final matches =
-        widget.app.nonBankAccounts.where((a) => a.currency == widget.goal.currency);
+        widget.app.cashAccounts.where((a) => a.currency == widget.goal.currency);
     if (matches.isNotEmpty) {
       _selectedAccountId = matches.first.id;
-    } else if (widget.app.nonBankAccounts.isNotEmpty) {
-      _selectedAccountId = widget.app.nonBankAccounts.first.id;
+    } else if (widget.app.cashAccounts.isNotEmpty) {
+      _selectedAccountId = widget.app.cashAccounts.first.id;
     }
   }
 
@@ -268,27 +272,40 @@ class _ContributionSheetState extends State<_ContributionSheet> {
     super.dispose();
   }
 
-  void _submit() {
+  Future<void> _submit() async {
+    if (_saving) return;
     setState(() => _submitted = true);
-    final amt = double.tryParse(_amountCtrl.text.replaceAll(',', '')) ?? 0.0;
+    final amt = parseMoney(_amountCtrl.text) ?? 0.0;
     if (amt <= 0 || _selectedAccountId == null) return;
+    if (!widget.isContribution && amt > widget.goal.currentAmount) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('A retirada não pode superar o valor guardado.')));
+      return;
+    }
 
+    setState(() => _saving = true);
+    try {
     if (widget.isContribution) {
-      widget.app.contributeToGoal(
+      await widget.app.contributeToGoal(
         goalId: widget.goal.id,
         fromAccountId: _selectedAccountId!,
         amount: amt, // Amount entered in account currency
         note: _noteCtrl.text.trim(),
       );
     } else {
-      widget.app.withdrawFromGoal(
+      await widget.app.withdrawFromGoal(
         goalId: widget.goal.id,
         toAccountId: _selectedAccountId!,
         amount: amt, // Amount entered in goal currency
         note: _noteCtrl.text.trim(),
       );
     }
-    Navigator.pop(context);
+    } catch (_) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Não foi possível concluir. Confira a conta e o valor e tente novamente.')));
+      return;
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
+    if (mounted) Navigator.pop(context);
   }
 
   @override
@@ -301,22 +318,23 @@ class _ContributionSheetState extends State<_ContributionSheet> {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Text(
-              widget.isContribution ? 'Add Contribution' : 'Withdraw from Goal',
+              widget.isContribution ? 'Adicionar aporte' : 'Retirar do objetivo',
               style:
                   const TextStyle(fontSize: 20, fontWeight: FontWeight.w800)),
           const SizedBox(height: 20),
-          if (widget.app.nonBankAccounts.isEmpty)
+          if (widget.app.cashAccounts.isEmpty)
             Text(l10n.savings_noAccounts)
           else ...[
             DropdownButtonFormField<String>(
+              isExpanded: true,
               initialValue: _selectedAccountId,
               decoration: InputDecoration(
                 labelText:
-                    widget.isContribution ? 'From Account' : 'To Account',
+                    widget.isContribution ? 'Conta de origem' : 'Conta de destino',
                 border:
                     OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
               ),
-              items: widget.app.nonBankAccounts
+              items: widget.app.cashAccounts
                   .map((a) => DropdownMenuItem(
                         value: a.id,
                         child: Text('${a.name} (${a.currency})'),
@@ -330,16 +348,16 @@ class _ContributionSheetState extends State<_ContributionSheet> {
               keyboardType:
                   const TextInputType.numberWithOptions(decimal: true),
               decoration: InputDecoration(
-                labelText: 'Amount',
+                labelText: 'Valor',
                 border:
                     OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                 prefixIcon: const Icon(Icons.monetization_on_outlined),
                 errorText: _submitted &&
-                        (double.tryParse(
-                                    _amountCtrl.text.replaceAll(',', '')) ??
+                        (parseMoney(
+                                    _amountCtrl.text) ??
                                 0.0) <=
                             0
-                    ? 'Amount is required'
+                    ? 'Informe um valor válido'
                     : null,
               ),
             ),
@@ -348,7 +366,7 @@ class _ContributionSheetState extends State<_ContributionSheet> {
               controller: _noteCtrl,
               textCapitalization: TextCapitalization.sentences,
               decoration: InputDecoration(
-                labelText: 'Note (Optional)',
+                labelText: 'Observação (opcional)',
                 border:
                     OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                 prefixIcon: const Icon(Icons.notes),
@@ -368,7 +386,7 @@ class _ContributionSheetState extends State<_ContributionSheet> {
                   shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(16))),
               child: Text(
-                  widget.isContribution ? 'Add Contribution' : 'Withdraw',
+                  widget.isContribution ? 'Adicionar aporte' : 'Retirar',
                   style: const TextStyle(
                       fontSize: 16, fontWeight: FontWeight.w700)),
             ),

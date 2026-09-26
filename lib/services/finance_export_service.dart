@@ -15,8 +15,22 @@ class FinanceExportService {
     required DateTime from,
     required DateTime to,
   }) async {
+    final excel = await buildWorkbook(app, from: from, to: to);
+    final bytes = excel.encode();
+    if (bytes == null) throw StateError('Não foi possível gerar o Excel.');
+    return FilePicker.platform.saveFile(
+        dialogTitle: 'Salvar relatório financeiro',
+        fileName:
+            'nexo_${DateFormat('yyyy-MM-dd').format(from)}_a_${DateFormat('yyyy-MM-dd').format(to)}.xlsx',
+        type: FileType.custom,
+        allowedExtensions: const ['xlsx'],
+        bytes: Uint8List.fromList(bytes));
+  }
+
+  static Future<Excel> buildWorkbook(AppProvider app,
+      {required DateTime from, required DateTime to}) async {
     final start = DateTime(from.year, from.month, from.day);
-    final end = DateTime(to.year, to.month, to.day, 23, 59, 59);
+    final end = DateTime(to.year, to.month, to.day, 23, 59, 59, 999, 999);
     final txs = app.transactions
         .where((t) => !t.date.isBefore(start) && !t.date.isAfter(end))
         .toList()
@@ -26,29 +40,16 @@ class FinanceExportService {
         .getForMany(txs.map((e) => e.id));
 
     final excel = Excel.createExcel();
-    try {
-      excel.delete('Sheet1');
-    } catch (_) {}
 
     _buildSummary(excel['Resumo'], app, txs, metadata, start, end);
     _buildTransactions(excel['Transações'], app, txs, metadata);
     _buildAccounts(excel['Contas'], app);
     _buildCards(excel['Cartões'], app, txs, metadata);
-    _buildBudgets(excel['Orçamento'], app);
+    _buildBudgets(excel['Orçamentos'], app);
+    _buildGoals(excel['Objetivos'], app);
 
-    final bytes = excel.encode();
-    if (bytes == null) throw Exception('Não foi possível gerar o Excel.');
-
-    final fileName =
-        'meu_fluxo_${DateFormat('yyyy-MM-dd').format(start)}_a_${DateFormat('yyyy-MM-dd').format(end)}.xlsx';
-
-    return FilePicker.platform.saveFile(
-      dialogTitle: 'Salvar relatório financeiro',
-      fileName: fileName,
-      type: FileType.custom,
-      allowedExtensions: const ['xlsx'],
-      bytes: Uint8List.fromList(bytes),
-    );
+    excel.delete('Sheet1');
+    return excel;
   }
 
   static void _header(Sheet sheet, List<String> labels) {
@@ -94,7 +95,7 @@ class FinanceExportService {
         continue;
       }
       if (tx.type == 'income') {
-        income += amount;
+        if (!meta.isPending) income += amount;
         continue;
       }
       if (meta.status == 'pending') {
@@ -106,14 +107,23 @@ class FinanceExportService {
     }
 
     final rows = <List<String>>[
-      ['Período', '${DateFormat('dd/MM/yyyy').format(from)} a ${DateFormat('dd/MM/yyyy').format(to)}'],
+      [
+        'Período',
+        '${DateFormat('dd/MM/yyyy').format(from)} a ${DateFormat('dd/MM/yyyy').format(to)}'
+      ],
       ['Moeda principal', app.settings.currency],
       ['Receitas reais', income.toStringAsFixed(2)],
       ['Despesas pagas', paid.toStringAsFixed(2)],
       ['Despesas pendentes', pending.toStringAsFixed(2)],
       ['Despesas extraordinárias', extraordinary.toStringAsFixed(2)],
-      ['Movimentos neutros (transferência/reserva)', neutralMovements.toStringAsFixed(2)],
-      ['Saldo do período (receitas - pagas)', (income - paid).toStringAsFixed(2)],
+      [
+        'Movimentos neutros (transferência/reserva)',
+        neutralMovements.toStringAsFixed(2)
+      ],
+      [
+        'Saldo do período (receitas - pagas)',
+        (income - paid).toStringAsFixed(2)
+      ],
       ['Comprometido (pagas + pendentes)', (paid + pending).toStringAsFixed(2)],
     ];
 
@@ -161,35 +171,63 @@ class FinanceExportService {
       final values = [
         DateFormat('dd/MM/yyyy').format(tx.date),
         tx.description,
-        tx.type == 'income' ? 'Receita' : 'Despesa',
+        neutral
+            ? 'Movimento neutro'
+            : tx.type == 'income'
+                ? 'Receita'
+                : 'Despesa',
         tx.amount.toStringAsFixed(2),
         _currencyFor(app, tx),
         app.accountById(tx.accountId)?.name ?? '',
         app.categoryById(tx.categoryId)?.name ?? '',
         meta.subcategory,
-        tx.type == 'income' ? 'Recebido' : status,
-        meta.dueDate == null ? '' : DateFormat('dd/MM/yyyy').format(meta.dueDate!),
+        tx.type == 'income'
+            ? (meta.isPending ? 'Prevista' : 'Recebida')
+            : status,
+        meta.dueDate == null
+            ? ''
+            : DateFormat('dd/MM/yyyy').format(meta.dueDate!),
         meta.expenseClass == 'extraordinary' ? 'Extraordinária' : 'Normal',
         neutral ? 'Não' : 'Sim',
         meta.installmentLabel,
-        meta.source,
+        meta.source.startsWith('transfer:')
+            ? 'Transferência'
+            : const {
+                  'manual': 'Manual',
+                  'import': 'Importação',
+                  'recurring': 'Recorrente',
+                  'installment': 'Parcelamento'
+                }[meta.source] ??
+                meta.source,
         tx.note,
       ];
       for (var c = 0; c < values.length; c++) {
         sheet
             .cell(CellIndex.indexByColumnRow(columnIndex: c, rowIndex: i + 1))
-            .value = TextCellValue(values[c]);
+            .value = double.tryParse(values[c]) != null &&
+                c != 0
+            ? DoubleCellValue(double.parse(values[c]))
+            : TextCellValue(values[c]);
       }
     }
   }
 
   static void _buildAccounts(Sheet sheet, AppProvider app) {
-    _header(sheet, const ['Conta', 'Tipo', 'Saldo', 'Moeda', 'Incluir no total']);
+    _header(
+        sheet, const ['Conta', 'Tipo', 'Saldo', 'Moeda', 'Incluir no total']);
     for (var i = 0; i < app.accounts.length; i++) {
       final a = app.accounts[i];
       final values = [
         a.name,
-        a.type,
+        const {
+              'bank': 'Banco',
+              'cash': 'Dinheiro',
+              'wallet': 'Carteira',
+              'savings': 'Poupança',
+              'credit': 'Cartão',
+              'gold': 'Ouro'
+            }[a.type] ??
+            a.type,
         a.balance.toStringAsFixed(2),
         a.currency,
         a.excludeFromTotal ? 'Não' : 'Sim',
@@ -197,7 +235,10 @@ class FinanceExportService {
       for (var c = 0; c < values.length; c++) {
         sheet
             .cell(CellIndex.indexByColumnRow(columnIndex: c, rowIndex: i + 1))
-            .value = TextCellValue(values[c]);
+            .value = double.tryParse(values[c]) != null &&
+                c != 0
+            ? DoubleCellValue(double.parse(values[c]))
+            : TextCellValue(values[c]);
       }
     }
   }
@@ -236,13 +277,17 @@ class FinanceExportService {
       for (var c = 0; c < values.length; c++) {
         sheet
             .cell(CellIndex.indexByColumnRow(columnIndex: c, rowIndex: i + 1))
-            .value = TextCellValue(values[c]);
+            .value = double.tryParse(values[c]) != null &&
+                c != 0
+            ? DoubleCellValue(double.parse(values[c]))
+            : TextCellValue(values[c]);
       }
     }
   }
 
   static void _buildBudgets(Sheet sheet, AppProvider app) {
-    _header(sheet, const ['Categoria', 'Limite', 'Gasto', 'Restante', 'Período']);
+    _header(
+        sheet, const ['Categoria', 'Limite', 'Gasto', 'Restante', 'Período']);
     for (var i = 0; i < app.budgets.length; i++) {
       final budget = app.budgets[i];
       final spent = app.budgetSpent(budget);
@@ -256,8 +301,30 @@ class FinanceExportService {
       for (var c = 0; c < values.length; c++) {
         sheet
             .cell(CellIndex.indexByColumnRow(columnIndex: c, rowIndex: i + 1))
-            .value = TextCellValue(values[c]);
+            .value = double.tryParse(values[c]) != null &&
+                c != 0
+            ? DoubleCellValue(double.parse(values[c]))
+            : TextCellValue(values[c]);
       }
+    }
+  }
+
+  static void _buildGoals(Sheet sheet, AppProvider app) {
+    _header(sheet,
+        const ['Objetivo', 'Meta', 'Guardado', 'Restante', 'Moeda', 'Prazo']);
+    for (final goal in app.savingsGoals) {
+      sheet.appendRow([
+        TextCellValue(goal.name),
+        DoubleCellValue(goal.targetAmount),
+        DoubleCellValue(goal.currentAmount),
+        DoubleCellValue((goal.targetAmount - goal.currentAmount)
+            .clamp(0, double.infinity)
+            .toDouble()),
+        TextCellValue(goal.currency),
+        TextCellValue(goal.targetDate == null
+            ? ''
+            : DateFormat('dd/MM/yyyy').format(goal.targetDate!))
+      ]);
     }
   }
 }

@@ -1,3 +1,4 @@
+import '../utils/finance_input.dart';
 // lib/screens/transfer_screen.dart
 import 'package:flutter/material.dart';
 import '../l10n/app_localizations.dart';
@@ -19,13 +20,14 @@ class _TransferScreenState extends State<TransferScreen> {
   String? _fromId;
   String? _toId;
   bool _submitted = false;
+  bool _saving = false;
 
   @override
   void initState() {
     super.initState();
     final app = context.read<AppProvider>();
     // Gold accounts have synthetic balances — exclude from manual transfers.
-    final transferable = app.nonBankAccounts.where((a) => !a.isGold).toList();
+    final transferable = app.cashAccounts.where((a) => !a.isGold).toList();
     if (transferable.length >= 2) {
       _fromId = transferable[0].id;
       _toId = transferable[1].id;
@@ -42,16 +44,25 @@ class _TransferScreenState extends State<TransferScreen> {
   }
 
   Future<void> _submit() async {
+    if (_saving) return;
     setState(() => _submitted = true);
     if (_fromId == null || _toId == null || _fromId == _toId) return;
-    final amount = double.tryParse(_amtCtrl.text);
+    final amount = parseMoney(_amtCtrl.text);
     if (amount == null || amount <= 0) return;
+    setState(() => _saving = true);
+    try {
     await context.read<AppProvider>().addTransfer(
           fromId: _fromId!,
           toId: _toId!,
           fromAmount: amount,
           note: _noteCtrl.text.trim(),
         );
+    } catch (_) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Não foi possível concluir. Confira a conta e o valor e tente novamente.')));
+      return;
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
     if (mounted) Navigator.pop(context);
   }
 
@@ -61,7 +72,7 @@ class _TransferScreenState extends State<TransferScreen> {
     final cs = Theme.of(context).colorScheme;
     final l10n = AppLocalizations.of(context)!;
     // Gold accounts update automatically — exclude from manual transfers.
-    final transferable = app.nonBankAccounts.where((a) => !a.isGold).toList();
+    final transferable = app.cashAccounts.where((a) => !a.isGold).toList();
     final from = app.accountById(_fromId ?? '');
     final to = app.accountById(_toId ?? '');
 
@@ -73,7 +84,7 @@ class _TransferScreenState extends State<TransferScreen> {
     final sym = currencyInfo(fromCurrency).symbol;
 
     // Live conversion preview
-    final inputAmount = double.tryParse(_amtCtrl.text);
+    final inputAmount = parseMoney(_amtCtrl.text);
     final convertedAmount =
         (isCrossCurrency && inputAmount != null && app.exchangeRates.isNotEmpty)
             ? app.convertBetween(inputAmount, fromCurrency, toCurrency)
@@ -279,7 +290,7 @@ class _TransferScreenState extends State<TransferScreen> {
                   prefixText: '$sym ',
                   suffixText: fromCurrency,
                   errorText:
-                      _submitted && (double.tryParse(_amtCtrl.text) ?? 0) <= 0
+                      _submitted && (parseMoney(_amtCtrl.text) ?? 0) <= 0
                           ? l10n.error_required
                           : null,
                 ),

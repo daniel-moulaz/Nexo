@@ -119,7 +119,7 @@ abstract class AppLocalizations {
   /// No description provided for @appTitle.
   ///
   /// In en, this message translates to:
-  /// **'Expensy'**
+  /// **'Nexo'**
   String get appTitle;
 
   /// No description provided for @settings_title.
@@ -497,7 +497,7 @@ abstract class AppLocalizations {
   /// No description provided for @recurring_notificationPermissionDenied.
   ///
   /// In en, this message translates to:
-  /// **'Notification permission denied. Enable it in Settings → Apps → Expensy → Notifications.'**
+  /// **'Notification permission denied. Enable it in Settings → Apps → Nexo → Notifications.'**
   String get recurring_notificationPermissionDenied;
 
   /// No description provided for @recurring_remindMeAt.
@@ -821,7 +821,7 @@ abstract class AppLocalizations {
   /// No description provided for @lended_person_notificationPermissionDenied.
   ///
   /// In en, this message translates to:
-  /// **'Notification permission denied. Enable it in Settings → Apps → Expensy → Notifications.'**
+  /// **'Notification permission denied. Enable it in Settings → Apps → Nexo → Notifications.'**
   String get lended_person_notificationPermissionDenied;
 
   /// No description provided for @lended_person_remindMeAtPrompt.
@@ -995,7 +995,7 @@ abstract class AppLocalizations {
   /// No description provided for @onboarding_restoreFailed.
   ///
   /// In en, this message translates to:
-  /// **'Restore failed: the file may be corrupted or not an Expensy backup.'**
+  /// **'Restore failed: the file may be corrupted or not an Nexo backup.'**
   String get onboarding_restoreFailed;
 
   /// No description provided for @onboarding_continue.
@@ -1235,7 +1235,7 @@ abstract class AppLocalizations {
   /// No description provided for @backup_restoreFailedCorrupted.
   ///
   /// In en, this message translates to:
-  /// **'Restore failed: the file may be corrupted or not an Expensy backup.'**
+  /// **'Restore failed: the file may be corrupted or not an Nexo backup.'**
   String get backup_restoreFailedCorrupted;
 
   /// No description provided for @budget_noBudgetsYet.
@@ -2555,7 +2555,7 @@ abstract class AppLocalizations {
   /// No description provided for @onboarding_welcomeToExpensy.
   ///
   /// In en, this message translates to:
-  /// **'Welcome to Expensy!'**
+  /// **'Bem-vindo ao Nexo!'**
   String get onboarding_welcomeToExpensy;
 
   /// No description provided for @onboarding_restoreABackup.
@@ -2567,7 +2567,7 @@ abstract class AppLocalizations {
   /// No description provided for @onboarding_loadAPreviouslySaved.
   ///
   /// In en, this message translates to:
-  /// **'Load a previously saved Expensy JSON file'**
+  /// **'Load a previously saved Nexo JSON file'**
   String get onboarding_loadAPreviouslySaved;
 
   /// No description provided for @onboarding_or.

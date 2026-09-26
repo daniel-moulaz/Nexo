@@ -219,7 +219,7 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get recurring_notificationPermissionDenied =>
-      'Permissão de notificação negada. Ative-o em Configurações → Aplicativos → Expensy → Notificações.';
+      'Permissão de notificação negada. Ative-o em Configurações → Aplicativos → Nexo → Notificações.';
 
   @override
   String get recurring_remindMeAt => 'Lembre-me em';
@@ -279,10 +279,10 @@ class AppLocalizationsPt extends AppLocalizations {
   String get accounts_goldCaps => 'OURO';
 
   @override
-  String get accounts_balance => 'Equilíbrio';
+  String get accounts_balance => 'Saldo';
 
   @override
-  String get accounts_income => 'Renda';
+  String get accounts_income => 'Receita';
 
   @override
   String get accounts_expense => 'Despesa';
@@ -404,7 +404,7 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get lended_person_notificationPermissionDenied =>
-      'Permissão de notificação negada. Ative-o em Configurações → Aplicativos → Expensy → Notificações.';
+      'Permissão de notificação negada. Ative-o em Configurações → Aplicativos → Nexo → Notificações.';
 
   @override
   String get lended_person_remindMeAtPrompt => 'Lembre-me em';
@@ -506,7 +506,7 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get onboarding_restoreFailed =>
-      'Falha na restauração: o arquivo pode estar corrompido ou não ser um backup Expensy.';
+      'Falha na restauração: o arquivo pode estar corrompido ou não ser um backup Nexo.';
 
   @override
   String get onboarding_continue => 'Continuar';
@@ -641,7 +641,7 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get backup_restoreFailedCorrupted =>
-      'Falha na restauração: o arquivo pode estar corrompido ou não ser um backup Expensy.';
+      'Falha na restauração: o arquivo pode estar corrompido ou não ser um backup Nexo.';
 
   @override
   String get budget_noBudgetsYet => 'Ainda sem orçamentos';
@@ -654,7 +654,7 @@ class AppLocalizationsPt extends AppLocalizations {
   String get budget_budgeted => 'Orçamentado';
 
   @override
-  String get budget_leftToSpend => 'Left to Spend';
+  String get budget_leftToSpend => 'Disponível para gastar';
 
   @override
   String get budget_spent => 'Gasto';
@@ -669,7 +669,7 @@ class AppLocalizationsPt extends AppLocalizations {
   String get budget_weeklyLabel => 'Semanal';
 
   @override
-  String get budget_monthlyLabel => 'Mensalmente';
+  String get budget_monthlyLabel => 'Mensal';
 
   @override
   String budget_overAmount(Object amount) {
@@ -1406,14 +1406,14 @@ class AppLocalizationsPt extends AppLocalizations {
   String get onboarding_back => 'Voltar';
 
   @override
-  String get onboarding_welcomeToExpensy => 'Bem-vindo ao Expensy!';
+  String get onboarding_welcomeToExpensy => 'Bem-vindo ao Nexo!';
 
   @override
   String get onboarding_restoreABackup => 'Restaurar um Backup';
 
   @override
   String get onboarding_loadAPreviouslySaved =>
-      'Carregar um arquivo JSON do Expensy salvo anteriormente';
+      'Carregar um arquivo JSON do Nexo salvo anteriormente';
 
   @override
   String get onboarding_or => 'ou';
@@ -1658,7 +1658,7 @@ class AppLocalizationsPt extends AppLocalizations {
   String get savings_savedSoFar => 'Salvo até agora';
 
   @override
-  String get savings_target => 'Alvo';
+  String get savings_target => 'Meta';
 
   @override
   String savings_targetDate(String date) {
@@ -1666,7 +1666,7 @@ class AppLocalizationsPt extends AppLocalizations {
   }
 
   @override
-  String get savings_contribute => 'Contribua';
+  String get savings_contribute => 'Adicionar aporte';
 
   @override
   String get savings_withdraw => 'Retirar';
@@ -1851,22 +1851,22 @@ class AppLocalizationsPt extends AppLocalizations {
   String get budget_addGoal => 'Adicionar meta de economia';
 
   @override
-  String get add_transaction_possibleDuplicate => 'Possible duplicate';
+  String get add_transaction_possibleDuplicate => 'Possível duplicidade';
 
   @override
-  String get add_transaction_goBack => 'Go back';
+  String get add_transaction_goBack => 'Revisar';
 
   @override
-  String get add_transaction_saveAnyway => 'Save anyway';
+  String get add_transaction_saveAnyway => 'Salvar mesmo assim';
 
   @override
   String get loans_confirmDeleteLoan =>
-      'Are you sure you want to delete this loan and all its payments?';
+      'Excluir este empréstimo e todos os pagamentos?';
 
   @override
-  String get loans_deletePayment => 'Delete Payment';
+  String get loans_deletePayment => 'Excluir pagamento';
 
   @override
   String get loans_confirmDeletePayment =>
-      'Are you sure you want to delete this payment record?';
+      'Excluir este registro de pagamento?';
 }

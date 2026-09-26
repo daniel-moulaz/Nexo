@@ -9,7 +9,6 @@ import '../models/models.dart';
 import '../theme/app_theme.dart';
 import '../widgets/shared_widgets.dart';
 import 'package:flutter/foundation.dart';
-import '../database/db_helper.dart';
 import '../services/exchange_rate_service.dart';
 import 'net_worth_screen.dart';
 import '../utils/haptics.dart';
@@ -143,7 +142,7 @@ class _InsightsScreenState extends State<InsightsScreen> {
     setState(() => _isLoading = true);
     final app = context.read<AppProvider>();
     
-    final allTxs = await DBHelper.getTransactions(limit: null); 
+    final allTxs = app.reportTransactions;
 
     final payload = _ComputePayload(
       txs: allTxs,
@@ -305,7 +304,7 @@ class _InsightsScreenState extends State<InsightsScreen> {
 
           // ── Spending Forecast ───────────────────────────────────────
           if (daysElapsed >= 3) ...[
-            const _SectionLabel(label: 'Spending Forecast'),
+            const _SectionLabel(label: 'Previsão de gastos'),
             Card(
                 child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
@@ -333,7 +332,7 @@ class _InsightsScreenState extends State<InsightsScreen> {
                               color: cs.onSurface),
                           children: [
                             const TextSpan(
-                                text: 'At this rate, you\'ll spend '),
+                                text: 'Neste ritmo, a previsão de gastos é '),
                             TextSpan(
                                 text: fmt(projectedTotal),
                                 style: TextStyle(
@@ -341,13 +340,13 @@ class _InsightsScreenState extends State<InsightsScreen> {
                                     color: forecastColor)),
                             TextSpan(
                                 text:
-                                    ' by the end of ${DateFormat('MMMM').format(now)} — $remainingDays days left.'),
+                                    ' até o fim de ${DateFormat('MMMM').format(now)} — faltam $remainingDays dias.'),
                           ],
                         ),
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        'Projection based on spending so far, doesn\'t include upcoming recurring bills.',
+                        'Projeção baseada nos gastos registrados, sem incluir próximas contas recorrentes.',
                         style: TextStyle(
                             fontSize: 11,
                             color: cs.onSurface.withValues(alpha: 0.5)),
@@ -357,7 +356,7 @@ class _InsightsScreenState extends State<InsightsScreen> {
             )),
             const SizedBox(height: 12),
           ] else ...[
-            const _SectionLabel(label: 'Spending Forecast'),
+            const _SectionLabel(label: 'Previsão de gastos'),
             Card(
                 child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
@@ -367,7 +366,7 @@ class _InsightsScreenState extends State<InsightsScreen> {
                 const SizedBox(width: 12),
                 Expanded(
                   child: Text(
-                    'Based on the first $daysElapsed days — accuracy improves as the month goes on.',
+                    'Com base nos primeiros $daysElapsed dias. A estimativa melhora ao longo do mês.',
                     style: TextStyle(
                         fontSize: 12,
                         color: cs.onSurface.withValues(alpha: 0.6)),
@@ -660,7 +659,7 @@ class _InsightsScreenState extends State<InsightsScreen> {
 
           // ── Net Worth ───────────────────────────────────────────────
           if (app.netWorthSnapshots.isNotEmpty || liveNetWorth != 0) ...[
-            const _SectionLabel(label: 'Net Worth'),
+            const _SectionLabel(label: 'Patrimônio'),
             Card(
               clipBehavior: Clip.antiAlias,
               child: InkWell(
@@ -673,7 +672,7 @@ class _InsightsScreenState extends State<InsightsScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('Current Net Worth',
+                      Text('Patrimônio atual',
                           style: TextStyle(
                               fontSize: 11,
                               fontWeight: FontWeight.w600,
@@ -732,7 +731,7 @@ class _InsightsScreenState extends State<InsightsScreen> {
                               child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    Text('Accounts & Gold',
+                                    Text('Contas e patrimônio',
                                         style: TextStyle(
                                             fontSize: 10,
                                             fontWeight: FontWeight.w600,
@@ -760,7 +759,7 @@ class _InsightsScreenState extends State<InsightsScreen> {
                               child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    Text('Assets',
+                                    Text('Bens',
                                         style: TextStyle(
                                             fontSize: 10,
                                             fontWeight: FontWeight.w600,
@@ -802,7 +801,7 @@ class _InsightsScreenState extends State<InsightsScreen> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                'Outstanding',
+                                'Em aberto',
                                 style: TextStyle(
                                   fontSize: 10,
                                   fontWeight: FontWeight.w600,
@@ -827,7 +826,7 @@ class _InsightsScreenState extends State<InsightsScreen> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                'Monthly Obligation',
+                                'Compromisso mensal',
                                 style: TextStyle(
                                   fontSize: 10,
                                   fontWeight: FontWeight.w600,

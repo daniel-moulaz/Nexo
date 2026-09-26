@@ -55,6 +55,7 @@ class FinanceBootstrapService {
           installmentCurrent: current.installmentCurrent,
           installmentTotal: current.installmentTotal,
           source: current.source,
+          affectsBalance: current.affectsBalance,
         ),
       );
     }

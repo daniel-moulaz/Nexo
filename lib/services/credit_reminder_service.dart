@@ -12,7 +12,7 @@ class CreditReminderService {
   bool _initialized = false;
 
   static const _channelId = 'expensy_credit';
-  static const _channelName = 'Credit Card Reminders';
+  static const _channelName = 'Lembretes de faturas';
   static const _channelDesc = 'Reminders to pay credit card bills';
 
   Future<void> initialize() async {
@@ -127,7 +127,7 @@ class CreditReminderService {
     // 1. On due date reminder
     final tzDate = _nextReminderDate(acc.dueDay!, 0, hour, minute);
     if (tzDate != null) {
-      final body = 'Your ${acc.name} bill is due today.';
+      final body = 'A fatura de ${acc.name} vence hoje.';
       await _plugin.zonedSchedule(
         _notifId(acc.id),
         '💳 Bill Due Today',
@@ -145,7 +145,7 @@ class CreditReminderService {
     if (acc.creditEarlyReminderEnabled) {
       final advTzDate = _nextReminderDate(acc.dueDay!, 2, hour, minute);
       if (advTzDate != null) {
-        final body = 'Your ${acc.name} bill is due in 2 days.';
+        final body = 'A fatura de ${acc.name} vence em 2 dias.';
         await _plugin.zonedSchedule(
           _advanceId(acc.id),
           '💳 Bill Due Soon',

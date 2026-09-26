@@ -448,7 +448,7 @@ class _MonthCardState extends State<_MonthCard> {
                       ),
                     if (isEmpty)
                       Text(
-                        'No Data',
+                        'Sem dados',
                         style: TextStyle(
                           fontSize: 12,
                           color: cs.onSurface.withValues(alpha: 0.5),

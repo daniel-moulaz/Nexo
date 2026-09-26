@@ -9,7 +9,7 @@ class AppLocalizationsEn extends AppLocalizations {
   AppLocalizationsEn([String locale = 'en']) : super(locale);
 
   @override
-  String get appTitle => 'Expensy';
+  String get appTitle => 'Nexo';
 
   @override
   String get settings_title => 'Settings';
@@ -217,7 +217,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get recurring_notificationPermissionDenied =>
-      'Notification permission denied. Enable it in Settings → Apps → Expensy → Notifications.';
+      'Notification permission denied. Enable it in Settings → Apps → Nexo → Notifications.';
 
   @override
   String get recurring_remindMeAt => 'Remind me at';
@@ -401,7 +401,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get lended_person_notificationPermissionDenied =>
-      'Notification permission denied. Enable it in Settings → Apps → Expensy → Notifications.';
+      'Notification permission denied. Enable it in Settings → Apps → Nexo → Notifications.';
 
   @override
   String get lended_person_remindMeAtPrompt => 'Remind me at';
@@ -502,7 +502,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get onboarding_restoreFailed =>
-      'Restore failed: the file may be corrupted or not an Expensy backup.';
+      'Restore failed: the file may be corrupted or not an Nexo backup.';
 
   @override
   String get onboarding_continue => 'Continue';
@@ -637,7 +637,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get backup_restoreFailedCorrupted =>
-      'Restore failed: the file may be corrupted or not an Expensy backup.';
+      'Restore failed: the file may be corrupted or not an Nexo backup.';
 
   @override
   String get budget_noBudgetsYet => 'No budgets yet';
@@ -1396,14 +1396,14 @@ class AppLocalizationsEn extends AppLocalizations {
   String get onboarding_back => 'Back';
 
   @override
-  String get onboarding_welcomeToExpensy => 'Welcome to Expensy!';
+  String get onboarding_welcomeToExpensy => 'Bem-vindo ao Nexo!';
 
   @override
   String get onboarding_restoreABackup => 'Restore a Backup';
 
   @override
   String get onboarding_loadAPreviouslySaved =>
-      'Load a previously saved Expensy JSON file';
+      'Load a previously saved Nexo JSON file';
 
   @override
   String get onboarding_or => 'or';

@@ -1,3 +1,4 @@
+import '../utils/finance_input.dart';
 // lib/screens/assets_screen.dart
 import 'package:flutter/material.dart';
 import '../utils/snackbar.dart';
@@ -242,7 +243,7 @@ class _AssetSheetState extends State<_AssetSheet> {
   Future<void> _submit() async {
     setState(() => _submitted = true);
     if (_nameCtrl.text.trim().isEmpty) return;
-    final value = double.tryParse(_valueCtrl.text);
+    final value = parseMoney(_valueCtrl.text);
     if (value == null || value < 0) return;
     final app = context.read<AppProvider>();
 
@@ -313,8 +314,8 @@ class _AssetSheetState extends State<_AssetSheet> {
                   decoration: InputDecoration(
                     labelText: l10n.assets_value,
                     prefixText: '$sym ',
-                    errorText: _submitted && (double.tryParse(_valueCtrl.text) == null || double.parse(_valueCtrl.text) < 0) ? l10n.error_required : null,
-                    helperText: _submitted && (double.tryParse(_valueCtrl.text) == null || double.parse(_valueCtrl.text) < 0) ? null : ' ',
+                    errorText: _submitted && (parseMoney(_valueCtrl.text) == null || parseMoney(_valueCtrl.text)! < 0) ? l10n.error_required : null,
+                    helperText: _submitted && (parseMoney(_valueCtrl.text) == null || parseMoney(_valueCtrl.text)! < 0) ? null : ' ',
                   ),
                   style: const TextStyle(
                       fontSize: 18, fontWeight: FontWeight.w700),

@@ -221,7 +221,7 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get recurring_notificationPermissionDenied =>
-      'Benachrichtigungsberechtigung verweigert. Aktiviere sie unter Einstellungen → Apps → Expensy → Benachrichtigungen.';
+      'Benachrichtigungsberechtigung verweigert. Aktiviere sie unter Einstellungen → Apps → Nexo → Benachrichtigungen.';
 
   @override
   String get recurring_remindMeAt => 'Erinnere mich um';
@@ -405,7 +405,7 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get lended_person_notificationPermissionDenied =>
-      'Benachrichtigungsberechtigung verweigert. Aktiviere sie unter Einstellungen → Apps → Expensy → Benachrichtigungen.';
+      'Benachrichtigungsberechtigung verweigert. Aktiviere sie unter Einstellungen → Apps → Nexo → Benachrichtigungen.';
 
   @override
   String get lended_person_remindMeAtPrompt => 'Erinnere mich um';
@@ -508,7 +508,7 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get onboarding_restoreFailed =>
-      'Wiederherstellung fehlgeschlagen: Die Datei ist möglicherweise beschädigt oder kein Expensy-Backup.';
+      'Wiederherstellung fehlgeschlagen: Die Datei ist möglicherweise beschädigt oder kein Nexo-Backup.';
 
   @override
   String get onboarding_continue => 'Weiter';
@@ -643,7 +643,7 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get backup_restoreFailedCorrupted =>
-      'Wiederherstellung fehlgeschlagen: Die Datei ist möglicherweise beschädigt oder kein Expensy-Backup.';
+      'Wiederherstellung fehlgeschlagen: Die Datei ist möglicherweise beschädigt oder kein Nexo-Backup.';
 
   @override
   String get budget_noBudgetsYet => 'Noch keine Budgets';
@@ -1405,14 +1405,14 @@ class AppLocalizationsDe extends AppLocalizations {
   String get onboarding_back => 'Zurück';
 
   @override
-  String get onboarding_welcomeToExpensy => 'Willkommen bei Expensy!';
+  String get onboarding_welcomeToExpensy => 'Willkommen bei Nexo!';
 
   @override
   String get onboarding_restoreABackup => 'Ein Backup wiederherstellen';
 
   @override
   String get onboarding_loadAPreviouslySaved =>
-      'Laden Sie eine zuvor gespeicherte Expensy JSON-Datei';
+      'Laden Sie eine zuvor gespeicherte Nexo JSON-Datei';
 
   @override
   String get onboarding_or => 'oder';

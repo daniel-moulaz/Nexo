@@ -43,7 +43,7 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
     final mStart = DateTime(_month.year, _month.month, 1);
     final mEnd = DateTime(_month.year, _month.month + 1, 0, 23, 59, 59);
 
-    _mTxs = app.transactions.where((t) {
+    _mTxs = app.reportTransactions.where((t) {
       if (t.date.isBefore(mStart) || t.date.isAfter(mEnd)) return false;
       if (_filterAccountId != null && t.accountId != _filterAccountId) {
         return false;
@@ -63,7 +63,7 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
 
     _barGroups = _months.map((m) {
       final mE = DateTime(m.year, m.month + 1, 0, 23, 59, 59);
-      final txs = app.transactions.where((t) {
+      final txs = app.reportTransactions.where((t) {
         if (t.date.isBefore(m) || t.date.isAfter(mE)) return false;
         if (_filterAccountId != null && t.accountId != _filterAccountId) {
           return false;

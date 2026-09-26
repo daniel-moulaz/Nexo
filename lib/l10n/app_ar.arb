@@ -101,7 +101,7 @@
     }
   },
   "recurring_paymentHistory": "سجل الدفعات",
-  "recurring_notificationPermissionDenied": "تم رفض إذن الإشعارات. قم بتمكينه في الإعدادات → التطبيقات → Expensy → الإشعارات.",
+  "recurring_notificationPermissionDenied": "تم رفض إذن الإشعارات. قم بتمكينه في الإعدادات → التطبيقات → Nexo → الإشعارات.",
   "recurring_remindMeAt": "ذكرني في",
   "recurring_editRecurring": "تعديل المتكرر",
   "recurring_addRecurring": "إضافة دفعة متكررة",
@@ -195,7 +195,7 @@
       "time": {}
     }
   },
-  "lended_person_notificationPermissionDenied": "تم رفض إذن الإشعارات. قم بتمكينه في الإعدادات → التطبيقات → Expensy → الإشعارات.",
+  "lended_person_notificationPermissionDenied": "تم رفض إذن الإشعارات. قم بتمكينه في الإعدادات → التطبيقات → Nexo → الإشعارات.",
   "lended_person_remindMeAtPrompt": "ذكرني في",
   "lended_person_editRecord": "تعديل السجل",
   "lended_person_addRecord": "إضافة سجل",
@@ -250,7 +250,7 @@
     }
   },
   "transactions_unsettled": "غير مُسَوّى",
-  "onboarding_restoreFailed": "فشلت الاستعادة: قد يكون الملف تالفًا أو ليس نسخة احتياطية من Expensy.",
+  "onboarding_restoreFailed": "فشلت الاستعادة: قد يكون الملف تالفًا أو ليس نسخة احتياطية من Nexo.",
   "onboarding_continue": "متابعة",
   "onboarding_getStarted": "البدء",
   "onboarding_yourPersonalTracker": "متتبع أموالك الشخصي وبدون إنترنت بنسبة 100%.\nهل لديك بالفعل نسخة احتياطية من جهاز آخر أو تثبيت سابق؟",
@@ -290,7 +290,7 @@
   "backup_upgradedFrom": " (تم الترقية من v{originalVersion} → v{schemaVersion})",
   "backup_dataRestoredSuccessfully": "تمت استعادة البيانات بنجاح!{vLabel}",
   "backup_restoreFailed": "فشلت الاستعادة: {error}",
-  "backup_restoreFailedCorrupted": "فشلت الاستعادة: قد يكون الملف تالفًا أو ليس نسخة احتياطية من Expensy.",
+  "backup_restoreFailedCorrupted": "فشلت الاستعادة: قد يكون الملف تالفًا أو ليس نسخة احتياطية من Nexo.",
   "budget_noBudgetsYet": "لا توجد ميزانيات بعد",
   "budget_tapToAddBudget": "انقر على + لتعيين حد للإنفاق لكل فئة",
   "budget_budgeted": "الميزانية المحددة",
@@ -537,9 +537,9 @@
   "lended_color": "اللون",
   "more_more": "المزيد",
   "onboarding_back": "رجوع",
-  "onboarding_welcomeToExpensy": "مرحبًا بك في Expensy!",
+  "onboarding_welcomeToExpensy": "مرحبًا بك في Nexo!",
   "onboarding_restoreABackup": "استعادة نسخة احتياطية",
-  "onboarding_loadAPreviouslySaved": "تحميل ملف JSON محفوظ مسبقًا لـ Expensy",
+  "onboarding_loadAPreviouslySaved": "تحميل ملف JSON محفوظ مسبقًا لـ Nexo",
   "onboarding_or": "أو",
   "onboarding_startFresh": "ابدأ من جديد",
   "onboarding_firstWhatShouldWeCal": "أولاً، ماذا يجب أن نسميك؟",

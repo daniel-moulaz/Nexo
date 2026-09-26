@@ -18,6 +18,7 @@ import 'statistics_screen.dart';
 import 'transaction_search_screen.dart';
 import 'wishlist_screen.dart';
 import 'yearly_analysis_screen.dart';
+import 'agenda_screen.dart';
 
 class MoreScreen extends StatelessWidget {
   const MoreScreen({super.key});
@@ -33,6 +34,12 @@ class MoreScreen extends StatelessWidget {
     final loansLen = app.loans.where((l) => !l.isSettled).length;
 
     final items = <_Item>[
+      const _Item(
+          icon: Icons.event_note,
+          label: 'Agenda financeira',
+          sub: 'Próximos vencimentos, receitas, parcelas e faturas',
+          color: Color(0xFF00897B),
+          screen: AgendaScreen()),
       const _Item(
         icon: Icons.auto_graph_rounded,
         label: 'Planejamento',
@@ -92,28 +99,32 @@ class MoreScreen extends StatelessWidget {
       _Item(
         icon: Icons.star_outline_rounded,
         label: 'Lista de desejos',
-        sub: '$wishlistLen ${wishlistLen == 1 ? 'item pendente' : 'itens pendentes'}',
+        sub:
+            '$wishlistLen ${wishlistLen == 1 ? 'item pendente' : 'itens pendentes'}',
         color: const Color(0xFF7D5260),
         screen: const WishlistScreen(),
       ),
       _Item(
         icon: Icons.handshake_outlined,
         label: 'Dinheiro emprestado',
-        sub: '$lendedLen ${lendedLen == 1 ? 'registro em aberto' : 'registros em aberto'}',
+        sub:
+            '$lendedLen ${lendedLen == 1 ? 'registro em aberto' : 'registros em aberto'}',
         color: const Color(0xFFE65140),
         screen: const LendedScreen(),
       ),
       _Item(
         icon: Icons.inventory_2_outlined,
         label: 'Ativos',
-        sub: '$assetsLen ${assetsLen == 1 ? 'item cadastrado' : 'itens cadastrados'}',
+        sub:
+            '$assetsLen ${assetsLen == 1 ? 'item cadastrado' : 'itens cadastrados'}',
         color: const Color(0xFF1565C0),
         screen: const AssetsScreen(),
       ),
       _Item(
         icon: Icons.account_balance_outlined,
         label: 'Empréstimos',
-        sub: '$loansLen ${loansLen == 1 ? 'empréstimo ativo' : 'empréstimos ativos'}',
+        sub:
+            '$loansLen ${loansLen == 1 ? 'empréstimo ativo' : 'empréstimos ativos'}',
         color: const Color(0xFF4A148C),
         screen: const LoansScreen(),
       ),
@@ -143,53 +154,58 @@ class MoreScreen extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(
         automaticallyImplyLeading: false,
-        title: const Text('Mais',
-            style: TextStyle(fontWeight: FontWeight.w900)),
+        title:
+            const Text('Mais', style: TextStyle(fontWeight: FontWeight.w900)),
         backgroundColor: cs.primaryContainer,
         foregroundColor: cs.onPrimaryContainer,
       ),
-      body: ListView.separated(
-        padding: const EdgeInsets.fromLTRB(14, 14, 14, 150),
-        itemCount: items.length,
-        separatorBuilder: (_, __) => const SizedBox(height: 8),
-        itemBuilder: (_, i) {
-          final item = items[i];
-          return Card(
-            child: ListTile(
-              contentPadding:
-                  const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-              leading: Container(
-                width: 44,
-                height: 44,
-                decoration: BoxDecoration(
-                  color: item.color.withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Icon(item.icon, color: item.color, size: 22),
-              ),
-              title: Text(
-                item.label,
-                style: const TextStyle(
-                  fontWeight: FontWeight.w800,
-                  fontSize: 15,
-                ),
-              ),
-              subtitle: Text(
-                item.sub,
-                style: TextStyle(
-                  fontSize: 12,
-                  color: cs.onSurface.withValues(alpha: 0.62),
-                ),
-              ),
-              trailing: const Icon(Icons.chevron_right_rounded),
-              onTap: () => Navigator.push(
-                context,
-                ExpensyRoute(builder: (_) => item.screen),
-              ),
-            ),
-          );
-        },
-      ),
+      body: ListView(
+          padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
+          children: [
+            for (final group in <String, List<String>>{
+              'Planejamento': [
+                'Agenda financeira',
+                'Planejamento',
+                'Buscar lançamentos'
+              ],
+              'Relatórios e arquivos': [
+                'Relatório financeiro',
+                'Importar extrato',
+                'Estatísticas',
+                'Informações e tendências',
+                'Análise anual'
+              ],
+              'Categorias e preferências': [
+                'Categorias',
+                'Backup',
+                'Backup e restauração',
+                'Configurações'
+              ],
+              'Ferramentas avançadas': [
+                'Conversor de moeda',
+                'Lista de desejos',
+                'Dinheiro emprestado',
+                'Empréstimos',
+                'Patrimônio',
+                'Ativos'
+              ],
+            }.entries)
+              Card(
+                  child: ExpansionTile(
+                      title: Text(group.key),
+                      initiallyExpanded: group.key == 'Planejamento',
+                      children: [
+                    for (final item in items
+                        .where((item) => group.value.contains(item.label)))
+                      ListTile(
+                          leading: Icon(item.icon, color: item.color),
+                          title: Text(item.label),
+                          subtitle: Text(item.sub),
+                          trailing: const Icon(Icons.chevron_right),
+                          onTap: () => Navigator.push(context,
+                              ExpensyRoute(builder: (_) => item.screen))),
+                  ])),
+          ]),
     );
   }
 }

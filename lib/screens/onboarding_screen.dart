@@ -1,3 +1,4 @@
+import '../utils/finance_input.dart';
 // lib/screens/onboarding_screen.dart
 import 'package:flutter/material.dart';
 import '../l10n/app_localizations.dart';
@@ -71,20 +72,20 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   final _nameCtrl = TextEditingController();
 
   // Step 2 — Currency
-  String _currency = 'EGP';
+  String _currency = 'BRL';
 
   // Step 3 — First account
-  final _accNameCtrl = TextEditingController(text: 'Main Account');
+  final _accNameCtrl = TextEditingController(text: 'Conta principal');
   final _accBalCtrl = TextEditingController(text: '0');
   String _accType = 'bank';
-  String _accCur = 'EGP';
+  String _accCur = 'BRL';
   int _accColor = 0xFF6750A4;
 
   // Step 4 — First Card
-  final _cardNameCtrl = TextEditingController(text: 'Credit Card');
+  final _cardNameCtrl = TextEditingController(text: 'Cartão de crédito');
   final _cardBalCtrl = TextEditingController(text: '0');
   final _cardLimitCtrl = TextEditingController(text: '0');
-  String _cardCur = 'EGP';
+  String _cardCur = 'BRL';
   String _cardType = 'credit';
   int _cardColor = 0xFF1565C0;
 
@@ -223,7 +224,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
         name: accName,
         type: _accType,
         currency: _accCur,
-        balance: double.tryParse(_accBalCtrl.text) ?? 0,
+        balance: parseMoney(_accBalCtrl.text) ?? 0,
         colorValue: _accColor,
       ));
     }
@@ -235,8 +236,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
         name: cardName,
         type: _cardType,
         currency: _cardCur,
-        balance: double.tryParse(_cardBalCtrl.text) ?? 0,
-        creditLimit: double.tryParse(_cardLimitCtrl.text) ?? 0,
+        balance: parseMoney(_cardBalCtrl.text) ?? 0,
+        creditLimit: parseMoney(_cardLimitCtrl.text) ?? 0,
         colorValue: _cardColor,
         linkedAccountId: bankAccId,
       ));
@@ -366,7 +367,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                       padding: const EdgeInsets.only(top: 8),
                       child: TextButton(
                         onPressed: _skip,
-                        child: const Text('Skip for now'),
+                        child: const Text('Pular por enquanto'),
                       ),
                     ),
                 ],
@@ -738,7 +739,7 @@ class _PageThree extends StatelessWidget {
               ('bank', l10n.onboarding_bank, 'account_balance'),
               ('cash', l10n.onboarding_cash, 'payments'),
               ('savings', l10n.onboarding_savings, 'savings'),
-              ('credit', 'Credit Card', 'credit_card'),
+              ('credit', 'Cartão de crédito', 'credit_card'),
               ('debit', 'Debit Card', 'credit_card'),
               ('wallet', l10n.onboarding_wallet, 'account_balance_wallet'),
             ])
@@ -894,13 +895,13 @@ class _PageFour extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 24),
       child: ListView(children: [
         const SizedBox(height: 24),
-        Text('Add a Card',
+        Text('Adicionar cartão',
             style: Theme.of(context)
                 .textTheme
                 .headlineSmall
                 ?.copyWith(fontWeight: FontWeight.w800)),
         const SizedBox(height: 8),
-        Text('You can skip this if you don\'t want to add a card right now.',
+        Text('Você pode adicionar seu cartão mais tarde.',
             style: TextStyle(
                 fontSize: 15, color: cs.onSurface.withValues(alpha: 0.6))),
         const SizedBox(height: 24),
@@ -918,7 +919,7 @@ class _PageFour extends StatelessWidget {
             scrollDirection: Axis.horizontal,
             child: Row(children: [
               for (final opt in [
-                ('credit', 'Credit Card', 'credit_card'),
+                ('credit', 'Cartão de crédito', 'credit_card'),
                 ('debit', 'Debit Card', 'credit_card'),
               ])
                 GestureDetector(
@@ -955,7 +956,7 @@ class _PageFour extends StatelessWidget {
         TextField(
           controller: nameCtrl,
           decoration: const InputDecoration(
-              labelText: 'Card Name (e.g. Visa Platinum)',
+              labelText: 'Nome do cartão (ex.: Meu cartão)',
               prefixIcon: Icon(Icons.credit_card)),
         ),
         const SizedBox(height: 14),
@@ -1001,7 +1002,7 @@ class _PageFour extends StatelessWidget {
                 keyboardType:
                     const TextInputType.numberWithOptions(decimal: true),
                 decoration: InputDecoration(
-                    labelText: 'Credit Limit', prefixText: '$sym '),
+                    labelText: 'Limite de crédito', prefixText: '$sym '),
               ),
             ),
             const SizedBox(width: 8),
@@ -1011,7 +1012,7 @@ class _PageFour extends StatelessWidget {
                 keyboardType:
                     const TextInputType.numberWithOptions(decimal: true),
                 decoration: InputDecoration(
-                    labelText: 'Amount Used', prefixText: '$sym '),
+                    labelText: 'Limite utilizado', prefixText: '$sym '),
               ),
             ),
           ],

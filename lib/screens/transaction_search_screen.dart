@@ -139,7 +139,7 @@ class _TransactionSearchScreenState extends State<TransactionSearchScreen> {
                           final currency = tx.currency.isNotEmpty
                               ? tx.currency
                               : (account?.currency ?? app.settings.currency);
-                          final status = tx.type == 'income'
+                          final status = tx.type == 'income' && txMeta?.isPending != true
                               ? 'Recebido'
                               : (txMeta?.isOverdue == true
                                   ? 'Atrasado'

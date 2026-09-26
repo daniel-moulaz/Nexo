@@ -64,16 +64,16 @@ class _MainShellState extends State<MainShell> {
         });
       },
       child: Scaffold(
-        extendBody: true,
+        extendBody: false,
         body: FadeIndexedStack(index: _index, children: _screens),
         bottomNavigationBar: SafeArea(
           child: Padding(
-            padding: const EdgeInsets.fromLTRB(48, 0, 48, 16),
+            padding: const EdgeInsets.fromLTRB(8, 0, 8, 8),
             child: ClipRRect(
               borderRadius: BorderRadius.circular(40),
               child: NavigationBarTheme(
                 data: NavigationBarThemeData(
-                  height: 54,
+                  height: 68,
                   indicatorShape: const CircleBorder(),
                   iconTheme: WidgetStateProperty.resolveWith((states) {
                     return IconThemeData(
@@ -85,7 +85,7 @@ class _MainShellState extends State<MainShell> {
                   }),
                 ),
                 child: NavigationBar(
-                  labelBehavior: NavigationDestinationLabelBehavior.alwaysHide,
+                  labelBehavior: NavigationDestinationLabelBehavior.onlyShowSelected,
                   selectedIndex: _index,
                   animationDuration: const Duration(milliseconds: 120),
                   onDestinationSelected: (i) {

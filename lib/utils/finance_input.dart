@@ -21,10 +21,13 @@ double? parseMoney(String raw) {
     }
   } else if (hasComma) {
     value = value.replaceAll('.', '').replaceAll(',', '.');
+  } else if (RegExp(r'^-?\d{1,3}(\.\d{3})+$').hasMatch(value)) {
+    value = value.replaceAll('.', '');
   }
 
-  value = value.replaceAll(RegExp(r'[^0-9.\-]'), '');
-  return double.tryParse(value);
+  if (!RegExp(r'^-?\d+(\.\d{1,2})?$').hasMatch(value)) return null;
+  final parsed = double.tryParse(value);
+  return parsed != null && parsed.isFinite ? parsed : null;
 }
 
 String ptDate(DateTime date) => DateFormat('dd/MM/yyyy', 'pt_BR').format(date);

@@ -221,7 +221,7 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get recurring_notificationPermissionDenied =>
-      'Permission de notification refusée. Activez-la dans Paramètres → Applications → Expensy → Notifications.';
+      'Permission de notification refusée. Activez-la dans Paramètres → Applications → Nexo → Notifications.';
 
   @override
   String get recurring_remindMeAt => 'Me le rappeler à';
@@ -407,7 +407,7 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get lended_person_notificationPermissionDenied =>
-      'Permission de notification refusée. Activez-la dans Paramètres → Applications → Expensy → Notifications.';
+      'Permission de notification refusée. Activez-la dans Paramètres → Applications → Nexo → Notifications.';
 
   @override
   String get lended_person_remindMeAtPrompt => 'Me le rappeler à';
@@ -509,7 +509,7 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get onboarding_restoreFailed =>
-      'Échec de la restauration : le fichier est peut-être corrompu ou ne correspond pas à une sauvegarde Expensy.';
+      'Échec de la restauration : le fichier est peut-être corrompu ou ne correspond pas à une sauvegarde Nexo.';
 
   @override
   String get onboarding_continue => 'Continuer';
@@ -644,7 +644,7 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get backup_restoreFailedCorrupted =>
-      'Échec de la restauration : le fichier est peut-être corrompu ou ne correspond pas à une sauvegarde Expensy.';
+      'Échec de la restauration : le fichier est peut-être corrompu ou ne correspond pas à une sauvegarde Nexo.';
 
   @override
   String get budget_noBudgetsYet => 'Aucun budget';
@@ -1413,14 +1413,14 @@ class AppLocalizationsFr extends AppLocalizations {
   String get onboarding_back => 'Retour';
 
   @override
-  String get onboarding_welcomeToExpensy => 'Bienvenue sur Expensy !';
+  String get onboarding_welcomeToExpensy => 'Bienvenue sur Nexo !';
 
   @override
   String get onboarding_restoreABackup => 'Restaurer une sauvegarde';
 
   @override
   String get onboarding_loadAPreviouslySaved =>
-      'Charger un fichier JSON Expensy précédemment enregistré';
+      'Charger un fichier JSON Nexo précédemment enregistré';
 
   @override
   String get onboarding_or => 'ou';

@@ -101,7 +101,7 @@
     }
   },
   "recurring_paymentHistory": "भुगतान इतिहास",
-  "recurring_notificationPermissionDenied": "सूचना की अनुमति अस्वीकृत। इसे सेटिंग्स → ऐप्स → Expensy → सूचनाएँ में सक्षम करें।",
+  "recurring_notificationPermissionDenied": "सूचना की अनुमति अस्वीकृत। इसे सेटिंग्स → ऐप्स → Nexo → सूचनाएँ में सक्षम करें।",
   "recurring_remindMeAt": "मुझे याद दिलाएं",
   "recurring_editRecurring": "आवर्ती संपादित करें",
   "recurring_addRecurring": "आवर्ती भुगतान जोड़ें",
@@ -195,7 +195,7 @@
       "time": {}
     }
   },
-  "lended_person_notificationPermissionDenied": "सूचना की अनुमति अस्वीकृत। इसे सेटिंग्स → ऐप्स → Expensy → सूचनाएँ में सक्षम करें।",
+  "lended_person_notificationPermissionDenied": "सूचना की अनुमति अस्वीकृत। इसे सेटिंग्स → ऐप्स → Nexo → सूचनाएँ में सक्षम करें।",
   "lended_person_remindMeAtPrompt": "मुझे याद दिलाएं",
   "lended_person_editRecord": "रिकॉर्ड संपादित करें",
   "lended_person_addRecord": "रिकॉर्ड जोड़ें",
@@ -250,7 +250,7 @@
     }
   },
   "transactions_unsettled": "अनिर्णीत",
-  "onboarding_restoreFailed": "पुनर्स्थापना विफल: फ़ाइल दूषित हो सकती है या Expensy बैकअप नहीं हो सकती है।",
+  "onboarding_restoreFailed": "पुनर्स्थापना विफल: फ़ाइल दूषित हो सकती है या Nexo बैकअप नहीं हो सकती है।",
   "onboarding_continue": "जारी रखें",
   "onboarding_getStarted": "शुरू करें",
   "onboarding_yourPersonalTracker": "आपका व्यक्तिगत, 100% ऑफ़लाइन वित्त ट्रैकर।\nक्या आपके पास पहले से किसी अन्य डिवाइस या पिछले इंस्टॉल से बैकअप है?",
@@ -290,7 +290,7 @@
   "backup_upgradedFrom": " (v{originalVersion} से v{schemaVersion} में अपग्रेड किया गया)",
   "backup_dataRestoredSuccessfully": "डेटा सफलतापूर्वक पुनर्स्थापित किया गया!{vLabel}",
   "backup_restoreFailed": "पुनर्स्थापना विफल: {error}",
-  "backup_restoreFailedCorrupted": "पुनर्स्थापना विफल: फ़ाइल दूषित हो सकती है या Expensy बैकअप नहीं हो सकती है।",
+  "backup_restoreFailedCorrupted": "पुनर्स्थापना विफल: फ़ाइल दूषित हो सकती है या Nexo बैकअप नहीं हो सकती है।",
   "budget_noBudgetsYet": "अभी तक कोई बजट नहीं",
   "budget_tapToAddBudget": "प्रति श्रेणी खर्च सीमा निर्धारित करने के लिए + टैप करें",
   "budget_budgeted": "बजट में रखा गया",
@@ -536,9 +536,9 @@
   "lended_color": "रंग",
   "more_more": "अधिक",
   "onboarding_back": "पीछे",
-  "onboarding_welcomeToExpensy": "Expensy में आपका स्वागत है!",
+  "onboarding_welcomeToExpensy": "Nexo में आपका स्वागत है!",
   "onboarding_restoreABackup": "एक बैकअप पुनर्स्थापित करें",
-  "onboarding_loadAPreviouslySaved": "पहले सहेजी गई Expensy JSON फ़ाइल लोड करें",
+  "onboarding_loadAPreviouslySaved": "पहले सहेजी गई Nexo JSON फ़ाइल लोड करें",
   "onboarding_or": "या",
   "onboarding_startFresh": "नई शुरुआत करें",
   "onboarding_firstWhatShouldWeCal": "सबसे पहले, हम आपको क्या बुलाएं?",

@@ -1,30 +1,11 @@
-import 'package:path/path.dart';
+import '../database/db_helper.dart';
 import 'package:sqflite/sqflite.dart';
 
 class CardInvoiceService {
   CardInvoiceService._();
 
   static final CardInvoiceService instance = CardInvoiceService._();
-  Database? _db;
-
-  Future<Database> get _database async {
-    if (_db != null) return _db!;
-    final path = join(await getDatabasesPath(), 'expensy.db');
-    _db = await openDatabase(path);
-    await _db!.execute('''
-      CREATE TABLE IF NOT EXISTS card_invoice_payments (
-        id TEXT PRIMARY KEY,
-        card_id TEXT NOT NULL,
-        cycle_end TEXT NOT NULL,
-        amount REAL NOT NULL,
-        paid_at TEXT NOT NULL
-      )
-    ''');
-    await _db!.execute(
-      'CREATE INDEX IF NOT EXISTS idx_invoice_payment_cycle ON card_invoice_payments(card_id, cycle_end)',
-    );
-    return _db!;
-  }
+  Future<Database> get _database => DBHelper.database;
 
   String _cycleKey(DateTime cycleEnd) =>
       '${cycleEnd.year.toString().padLeft(4, '0')}-${cycleEnd.month.toString().padLeft(2, '0')}-${cycleEnd.day.toString().padLeft(2, '0')}';

@@ -407,7 +407,7 @@ class RecurringPayment {
         final m = nextDate.month + freqVal;
         final y = nextDate.year + (m - 1) ~/ 12;
         final mon = ((m - 1) % 12) + 1;
-        final day = nextDate.day.clamp(1, DateTime(y, mon + 1, 0).day);
+        final day = startDate.day.clamp(1, DateTime(y, mon + 1, 0).day);
         return DateTime(y, mon, day);
       case 'years':
         return DateTime(nextDate.year + freqVal, nextDate.month, nextDate.day);

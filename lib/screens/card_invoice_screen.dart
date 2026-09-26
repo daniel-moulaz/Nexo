@@ -8,6 +8,8 @@ import '../services/card_invoice_service.dart';
 import '../services/finance_rules.dart';
 import '../services/transaction_metadata_service.dart';
 import '../theme/app_theme.dart';
+import '../services/billing_cycle.dart';
+import '../utils/finance_input.dart';
 
 class CardInvoiceScreen extends StatefulWidget {
   final String cardId;
@@ -20,34 +22,16 @@ class CardInvoiceScreen extends StatefulWidget {
 
 class _CardInvoiceScreenState extends State<CardInvoiceScreen> {
   Future<Map<String, TransactionMetadata>>? _metadata;
-
-  DateTime _safeDate(int year, int month, int day) {
-    final max = DateTime(year, month + 1, 0).day;
-    return DateTime(year, month, day.clamp(1, max));
-  }
+  int _monthOffset = 0;
+  bool _paying = false;
 
   ({DateTime start, DateTime end, DateTime? due}) _cycle(Account card) {
-    final now = DateTime.now();
-    final closeDay = card.statementDay ?? 1;
-    final thisClose = _safeDate(now.year, now.month, closeDay);
-    final DateTime start;
-    final DateTime end;
-    if (!now.isAfter(thisClose)) {
-      end = thisClose;
-      start = _safeDate(now.year, now.month - 1, closeDay)
-          .add(const Duration(days: 1));
-    } else {
-      start = thisClose.add(const Duration(days: 1));
-      end = _safeDate(now.year, now.month + 1, closeDay);
-    }
-
-    DateTime? due;
-    if (card.dueDay != null) {
-      final dueMonth = end.month == 12 ? 1 : end.month + 1;
-      final dueYear = end.month == 12 ? end.year + 1 : end.year;
-      due = _safeDate(dueYear, dueMonth, card.dueDay!);
-    }
-    return (start: start, end: end, due: due);
+    final cycle = BillingCycle.forDate(
+        BillingCycle.date(DateTime.now().year,
+            DateTime.now().month + _monthOffset, DateTime.now().day),
+        card.statementDay,
+        card.dueDay);
+    return (start: cycle.start, end: cycle.end, due: cycle.due);
   }
 
   Future<void> _editSettings(Account card) async {
@@ -108,7 +92,7 @@ class _CardInvoiceScreenState extends State<CardInvoiceScreen> {
     if (save != true || !mounted) return;
     final statement = int.tryParse(statementCtrl.text.trim());
     final due = int.tryParse(dueCtrl.text.trim());
-    final limit = double.tryParse(limitCtrl.text.trim().replaceAll(',', '.'));
+    final limit = parseMoney(limitCtrl.text);
     if (statement == null || statement < 1 || statement > 31) {
       _snack('Informe um dia de fechamento entre 1 e 31.');
       return;
@@ -133,7 +117,42 @@ class _CardInvoiceScreenState extends State<CardInvoiceScreen> {
     DateTime cycleEnd,
     double remaining,
   ) async {
-    if (remaining <= 0) return;
+    if (remaining <= 0 || _paying) return;
+    final amountCtrl = TextEditingController(
+        text: remaining.toStringAsFixed(2).replaceAll('.', ','));
+    final selected = await showDialog<double>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+              title: const Text('Pagamento total ou parcial'),
+              content: TextField(
+                  controller: amountCtrl,
+                  keyboardType:
+                      const TextInputType.numberWithOptions(decimal: true),
+                  decoration: InputDecoration(
+                      labelText: 'Valor a pagar',
+                      helperText:
+                          'Em aberto: ${formatAmount(remaining, card.currency)}')),
+              actions: [
+                TextButton(
+                    onPressed: () => Navigator.pop(ctx),
+                    child: const Text('Cancelar')),
+                FilledButton(
+                    onPressed: () {
+                      final value = parseMoney(amountCtrl.text);
+                      if (value == null ||
+                          value <= 0 ||
+                          value > remaining + 0.005) {
+                        _snack(
+                            'Informe um valor maior que zero e até o total em aberto.');
+                        return;
+                      }
+                      Navigator.pop(ctx, value);
+                    },
+                    child: const Text('Continuar'))
+              ],
+            ));
+    if (selected == null || !mounted) return;
+    remaining = selected;
     final app = context.read<AppProvider>();
     final linked = card.linkedAccountId == null
         ? null
@@ -171,19 +190,22 @@ class _CardInvoiceScreenState extends State<CardInvoiceScreen> {
     );
     if (confirmed != true) return;
 
-    await app.addTransfer(
-      fromId: linked.id,
-      toId: card.id,
-      fromAmount: fromAmount,
-      toAmount: remaining,
-      note: 'Pagamento da fatura ${card.name}',
-    );
-    await CardInvoiceService.instance.recordPayment(
-      id: app.newId(),
-      cardId: card.id,
-      cycleEnd: cycleEnd,
-      amount: remaining,
-    );
+    setState(() => _paying = true);
+    try {
+      await app.addTransfer(
+          fromId: linked.id,
+          toId: card.id,
+          fromAmount: fromAmount,
+          toAmount: remaining,
+          invoiceCycleEnd: cycleEnd,
+          note: 'Pagamento da fatura ${card.name}');
+    } catch (_) {
+      _snack(
+          'Não foi possível pagar. Atualize a fatura e confira o valor e a conta.');
+      return;
+    } finally {
+      if (mounted) setState(() => _paying = false);
+    }
     if (!mounted) return;
     _snack('Pagamento registrado sem duplicar seus gastos.');
     setState(() {
@@ -201,15 +223,15 @@ class _CardInvoiceScreenState extends State<CardInvoiceScreen> {
     final app = context.watch<AppProvider>();
     final card = app.accountById(widget.cardId);
     if (card == null) {
-      return const Scaffold(body: Center(child: Text('Cartão não encontrado.')));
+      return const Scaffold(
+          body: Center(child: Text('Cartão não encontrado.')));
     }
 
     final cycle = _cycle(card);
     final allCycleTx = app.transactions.where((t) =>
         t.accountId == card.id &&
-        t.type == 'expense' &&
         !t.date.isBefore(cycle.start) &&
-        !t.date.isAfter(cycle.end));
+        t.date.isBefore(cycle.end.add(const Duration(days: 1))));
     _metadata ??= TransactionMetadataService.instance
         .getForMany(allCycleTx.map((e) => e.id));
 
@@ -225,15 +247,19 @@ class _CardInvoiceScreenState extends State<CardInvoiceScreen> {
             : values[0] as Map<String, TransactionMetadata>;
         final alreadyPaid = values == null ? 0.0 : values[1] as double;
         final purchases = allCycleTx
-            .where((t) => !FinanceRules.isNeutral(t, meta[t.id]))
+            .where((t) =>
+                !FinanceRules.isNeutral(t, meta[t.id]) ||
+                meta[t.id]?.source == 'opening_balance')
             .toList()
           ..sort((a, b) => b.date.compareTo(a.date));
-        final total = purchases.fold<double>(0, (s, t) => s + t.amount);
+        final total = purchases.fold<double>(
+            0, (s, t) => s + (t.type == 'income' ? -t.amount : t.amount));
         final remaining =
             (total - alreadyPaid).clamp(0.0, double.infinity).toDouble();
         final freeLimit = card.creditLimit == null
             ? null
-            : (card.creditLimit! - total)
+            : (card.creditLimit! +
+                    card.balance.clamp(double.negativeInfinity, 0))
                 .clamp(0.0, double.infinity)
                 .toDouble();
 
@@ -242,6 +268,20 @@ class _CardInvoiceScreenState extends State<CardInvoiceScreen> {
             title: Text(card.name,
                 style: const TextStyle(fontWeight: FontWeight.w900)),
             actions: [
+              IconButton(
+                  tooltip: 'Fatura anterior',
+                  icon: const Icon(Icons.chevron_left),
+                  onPressed: () => setState(() {
+                        _monthOffset--;
+                        _metadata = null;
+                      })),
+              IconButton(
+                  tooltip: 'Próxima fatura',
+                  icon: const Icon(Icons.chevron_right),
+                  onPressed: () => setState(() {
+                        _monthOffset++;
+                        _metadata = null;
+                      })),
               IconButton(
                 tooltip: 'Configurar fatura',
                 onPressed: () => _editSettings(card),
@@ -265,18 +305,21 @@ class _CardInvoiceScreenState extends State<CardInvoiceScreen> {
                     const SizedBox(height: 4),
                     Text(
                       formatAmount(total, card.currency),
-                      style: Theme.of(context).textTheme.headlineLarge?.copyWith(
-                            fontWeight: FontWeight.w900,
-                          ),
+                      style:
+                          Theme.of(context).textTheme.headlineLarge?.copyWith(
+                                fontWeight: FontWeight.w900,
+                              ),
                     ),
                     const SizedBox(height: 12),
                     Text(
                       'Período ${DateFormat('dd/MM').format(cycle.start)} a ${DateFormat('dd/MM').format(cycle.end)}',
                     ),
                     if (cycle.due != null)
-                      Text('Vencimento ${DateFormat('dd/MM/yyyy').format(cycle.due!)}'),
+                      Text(
+                          'Vencimento ${DateFormat('dd/MM/yyyy').format(cycle.due!)}'),
                     if (alreadyPaid > 0)
-                      Text('Já pago ${formatAmount(alreadyPaid, card.currency)}'),
+                      Text(
+                          'Já pago ${formatAmount(alreadyPaid, card.currency)}'),
                     Text(
                       remaining <= 0
                           ? 'Situação: paga'
@@ -284,7 +327,8 @@ class _CardInvoiceScreenState extends State<CardInvoiceScreen> {
                       style: const TextStyle(fontWeight: FontWeight.w800),
                     ),
                     if (freeLimit != null)
-                      Text('Limite disponível ${formatAmount(freeLimit, card.currency)}'),
+                      Text(
+                          'Limite disponível ${formatAmount(freeLimit, card.currency)}'),
                   ],
                 ),
               ),
@@ -303,7 +347,9 @@ class _CardInvoiceScreenState extends State<CardInvoiceScreen> {
               if (remaining > 0) ...[
                 const SizedBox(height: 8),
                 FilledButton.icon(
-                  onPressed: () => _payInvoice(card, cycle.end, remaining),
+                  onPressed: _paying
+                      ? null
+                      : () => _payInvoice(card, cycle.end, remaining),
                   icon: const Icon(Icons.payments_outlined),
                   label: Text(
                     alreadyPaid > 0
@@ -314,7 +360,7 @@ class _CardInvoiceScreenState extends State<CardInvoiceScreen> {
               ],
               const SizedBox(height: 24),
               Text(
-                'Compras da fatura',
+                'Compras e créditos da fatura',
                 style: Theme.of(context)
                     .textTheme
                     .titleMedium
@@ -349,7 +395,7 @@ class _CardInvoiceScreenState extends State<CardInvoiceScreen> {
                           'Parcela ${txMeta!.installmentLabel}',
                       ].join(' • ')),
                       trailing: Text(
-                        formatAmount(tx.amount, card.currency),
+                        '${tx.type == 'income' ? '− ' : ''}${formatAmount(tx.amount, card.currency)}',
                         style: const TextStyle(fontWeight: FontWeight.w900),
                       ),
                     ),

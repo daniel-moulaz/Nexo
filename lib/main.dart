@@ -1,5 +1,7 @@
 // lib/main.dart
 import 'dart:async';
+import 'package:intl/intl.dart';
+import 'package:intl/date_symbol_data_local.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:dynamic_color/dynamic_color.dart';
@@ -22,6 +24,8 @@ final GlobalKey<NavigatorState> rootNavigatorKey = GlobalKey<NavigatorState>();
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  Intl.defaultLocale = 'pt_BR';
+  await initializeDateFormatting('pt_BR');
   await NotificationService().initialize();
   await LendedNotificationService().initialize();
   await BudgetNotificationService().initialize();
@@ -117,7 +121,7 @@ class _ExpensyAppState extends State<ExpensyApp> {
         return MediaQuery(
           data: mediaQueryData,
           child: MaterialApp(
-            title: 'Meu Fluxo',
+            title: 'Nexo',
             navigatorKey: rootNavigatorKey,
             debugShowCheckedModeBanner: false,
             localizationsDelegates: AppLocalizations.localizationsDelegates,

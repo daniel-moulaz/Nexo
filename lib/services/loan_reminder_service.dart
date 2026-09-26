@@ -12,7 +12,7 @@ class LoanReminderService {
   bool _initialized = false;
 
   static const _channelId = 'expensy_loans';
-  static const _channelName = 'Loan Payment Reminders';
+  static const _channelName = 'Lembretes de empréstimos';
   static const _channelDesc = 'Reminders when a loan installment is due';
 
   Future<void> initialize() async {
@@ -116,7 +116,7 @@ class LoanReminderService {
     if (tzDate != null) {
       await _plugin.zonedSchedule(
         _notifId(l.id),
-        '🏦 Loan Payment Due',
+        'Pagamento de empréstimo',
         '${l.name} installment is due today.',
         tzDate,
         _buildDetails(),

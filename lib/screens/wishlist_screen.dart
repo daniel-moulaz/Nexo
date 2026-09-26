@@ -1,3 +1,4 @@
+import '../utils/finance_input.dart';
 // lib/screens/wishlist_screen.dart
 import 'package:flutter/material.dart';
 import '../utils/snackbar.dart';
@@ -195,7 +196,7 @@ class _WishSheetState extends State<_WishSheet> {
   Future<void> _submit() async {
     setState(() => _submitted = true);
     if (_nameCtrl.text.trim().isEmpty) return;
-    final price = double.tryParse(_priceCtrl.text) ?? 0;
+    final price = parseMoney(_priceCtrl.text) ?? 0;
     final app = context.read<AppProvider>();
     if (isEdit) {
       await app.updateWishlist(widget.existing!.copyWith(
@@ -264,7 +265,7 @@ class _WishSheetState extends State<_WishSheet> {
                     labelText: l10n.wishlist_targetPrice,
                     prefixText: '$sym ',
                     errorText: _submitted &&
-                            (double.tryParse(_priceCtrl.text) ?? 0) <= 0
+                            (parseMoney(_priceCtrl.text) ?? 0) <= 0
                         ? l10n.error_required
                         : null,
                   ),

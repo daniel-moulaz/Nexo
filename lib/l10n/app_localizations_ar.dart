@@ -217,7 +217,7 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get recurring_notificationPermissionDenied =>
-      'تم رفض إذن الإشعارات. قم بتمكينه في الإعدادات → التطبيقات → Expensy → الإشعارات.';
+      'تم رفض إذن الإشعارات. قم بتمكينه في الإعدادات → التطبيقات → Nexo → الإشعارات.';
 
   @override
   String get recurring_remindMeAt => 'ذكرني في';
@@ -400,7 +400,7 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get lended_person_notificationPermissionDenied =>
-      'تم رفض إذن الإشعارات. قم بتمكينه في الإعدادات → التطبيقات → Expensy → الإشعارات.';
+      'تم رفض إذن الإشعارات. قم بتمكينه في الإعدادات → التطبيقات → Nexo → الإشعارات.';
 
   @override
   String get lended_person_remindMeAtPrompt => 'ذكرني في';
@@ -499,7 +499,7 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get onboarding_restoreFailed =>
-      'فشلت الاستعادة: قد يكون الملف تالفًا أو ليس نسخة احتياطية من Expensy.';
+      'فشلت الاستعادة: قد يكون الملف تالفًا أو ليس نسخة احتياطية من Nexo.';
 
   @override
   String get onboarding_continue => 'متابعة';
@@ -634,7 +634,7 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get backup_restoreFailedCorrupted =>
-      'فشلت الاستعادة: قد يكون الملف تالفًا أو ليس نسخة احتياطية من Expensy.';
+      'فشلت الاستعادة: قد يكون الملف تالفًا أو ليس نسخة احتياطية من Nexo.';
 
   @override
   String get budget_noBudgetsYet => 'لا توجد ميزانيات بعد';
@@ -1389,14 +1389,14 @@ class AppLocalizationsAr extends AppLocalizations {
   String get onboarding_back => 'رجوع';
 
   @override
-  String get onboarding_welcomeToExpensy => 'مرحبًا بك في Expensy!';
+  String get onboarding_welcomeToExpensy => 'مرحبًا بك في Nexo!';
 
   @override
   String get onboarding_restoreABackup => 'استعادة نسخة احتياطية';
 
   @override
   String get onboarding_loadAPreviouslySaved =>
-      'تحميل ملف JSON محفوظ مسبقًا لـ Expensy';
+      'تحميل ملف JSON محفوظ مسبقًا لـ Nexo';
 
   @override
   String get onboarding_or => 'أو';

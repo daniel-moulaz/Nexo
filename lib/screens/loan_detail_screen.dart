@@ -1,3 +1,4 @@
+import '../utils/finance_input.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
@@ -50,7 +51,7 @@ class _LoanDetailScreenState extends State<LoanDetailScreen> {
     final progress = app.loanProgress(_loan);
     final cur = _loan.currency;
 
-    final df = DateFormat('MMM dd, yyyy');
+    final df = DateFormat('dd/MM/yyyy');
 
     return Scaffold(
       appBar: AppBar(
@@ -91,7 +92,7 @@ class _LoanDetailScreenState extends State<LoanDetailScreen> {
                         if (context.mounted) {
                           showAppSnackbar(
                             context,
-                            'Deleted ${_loan.name}',
+                            'Excluído: ${_loan.name}',
                             onUndo: undo,
                           );
                         }
@@ -212,7 +213,7 @@ class _LoanDetailScreenState extends State<LoanDetailScreen> {
                     Row(
                       children: [
                         Expanded(child: _DetailStat('Duration', l10n.loans_durationMonths(_loan.durationMonths))),
-                        Expanded(child: _DetailStat('Total Payable', formatAmount(_loan.totalPayable, cur))),
+                        Expanded(child: _DetailStat('Total a pagar', formatAmount(_loan.totalPayable, cur))),
                       ],
                     ),
                     if (_loan.accountId != null) ...[
@@ -221,8 +222,8 @@ class _LoanDetailScreenState extends State<LoanDetailScreen> {
                         children: [
                           Expanded(
                             child: _DetailStat(
-                              'Linked Account',
-                              app.accountById(_loan.accountId!)?.name ?? 'Deleted Account',
+                              'Conta vinculada',
+                              app.accountById(_loan.accountId!)?.name ?? 'Conta excluída',
                             ),
                           ),
                         ],
@@ -335,7 +336,7 @@ class _LoanDetailScreenState extends State<LoanDetailScreen> {
                             if (context.mounted) {
                               showAppSnackbar(
                                 context,
-                                'Payment deleted',
+                                'Pagamento excluído',
                                 onUndo: undo,
                               );
                             }
@@ -475,11 +476,11 @@ class _LogPaymentSheetState extends State<_LogPaymentSheet> {
                 keyboardType: const TextInputType.numberWithOptions(decimal: true),
                 validator: (val) {
                   if (val == null || val.trim().isEmpty) return 'Required';
-                  final num = double.tryParse(val);
+                  final num = parseMoney(val);
                   if (num == null || num <= 0) return 'Invalid';
                   return null;
                 },
-                onChanged: (val) => setState(() => _amount = double.tryParse(val) ?? 0.0),
+                onChanged: (val) => setState(() => _amount = parseMoney(val) ?? 0.0),
               ),
               const SizedBox(height: 16),
 
@@ -523,7 +524,7 @@ class _LogPaymentSheetState extends State<_LogPaymentSheet> {
 
                   if (mounted) {
                     Navigator.pop(context);
-                    showAppSnackbar(context, 'Logged payment of ${formatAmount(_amount, widget.loan.currency)}');
+                    showAppSnackbar(context, 'Pagamento registrado: ${formatAmount(_amount, widget.loan.currency)}');
                   }
                 },
                 child: Text(l10n.loans_logPayment),

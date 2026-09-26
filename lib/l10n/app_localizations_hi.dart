@@ -219,7 +219,7 @@ class AppLocalizationsHi extends AppLocalizations {
 
   @override
   String get recurring_notificationPermissionDenied =>
-      'सूचना की अनुमति अस्वीकृत। इसे सेटिंग्स → ऐप्स → Expensy → सूचनाएँ में सक्षम करें।';
+      'सूचना की अनुमति अस्वीकृत। इसे सेटिंग्स → ऐप्स → Nexo → सूचनाएँ में सक्षम करें।';
 
   @override
   String get recurring_remindMeAt => 'मुझे याद दिलाएं';
@@ -404,7 +404,7 @@ class AppLocalizationsHi extends AppLocalizations {
 
   @override
   String get lended_person_notificationPermissionDenied =>
-      'सूचना की अनुमति अस्वीकृत। इसे सेटिंग्स → ऐप्स → Expensy → सूचनाएँ में सक्षम करें।';
+      'सूचना की अनुमति अस्वीकृत। इसे सेटिंग्स → ऐप्स → Nexo → सूचनाएँ में सक्षम करें।';
 
   @override
   String get lended_person_remindMeAtPrompt => 'मुझे याद दिलाएं';
@@ -504,7 +504,7 @@ class AppLocalizationsHi extends AppLocalizations {
 
   @override
   String get onboarding_restoreFailed =>
-      'पुनर्स्थापना विफल: फ़ाइल दूषित हो सकती है या Expensy बैकअप नहीं हो सकती है।';
+      'पुनर्स्थापना विफल: फ़ाइल दूषित हो सकती है या Nexo बैकअप नहीं हो सकती है।';
 
   @override
   String get onboarding_continue => 'जारी रखें';
@@ -639,7 +639,7 @@ class AppLocalizationsHi extends AppLocalizations {
 
   @override
   String get backup_restoreFailedCorrupted =>
-      'पुनर्स्थापना विफल: फ़ाइल दूषित हो सकती है या Expensy बैकअप नहीं हो सकती है।';
+      'पुनर्स्थापना विफल: फ़ाइल दूषित हो सकती है या Nexo बैकअप नहीं हो सकती है।';
 
   @override
   String get budget_noBudgetsYet => 'अभी तक कोई बजट नहीं';
@@ -1403,14 +1403,14 @@ class AppLocalizationsHi extends AppLocalizations {
   String get onboarding_back => 'पीछे';
 
   @override
-  String get onboarding_welcomeToExpensy => 'Expensy में आपका स्वागत है!';
+  String get onboarding_welcomeToExpensy => 'Nexo में आपका स्वागत है!';
 
   @override
   String get onboarding_restoreABackup => 'एक बैकअप पुनर्स्थापित करें';
 
   @override
   String get onboarding_loadAPreviouslySaved =>
-      'पहले सहेजी गई Expensy JSON फ़ाइल लोड करें';
+      'पहले सहेजी गई Nexo JSON फ़ाइल लोड करें';
 
   @override
   String get onboarding_or => 'या';

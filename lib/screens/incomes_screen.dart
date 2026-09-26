@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import '../models/models.dart';
 import '../providers/app_provider.dart';
 import '../theme/app_theme.dart';
+import '../services/finance_rules.dart';
 import 'add_transaction_screen.dart';
 
 class IncomesScreen extends StatefulWidget {
@@ -103,11 +104,11 @@ class _IncomesScreenState extends State<IncomesScreen> {
     final theme = Theme.of(context);
     final cs = theme.colorScheme;
     final incomes = app.transactions
-        .where((t) => t.type == 'income' && _sameMonth(t.date))
+        .where((t) => t.type == 'income' && _sameMonth(t.date) && !FinanceRules.isNeutral(t, app.transactionMetadata[t.id]))
         .toList()
       ..sort((a, b) => b.date.compareTo(a.date));
 
-    final total = incomes.fold<double>(0, (sum, tx) {
+    final total = incomes.where((t) => app.transactionMetadata[t.id]?.isPending != true).fold<double>(0, (sum, tx) {
       final currency = _currencyFor(app, tx);
       return sum + app.convertToMain(tx.amount, currency);
     });
@@ -277,6 +278,8 @@ class _IncomesScreenState extends State<IncomesScreen> {
                                 subtitle: Text([
                                   if (account != null) account.name,
                                   _categoryLabel(category),
+                                  if ((app.transactionMetadata[tx.id]?.subcategory ?? '').isNotEmpty) app.transactionMetadata[tx.id]!.subcategory,
+                                  app.transactionMetadata[tx.id]?.isPending == true ? 'Prevista' : 'Recebida',
                                 ].join(' • ')),
                                 trailing: Text(
                                   formatAmount(

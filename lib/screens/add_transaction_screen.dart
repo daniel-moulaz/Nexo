@@ -6,6 +6,7 @@ import '../providers/app_provider.dart';
 import '../services/transaction_metadata_service.dart';
 import '../theme/app_theme.dart';
 import '../utils/finance_input.dart';
+import '../widgets/shared_widgets.dart' show showCurrencyPicker;
 import 'transfer_screen.dart';
 
 class AddTransactionScreen extends StatefulWidget {
@@ -63,7 +64,8 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
 
     final existing = widget.existing;
     if (existing != null) {
-      _amountCtrl.text = existing.amount.toStringAsFixed(2).replaceAll('.', ',');
+      _amountCtrl.text =
+          existing.amount.toStringAsFixed(2).replaceAll('.', ',');
       _descriptionCtrl.text = existing.description;
       _noteCtrl.text = existing.note;
       _accountId = existing.accountId;
@@ -92,7 +94,8 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
       _expenseClass = metadata.expenseClass;
       _excludeFromSpending = metadata.excludeFromSpending;
       _source = metadata.source;
-      if (metadata.installmentCurrent != null && metadata.installmentTotal != null) {
+      if (metadata.installmentCurrent != null &&
+          metadata.installmentTotal != null) {
         _isInstallment = true;
         _installmentCurrentCtrl.text = '${metadata.installmentCurrent}';
         _installmentTotalCtrl.text = '${metadata.installmentTotal}';
@@ -140,7 +143,14 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
         'Estacionamento',
       ],
       'shopping': ['Roupas', 'Eletrônicos', 'Casa', 'Pessoal', 'Outros'],
-      'bills': ['Água', 'Luz', 'Internet', 'Telefone', 'Assinaturas', 'Aluguel'],
+      'bills': [
+        'Água',
+        'Luz',
+        'Internet',
+        'Telefone',
+        'Assinaturas',
+        'Aluguel'
+      ],
       'health': ['Farmácia', 'Consulta', 'Exames', 'Academia'],
       'entertainment': ['Streaming', 'Cinema', 'Jogos', 'Passeio'],
       'education': ['Faculdade', 'Cursos', 'Livros', 'Material'],
@@ -204,7 +214,8 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
   Future<void> _save() async {
     setState(() => _submitted = true);
     final amount = parseMoney(_amountCtrl.text);
-    final currentInstallment = int.tryParse(_installmentCurrentCtrl.text.trim());
+    final currentInstallment =
+        int.tryParse(_installmentCurrentCtrl.text.trim());
     final totalInstallments = int.tryParse(_installmentTotalCtrl.text.trim());
     final installmentValid = !_isInstallment ||
         (currentInstallment != null &&
@@ -218,6 +229,14 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
         _accountId == null ||
         _categoryId == null ||
         !installmentValid) {
+      final errors = <String>[
+        if (amount == null || amount <= 0) 'valor',
+        if (_accountId == null) 'conta',
+        if (_categoryId == null) 'categoria',
+        if (!installmentValid) 'parcela atual e total de parcelas',
+      ];
+      ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Revise: ${errors.join(', ')}.')));
       return;
     }
 
@@ -250,28 +269,39 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
     }
 
     setState(() => _saving = true);
-    if (isEdit) {
-      await app.updateTransaction(transaction, widget.existing!);
-    } else {
-      await app.addTransaction(transaction);
-    }
-
-    await TransactionMetadataService.instance.save(
-      TransactionMetadata(
-        transactionId: id,
-        subcategory: _subcategory,
-        status: _status,
-        dueDate: _status == 'pending' ? (_dueDate ?? _date) : null,
-        expenseClass: _type == 'expense' ? _expenseClass : 'normal',
-        excludeFromSpending: _type == 'expense' && _excludeFromSpending,
-        installmentCurrent: _type == 'expense' && _isInstallment
-            ? currentInstallment
-            : null,
-        installmentTotal:
-            _type == 'expense' && _isInstallment ? totalInstallments : null,
-        source: _source,
-      ),
+    final metadata = TransactionMetadata(
+      transactionId: id,
+      subcategory: _subcategory,
+      status: _status,
+      dueDate: _status == 'pending' ? (_dueDate ?? _date) : null,
+      expenseClass: _type == 'expense' ? _expenseClass : 'normal',
+      excludeFromSpending: _type == 'expense' && _excludeFromSpending,
+      installmentCurrent:
+          _type == 'expense' && _isInstallment ? currentInstallment : null,
+      installmentTotal:
+          _type == 'expense' && _isInstallment ? totalInstallments : null,
+      source: _source,
+      affectsBalance: isEdit
+          ? (await TransactionMetadataService.instance.getFor(id))
+              .affectsBalance
+          : true,
     );
+    try {
+      if (isEdit) {
+        await app.updateTransaction(transaction, widget.existing!,
+            metadata: metadata);
+      } else {
+        await app.addTransaction(transaction, metadata: metadata);
+      }
+    } catch (_) {
+      if (mounted) {
+        setState(() => _saving = false);
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+            content: Text(
+                'Não foi possível salvar. Revise os campos. Para alterar uma transferência, exclua e registre novamente.')));
+      }
+      return;
+    }
 
     if (!mounted) return;
     Navigator.pop(context);
@@ -284,7 +314,8 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
       context: context,
       builder: (dialogContext) => AlertDialog(
         title: const Text('Excluir lançamento?'),
-        content: const Text('Essa ação também desfaz o efeito deste lançamento no saldo da conta.'),
+        content: const Text(
+            'Essa ação desfaz o efeito no saldo. Em transferências ou pagamentos de fatura, os dois lados serão excluídos juntos. Em compras parceladas, só esta parcela será excluída.'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(dialogContext, false),
@@ -313,7 +344,8 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
     final categories = app.categories.where((c) => c.type == _type).toList();
     final subcategories = _subcategories(_categoryId);
     final amount = parseMoney(_amountCtrl.text);
-    final currentInstallment = int.tryParse(_installmentCurrentCtrl.text.trim());
+    final currentInstallment =
+        int.tryParse(_installmentCurrentCtrl.text.trim());
     final totalInstallments = int.tryParse(_installmentTotalCtrl.text.trim());
 
     final selectedAccount = app.accountById(_accountId ?? '');
@@ -361,28 +393,17 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
       body: ListView(
         padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
         children: [
-          SegmentedButton<String>(
-            segments: [
-              const ButtonSegment(
-                value: 'expense',
-                label: Text('Despesa'),
-                icon: Icon(Icons.north_east_rounded),
-              ),
-              const ButtonSegment(
-                value: 'income',
-                label: Text('Receita'),
-                icon: Icon(Icons.south_west_rounded),
-              ),
-              if (!isEdit)
-                const ButtonSegment(
-                  value: 'transfer',
-                  label: Text('Transferir'),
-                  icon: Icon(Icons.swap_horiz_rounded),
-                ),
-            ],
-            selected: {_type},
-            onSelectionChanged: (selection) => _setType(selection.first),
-          ),
+          Wrap(spacing: 8, runSpacing: 8, children: [
+            for (final type in ['expense', 'income', if (!isEdit) 'transfer'])
+              ChoiceChip(
+                  label: Text(const {
+                    'expense': 'Despesa',
+                    'income': 'Receita',
+                    'transfer': 'Transferência'
+                  }[type]!),
+                  selected: _type == type,
+                  onSelected: (_) => _setType(type)),
+          ]),
           const SizedBox(height: 16),
           Container(
             padding: const EdgeInsets.all(18),
@@ -410,7 +431,8 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
                       child: TextField(
                         controller: _amountCtrl,
                         autofocus: !isEdit,
-                        keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                        keyboardType: const TextInputType.numberWithOptions(
+                            decimal: true),
                         decoration: const InputDecoration(
                           hintText: '0,00',
                           filled: false,
@@ -442,7 +464,8 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
                 if (_submitted && (amount == null || amount <= 0))
                   Text(
                     'Informe um valor maior que zero.',
-                    style: TextStyle(color: cs.error, fontWeight: FontWeight.w700),
+                    style:
+                        TextStyle(color: cs.error, fontWeight: FontWeight.w700),
                   ),
               ],
             ),
@@ -475,7 +498,9 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
             )
           else
             DropdownButtonFormField<String>(
-              initialValue: accounts.any((a) => a.id == _accountId) ? _accountId : null,
+              isExpanded: true,
+              initialValue:
+                  accounts.any((a) => a.id == _accountId) ? _accountId : null,
               decoration: InputDecoration(
                 labelText: 'Conta ou cartão',
                 errorText: _submitted && _accountId == null
@@ -546,11 +571,14 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
           if (_submitted && _categoryId == null)
             Padding(
               padding: const EdgeInsets.only(top: 6),
-              child: Text('Escolha uma categoria.', style: TextStyle(color: cs.error)),
+              child: Text('Escolha uma categoria.',
+                  style: TextStyle(color: cs.error)),
             ),
           if (subcategories.isNotEmpty) ...[
             const SizedBox(height: 16),
-            Text('Subcategoria', style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w900)),
+            Text('Subcategoria',
+                style: theme.textTheme.titleSmall
+                    ?.copyWith(fontWeight: FontWeight.w900)),
             const SizedBox(height: 8),
             Wrap(
               spacing: 8,
@@ -569,7 +597,9 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
           const SizedBox(height: 20),
           _SectionTitle(
             icon: Icons.fact_check_outlined,
-            title: _type == 'income' ? 'Situação da receita' : 'Situação da despesa',
+            title: _type == 'income'
+                ? 'Situação da receita'
+                : 'Situação da despesa',
             subtitle: _type == 'income'
                 ? 'Separe o que já recebeu do que ainda está previsto'
                 : 'Separe o que já foi pago do que ainda está pendente',
@@ -626,7 +656,8 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
             SegmentedButton<String>(
               segments: const [
                 ButtonSegment(value: 'normal', label: Text('Normal')),
-                ButtonSegment(value: 'extraordinary', label: Text('Extraordinária')),
+                ButtonSegment(
+                    value: 'extraordinary', label: Text('Extraordinária')),
               ],
               selected: {_expenseClass},
               onSelectionChanged: (selection) {
@@ -637,7 +668,8 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
             SwitchListTile.adaptive(
               contentPadding: EdgeInsets.zero,
               value: _excludeFromSpending,
-              onChanged: (value) => setState(() => _excludeFromSpending = value),
+              onChanged: (value) =>
+                  setState(() => _excludeFromSpending = value),
               title: const Text('Não contar como gasto'),
               subtitle: const Text(
                 'Use para movimentos neutros, ajustes, reserva ou casos especiais. Para transferências entre contas, prefira “Transferir”.',
@@ -648,7 +680,8 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
               value: _isInstallment,
               onChanged: (value) => setState(() => _isInstallment = value),
               title: const Text('Compra parcelada'),
-              subtitle: const Text('Registre em qual parcela você está, por exemplo 3 de 12.'),
+              subtitle: const Text(
+                  'Informe o valor de cada parcela e a parcela atual (ex.: 3 de 12). As próximas serão criadas mensalmente. Ao editar ou excluir, só esta parcela será alterada.'),
             ),
             if (_isInstallment) ...[
               const SizedBox(height: 6),
@@ -658,7 +691,8 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
                     child: TextField(
                       controller: _installmentCurrentCtrl,
                       keyboardType: TextInputType.number,
-                      decoration: const InputDecoration(labelText: 'Parcela atual'),
+                      decoration:
+                          const InputDecoration(labelText: 'Parcela atual'),
                     ),
                   ),
                   const Padding(
@@ -712,7 +746,8 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
               if (picked != null) {
                 setState(() {
                   _date = picked;
-                  if (_status == 'pending' && _dueDate == null) _dueDate = picked;
+                  if (_status == 'pending' && _dueDate == null)
+                    _dueDate = picked;
                 });
               }
             },
@@ -812,7 +847,8 @@ class _DateTile extends StatelessWidget {
                 children: [
                   Text(title, style: Theme.of(context).textTheme.labelSmall),
                   const SizedBox(height: 2),
-                  Text(ptDate(date), style: const TextStyle(fontWeight: FontWeight.w900)),
+                  Text(ptDate(date),
+                      style: const TextStyle(fontWeight: FontWeight.w900)),
                 ],
               ),
             ),

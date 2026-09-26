@@ -39,7 +39,7 @@ class BudgetNotificationService {
     final overAmount = spentAmount - budget.amount;
     if (overAmount <= 0) return;
 
-    final nf = NumberFormat.currency(symbol: '');
+    final nf = NumberFormat.currency(locale: 'pt_BR', symbol: '');
     final amountStr = nf.format(overAmount).trim();
 
     // Stable ID that resets daily so budget alerts don't spam.
@@ -48,7 +48,7 @@ class BudgetNotificationService {
 
     const androidDetails = AndroidNotificationDetails(
       'expensy_budget',
-      'Budget & Goal Alerts',
+      'Alertas de orçamento e objetivos',
       channelDescription:
           'Immediate alerts for exceeded budgets and completed goals.',
       importance: Importance.high,
@@ -62,7 +62,7 @@ class BudgetNotificationService {
 
     await _plugin.show(
       id,
-      '🚨 Over Budget',
+      'Orçamento ultrapassado',
       '${category.name} — $amountStr over your ${budget.period} limit',
       details,
     );
@@ -71,7 +71,7 @@ class BudgetNotificationService {
   Future<void> showGoalCompleted(SavingsGoal goal) async {
     if (!(await hasPermission())) return;
 
-    final nf = NumberFormat.currency(symbol: '');
+    final nf = NumberFormat.currency(locale: 'pt_BR', symbol: '');
     final amountStr = nf.format(goal.targetAmount).trim();
 
     // Stable ID that resets daily.
@@ -80,7 +80,7 @@ class BudgetNotificationService {
 
     const androidDetails = AndroidNotificationDetails(
       'expensy_budget',
-      'Budget & Goal Alerts',
+      'Alertas de orçamento e objetivos',
       channelDescription:
           'Immediate alerts for exceeded budgets and completed goals.',
       importance: Importance.high,
@@ -94,8 +94,8 @@ class BudgetNotificationService {
 
     await _plugin.show(
       id,
-      '🎉 Goal Reached',
-      'You reached your goal of $amountStr for ${goal.name}!',
+      'Objetivo alcançado',
+      'Você alcançou a meta de $amountStr para ${goal.name}!',
       details,
     );
   }

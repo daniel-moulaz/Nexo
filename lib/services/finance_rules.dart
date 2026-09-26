@@ -6,10 +6,8 @@ class FinanceRules {
     final text = '${tx.description} ${tx.note}'.toLowerCase();
     return text.contains('transfer out') ||
         text.contains('transfer in') ||
-        text.contains('transferência') ||
-        text.contains('transferencia') ||
-        text.contains('entre contas') ||
-        text.contains('reserva') ||
+        text.startsWith('transferência enviada') ||
+        text.startsWith('transferência recebida') ||
         (text.contains('fatura') && text.contains('pagamento')) ||
         text.contains('pagamento da fatura') ||
         text.contains('pagamento de fatura');

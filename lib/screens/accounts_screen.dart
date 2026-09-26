@@ -5,6 +5,7 @@ import '../models/models.dart';
 import '../providers/app_provider.dart';
 import '../theme/app_theme.dart';
 import '../utils/finance_input.dart';
+import '../widgets/shared_widgets.dart' show showCurrencyPicker;
 import 'card_invoice_screen.dart';
 
 class AccountsScreen extends StatelessWidget {
@@ -22,7 +23,8 @@ class AccountsScreen extends StatelessWidget {
       showDragHandle: true,
       builder: (_) => _AccountEditor(
         existing: existing,
-        cardMode: isCard || existing?.type == 'credit' || existing?.type == 'debit',
+        cardMode:
+            isCard || existing?.type == 'credit' || existing?.type == 'debit',
       ),
     );
   }
@@ -42,7 +44,8 @@ class AccountsScreen extends StatelessWidget {
       child: Scaffold(
         appBar: AppBar(
           automaticallyImplyLeading: false,
-          title: const Text('Contas e cartões', style: TextStyle(fontWeight: FontWeight.w900)),
+          title: const Text('Contas e cartões',
+              style: TextStyle(fontWeight: FontWeight.w900)),
           actions: [
             Padding(
               padding: const EdgeInsets.only(right: 16),
@@ -50,7 +53,8 @@ class AccountsScreen extends StatelessWidget {
                 mainAxisAlignment: MainAxisAlignment.center,
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
-                  Text('Saldo total', style: Theme.of(context).textTheme.labelSmall),
+                  Text('Saldo total',
+                      style: Theme.of(context).textTheme.labelSmall),
                   Text(
                     formatAmount(app.totalBalanceAll, app.settings.currency),
                     style: const TextStyle(fontWeight: FontWeight.w900),
@@ -95,18 +99,24 @@ class AccountsScreen extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             children: [
               const ListTile(
-                title: Text('O que você quer adicionar?', style: TextStyle(fontWeight: FontWeight.w900)),
-                subtitle: Text('Separe contas do dia a dia e cartões de crédito/débito.'),
+                title: Text('O que você quer adicionar?',
+                    style: TextStyle(fontWeight: FontWeight.w900)),
+                subtitle: Text(
+                    'Separe contas do dia a dia e cartões de crédito/débito.'),
               ),
               ListTile(
-                leading: const CircleAvatar(child: Icon(Icons.account_balance_wallet_outlined)),
-                title: const Text('Conta', style: TextStyle(fontWeight: FontWeight.w800)),
+                leading: const CircleAvatar(
+                    child: Icon(Icons.account_balance_wallet_outlined)),
+                title: const Text('Conta',
+                    style: TextStyle(fontWeight: FontWeight.w800)),
                 subtitle: const Text('Banco, dinheiro, poupança ou carteira'),
                 onTap: () => Navigator.pop(sheetContext, 'account'),
               ),
               ListTile(
-                leading: const CircleAvatar(child: Icon(Icons.credit_card_rounded)),
-                title: const Text('Cartão', style: TextStyle(fontWeight: FontWeight.w800)),
+                leading:
+                    const CircleAvatar(child: Icon(Icons.credit_card_rounded)),
+                title: const Text('Cartão',
+                    style: TextStyle(fontWeight: FontWeight.w800)),
                 subtitle: const Text('Crédito ou débito com limite e fatura'),
                 onTap: () => Navigator.pop(sheetContext, 'card'),
               ),
@@ -131,7 +141,8 @@ class _AccountsList extends StatelessWidget {
       return const _EmptyState(
         icon: Icons.account_balance_wallet_outlined,
         title: 'Nenhuma conta cadastrada',
-        subtitle: 'Adicione onde seu dinheiro fica: banco, carteira, dinheiro ou poupança.',
+        subtitle:
+            'Adicione onde seu dinheiro fica: banco, carteira, dinheiro ou poupança.',
       );
     }
     return ListView.builder(
@@ -170,7 +181,8 @@ class _AccountTile extends StatelessWidget {
           backgroundColor: color.withValues(alpha: .15),
           child: Icon(_accountIcon(account.type), color: color),
         ),
-        title: Text(account.name, style: const TextStyle(fontWeight: FontWeight.w900)),
+        title: Text(account.name,
+            style: const TextStyle(fontWeight: FontWeight.w900)),
         subtitle: Text([
           _typeLabel(),
           account.currency,
@@ -182,7 +194,10 @@ class _AccountTile extends StatelessWidget {
           children: [
             Text(
               formatAmount(balance, account.currency),
-              style: TextStyle(fontWeight: FontWeight.w900, color: balance < 0 ? Theme.of(context).colorScheme.error : null),
+              style: TextStyle(
+                  fontWeight: FontWeight.w900,
+                  color:
+                      balance < 0 ? Theme.of(context).colorScheme.error : null),
             ),
             Text(
               '${app.getAccountTransactions(account.id).length} lançamento${app.getAccountTransactions(account.id).length == 1 ? '' : 's'}',
@@ -208,7 +223,8 @@ class _CardsList extends StatelessWidget {
       return const _EmptyState(
         icon: Icons.credit_card_off_outlined,
         title: 'Nenhum cartão cadastrado',
-        subtitle: 'Cadastre o cartão com limite, fechamento e vencimento para acompanhar a fatura.',
+        subtitle:
+            'Cadastre o cartão com limite, fechamento e vencimento para acompanhar a fatura.',
       );
     }
     return ListView.builder(
@@ -232,7 +248,9 @@ class _CardTile extends StatelessWidget {
     final available = card.creditLimit == null
         ? null
         : (card.creditLimit! - used).clamp(0.0, double.infinity).toDouble();
-    final linked = card.linkedAccountId == null ? null : app.accountById(card.linkedAccountId!);
+    final linked = card.linkedAccountId == null
+        ? null
+        : app.accountById(card.linkedAccountId!);
 
     return Card(
       elevation: 0,
@@ -241,9 +259,11 @@ class _CardTile extends StatelessWidget {
         borderRadius: BorderRadius.circular(20),
         onTap: card.type == 'credit'
             ? () => Navigator.of(context).push(
-                  MaterialPageRoute(builder: (_) => CardInvoiceScreen(cardId: card.id)),
+                  MaterialPageRoute(
+                      builder: (_) => CardInvoiceScreen(cardId: card.id)),
                 )
-            : () => AccountsScreen.openSheet(context, existing: card, isCard: true),
+            : () =>
+                AccountsScreen.openSheet(context, existing: card, isCard: true),
         onLongPress: () => _confirmDelete(context, card),
         child: Padding(
           padding: const EdgeInsets.all(16),
@@ -261,9 +281,13 @@ class _CardTile extends StatelessWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(card.name, style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 16)),
+                        Text(card.name,
+                            style: const TextStyle(
+                                fontWeight: FontWeight.w900, fontSize: 16)),
                         Text(
-                          card.type == 'credit' ? 'Cartão de crédito' : 'Cartão de débito',
+                          card.type == 'credit'
+                              ? 'Cartão de crédito'
+                              : 'Cartão de débito',
                           style: Theme.of(context).textTheme.bodySmall,
                         ),
                       ],
@@ -271,7 +295,8 @@ class _CardTile extends StatelessWidget {
                   ),
                   IconButton(
                     tooltip: 'Editar cartão',
-                    onPressed: () => AccountsScreen.openSheet(context, existing: card, isCard: true),
+                    onPressed: () => AccountsScreen.openSheet(context,
+                        existing: card, isCard: true),
                     icon: const Icon(Icons.edit_outlined),
                   ),
                 ],
@@ -280,8 +305,16 @@ class _CardTile extends StatelessWidget {
                 const SizedBox(height: 14),
                 Row(
                   children: [
-                    Expanded(child: _CardStat(label: 'Usado', value: formatAmount(used, card.currency))),
-                    Expanded(child: _CardStat(label: 'Limite livre', value: available == null ? 'Não definido' : formatAmount(available, card.currency))),
+                    Expanded(
+                        child: _CardStat(
+                            label: 'Usado',
+                            value: formatAmount(used, card.currency))),
+                    Expanded(
+                        child: _CardStat(
+                            label: 'Limite livre',
+                            value: available == null
+                                ? 'Não definido'
+                                : formatAmount(available, card.currency))),
                   ],
                 ),
                 const SizedBox(height: 10),
@@ -289,8 +322,14 @@ class _CardTile extends StatelessWidget {
                   spacing: 8,
                   runSpacing: 6,
                   children: [
-                    _Tag(text: card.statementDay == null ? 'Fechamento não definido' : 'Fecha dia ${card.statementDay}'),
-                    _Tag(text: card.dueDay == null ? 'Vencimento não definido' : 'Vence dia ${card.dueDay}'),
+                    _Tag(
+                        text: card.statementDay == null
+                            ? 'Fechamento não definido'
+                            : 'Fecha dia ${card.statementDay}'),
+                    _Tag(
+                        text: card.dueDay == null
+                            ? 'Vencimento não definido'
+                            : 'Vence dia ${card.dueDay}'),
                     if (linked != null) _Tag(text: 'Paga por ${linked.name}'),
                   ],
                 ),
@@ -345,11 +384,22 @@ class _Tag extends StatelessWidget {
 }
 
 Future<void> _confirmDelete(BuildContext context, Account account) async {
+  final app = context.read<AppProvider>();
+  if (app.transactions.any((t) => t.accountId == account.id) ||
+      app.recurring.any((r) => r.accountId == account.id) ||
+      app.accounts.any((a) => a.linkedAccountId == account.id) ||
+      app.savingsContributions.any((c) => c.accountId == account.id)) {
+    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+        content: Text(
+            'Esta conta possui vínculos. Realoque os lançamentos, recorrentes e cartões antes de excluir. Você também pode ocultá-la do saldo total na edição.')));
+    return;
+  }
   final confirmed = await showDialog<bool>(
     context: context,
     builder: (dialogContext) => AlertDialog(
       title: const Text('Excluir conta?'),
-      content: Text('Excluir “${account.name}” também pode remover lançamentos vinculados a ela.'),
+      content: Text(
+          'Excluir “${account.name}” também pode remover lançamentos vinculados a ela.'),
       actions: [
         TextButton(
           onPressed: () => Navigator.pop(dialogContext, false),
@@ -381,7 +431,8 @@ class _EmptyState extends StatelessWidget {
   final String title;
   final String subtitle;
 
-  const _EmptyState({required this.icon, required this.title, required this.subtitle});
+  const _EmptyState(
+      {required this.icon, required this.title, required this.subtitle});
 
   @override
   Widget build(BuildContext context) {
@@ -392,9 +443,13 @@ class _EmptyState extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, size: 64, color: cs.onSurfaceVariant.withValues(alpha: .35)),
+            Icon(icon,
+                size: 64, color: cs.onSurfaceVariant.withValues(alpha: .35)),
             const SizedBox(height: 14),
-            Text(title, textAlign: TextAlign.center, style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 18)),
+            Text(title,
+                textAlign: TextAlign.center,
+                style:
+                    const TextStyle(fontWeight: FontWeight.w900, fontSize: 18)),
             const SizedBox(height: 6),
             Text(subtitle, textAlign: TextAlign.center),
           ],
@@ -456,13 +511,17 @@ class _AccountEditorState extends State<_AccountEditor> {
     final existing = widget.existing;
     if (existing != null) {
       _nameCtrl.text = existing.name;
-      _balanceCtrl.text = existing.balance.toStringAsFixed(2).replaceAll('.', ',');
+      _balanceCtrl.text =
+          (existing.type == 'credit' ? -existing.balance : existing.balance)
+              .toStringAsFixed(2)
+              .replaceAll('.', ',');
       _type = existing.type;
       _currency = existing.currency;
       _color = existing.colorValue;
       _excludeFromTotal = existing.excludeFromTotal;
       _linkedAccountId = existing.linkedAccountId;
-      _limitCtrl.text = existing.creditLimit?.toStringAsFixed(2).replaceAll('.', ',') ?? '';
+      _limitCtrl.text =
+          existing.creditLimit?.toStringAsFixed(2).replaceAll('.', ',') ?? '';
       _statementCtrl.text = existing.statementDay?.toString() ?? '';
       _dueCtrl.text = existing.dueDay?.toString() ?? '';
       _holderCtrl.text = existing.cardHolderName ?? '';
@@ -487,18 +546,49 @@ class _AccountEditorState extends State<_AccountEditor> {
   Future<void> _save() async {
     setState(() => _submitted = true);
     final name = _nameCtrl.text.trim();
-    final balance = parseMoney(_balanceCtrl.text) ?? 0;
+    final enteredBalance = parseMoney(_balanceCtrl.text) ?? 0;
+    final balance = isCredit ? -enteredBalance : enteredBalance;
     final limit = parseMoney(_limitCtrl.text);
     final statement = int.tryParse(_statementCtrl.text.trim());
     final due = int.tryParse(_dueCtrl.text.trim());
 
-    if (name.isEmpty) return;
-    if (isCredit && statement != null && (statement < 1 || statement > 31)) return;
+    String? error;
+    if (name.isEmpty) error = 'Informe o nome da conta.';
+    if (_balanceCtrl.text.trim().isNotEmpty &&
+        parseMoney(_balanceCtrl.text) == null)
+      error = 'Informe um saldo válido, como 1.234,56.';
+    if (isCredit &&
+        _limitCtrl.text.trim().isNotEmpty &&
+        (limit == null || limit < 0)) error = 'Informe um limite válido.';
+    if (isCredit &&
+        _statementCtrl.text.trim().isNotEmpty &&
+        (statement == null || statement < 1 || statement > 31))
+      error = 'Informe o fechamento entre 1 e 31.';
+    if (isCredit &&
+        _dueCtrl.text.trim().isNotEmpty &&
+        (due == null || due < 1 || due > 31))
+      error = 'Informe o vencimento entre 1 e 31.';
+    if (error != null) {
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(error)));
+      return;
+    }
+    if (isCredit && statement != null && (statement < 1 || statement > 31))
+      return;
     if (isCredit && due != null && (due < 1 || due > 31)) return;
 
     setState(() => _saving = true);
     final app = context.read<AppProvider>();
     final existing = widget.existing;
+    if (existing != null &&
+        existing.currency != _currency &&
+        app.getAccountTransactions(existing.id).isNotEmpty) {
+      setState(() => _saving = false);
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text(
+              'Crie outra conta para usar uma moeda diferente e preservar o histórico.')));
+      return;
+    }
 
     if (existing == null) {
       await app.addAccount(
@@ -550,7 +640,8 @@ class _AccountEditorState extends State<_AccountEditor> {
     final theme = Theme.of(context);
     final cs = theme.colorScheme;
     final payableAccounts = app.accounts
-        .where((a) => a.id != widget.existing?.id && a.type != 'credit' && !a.isGold)
+        .where((a) =>
+            a.id != widget.existing?.id && a.type != 'credit' && !a.isGold)
         .toList();
     final statement = int.tryParse(_statementCtrl.text.trim());
     final due = int.tryParse(_dueCtrl.text.trim());
@@ -571,10 +662,13 @@ class _AccountEditorState extends State<_AccountEditor> {
                       isEdit
                           ? (isCard ? 'Editar cartão' : 'Editar conta')
                           : (isCard ? 'Novo cartão' : 'Nova conta'),
-                      style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w900),
+                      style: theme.textTheme.titleLarge
+                          ?.copyWith(fontWeight: FontWeight.w900),
                     ),
                   ),
-                  IconButton(onPressed: () => Navigator.pop(context), icon: const Icon(Icons.close_rounded)),
+                  IconButton(
+                      onPressed: () => Navigator.pop(context),
+                      icon: const Icon(Icons.close_rounded)),
                 ],
               ),
             ),
@@ -587,34 +681,53 @@ class _AccountEditorState extends State<_AccountEditor> {
                     textCapitalization: TextCapitalization.words,
                     decoration: InputDecoration(
                       labelText: isCard ? 'Nome do cartão' : 'Nome da conta',
-                      hintText: isCard ? 'Ex.: Nubank Ultravioleta' : 'Ex.: Mercado Pago',
+                      hintText: isCard
+                          ? 'Ex.: Nubank Ultravioleta'
+                          : 'Ex.: Mercado Pago',
                       prefixIcon: const Icon(Icons.label_outline_rounded),
-                      errorText: _submitted && _nameCtrl.text.trim().isEmpty ? 'Informe um nome.' : null,
+                      errorText: _submitted && _nameCtrl.text.trim().isEmpty
+                          ? 'Informe um nome.'
+                          : null,
                     ),
                   ),
                   const SizedBox(height: 14),
-                  Text('Tipo', style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w900)),
+                  Text('Tipo',
+                      style: theme.textTheme.titleSmall
+                          ?.copyWith(fontWeight: FontWeight.w900)),
                   const SizedBox(height: 8),
                   Wrap(
                     spacing: 8,
                     runSpacing: 8,
                     children: (isCard
                             ? const [
-                                ('credit', 'Crédito', Icons.credit_card_rounded),
+                                (
+                                  'credit',
+                                  'Crédito',
+                                  Icons.credit_card_rounded
+                                ),
                                 ('debit', 'Débito', Icons.credit_card_outlined),
                               ]
                             : const [
-                                ('bank', 'Banco', Icons.account_balance_outlined),
+                                (
+                                  'bank',
+                                  'Banco',
+                                  Icons.account_balance_outlined
+                                ),
                                 ('cash', 'Dinheiro', Icons.payments_outlined),
                                 ('savings', 'Poupança', Icons.savings_outlined),
-                                ('wallet', 'Carteira', Icons.account_balance_wallet_outlined),
+                                (
+                                  'wallet',
+                                  'Carteira',
+                                  Icons.account_balance_wallet_outlined
+                                ),
                                 ('gold', 'Ouro/ativo', Icons.diamond_outlined),
                               ])
                         .map((option) => ChoiceChip(
                               selected: _type == option.$1,
                               avatar: Icon(option.$3, size: 18),
                               label: Text(option.$2),
-                              onSelected: (_) => setState(() => _type = option.$1),
+                              onSelected: (_) =>
+                                  setState(() => _type = option.$1),
                             ))
                         .toList(),
                   ),
@@ -623,32 +736,40 @@ class _AccountEditorState extends State<_AccountEditor> {
                     contentPadding: const EdgeInsets.symmetric(horizontal: 4),
                     leading: const Icon(Icons.currency_exchange_rounded),
                     title: const Text('Moeda'),
-                    subtitle: Text('$_currency • ${currencyInfo(_currency).name}'),
+                    subtitle:
+                        Text('$_currency • ${currencyInfo(_currency).name}'),
                     trailing: const Icon(Icons.chevron_right_rounded),
                     onTap: () async {
-                      final picked = await showCurrencyPicker(context, current: _currency);
+                      final picked =
+                          await showCurrencyPicker(context, current: _currency);
                       if (picked != null) setState(() => _currency = picked);
                     },
                   ),
                   const SizedBox(height: 8),
                   TextField(
                     controller: _balanceCtrl,
-                    keyboardType: const TextInputType.numberWithOptions(decimal: true, signed: true),
+                    keyboardType: const TextInputType.numberWithOptions(
+                        decimal: true, signed: true),
                     decoration: InputDecoration(
-                      labelText: isCredit ? 'Saldo atual do cartão (opcional)' : 'Saldo inicial / atual',
+                      labelText: isCredit
+                          ? 'Valor em aberto no cartão'
+                          : 'Saldo inicial / atual',
                       prefixText: '${currencyInfo(_currency).symbol} ',
                       helperText: isCredit
-                          ? 'Se estiver começando agora, pode deixar 0 e cadastrar as compras normalmente.'
+                          ? 'Informe a dívida atual. Use valor negativo somente se houver crédito a seu favor.'
                           : 'Use o saldo real desta conta para começar o controle sem reconstruir todo o passado.',
                     ),
                   ),
                   if (isCredit) ...[
                     const SizedBox(height: 14),
-                    Text('Fatura', style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w900)),
+                    Text('Fatura',
+                        style: theme.textTheme.titleSmall
+                            ?.copyWith(fontWeight: FontWeight.w900)),
                     const SizedBox(height: 8),
                     TextField(
                       controller: _limitCtrl,
-                      keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                      keyboardType:
+                          const TextInputType.numberWithOptions(decimal: true),
                       decoration: InputDecoration(
                         labelText: 'Limite do cartão',
                         prefixText: '${currencyInfo(_currency).symbol} ',
@@ -664,7 +785,9 @@ class _AccountEditorState extends State<_AccountEditor> {
                             decoration: InputDecoration(
                               labelText: 'Dia de fechamento',
                               hintText: 'Ex.: 20',
-                              errorText: _submitted && statement != null && (statement < 1 || statement > 31)
+                              errorText: _submitted &&
+                                      statement != null &&
+                                      (statement < 1 || statement > 31)
                                   ? 'Use 1 a 31'
                                   : null,
                             ),
@@ -678,7 +801,9 @@ class _AccountEditorState extends State<_AccountEditor> {
                             decoration: InputDecoration(
                               labelText: 'Dia de vencimento',
                               hintText: 'Ex.: 27',
-                              errorText: _submitted && due != null && (due < 1 || due > 31)
+                              errorText: _submitted &&
+                                      due != null &&
+                                      (due < 1 || due > 31)
                                   ? 'Use 1 a 31'
                                   : null,
                             ),
@@ -688,30 +813,38 @@ class _AccountEditorState extends State<_AccountEditor> {
                     ),
                     const SizedBox(height: 10),
                     DropdownButtonFormField<String?>(
-                      initialValue: payableAccounts.any((a) => a.id == _linkedAccountId)
-                          ? _linkedAccountId
-                          : null,
+                      isExpanded: true,
+                      initialValue:
+                          payableAccounts.any((a) => a.id == _linkedAccountId)
+                              ? _linkedAccountId
+                              : null,
                       decoration: const InputDecoration(
                         labelText: 'Conta padrão para pagar a fatura',
                       ),
                       items: [
-                        const DropdownMenuItem<String?>(value: null, child: Text('Nenhuma conta vinculada')),
+                        const DropdownMenuItem<String?>(
+                            value: null,
+                            child: Text('Nenhuma conta vinculada')),
                         ...payableAccounts.map(
-                          (a) => DropdownMenuItem<String?>(value: a.id, child: Text(a.name)),
+                          (a) => DropdownMenuItem<String?>(
+                              value: a.id, child: Text(a.name)),
                         ),
                       ],
-                      onChanged: (value) => setState(() => _linkedAccountId = value),
+                      onChanged: (value) =>
+                          setState(() => _linkedAccountId = value),
                     ),
                   ],
                   if (isCard) ...[
                     const SizedBox(height: 16),
                     ExpansionTile(
                       tilePadding: EdgeInsets.zero,
-                      title: const Text('Detalhes opcionais', style: TextStyle(fontWeight: FontWeight.w800)),
+                      title: const Text('Detalhes opcionais',
+                          style: TextStyle(fontWeight: FontWeight.w800)),
                       children: [
                         TextField(
                           controller: _holderCtrl,
-                          decoration: const InputDecoration(labelText: 'Nome impresso no cartão'),
+                          decoration: const InputDecoration(
+                              labelText: 'Nome impresso no cartão'),
                         ),
                         const SizedBox(height: 10),
                         Row(
@@ -721,7 +854,9 @@ class _AccountEditorState extends State<_AccountEditor> {
                                 controller: _last4Ctrl,
                                 maxLength: 4,
                                 keyboardType: TextInputType.number,
-                                decoration: const InputDecoration(labelText: 'Últimos 4 dígitos', counterText: ''),
+                                decoration: const InputDecoration(
+                                    labelText: 'Últimos 4 dígitos',
+                                    counterText: ''),
                               ),
                             ),
                             const SizedBox(width: 10),
@@ -730,7 +865,9 @@ class _AccountEditorState extends State<_AccountEditor> {
                                 controller: _expiryCtrl,
                                 maxLength: 5,
                                 keyboardType: TextInputType.datetime,
-                                decoration: const InputDecoration(labelText: 'Validade MM/AA', counterText: ''),
+                                decoration: const InputDecoration(
+                                    labelText: 'Validade MM/AA',
+                                    counterText: ''),
                               ),
                             ),
                           ],
@@ -743,13 +880,17 @@ class _AccountEditorState extends State<_AccountEditor> {
                     SwitchListTile.adaptive(
                       contentPadding: EdgeInsets.zero,
                       title: const Text('Não incluir no saldo total'),
-                      subtitle: const Text('Útil para contas separadas, valores de terceiros ou controles auxiliares.'),
+                      subtitle: const Text(
+                          'Útil para contas separadas, valores de terceiros ou controles auxiliares.'),
                       value: _excludeFromTotal,
-                      onChanged: (value) => setState(() => _excludeFromTotal = value),
+                      onChanged: (value) =>
+                          setState(() => _excludeFromTotal = value),
                     ),
                   ],
                   const SizedBox(height: 12),
-                  Text('Cor', style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w900)),
+                  Text('Cor',
+                      style: theme.textTheme.titleSmall
+                          ?.copyWith(fontWeight: FontWeight.w900)),
                   const SizedBox(height: 8),
                   Wrap(
                     spacing: 10,
@@ -764,9 +905,14 @@ class _AccountEditorState extends State<_AccountEditor> {
                           decoration: BoxDecoration(
                             color: Color(value),
                             shape: BoxShape.circle,
-                            border: selected ? Border.all(color: cs.onSurface, width: 3) : null,
+                            border: selected
+                                ? Border.all(color: cs.onSurface, width: 3)
+                                : null,
                           ),
-                          child: selected ? const Icon(Icons.check_rounded, color: Colors.white) : null,
+                          child: selected
+                              ? const Icon(Icons.check_rounded,
+                                  color: Colors.white)
+                              : null,
                         ),
                       );
                     }).toList(),
@@ -779,12 +925,18 @@ class _AccountEditorState extends State<_AccountEditor> {
               child: FilledButton.icon(
                 onPressed: _saving ? null : _save,
                 icon: _saving
-                    ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
+                    ? const SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(strokeWidth: 2))
                     : const Icon(Icons.check_rounded),
-                label: Text(isEdit ? 'Salvar alterações' : (isCard ? 'Salvar cartão' : 'Salvar conta')),
+                label: Text(isEdit
+                    ? 'Salvar alterações'
+                    : (isCard ? 'Salvar cartão' : 'Salvar conta')),
                 style: FilledButton.styleFrom(
                   minimumSize: const Size.fromHeight(52),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(18)),
                 ),
               ),
             ),

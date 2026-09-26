@@ -5,9 +5,11 @@ import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:uuid/uuid.dart';
 import 'package:file_picker/file_picker.dart';
-import 'package:excel/excel.dart' hide Border;
 import '../models/models.dart';
 import '../database/db_helper.dart';
+import '../services/transaction_metadata_service.dart';
+import '../services/finance_rules.dart';
+import '../services/billing_cycle.dart';
 import '../services/exchange_rate_service.dart';
 import '../services/notification_service.dart';
 import '../services/lended_notification_service.dart';
@@ -23,33 +25,34 @@ import '../theme/app_theme.dart';
 class AppSettings {
   String currency;
   String themeSeed;
-  String themeMode;   // system|light|dark  ('amoled' is migrated on load)
-  String weekStart;   // monday|sunday
-  bool   hideBalance;
+  String themeMode; // system|light|dark  ('amoled' is migrated on load)
+  String weekStart; // monday|sunday
+  bool hideBalance;
   String userName;
-  bool   onboarded;
-  String appFont;     // key into kFonts; 'default' = system/Roboto
-  bool   amoledSurfaces;
-  bool   dynamicColorEnabled; // pure-black surfaces when dark — decoupled from themeMode
+  bool onboarded;
+  String appFont; // key into kFonts; 'default' = system/Roboto
+  bool amoledSurfaces;
+  bool
+      dynamicColorEnabled; // pure-black surfaces when dark — decoupled from themeMode
   String languageCode; // 'system'|'en'|'ar'|'fr'|'de'|'hi'
-  bool   budgetAlertsEnabled;
-  bool   dailyReminderEnabled;
+  bool budgetAlertsEnabled;
+  bool dailyReminderEnabled;
   String dailyReminderTime;
-  bool   hapticsEnabled;
+  bool hapticsEnabled;
   List<String> pinnedWidgetAccountIds;
 
   AppSettings({
-    this.currency      = 'EGP',
-    this.themeSeed     = 'violet',
-    this.themeMode     = 'dark',
-    this.weekStart     = 'monday',
-    this.hideBalance   = false,
-    this.userName      = '',
-    this.onboarded     = false,
-    this.appFont       = 'default',
+    this.currency = 'BRL',
+    this.themeSeed = 'violet',
+    this.themeMode = 'dark',
+    this.weekStart = 'monday',
+    this.hideBalance = false,
+    this.userName = '',
+    this.onboarded = false,
+    this.appFont = 'default',
     this.amoledSurfaces = false,
     this.dynamicColorEnabled = false,
-    this.languageCode  = 'system',
+    this.languageCode = 'pt',
     this.budgetAlertsEnabled = true,
     this.dailyReminderEnabled = false,
     this.dailyReminderTime = '22:00',
@@ -58,29 +61,68 @@ class AppSettings {
   });
 
   Map<String, dynamic> toJson() => {
-    'currency': currency, 'themeSeed': themeSeed, 'themeMode': themeMode,
-    'weekStart': weekStart, 'hideBalance': hideBalance,
-    'userName': userName, 'onboarded': onboarded,
-    'appFont': appFont, 'amoledSurfaces': amoledSurfaces, 'dynamicColorEnabled': dynamicColorEnabled,
-    'languageCode': languageCode,
-    'budgetAlertsEnabled': budgetAlertsEnabled,
-    'dailyReminderEnabled': dailyReminderEnabled,
-    'dailyReminderTime': dailyReminderTime,
-    'hapticsEnabled': hapticsEnabled,
-    'pinnedWidgetAccountIds': pinnedWidgetAccountIds,
-  };
+        'currency': currency,
+        'themeSeed': themeSeed,
+        'themeMode': themeMode,
+        'weekStart': weekStart,
+        'hideBalance': hideBalance,
+        'userName': userName,
+        'onboarded': onboarded,
+        'appFont': appFont,
+        'amoledSurfaces': amoledSurfaces,
+        'dynamicColorEnabled': dynamicColorEnabled,
+        'languageCode': languageCode,
+        'budgetAlertsEnabled': budgetAlertsEnabled,
+        'dailyReminderEnabled': dailyReminderEnabled,
+        'dailyReminderTime': dailyReminderTime,
+        'hapticsEnabled': hapticsEnabled,
+        'pinnedWidgetAccountIds': pinnedWidgetAccountIds,
+      };
 
   static const _validThemeModes = {'system', 'light', 'dark'};
   // 'amoled' is legacy — migrated to themeMode:'dark' + amoledSurfaces:true
   static const _validSeeds = {
-    'violet','blue','green','rose','amber','teal','orange','indigo','cyan',
-    'pink','lime','deep_purple','crimson','midnight','forest','mint','olive',
-    'sage','sky','navy','cobalt','ocean','coral','gold','slate','magenta',
-    'turquoise','brown','lavender',
+    'violet',
+    'blue',
+    'green',
+    'rose',
+    'amber',
+    'teal',
+    'orange',
+    'indigo',
+    'cyan',
+    'pink',
+    'lime',
+    'deep_purple',
+    'crimson',
+    'midnight',
+    'forest',
+    'mint',
+    'olive',
+    'sage',
+    'sky',
+    'navy',
+    'cobalt',
+    'ocean',
+    'coral',
+    'gold',
+    'slate',
+    'magenta',
+    'turquoise',
+    'brown',
+    'lavender',
   };
   static const _validFonts = {
-    'default','plus_jakarta_sans','dm_sans','inter','nunito_sans',
-    'space_grotesk','outfit','sora','poppins','nunito',
+    'default',
+    'plus_jakarta_sans',
+    'dm_sans',
+    'inter',
+    'nunito_sans',
+    'space_grotesk',
+    'outfit',
+    'sora',
+    'poppins',
+    'nunito',
   };
   static final _validLanguages = {
     'system',
@@ -89,24 +131,27 @@ class AppSettings {
 
   static AppSettings fromJson(Map<String, dynamic> j) {
     String seed = (j['themeSeed'] as String?) ?? 'violet';
-    bool   wasAmoled = seed == 'pitch_black';
+    bool wasAmoled = seed == 'pitch_black';
     if (wasAmoled) seed = 'midnight';
     if (!_validSeeds.contains(seed)) seed = 'violet';
 
     String mode;
-    bool   legacyAmoled = false;
+    bool legacyAmoled = false;
     if (j.containsKey('themeMode') && j['themeMode'] != null) {
       mode = j['themeMode'] as String;
       // Migrate legacy 'amoled' themeMode → 'dark' + amoledSurfaces:true
-      if (mode == 'amoled') { mode = 'dark'; legacyAmoled = true; }
-      else if (!_validThemeModes.contains(mode)) mode = 'dark';
+      if (mode == 'amoled') {
+        mode = 'dark';
+        legacyAmoled = true;
+      } else if (!_validThemeModes.contains(mode)) mode = 'dark';
     } else {
       mode = (j['darkMode'] as bool? ?? false) ? 'dark' : 'system';
     }
     if (wasAmoled) mode = 'dark';
 
     // amoledSurfaces: prefer stored value; fall back to any legacy amoled flag.
-    final amoled = (j['amoledSurfaces'] as bool?) ?? (wasAmoled || legacyAmoled);
+    final amoled =
+        (j['amoledSurfaces'] as bool?) ?? (wasAmoled || legacyAmoled);
 
     String font = (j['appFont'] as String?) ?? 'default';
     if (!_validFonts.contains(font)) font = 'default';
@@ -115,40 +160,43 @@ class AppSettings {
     if (!_validLanguages.contains(lang)) lang = 'system';
 
     return AppSettings(
-      currency:       (j['currency']    as String?) ?? 'EGP',
-      themeSeed:      seed,
-      themeMode:      mode,
-      weekStart:      (j['weekStart']   as String?) ?? 'monday',
-      hideBalance:    (j['hideBalance'] as bool?)   ?? false,
-      userName:       (j['userName']    as String?) ?? '',
-      onboarded:      (j['onboarded']   as bool?)   ?? false,
-      appFont:        font,
+      currency: (j['currency'] as String?) ?? 'EGP',
+      themeSeed: seed,
+      themeMode: mode,
+      weekStart: (j['weekStart'] as String?) ?? 'monday',
+      hideBalance: (j['hideBalance'] as bool?) ?? false,
+      userName: (j['userName'] as String?) ?? '',
+      onboarded: (j['onboarded'] as bool?) ?? false,
+      appFont: font,
       amoledSurfaces: amoled,
       dynamicColorEnabled: (j['dynamicColorEnabled'] as bool?) ?? false,
-      languageCode:   lang,
+      languageCode: lang,
       budgetAlertsEnabled: (j['budgetAlertsEnabled'] as bool?) ?? true,
       dailyReminderEnabled: (j['dailyReminderEnabled'] as bool?) ?? false,
       dailyReminderTime: (j['dailyReminderTime'] as String?) ?? '22:00',
       hapticsEnabled: (j['hapticsEnabled'] as bool?) ?? true,
-      pinnedWidgetAccountIds: (j['pinnedWidgetAccountIds'] as List<dynamic>?)?.map((e) => e.toString()).toList() ?? [],
+      pinnedWidgetAccountIds: (j['pinnedWidgetAccountIds'] as List<dynamic>?)
+              ?.map((e) => e.toString())
+              .toList() ??
+          [],
     );
   }
 }
 
 class AppProvider extends ChangeNotifier {
   AppSettings settings = AppSettings();
-  List<Account>               accounts     = [];
-  List<AppCategory>           categories   = [];
-  List<AppTransaction>        transactions = [];
-  List<RecurringPayment>      recurring    = [];
-  List<WishlistItem>          wishlist     = [];
-  List<LendedPerson>          lendedPeople = [];
-  List<LendedMoney>           lended       = [];
-  List<AssetItem>             assets       = [];
-  List<Budget>                budgets      = [];
-  List<SavingsGoal>           savingsGoals = [];
-  List<SavingsContribution>   savingsContributions = [];
-  List<NetWorthSnapshot>      netWorthSnapshots = [];
+  List<Account> accounts = [];
+  List<AppCategory> categories = [];
+  List<AppTransaction> transactions = [];
+  List<RecurringPayment> recurring = [];
+  List<WishlistItem> wishlist = [];
+  List<LendedPerson> lendedPeople = [];
+  List<LendedMoney> lended = [];
+  List<AssetItem> assets = [];
+  List<Budget> budgets = [];
+  List<SavingsGoal> savingsGoals = [];
+  List<SavingsContribution> savingsContributions = [];
+  List<NetWorthSnapshot> netWorthSnapshots = [];
 
   /// Total row count in `recurring_history` — kept for display purposes
   /// (e.g. the Backup screen's "what's included" list) without needing to
@@ -157,8 +205,8 @@ class AppProvider extends ChangeNotifier {
 
   // ── Exchange rates ────────────────────────────────────────────────────
   Map<String, double> exchangeRates = {};
-  bool ratesLoaded    = false;
-  bool ratesFetching  = false;
+  bool ratesLoaded = false;
+  bool ratesFetching = false;
   DateTime? ratesLastFetched;
 
   // ── Recurring history (lazy cache) ────────────────────────────────────
@@ -168,11 +216,11 @@ class AppProvider extends ChangeNotifier {
   List<LoanPayment> loanPayments = [];
 
   final _erService = ExchangeRateService();
-  final _notif       = NotificationService();
+  final _notif = NotificationService();
   final _lendedNotif = LendedNotificationService();
   final _budgetNotif = BudgetNotificationService();
-  final _dailyNotif  = DailyReminderService();
-  final _loanNotif   = LoanReminderService();
+  final _dailyNotif = DailyReminderService();
+  final _loanNotif = LoanReminderService();
 
   bool _loaded = false;
   bool get loaded => _loaded;
@@ -187,18 +235,20 @@ class AppProvider extends ChangeNotifier {
     if (raw != null) {
       settings = AppSettings.fromJson(jsonDecode(raw) as Map<String, dynamic>);
     }
-    accounts     = await DBHelper.getAccounts();
-    categories   = await DBHelper.getCategories();
+    accounts = await DBHelper.getAccounts();
+    categories = await DBHelper.getCategories();
     transactions = await DBHelper.getTransactions();
-    recurring    = await DBHelper.getRecurring();
-    wishlist     = await DBHelper.getWishlist();
+    transactionMetadata = await TransactionMetadataService.instance
+        .getForMany(transactions.map((t) => t.id));
+    recurring = await DBHelper.getRecurring();
+    wishlist = await DBHelper.getWishlist();
     lendedPeople = await DBHelper.getLendedPeople();
-    lended       = await DBHelper.getLended();
-    assets       = await DBHelper.getAssets();
-    budgets      = await DBHelper.getBudgets();
+    lended = await DBHelper.getLended();
+    assets = await DBHelper.getAssets();
+    budgets = await DBHelper.getBudgets();
     savingsGoals = await DBHelper.getSavingsGoals();
     savingsContributions = await DBHelper.getAllSavingsContributions();
-    loans        = await DBHelper.getLoans();
+    loans = await DBHelper.getLoans();
     loanPayments = await DBHelper.getAllLoanPayments();
     netWorthSnapshots = await DBHelper.getNetWorthSnapshots();
     recurringHistoryCount = await DBHelper.getRecurringHistoryCount();
@@ -223,21 +273,23 @@ class AppProvider extends ChangeNotifier {
   Future<void> updateHomeWidgets() async {
     try {
       final pinnedIds = settings.pinnedWidgetAccountIds;
-      final pinnedAccounts = accounts.where((a) => pinnedIds.contains(a.id)).take(3).toList();
+      final pinnedAccounts =
+          accounts.where((a) => pinnedIds.contains(a.id)).take(3).toList();
       if (pinnedAccounts.isEmpty) {
         pinnedAccounts.addAll(accounts.take(3));
       }
-      final accountsJson = jsonEncode(pinnedAccounts.map((a) => {
-        'name': a.name,
-        'balance': formatAmount(a.balance, a.currency.isNotEmpty ? a.currency : settings.currency),
-      }).toList());
+      final accountsJson = jsonEncode(pinnedAccounts
+          .map((a) => {
+                'name': a.name,
+                'balance': formatAmount(a.balance,
+                    a.currency.isNotEmpty ? a.currency : settings.currency),
+              })
+          .toList());
       await HomeWidget.saveWidgetData('accounts_widget_data', accountsJson);
       await HomeWidget.updateWidget(name: 'AccountsWidgetProvider');
 
       final budgetData = budgets.map((b) {
-        final spent = transactions
-            .where((t) => t.type == 'expense' && t.categoryId == b.categoryId)
-            .fold(0.0, (s, t) => s + t.amount);
+        final spent = budgetSpent(b);
         return {
           'category': categoryById(b.categoryId)?.name ?? 'Budget',
           'spent': spent,
@@ -247,10 +299,11 @@ class AppProvider extends ChangeNotifier {
           'currency': settings.currency,
         };
       }).toList();
-      await HomeWidget.saveWidgetData('budget_widget_data', jsonEncode(budgetData));
+      await HomeWidget.saveWidgetData(
+          'budget_widget_data', jsonEncode(budgetData));
       await HomeWidget.updateWidget(name: 'BudgetWidgetProvider');
     } catch (e) {
-      debugPrint('Error updating home widgets: $e');
+      debugPrint('Error updating home widgets');
     }
   }
 
@@ -270,7 +323,7 @@ class AppProvider extends ChangeNotifier {
       await DBHelper.insertNetWorthSnapshot(snap);
       netWorthSnapshots.add(snap);
     } catch (e) {
-      debugPrint('Error recording net worth snapshot: $e');
+      debugPrint('Error recording net worth snapshot');
     }
   }
 
@@ -290,9 +343,9 @@ class AppProvider extends ChangeNotifier {
           await _erService.patchCachedXau(xauRate);
         }
       }
-      exchangeRates    = rates;
-      ratesLoaded      = true;
-      ratesFetching    = false;
+      exchangeRates = rates;
+      ratesLoaded = true;
+      ratesFetching = false;
       ratesLastFetched = await _erService.lastFetchedAt();
       notifyListeners();
       await _refreshGoldBalances();
@@ -301,7 +354,8 @@ class AppProvider extends ChangeNotifier {
       final cached = await _erService.getCached();
       if (cached != null && cached.isNotEmpty) {
         var rates = cached;
-        final hasXauCached = rates.containsKey('XAU') && (rates['XAU'] ?? 0) > 0;
+        final hasXauCached =
+            rates.containsKey('XAU') && (rates['XAU'] ?? 0) > 0;
         if (!hasXauCached) {
           final xauRate = await _erService.fetchGoldRate();
           if (xauRate != null) {
@@ -309,9 +363,9 @@ class AppProvider extends ChangeNotifier {
             await _erService.patchCachedXau(xauRate);
           }
         }
-        exchangeRates    = rates;
-        ratesLoaded      = true;
-        ratesFetching    = false;
+        exchangeRates = rates;
+        ratesLoaded = true;
+        ratesFetching = false;
         ratesLastFetched = await _erService.lastFetchedAt();
         notifyListeners();
         await _refreshGoldBalances();
@@ -335,8 +389,8 @@ class AppProvider extends ChangeNotifier {
               await _erService.patchCachedXau(xauRate);
             }
           }
-          exchangeRates    = rates;
-          ratesLoaded      = true;
+          exchangeRates = rates;
+          ratesLoaded = true;
           ratesLastFetched = await _erService.lastFetchedAt();
         }
         ratesFetching = false;
@@ -362,8 +416,8 @@ class AppProvider extends ChangeNotifier {
 
       final xauAmount = grams * (karat / 24) / 31.1035;
       final newBalance =
-          _erService.convert(xauAmount, 'XAU', acc.currency, exchangeRates)
-          ?? acc.balance;
+          _erService.convert(xauAmount, 'XAU', acc.currency, exchangeRates) ??
+              acc.balance;
 
       if ((newBalance - acc.balance).abs() < 0.001) continue;
 
@@ -387,21 +441,51 @@ class AppProvider extends ChangeNotifier {
     final oldLang = settings.languageCode;
 
     switch (key) {
-      case 'currency':       settings.currency       = value as String; break;
-      case 'themeSeed':      settings.themeSeed      = value as String; break;
-      case 'themeMode':      settings.themeMode      = value as String; break;
-      case 'weekStart':      settings.weekStart      = value as String; break;
-      case 'hideBalance':    settings.hideBalance    = value as bool;   break;
-      case 'userName':       settings.userName       = value as String; break;
-      case 'appFont':        settings.appFont        = value as String; break;
-      case 'amoledSurfaces': settings.amoledSurfaces = value as bool;  break;
-      case 'dynamicColorEnabled': settings.dynamicColorEnabled = value as bool;  break;
-      case 'languageCode':   settings.languageCode   = value as String; break;
-      case 'budgetAlertsEnabled':  settings.budgetAlertsEnabled  = value as bool;   break;
-      case 'dailyReminderEnabled': settings.dailyReminderEnabled = value as bool;   break;
-      case 'dailyReminderTime':    settings.dailyReminderTime    = value as String; break;
-      case 'hapticsEnabled': settings.hapticsEnabled = value as bool;   break;
-      case 'pinnedWidgetAccountIds': settings.pinnedWidgetAccountIds = value as List<String>; break;
+      case 'currency':
+        settings.currency = value as String;
+        break;
+      case 'themeSeed':
+        settings.themeSeed = value as String;
+        break;
+      case 'themeMode':
+        settings.themeMode = value as String;
+        break;
+      case 'weekStart':
+        settings.weekStart = value as String;
+        break;
+      case 'hideBalance':
+        settings.hideBalance = value as bool;
+        break;
+      case 'userName':
+        settings.userName = value as String;
+        break;
+      case 'appFont':
+        settings.appFont = value as String;
+        break;
+      case 'amoledSurfaces':
+        settings.amoledSurfaces = value as bool;
+        break;
+      case 'dynamicColorEnabled':
+        settings.dynamicColorEnabled = value as bool;
+        break;
+      case 'languageCode':
+        settings.languageCode = value as String;
+        break;
+      case 'budgetAlertsEnabled':
+        settings.budgetAlertsEnabled = value as bool;
+        break;
+      case 'dailyReminderEnabled':
+        settings.dailyReminderEnabled = value as bool;
+        break;
+      case 'dailyReminderTime':
+        settings.dailyReminderTime = value as String;
+        break;
+      case 'hapticsEnabled':
+        settings.hapticsEnabled = value as bool;
+        break;
+      case 'pinnedWidgetAccountIds':
+        settings.pinnedWidgetAccountIds = value as List<String>;
+        break;
     }
 
     _saveSettings();
@@ -411,7 +495,8 @@ class AppProvider extends ChangeNotifier {
       // Handled in main by restarting or notifying.
     }
 
-    if (oldDailyEnabled != settings.dailyReminderEnabled || oldDailyTime != settings.dailyReminderTime) {
+    if (oldDailyEnabled != settings.dailyReminderEnabled ||
+        oldDailyTime != settings.dailyReminderTime) {
       if (settings.dailyReminderEnabled) {
         await _dailyNotif.scheduleDailyReminder(settings.dailyReminderTime);
       } else {
@@ -424,18 +509,17 @@ class AppProvider extends ChangeNotifier {
     required String name,
     required String currency,
   }) async {
-    settings.userName  = name;
-    settings.currency  = currency;
+    settings.userName = name;
+    settings.currency = currency;
     settings.onboarded = true;
     await _saveSettings();
   }
 
   // ── Helpers ───────────────────────────────────────────────────────────
 
-  double get totalBalance => accounts
-      .where((a) => !a.excludeFromTotal)
-      .fold(0.0, (sum, a) {
-        final absBalance = a.balance.abs();
+  double get totalBalance =>
+      accounts.where((a) => !a.excludeFromTotal).fold(0.0, (sum, a) {
+        final absBalance = a.balance;
         if (exchangeRates.isEmpty || a.currency == settings.currency) {
           return sum + absBalance;
         }
@@ -445,9 +529,8 @@ class AppProvider extends ChangeNotifier {
                 absBalance);
       });
 
-  double get totalBalanceAll => accounts
-      .fold(0.0, (sum, a) {
-        final absBalance = a.balance.abs();
+  double get totalBalanceAll => accounts.fold(0.0, (sum, a) {
+        final absBalance = a.balance;
         if (exchangeRates.isEmpty || a.currency == settings.currency) {
           return sum + absBalance;
         }
@@ -499,7 +582,7 @@ class AppProvider extends ChangeNotifier {
     return _erService.convert(xauAmount, 'XAU', currency, exchangeRates);
   }
 
-  Account?     accountById(String id)  =>
+  Account? accountById(String id) =>
       accounts.where((a) => a.id == id).firstOrNull;
   AppCategory? categoryById(String id) =>
       categories.where((c) => c.id == id).firstOrNull;
@@ -519,25 +602,52 @@ class AppProvider extends ChangeNotifier {
     return true;
   }
 
-  Future<void> addAccount(Account a) async {
-    await DBHelper.insertAccount(a);
-    accounts = await DBHelper.getAccounts();
-    if (a.type == 'credit' && a.creditReminderEnabled) {
-      await CreditReminderService().scheduleReminder(a);
-    }
-    notifyListeners();
-  }
+  Future<void> addAccount(Account a) => _persistAccount(a, create: true);
+  Future<void> updateAccount(Account a) => _persistAccount(a, create: false);
 
-  Future<void> updateAccount(Account a) async {
-    await DBHelper.updateAccount(a);
-    accounts = await DBHelper.getAccounts();
-    if (a.type == 'credit') {
-      await CreditReminderService().cancelReminder(a.id);
-      if (a.creditReminderEnabled) {
-        await CreditReminderService().scheduleReminder(a);
+  Future<void> _persistAccount(Account a, {required bool create}) async {
+    final previouslyReminded =
+        accountById(a.id)?.creditReminderEnabled ?? false;
+    final db = await DBHelper.database;
+    await db.transaction((txn) async {
+      final previous =
+          await txn.query('accounts', where: 'id = ?', whereArgs: [a.id]);
+      final oldBalance = previous.isEmpty
+          ? 0.0
+          : (previous.first['balance'] as num).toDouble();
+      if (create) {
+        await txn.insert('accounts', a.toMap());
+      } else {
+        await txn
+            .update('accounts', a.toMap(), where: 'id = ?', whereArgs: [a.id]);
       }
-    }
-    notifyListeners();
+      final difference = a.balance - oldBalance;
+      if (a.type == 'credit' && difference.abs() > .005) {
+        final tx = AppTransaction(
+            id: newId(),
+            type: difference < 0 ? 'expense' : 'income',
+            amount: difference.abs(),
+            description: create
+                ? 'Saldo inicial do cartão'
+                : 'Ajuste do saldo do cartão',
+            accountId: a.id,
+            categoryId: '',
+            date: DateTime.now(),
+            currency: a.currency);
+        await txn.insert('transactions', tx.toMap());
+        await txn.insert(
+            'transaction_metadata',
+            TransactionMetadata(
+                    transactionId: tx.id,
+                    excludeFromSpending: true,
+                    source: 'opening_balance')
+                .toMap());
+      }
+    });
+    await _reloadLedger();
+    if (previouslyReminded) await CreditReminderService().cancelReminder(a.id);
+    if (a.type == 'credit' && a.creditReminderEnabled)
+      await CreditReminderService().scheduleReminder(a);
   }
 
   Future<VoidCallback> deleteAccountWithUndo(String id) async {
@@ -551,7 +661,7 @@ class AppProvider extends ChangeNotifier {
   Future<void> deleteAccount(String id) async {
     await CreditReminderService().cancelReminder(id);
     await DBHelper.deleteAccount(id);
-    accounts     = await DBHelper.getAccounts();
+    accounts = await DBHelper.getAccounts();
     transactions = await DBHelper.getTransactions();
     notifyListeners();
   }
@@ -592,29 +702,112 @@ class AppProvider extends ChangeNotifier {
 
     double amount = t.amount;
     if (txCurrency != accCurrency && exchangeRates.isNotEmpty) {
-      amount = _erService.convert(amount, txCurrency, accCurrency, exchangeRates)
-          ?? amount;
+      amount =
+          _erService.convert(amount, txCurrency, accCurrency, exchangeRates) ??
+              amount;
     }
     final sign = t.type == 'income' ? 1.0 : -1.0;
     return (reverse ? -sign : sign) * amount;
   }
 
-  Future<void> addTransaction(AppTransaction t) async {
-    await DBHelper.insertTransaction(t);
-    await _updateAccountBalance(t.accountId, _txDelta(t));
+  Map<String, TransactionMetadata> transactionMetadata = {};
+
+  Future<void> _reloadLedger() async {
     transactions = await DBHelper.getTransactions();
+    accounts = await DBHelper.getAccounts();
+    transactionMetadata = await TransactionMetadataService.instance
+        .getForMany(transactions.map((t) => t.id));
+    TransactionMetadataService.instance.revision.value++;
     notifyListeners();
+  }
+
+  Future<void> addTransaction(AppTransaction t,
+      {TransactionMetadata? metadata, bool generateInstallments = true}) async {
+    final db = await DBHelper.database;
+    if (!t.amount.isFinite ||
+        t.amount <= 0 ||
+        accountById(t.accountId) == null ||
+        !['income', 'expense'].contains(t.type)) {
+      throw ArgumentError('Conta, tipo ou valor inválido.');
+    }
+    final meta = metadata ?? TransactionMetadata(transactionId: t.id);
+    await db.transaction((txn) async {
+      final current = meta.installmentCurrent ?? 1;
+      final total =
+          generateInstallments ? meta.installmentTotal ?? current : current;
+      if (current < 1 || total < current || total > 600)
+        throw ArgumentError('Parcelas inválidas (máximo 600).');
+      for (var installment = current; installment <= total; installment++) {
+        final first = installment == current;
+        final date = BillingCycle.date(
+            t.date.year, t.date.month + installment - current, t.date.day);
+        final tx = first
+            ? t
+            : AppTransaction(
+                id: '${t.id}:installment:$installment',
+                type: t.type,
+                amount: t.amount,
+                description: t.description,
+                accountId: t.accountId,
+                categoryId: t.categoryId,
+                date: date,
+                note: t.note,
+                currency: t.currency);
+        final itemMeta = first
+            ? meta
+            : TransactionMetadata(
+                transactionId: tx.id,
+                subcategory: meta.subcategory,
+                status: accountById(t.accountId)?.type == 'credit'
+                    ? 'paid'
+                    : 'pending',
+                dueDate: date,
+                expenseClass: meta.expenseClass,
+                excludeFromSpending: meta.excludeFromSpending,
+                installmentCurrent: installment,
+                installmentTotal: total,
+                source: 'installment',
+                affectsBalance: meta.affectsBalance);
+        await txn.insert('transactions', tx.toMap());
+        await txn.insert('transaction_metadata', itemMeta.toMap());
+        if (!itemMeta.isPending && itemMeta.affectsBalance) {
+          await txn.rawUpdate(
+              'UPDATE accounts SET balance = balance + ? WHERE id = ?',
+              [_txDelta(tx), tx.accountId]);
+        }
+      }
+    });
+    await _reloadLedger();
     await _checkBudgetAlert(t);
   }
 
-  Future<void> updateTransaction(AppTransaction updated,
-      AppTransaction original) async {
-    await _updateAccountBalance(original.accountId, _txDelta(original, reverse: true));
-    await _updateAccountBalance(updated.accountId, _txDelta(updated));
-    await DBHelper.updateTransaction(updated);
-    transactions = await DBHelper.getTransactions();
-    accounts     = await DBHelper.getAccounts();
-    notifyListeners();
+  Future<void> updateTransaction(
+      AppTransaction updated, AppTransaction original,
+      {TransactionMetadata? metadata}) async {
+    final old = await TransactionMetadataService.instance.getFor(original.id);
+    if (old.source.startsWith('transfer:'))
+      throw StateError(
+          'Para alterar uma transferência, exclua o par e registre novamente.');
+    final meta = metadata ?? old;
+    final db = await DBHelper.database;
+    await db.transaction((txn) async {
+      if (!old.isPending && old.affectsBalance) {
+        await txn.rawUpdate(
+            'UPDATE accounts SET balance = balance + ? WHERE id = ?',
+            [_txDelta(original, reverse: true), original.accountId]);
+      }
+      if (!meta.isPending && meta.affectsBalance) {
+        await txn.rawUpdate(
+            'UPDATE accounts SET balance = balance + ? WHERE id = ?',
+            [_txDelta(updated), updated.accountId]);
+      }
+      await txn.update('transactions', updated.toMap(),
+          where: 'id = ?', whereArgs: [updated.id]);
+      await txn.delete('transaction_metadata',
+          where: 'transaction_id = ?', whereArgs: [updated.id]);
+      await txn.insert('transaction_metadata', meta.toMap());
+    });
+    await _reloadLedger();
     await _checkBudgetAlert(updated);
   }
 
@@ -632,13 +825,36 @@ class AppProvider extends ChangeNotifier {
   }
 
   Future<void> deleteTransaction(String id) async {
-    final t = transactions.where((x) => x.id == id).firstOrNull;
-    if (t == null) return;
-    await _updateAccountBalance(t.accountId, _txDelta(t, reverse: true));
-    await DBHelper.deleteTransaction(id);
-    transactions = await DBHelper.getTransactions();
-    accounts     = await DBHelper.getAccounts();
-    notifyListeners();
+    final meta = await TransactionMetadataService.instance.getFor(id);
+    final db = await DBHelper.database;
+    final ids = meta.source.startsWith('transfer:')
+        ? (await db.query('transaction_metadata',
+                where: 'source = ?', whereArgs: [meta.source]))
+            .map((r) => r['transaction_id'] as String)
+            .toList()
+        : [id];
+    await db.transaction((txn) async {
+      for (final txId in ids) {
+        final rows =
+            await txn.query('transactions', where: 'id = ?', whereArgs: [txId]);
+        if (rows.isEmpty) continue;
+        final t = AppTransaction.fromMap(rows.first);
+        final metas = await txn.query('transaction_metadata',
+            where: 'transaction_id = ?', whereArgs: [txId]);
+        final m = metas.isEmpty
+            ? TransactionMetadata(transactionId: txId)
+            : TransactionMetadata.fromMap(metas.first);
+        if (!m.isPending && m.affectsBalance) {
+          await txn.rawUpdate(
+              'UPDATE accounts SET balance = balance + ? WHERE id = ?',
+              [_txDelta(t, reverse: true), t.accountId]);
+        }
+        await txn.delete('card_invoice_payments',
+            where: 'id = ?', whereArgs: [txId]);
+        await txn.delete('transactions', where: 'id = ?', whereArgs: [txId]);
+      }
+    });
+    await _reloadLedger();
   }
 
   Future<void> addTransfer({
@@ -647,11 +863,18 @@ class AppProvider extends ChangeNotifier {
     required double fromAmount,
     double? toAmount,
     String note = '',
+    DateTime? invoiceCycleEnd,
   }) async {
+    if (fromId == toId ||
+        !fromAmount.isFinite ||
+        fromAmount <= 0 ||
+        (toAmount != null && (!toAmount.isFinite || toAmount <= 0))) {
+      throw ArgumentError('Selecione contas diferentes e um valor positivo.');
+    }
     final fromAcc = accountById(fromId);
-    final toAcc   = accountById(toId);
+    final toAcc = accountById(toId);
     final fromCurrency = fromAcc?.currency ?? settings.currency;
-    final toCurrency   = toAcc?.currency   ?? settings.currency;
+    final toCurrency = toAcc?.currency ?? settings.currency;
 
     final double creditAmount;
     if (toAmount != null) {
@@ -659,8 +882,8 @@ class AppProvider extends ChangeNotifier {
     } else if (fromCurrency == toCurrency) {
       creditAmount = fromAmount;
     } else {
-      creditAmount = convertBetween(fromAmount, fromCurrency, toCurrency)
-          ?? fromAmount;
+      creditAmount =
+          convertBetween(fromAmount, fromCurrency, toCurrency) ?? fromAmount;
     }
 
     final now = DateTime.now();
@@ -669,24 +892,76 @@ class AppProvider extends ChangeNotifier {
         : '';
 
     final debit = AppTransaction(
-      id: newId(), type: 'expense', amount: fromAmount,
-      description: 'Transfer out', accountId: fromId,
-      categoryId: catId, date: now, note: note,
+      id: newId(),
+      type: 'expense',
+      amount: fromAmount,
+      description: 'Transferência enviada',
+      accountId: fromId,
+      categoryId: catId,
+      date: now,
+      note: note,
       currency: fromCurrency,
     );
     final credit = AppTransaction(
-      id: newId(), type: 'income', amount: creditAmount,
-      description: 'Transfer in', accountId: toId,
-      categoryId: catId, date: now, note: note,
+      id: newId(),
+      type: 'income',
+      amount: creditAmount,
+      description: 'Transferência recebida',
+      accountId: toId,
+      categoryId: catId,
+      date: now,
+      note: note,
       currency: toCurrency,
     );
-    await DBHelper.insertTransaction(debit);
-    await _updateAccountBalance(fromId, -fromAmount);
-    await DBHelper.insertTransaction(credit);
-    await _updateAccountBalance(toId, creditAmount);
-    transactions = await DBHelper.getTransactions();
-    accounts     = await DBHelper.getAccounts();
-    notifyListeners();
+    if (fromAcc == null || toAcc == null)
+      throw StateError('Conta não encontrada.');
+    final db = await DBHelper.database;
+    await db.transaction((txn) async {
+      if (invoiceCycleEnd != null) {
+        final key = DateFormat('yyyy-MM-dd').format(invoiceCycleEnd);
+        final cycle = BillingCycle.forDate(
+            invoiceCycleEnd, toAcc.statementDay, toAcc.dueDay);
+        final purchaseRows = await txn.rawQuery(
+            "SELECT COALESCE(SUM(CASE WHEN t.type = 'income' THEN -t.amount ELSE t.amount END), 0) AS total FROM transactions t LEFT JOIN transaction_metadata m ON m.transaction_id = t.id WHERE t.account_id = ? AND t.date >= ? AND t.date < ? AND (COALESCE(m.exclude_from_spending, 0) = 0 OR m.source = 'opening_balance')",
+            [
+              toId,
+              cycle.start.toIso8601String(),
+              cycle.end.add(const Duration(days: 1)).toIso8601String()
+            ]);
+        final paidRows = await txn.rawQuery(
+            'SELECT COALESCE(SUM(amount), 0) AS total FROM card_invoice_payments WHERE card_id = ? AND cycle_end = ?',
+            [toId, key]);
+        final remaining = (purchaseRows.first['total'] as num).toDouble() -
+            (paidRows.first['total'] as num).toDouble();
+        if (creditAmount > remaining + 0.005)
+          throw StateError(
+              'O valor supera a fatura em aberto. Atualize a tela.');
+        await txn.insert('card_invoice_payments', {
+          'id': debit.id,
+          'card_id': toId,
+          'cycle_end': key,
+          'amount': creditAmount,
+          'paid_at': now.toIso8601String()
+        });
+      }
+      for (final tx in [debit, credit]) {
+        await txn.insert('transactions', tx.toMap());
+        await txn.insert(
+            'transaction_metadata',
+            TransactionMetadata(
+                    transactionId: tx.id,
+                    excludeFromSpending: true,
+                    source: 'transfer:${debit.id}')
+                .toMap());
+      }
+      await txn.rawUpdate(
+          'UPDATE accounts SET balance = balance - ? WHERE id = ?',
+          [fromAmount, fromId]);
+      await txn.rawUpdate(
+          'UPDATE accounts SET balance = balance + ? WHERE id = ?',
+          [creditAmount, toId]);
+    });
+    await _reloadLedger();
   }
 
   // ── Recurring ─────────────────────────────────────────────────────────
@@ -719,70 +994,80 @@ class AppProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> markRecurringPaid(RecurringPayment r) async {
-    final t = AppTransaction(
-      id: newId(), type: r.paymentType, amount: r.amount,
-      description: '${r.name} (recurring)',
-      accountId: r.accountId, categoryId: r.categoryId,
-      date: DateTime.now(),
-    );
-    await addTransaction(t);
-    await _recordHistory(r, 'paid');
+  Future<void> markRecurringPaid(RecurringPayment r) =>
+      _completeRecurring(r, false);
 
-    final updated = RecurringPayment(
-      id: r.id, name: r.name, accountId: r.accountId,
-      categoryId: r.categoryId, amount: r.amount,
-      paymentType: r.paymentType, freqVal: r.freqVal, freqUnit: r.freqUnit,
-      startDate: r.startDate, nextDate: r.calcNextDate(),
-      endDate: r.endDate, paidPayments: r.paidPayments + 1,
-      reminderEnabled: r.reminderEnabled,
-      reminderTime: r.reminderTime,
-      earlyReminderEnabled: r.earlyReminderEnabled,
-      notes: r.notes,
-    );
-    await DBHelper.updateRecurring(updated);
+  Future<void> skipNextRecurring(RecurringPayment r) =>
+      _completeRecurring(r, true);
+
+  Future<void> _completeRecurring(RecurringPayment expected, bool skip) async {
+    final db = await DBHelper.database;
+    await db.transaction((txn) async {
+      final rows = await txn.query('recurring_payments',
+          where: 'id = ?', whereArgs: [expected.id]);
+      if (rows.isEmpty) return;
+      final r = RecurringPayment.fromMap(rows.first);
+      // A stale screen or double tap must never complete another occurrence.
+      if (r.nextDate != expected.nextDate ||
+          (r.endDate != null && r.nextDate.isAfter(r.endDate!))) return;
+      final occurrenceId = 'recurring:${r.id}:${r.nextDate.toIso8601String()}';
+      if (!skip) {
+        final tx = AppTransaction(
+            id: occurrenceId,
+            type: r.paymentType,
+            amount: r.amount,
+            description: r.name,
+            accountId: r.accountId,
+            categoryId: r.categoryId,
+            date: r.nextDate,
+            note: r.notes);
+        await txn.insert('transactions', tx.toMap());
+        await txn.insert(
+            'transaction_metadata',
+            TransactionMetadata(
+              transactionId: tx.id,
+              source: 'recurring',
+              installmentCurrent:
+                  r.recurringType == 'installment' ? r.paidPayments + 1 : null,
+              installmentTotal:
+                  r.recurringType == 'installment' ? r.totalPayments : null,
+            ).toMap());
+        await txn.rawUpdate(
+            'UPDATE accounts SET balance = balance + ? WHERE id = ?',
+            [_txDelta(tx), tx.accountId]);
+      }
+      await txn.insert(
+          'recurring_history',
+          RecurringHistoryEntry(
+            id: occurrenceId,
+            recurringId: r.id,
+            action: skip ? 'skipped' : 'paid',
+            date: r.nextDate,
+            amount: r.amount,
+            currency: accountById(r.accountId)?.currency ?? settings.currency,
+          ).toMap());
+      final next = r.calcNextDate();
+      await txn.update(
+          'recurring_payments',
+          {
+            'next_date': next.toIso8601String(),
+            'paid_payments': r.paidPayments + 1
+          },
+          where: 'id = ?',
+          whereArgs: [r.id]);
+    });
+    _historyCache.remove(expected.id);
     recurring = await DBHelper.getRecurring();
-    notifyListeners();
-    await _notif.cancelReminder(r.id);
-    await _notif.scheduleReminder(updated, settings.currency);
-  }
-
-  Future<void> skipNextRecurring(RecurringPayment r) async {
-    await _recordHistory(r, 'skipped');
-
-    final updated = RecurringPayment(
-      id: r.id, name: r.name, accountId: r.accountId,
-      categoryId: r.categoryId, amount: r.amount,
-      paymentType: r.paymentType, freqVal: r.freqVal, freqUnit: r.freqUnit,
-      startDate: r.startDate, nextDate: r.calcNextDate(),
-      endDate: r.endDate, paidPayments: r.paidPayments + 1,
-      reminderEnabled: r.reminderEnabled,
-      reminderTime: r.reminderTime,
-      earlyReminderEnabled: r.earlyReminderEnabled,
-      notes: r.notes,
-    );
-    await DBHelper.updateRecurring(updated);
-    recurring = await DBHelper.getRecurring();
-    notifyListeners();
-    await _notif.cancelReminder(r.id);
-    await _notif.scheduleReminder(updated, settings.currency);
-  }
-
-  // ── Recurring History ─────────────────────────────────────────────────
-
-  Future<void> _recordHistory(RecurringPayment r, String action) async {
-    final acct = accountById(r.accountId);
-    final entry = RecurringHistoryEntry(
-      id: newId(),
-      recurringId: r.id,
-      action: action,
-      date: DateTime.now(),
-      amount: r.amount,
-      currency: acct?.currency ?? settings.currency,
-    );
-    await DBHelper.insertRecurringHistory(entry);
-    _historyCache.remove(r.id); // invalidate cache for this payment
     recurringHistoryCount = await DBHelper.getRecurringHistoryCount();
+    await _reloadLedger();
+    if (expected.reminderEnabled) await _notif.cancelReminder(expected.id);
+    final updated = recurring.where((r) => r.id == expected.id).firstOrNull;
+    if (updated != null &&
+        updated.reminderEnabled &&
+        (updated.endDate == null ||
+            !updated.nextDate.isAfter(updated.endDate!))) {
+      await _notif.scheduleReminder(updated, settings.currency);
+    }
   }
 
   /// Loads history for [recurringId] from DB, caching in memory.
@@ -836,7 +1121,7 @@ class AppProvider extends ChangeNotifier {
     }
     await DBHelper.deleteLendedForPerson(id);
     await DBHelper.deleteLendedPerson(id);
-    lended       = await DBHelper.getLended();
+    lended = await DBHelper.getLended();
     lendedPeople = await DBHelper.getLendedPeople();
     notifyListeners();
   }
@@ -870,7 +1155,7 @@ class AppProvider extends ChangeNotifier {
       final delta = l.type == 'lent' ? -l.amount : l.amount;
       await _updateAccountBalance(l.accountId!, delta);
     }
-    lended   = await DBHelper.getLended();
+    lended = await DBHelper.getLended();
     accounts = await DBHelper.getAccounts();
     notifyListeners();
     if (l.reminderEnabled && l.dueDate != null) {
@@ -881,7 +1166,8 @@ class AppProvider extends ChangeNotifier {
 
   Future<void> updateLended(LendedMoney updated, LendedMoney original) async {
     if (original.accountId != null && !original.isSettled) {
-      final delta = original.type == 'lent' ? original.amount : -original.amount;
+      final delta =
+          original.type == 'lent' ? original.amount : -original.amount;
       await _updateAccountBalance(original.accountId!, delta);
     }
     if (updated.accountId != null && !updated.isSettled) {
@@ -889,12 +1175,14 @@ class AppProvider extends ChangeNotifier {
       await _updateAccountBalance(updated.accountId!, delta);
     }
     await DBHelper.updateLended(updated);
-    lended   = await DBHelper.getLended();
+    lended = await DBHelper.getLended();
     accounts = await DBHelper.getAccounts();
     notifyListeners();
     // Always cancel old reminder, then reschedule if still enabled
     await _lendedNotif.cancelLendedReminder(original.id);
-    if (updated.reminderEnabled && updated.dueDate != null && !updated.isSettled) {
+    if (updated.reminderEnabled &&
+        updated.dueDate != null &&
+        !updated.isSettled) {
       await _lendedNotif.scheduleLendedReminder(updated, settings.currency,
           personName: personById(updated.personId)?.name ?? '');
     }
@@ -907,10 +1195,11 @@ class AppProvider extends ChangeNotifier {
     }
     final settled = l.copyWith(isSettled: true);
     await DBHelper.updateLended(settled);
-    lended   = await DBHelper.getLended();
+    lended = await DBHelper.getLended();
     accounts = await DBHelper.getAccounts();
     notifyListeners();
-    await _lendedNotif.cancelLendedReminder(l.id); // no reminder needed after settlement
+    await _lendedNotif
+        .cancelLendedReminder(l.id); // no reminder needed after settlement
   }
 
   Future<void> deleteLended(String id) async {
@@ -928,7 +1217,8 @@ class AppProvider extends ChangeNotifier {
       lended = await DBHelper.getLended();
       if (!record.isSettled) {
         final p = lendedPeople.firstWhere((p) => p.id == record.personId);
-        _lendedNotif.scheduleLendedReminder(record, settings.currency, personName: p.name);
+        _lendedNotif.scheduleLendedReminder(record, settings.currency,
+            personName: p.name);
       }
       notifyListeners();
     };
@@ -964,13 +1254,14 @@ class AppProvider extends ChangeNotifier {
   }
 
   double get totalAssetsValue => assets.fold(0.0, (sum, a) {
-    if (exchangeRates.isEmpty || a.currency == settings.currency) {
-      return sum + a.value;
-    }
-    return sum +
-        (_erService.convert(a.value, a.currency, settings.currency, exchangeRates)
-            ?? a.value);
-  });
+        if (exchangeRates.isEmpty || a.currency == settings.currency) {
+          return sum + a.value;
+        }
+        return sum +
+            (_erService.convert(
+                    a.value, a.currency, settings.currency, exchangeRates) ??
+                a.value);
+      });
 
   // ── Budgets ───────────────────────────────────────────────────────────
   Future<void> addBudget(Budget b) async {
@@ -1019,6 +1310,10 @@ class AppProvider extends ChangeNotifier {
         .where((t) =>
             t.type == 'expense' &&
             t.categoryId == budget.categoryId &&
+            !FinanceRules.isNeutral(t, transactionMetadata[t.id]) &&
+            t.date.isBefore(budget.period == 'weekly'
+                ? periodStart.add(const Duration(days: 7))
+                : DateTime(now.year, now.month + 1)) &&
             !t.date.isBefore(periodStart))
         .fold(0.0, (sum, t) {
       final acct = accountById(t.accountId);
@@ -1084,84 +1379,70 @@ class AppProvider extends ChangeNotifier {
     return savingsContributions.where((c) => c.goalId == goalId).toList();
   }
 
-  Future<void> contributeToGoal({
-    required String goalId,
-    required String fromAccountId,
-    required double amount,
-    String note = '',
-  }) async {
-    final goal = savingsGoals.firstWhere((g) => g.id == goalId);
-    final fromAcc = accountById(fromAccountId);
-    if (fromAcc == null) return;
-    
-    // Amount is in the account's currency, we need to convert it to goal's currency.
-    final double goalAmount = convertBetween(amount, fromAcc.currency, goal.currency) ?? amount;
-    
-    final contrib = SavingsContribution(
-      id: newId(),
-      goalId: goalId,
-      amount: goalAmount,
-      accountId: fromAccountId,
-      type: 'contribution',
-      date: DateTime.now(),
-      note: note,
-    );
+  Future<void> contributeToGoal(
+          {required String goalId,
+          required String fromAccountId,
+          required double amount,
+          String note = ''}) =>
+      _moveGoal(goalId, fromAccountId, amount, note, true);
 
-    await DBHelper.insertSavingsContribution(contrib);
-    await _updateAccountBalance(fromAccountId, -amount);
-    
-    final wasCompleted = goal.isCompleted;
-    var updatedGoal = goal.copyWith(currentAmount: goal.currentAmount + goalAmount);
-    
-    if (!wasCompleted && updatedGoal.currentAmount >= updatedGoal.targetAmount) {
-      updatedGoal = updatedGoal.copyWith(isCompleted: true, completedAt: DateTime.now());
-      if (settings.budgetAlertsEnabled) {
-        await _budgetNotif.showGoalCompleted(updatedGoal);
-      }
-    }
-    
-    await DBHelper.updateSavingsGoal(updatedGoal);
-    savingsGoals = await DBHelper.getSavingsGoals();
-    savingsContributions = await DBHelper.getAllSavingsContributions();
-    accounts = await DBHelper.getAccounts();
-    notifyListeners();
-  }
+  Future<void> withdrawFromGoal(
+          {required String goalId,
+          required String toAccountId,
+          required double amount,
+          String note = ''}) =>
+      _moveGoal(goalId, toAccountId, amount, note, false);
 
-  Future<void> withdrawFromGoal({
-    required String goalId,
-    required String toAccountId,
-    required double amount, // amount in goal currency
-    String note = '',
-  }) async {
-    final goal = savingsGoals.firstWhere((g) => g.id == goalId);
-    final toAcc = accountById(toAccountId);
-    if (toAcc == null) return;
-    
-    // Cannot withdraw more than we have
-    if (amount > goal.currentAmount) return;
-
-    final double accountAmount = convertBetween(amount, goal.currency, toAcc.currency) ?? amount;
-    
-    final withdrawal = SavingsContribution(
-      id: newId(),
-      goalId: goalId,
-      amount: amount,
-      accountId: toAccountId,
-      type: 'withdrawal',
-      date: DateTime.now(),
-      note: note,
-    );
-
-    await DBHelper.insertSavingsContribution(withdrawal);
-    await _updateAccountBalance(toAccountId, accountAmount);
-    
-    var updatedGoal = goal.copyWith(currentAmount: goal.currentAmount - amount);
-    
-    if (updatedGoal.isCompleted && updatedGoal.currentAmount < updatedGoal.targetAmount) {
-      updatedGoal = updatedGoal.copyWith(isCompleted: false, clearCompletedAt: true);
-    }
-    
-    await DBHelper.updateSavingsGoal(updatedGoal);
+  Future<void> _moveGoal(String goalId, String accountId, double amount,
+      String note, bool deposit) async {
+    if (!amount.isFinite || amount <= 0)
+      throw ArgumentError('Informe um valor positivo.');
+    final account = accountById(accountId);
+    if (account == null || account.type == 'credit' || account.isGold)
+      throw StateError('Selecione uma conta válida.');
+    final db = await DBHelper.database;
+    await db.transaction((txn) async {
+      final rows = await txn
+          .query('savings_goals', where: 'id = ?', whereArgs: [goalId]);
+      if (rows.isEmpty) throw StateError('Objetivo não encontrado.');
+      final goal = SavingsGoal.fromMap(rows.first);
+      final goalAmount = deposit
+          ? convertBetween(amount, account.currency, goal.currency) ?? amount
+          : amount;
+      final accountAmount = deposit
+          ? amount
+          : convertBetween(amount, goal.currency, account.currency) ?? amount;
+      if (!deposit && goalAmount > goal.currentAmount)
+        throw StateError('O valor supera o saldo guardado.');
+      final newAmount =
+          goal.currentAmount + (deposit ? goalAmount : -goalAmount);
+      final completed = newAmount >= goal.targetAmount;
+      await txn.insert(
+          'savings_contributions',
+          SavingsContribution(
+                  id: newId(),
+                  goalId: goalId,
+                  accountId: accountId,
+                  amount: goalAmount,
+                  type: deposit ? 'contribution' : 'withdrawal',
+                  date: DateTime.now(),
+                  note: note)
+              .toMap());
+      await txn.rawUpdate(
+          'UPDATE accounts SET balance = balance + ? WHERE id = ?',
+          [deposit ? -accountAmount : accountAmount, accountId]);
+      await txn.update(
+          'savings_goals',
+          goal
+              .copyWith(
+                  currentAmount: newAmount,
+                  isCompleted: completed,
+                  completedAt: completed ? DateTime.now() : null,
+                  clearCompletedAt: !completed)
+              .toMap(),
+          where: 'id = ?',
+          whereArgs: [goalId]);
+    });
     savingsGoals = await DBHelper.getSavingsGoals();
     savingsContributions = await DBHelper.getAllSavingsContributions();
     accounts = await DBHelper.getAccounts();
@@ -1183,7 +1464,7 @@ class AppProvider extends ChangeNotifier {
   Future<void> updateLoan(Loan l) async {
     await _loanNotif.cancelReminder(l.id);
     final oldL = loans.firstWhere((x) => x.id == l.id);
-    
+
     // Reverse old principal transfer if any
     if (oldL.transferAccountId != null) {
       await _updateAccountBalance(oldL.transferAccountId!, -oldL.principal);
@@ -1203,7 +1484,7 @@ class AppProvider extends ChangeNotifier {
   Future<void> deleteLoan(String id) async {
     await _loanNotif.cancelReminder(id);
     final l = loans.firstWhere((x) => x.id == id);
-    
+
     // Reverse principal transfer if any
     if (l.transferAccountId != null) {
       await _updateAccountBalance(l.transferAccountId!, -l.principal);
@@ -1244,7 +1525,8 @@ class AppProvider extends ChangeNotifier {
     };
   }
 
-  Future<void> payLoanInstallment(Loan l, {double? amount, String? accountId, String notes = ''}) async {
+  Future<void> payLoanInstallment(Loan l,
+      {double? amount, String? accountId, String notes = ''}) async {
     final payAmount = amount ?? l.monthlyPayment;
     final useAccount = accountId ?? l.accountId;
 
@@ -1325,8 +1607,9 @@ class AppProvider extends ChangeNotifier {
   double loanRemaining(Loan l) =>
       (l.totalPayable - loanTotalPaid(l)).clamp(0.0, double.infinity);
 
-  double loanProgress(Loan l) =>
-      l.totalPayable <= 0 ? 0.0 : (loanTotalPaid(l) / l.totalPayable).clamp(0.0, 1.0);
+  double loanProgress(Loan l) => l.totalPayable <= 0
+      ? 0.0
+      : (loanTotalPaid(l) / l.totalPayable).clamp(0.0, 1.0);
 
   double get totalMonthlyLoanObligation => loans
       .where((l) => !l.isSettled)
@@ -1337,71 +1620,12 @@ class AppProvider extends ChangeNotifier {
       .fold(0.0, (s, l) => s + convertToMain(loanRemaining(l), l.currency));
 
   // ── Export ────────────────────────────────────────────────────────────
-  Future<String?> exportTransactionsExcel({
-    required DateTime from, required DateTime to,
-  }) async {
-    final fromStart = DateTime(from.year, from.month, from.day);
-    final toEnd     = DateTime(to.year, to.month, to.day, 23, 59, 59);
-    final filtered  = transactions
-        .where((t) => !t.date.isBefore(fromStart) && !t.date.isAfter(toEnd))
-        .toList();
-    if (filtered.isEmpty) throw Exception('No transactions in this date range');
-
-    final excel = Excel.createExcel();
-    final sheet = excel['Transactions'];
-    try { excel.delete('Sheet1'); } catch (_) {}
-
-    const headers = ['Date','Description','Type','Amount','Currency','Account','Category','Note'];
-    for (int col = 0; col < headers.length; col++) {
-      final cell = sheet.cell(
-          CellIndex.indexByColumnRow(columnIndex: col, rowIndex: 0));
-      cell.value = TextCellValue(headers[col]);
-      cell.cellStyle = CellStyle(bold: true);
-    }
-    for (int i = 0; i < filtered.length; i++) {
-      final t = filtered[i];
-      final accCurrency = accountById(t.accountId)?.currency ?? '';
-      final displayCurrency = t.currency.isEmpty ? accCurrency : t.currency;
-      final vals = [
-        '${t.date.day}/${t.date.month}/${t.date.year}',
-        t.description, t.type,
-        t.amount.toStringAsFixed(2),
-        displayCurrency,
-        accountById(t.accountId)?.name   ?? '',
-        categoryById(t.categoryId)?.name ?? '',
-        t.note,
-      ];
-      for (int col = 0; col < vals.length; col++) {
-        sheet.cell(CellIndex.indexByColumnRow(columnIndex: col, rowIndex: i + 1))
-            .value = TextCellValue(vals[col]);
-      }
-    }
-
-    final bytes = excel.encode();
-    if (bytes == null) throw Exception('Excel encoding failed');
-    final uint8 = Uint8List.fromList(bytes);
-
-    final fileName =
-        'expensy_${from.year}-${from.month.toString().padLeft(2,'0')}'
-        '_to_${to.year}-${to.month.toString().padLeft(2,'0')}.xlsx';
-
-    final savePath = await FilePicker.platform.saveFile(
-      dialogTitle: 'Save transactions as Excel',
-      fileName: fileName,
-      type: FileType.custom,
-      allowedExtensions: ['xlsx'],
-      bytes: uint8,
-    );
-    return savePath;
-  }
-
-  // ── Backup ────────────────────────────────────────────────────────────
   Future<String?> createBackup() async {
     final data = await DBHelper.exportAll();
     data['settings'] = settings.toJson();
-    final json  = const JsonEncoder.withIndent('  ').convert(data);
+    final json = const JsonEncoder.withIndent('  ').convert(data);
     final uint8 = Uint8List.fromList(utf8.encode(json));
-    final ts    = DateTime.now().millisecondsSinceEpoch;
+    final ts = DateTime.now().millisecondsSinceEpoch;
 
     final savePath = await FilePicker.platform.saveFile(
       dialogTitle: 'Save Expensy Backup',
@@ -1442,9 +1666,18 @@ class AppProvider extends ChangeNotifier {
     final data = Map<String, dynamic>.from(decoded);
 
     const knownKeys = {
-      'accounts', 'categories', 'transactions', 'recurring_payments',
-      'wishlist', 'lended_people', 'lended_money', 'assets', 'budgets',
-      'recurring_history', 'version', 'settings',
+      'accounts',
+      'categories',
+      'transactions',
+      'recurring_payments',
+      'wishlist',
+      'lended_people',
+      'lended_money',
+      'assets',
+      'budgets',
+      'recurring_history',
+      'version',
+      'settings',
     };
     if (!data.keys.any(knownKeys.contains)) {
       throw const FormatException(
@@ -1489,8 +1722,8 @@ class AppProvider extends ChangeNotifier {
     final bytes = result.files.first.bytes;
     if (bytes == null && result.files.first.path == null) return false;
 
-    String contentStr = bytes != null 
-        ? utf8.decode(bytes) 
+    String contentStr = bytes != null
+        ? utf8.decode(bytes)
         : await File(result.files.first.path!).readAsString();
 
     if (source == 'greenstash') {
@@ -1498,7 +1731,6 @@ class AppProvider extends ChangeNotifier {
     }
     return true;
   }
-
 
   Future<void> _restoreGreenStash(String jsonStr) async {
     final decoded = jsonDecode(jsonStr);
@@ -1526,18 +1758,22 @@ class AppProvider extends ChangeNotifier {
       if (item['transactions'] is List) {
         for (var tx in item['transactions']) {
           bool isDeposit = true;
-          if (tx['type'] == 1 || tx['type'] == 'withdrawal' || tx['type'] == 'Withdraw' || tx['isDeposit'] == false) {
-             isDeposit = false;
+          if (tx['type'] == 1 ||
+              tx['type'] == 'withdrawal' ||
+              tx['type'] == 'Withdraw' ||
+              tx['isDeposit'] == false) {
+            isDeposit = false;
           }
           double amt = (tx['amount'] ?? 0).toDouble().abs();
-          
+
           await DBHelper.insertSavingsContribution(SavingsContribution(
             id: newId(),
             goalId: sg.id,
             amount: amt,
-            accountId: '', 
+            accountId: '',
             type: isDeposit ? 'contribution' : 'withdrawal',
-            date: DateTime.fromMillisecondsSinceEpoch(tx['timeStamp'] ?? DateTime.now().millisecondsSinceEpoch),
+            date: DateTime.fromMillisecondsSinceEpoch(
+                tx['timeStamp'] ?? DateTime.now().millisecondsSinceEpoch),
             note: tx['notes'] ?? '',
           ));
           if (isDeposit) {
@@ -1553,112 +1789,6 @@ class AppProvider extends ChangeNotifier {
     await load();
   }
 
-  Future<void> _restoreSay(String csvContent) async {
-    final lines = csvContent.split('\n');
-    // Say CSVs typically have a summary in the first ~9 lines, followed by empty line, then headers at line 10.
-    // We'll just look for the header row 'Date,Description,Amount,Currency,Account,Category,Type,Hint'
-    // or just assume data rows start after a certain point.
-    // A safer way is to find the header row, then parse the following rows.
-    int startIndex = -1;
-    for (int i = 0; i < lines.length; i++) {
-      if (lines[i].toLowerCase().startsWith('date,description,amount')) {
-        startIndex = i + 1;
-        break;
-      }
-    }
-    if (startIndex == -1) {
-      throw const FormatException('Invalid Say CSV format: Header row not found.');
-    }
-
-    for (int i = startIndex; i < lines.length; i++) {
-      final line = lines[i].trim();
-      if (line.isEmpty) continue;
-
-      try {
-        // Simple CSV splitting (Say doesn't typically escape commas in its basic export, but this might break if descriptions have commas)
-        // A more robust regex to handle quoted commas could be used, but for now simple split by comma.
-        // Actually, we can just use a simple regex for CSV parsing if needed, but a basic split is often sufficient if fields are simple.
-        // Let's use a regex that handles basic quoted fields just in case.
-        List<String> row = [];
-        final regex = RegExp(r',(?=(?:[^\"]*\"[^\"]*\")*[^\"]*$)');
-        final parts = line.split(regex);
-        for (var p in parts) {
-          if (p.startsWith('"') && p.endsWith('"') && p.length >= 2) {
-            row.add(p.substring(1, p.length - 1).replaceAll('""', '"'));
-          } else {
-            row.add(p);
-          }
-        }
-
-        if (row.length < 7) continue;
-
-        final dateStr = row[0];
-        final desc = row[1];
-        final amountStr = row[2];
-        final currencyStr = row[3];
-        final accountName = row[4];
-        final categoryName = row[5];
-        final typeStr = row[6]; // Expense, Income, Adjustment
-        final hint = row.length > 7 ? row[7] : '';
-
-        final date = DateTime.tryParse(dateStr) ?? DateTime.now();
-        final amount = double.tryParse(amountStr) ?? 0.0;
-        
-        if (amount == 0 && typeStr != 'Adjustment') continue;
-
-        // Find or create account
-        var acc = accounts.firstWhere(
-          (a) => a.name.toLowerCase() == accountName.toLowerCase(),
-          orElse: () {
-            final newAcc = Account(
-              id: newId(), name: accountName, type: 'bank',
-              currency: currencyStr, balance: 0, colorValue: 0xFF6750A4,
-            );
-            DBHelper.insertAccount(newAcc);
-            accounts.add(newAcc);
-            return newAcc;
-          }
-        );
-
-        // Find or create category
-        final isIncome = typeStr == 'Income' || typeStr == 'Adjustment';
-        final catType = isIncome ? 'income' : 'expense';
-        final catNameToUse = typeStr == 'Adjustment' && categoryName.isEmpty ? 'Balance Adjustment' : categoryName;
-        var cat = categories.firstWhere(
-          (c) => c.name.toLowerCase() == catNameToUse.toLowerCase() && c.type == catType,
-          orElse: () {
-            final newCat = AppCategory(
-              id: newId(), name: catNameToUse, type: catType, colorValue: 0xFF9C27B0,
-            );
-            DBHelper.insertCategory(newCat);
-            categories.add(newCat);
-            return newCat;
-          }
-        );
-
-        // Create transaction
-        final tx = AppTransaction(
-          id: newId(),
-          type: catType,
-          amount: amount,
-          description: typeStr == 'Adjustment' && desc.isEmpty ? 'Initial Balance' : desc,
-          accountId: acc.id,
-          categoryId: cat.id,
-          date: date,
-          note: hint,
-          currency: currencyStr,
-        );
-
-        await addTransaction(tx);
-
-      } catch (e) {
-        // Skip malformed rows
-        continue;
-      }
-    }
-    await load();
-  }
-  
   bool isTransactionSelectionMode = false;
   void setTransactionSelectionMode(bool value) {
     if (isTransactionSelectionMode != value) {
@@ -1666,20 +1796,25 @@ class AppProvider extends ChangeNotifier {
       notifyListeners();
     }
   }
+
   final ValueNotifier<int> tabIndexNotifier = ValueNotifier<int>(0);
 
-  List<Account> get nonBankAccounts => accounts.where((a) => a.type != 'bank').toList();
+  List<Account> get cashAccounts =>
+      accounts.where((a) => !a.isGold && a.type != 'credit').toList();
 
   void reorderCategories(int oldIndex, int newIndex, String type) {
     if (oldIndex < newIndex) newIndex -= 1;
-    
+
     final typedCats = categories.where((c) => c.type == type).toList();
-    if (oldIndex < 0 || oldIndex >= typedCats.length || newIndex < 0 || newIndex >= typedCats.length) return;
-    
+    if (oldIndex < 0 ||
+        oldIndex >= typedCats.length ||
+        newIndex < 0 ||
+        newIndex >= typedCats.length) return;
+
     final item = typedCats[oldIndex];
-    
+
     categories.remove(item);
-    
+
     int insertionIndex = 0;
     int currentTypedIndex = 0;
     for (int i = 0; i < categories.length; i++) {
@@ -1692,7 +1827,7 @@ class AppProvider extends ChangeNotifier {
       }
       insertionIndex = i + 1;
     }
-    
+
     categories.insert(insertionIndex, item);
     notifyListeners();
   }
@@ -1724,17 +1859,42 @@ class AppProvider extends ChangeNotifier {
   }
 
   Future<VoidCallback> deleteTransactionWithUndo(String id) async {
-    final tx = transactions.firstWhere((t) => t.id == id);
+    final metadata = await TransactionMetadataService.instance.getFor(id);
+    final db = await DBHelper.database;
+    final metas = metadata.source.startsWith('transfer:')
+        ? (await db.query('transaction_metadata',
+                where: 'source = ?', whereArgs: [metadata.source]))
+            .map(TransactionMetadata.fromMap)
+            .toList()
+        : [metadata];
+    final txs = transactions
+        .where((t) => metas.any((m) => m.transactionId == t.id))
+        .toList();
+    final payments = await db.query('card_invoice_payments');
     await deleteTransaction(id);
     return () async {
-      await addTransaction(tx);
+      await db.transaction((txn) async {
+        for (final tx in txs) {
+          final m = metas.firstWhere((m) => m.transactionId == tx.id);
+          await txn.insert('transactions', tx.toMap());
+          await txn.insert('transaction_metadata', m.toMap());
+          if (!m.isPending && m.affectsBalance)
+            await txn.rawUpdate(
+                'UPDATE accounts SET balance = balance + ? WHERE id = ?',
+                [_txDelta(tx), tx.accountId]);
+          for (final payment in payments.where((p) => p['id'] == tx.id)) {
+            await txn.insert('card_invoice_payments', payment);
+          }
+        }
+      });
+      await _reloadLedger();
     };
   }
 
   Future<VoidCallback> deleteLendedPersonWithUndo(String id) async {
     final person = lendedPeople.firstWhere((p) => p.id == id);
     final personLended = lended.where((l) => l.personId == id).toList();
-    
+
     await DBHelper.deleteLendedPerson(id);
     for (final l in personLended) {
       await DBHelper.deleteLended(l.id);
@@ -1769,29 +1929,43 @@ class AppProvider extends ChangeNotifier {
     };
   }
 
+  List<AppTransaction> get reportTransactions => transactions
+      .where((t) =>
+          !FinanceRules.isNeutral(t, transactionMetadata[t.id]) &&
+          transactionMetadata[t.id]?.isPending != true)
+      .toList();
+
   List<AppTransaction> getAccountTransactions(String id) {
     return transactions.where((t) => t.accountId == id).toList();
   }
 
   double getAccountIncome(String id) {
     return getAccountTransactions(id)
-        .where((t) => t.type == 'income')
+        .where((t) =>
+            t.type == 'income' &&
+            !FinanceRules.isNeutral(t, transactionMetadata[t.id]) &&
+            transactionMetadata[t.id]?.isPending != true)
         .fold(0.0, (sum, t) => sum + t.amount);
   }
 
   double getAccountExpense(String id) {
     return getAccountTransactions(id)
-        .where((t) => t.type == 'expense')
+        .where((t) =>
+            t.type == 'expense' &&
+            !FinanceRules.isNeutral(t, transactionMetadata[t.id]) &&
+            transactionMetadata[t.id]?.isPending != true)
         .fold(0.0, (sum, t) => sum + t.amount);
   }
 
-  List<AppTransaction> findPossibleDuplicates(AppTransaction tx, {String? excludeId}) {
-    return transactions.where((t) => 
-      t.id != excludeId &&
-      t.accountId == tx.accountId && 
-      t.amount == tx.amount && 
-      t.type == tx.type && 
-      t.date.difference(tx.date).inDays.abs() <= 2
-    ).toList();
+  List<AppTransaction> findPossibleDuplicates(AppTransaction tx,
+      {String? excludeId}) {
+    return transactions
+        .where((t) =>
+            t.id != excludeId &&
+            t.accountId == tx.accountId &&
+            t.amount == tx.amount &&
+            t.type == tx.type &&
+            t.date.difference(tx.date).inDays.abs() <= 2)
+        .toList();
   }
 }

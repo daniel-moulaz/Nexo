@@ -1371,13 +1371,13 @@ class AppLocalizationsZh extends AppLocalizations {
   String get onboarding_back => '返回';
 
   @override
-  String get onboarding_welcomeToExpensy => '欢迎使用 Expensy！';
+  String get onboarding_welcomeToExpensy => '欢迎使用 Nexo！';
 
   @override
   String get onboarding_restoreABackup => '恢复备份';
 
   @override
-  String get onboarding_loadAPreviouslySaved => '加载之前保存的 Expensy JSON 文件';
+  String get onboarding_loadAPreviouslySaved => '加载之前保存的 Nexo JSON 文件';
 
   @override
   String get onboarding_or => '或';

@@ -1,6 +1,6 @@
 {
   "@@locale": "en",
-  "appTitle": "Expensy",
+  "appTitle": "Nexo",
   "settings_title": "Settings",
   "settings_appearance": "Appearance",
   "settings_theme": "Theme",
@@ -119,7 +119,7 @@
     }
   },
   "recurring_paymentHistory": "Payment history",
-  "recurring_notificationPermissionDenied": "Notification permission denied. Enable it in Settings → Apps → Expensy → Notifications.",
+  "recurring_notificationPermissionDenied": "Notification permission denied. Enable it in Settings → Apps → Nexo → Notifications.",
   "recurring_remindMeAt": "Remind me at",
   "recurring_editRecurring": "Edit Recurring",
   "recurring_addRecurring": "Add a Recurring Payment",
@@ -213,7 +213,7 @@
       "time": {}
     }
   },
-  "lended_person_notificationPermissionDenied": "Notification permission denied. Enable it in Settings → Apps → Expensy → Notifications.",
+  "lended_person_notificationPermissionDenied": "Notification permission denied. Enable it in Settings → Apps → Nexo → Notifications.",
   "lended_person_remindMeAtPrompt": "Remind me at",
   "lended_person_editRecord": "Edit Record",
   "lended_person_addRecord": "Add Record",
@@ -268,7 +268,7 @@
     }
   },
   "transactions_unsettled": "Unsettled",
-  "onboarding_restoreFailed": "Restore failed: the file may be corrupted or not an Expensy backup.",
+  "onboarding_restoreFailed": "Restore failed: the file may be corrupted or not an Nexo backup.",
   "onboarding_continue": "Continue",
   "onboarding_getStarted": "Get Started",
   "onboarding_yourPersonalTracker": "Your personal, 100% offline finance tracker.\nAlready have a backup from another device or a previous install?",
@@ -308,7 +308,7 @@
   "backup_upgradedFrom": " (upgraded from v{originalVersion} → v{schemaVersion})",
   "backup_dataRestoredSuccessfully": "Data restored successfully!{vLabel}",
   "backup_restoreFailed": "Restore failed: {error}",
-  "backup_restoreFailedCorrupted": "Restore failed: the file may be corrupted or not an Expensy backup.",
+  "backup_restoreFailedCorrupted": "Restore failed: the file may be corrupted or not an Nexo backup.",
   "budget_noBudgetsYet": "No budgets yet",
   "budget_tapToAddBudget": "Tap + to set a spending limit per category",
   "budget_budgeted": "Budgeted",
@@ -528,9 +528,9 @@
   "lended_color": "Color",
   "more_more": "More",
   "onboarding_back": "Back",
-  "onboarding_welcomeToExpensy": "Welcome to Expensy!",
+  "onboarding_welcomeToExpensy": "Bem-vindo ao Nexo!",
   "onboarding_restoreABackup": "Restore a Backup",
-  "onboarding_loadAPreviouslySaved": "Load a previously saved Expensy JSON file",
+  "onboarding_loadAPreviouslySaved": "Load a previously saved Nexo JSON file",
   "onboarding_or": "or",
   "onboarding_startFresh": "Start Fresh",
   "onboarding_firstWhatShouldWeCal": "First, what should we call you?",

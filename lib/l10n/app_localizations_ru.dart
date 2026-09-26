@@ -1407,14 +1407,14 @@ class AppLocalizationsRu extends AppLocalizations {
   String get onboarding_back => 'Назад';
 
   @override
-  String get onboarding_welcomeToExpensy => 'Добро пожаловать в Expensy!';
+  String get onboarding_welcomeToExpensy => 'Добро пожаловать в Nexo!';
 
   @override
   String get onboarding_restoreABackup => 'Восстановить резервную копию';
 
   @override
   String get onboarding_loadAPreviouslySaved =>
-      'Загрузить ранее сохраненный JSON файл Expensy';
+      'Загрузить ранее сохраненный JSON файл Nexo';
 
   @override
   String get onboarding_or => 'или';

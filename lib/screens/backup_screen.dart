@@ -151,8 +151,8 @@ class _BackupScreenState extends State<BackupScreen> {
       _CountRow(Icons.pie_chart_outline_rounded, l10n.backup_budgets,
           app.budgets.length),
       _CountRow(
-          Icons.savings_outlined, 'Savings Goals', app.savingsGoals.length),
-      _CountRow(Icons.payments_outlined, 'Savings Contributions',
+          Icons.savings_outlined, 'Objetivos', app.savingsGoals.length),
+      _CountRow(Icons.payments_outlined, 'Aportes e retiradas',
           app.savingsContributions.length),
       _CountRow(Icons.star_outline_rounded, l10n.backup_wishlist,
           app.wishlist.length),

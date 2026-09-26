@@ -494,7 +494,7 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get onboarding_restoreFailed =>
-      '復元に失敗しました: ファイルが破損しているか、Expensy のバックアップではない可能性があります。';
+      '復元に失敗しました: ファイルが破損しているか、Nexo のバックアップではない可能性があります。';
 
   @override
   String get onboarding_continue => '続行';
@@ -629,7 +629,7 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get backup_restoreFailedCorrupted =>
-      '復元に失敗しました: ファイルが破損しているか、Expensy のバックアップではない可能性があります。';
+      '復元に失敗しました: ファイルが破損しているか、Nexo のバックアップではない可能性があります。';
 
   @override
   String get budget_noBudgetsYet => 'まだ予算がありません';
@@ -1381,13 +1381,13 @@ class AppLocalizationsJa extends AppLocalizations {
   String get onboarding_back => '戻る';
 
   @override
-  String get onboarding_welcomeToExpensy => 'Expensyへようこそ！';
+  String get onboarding_welcomeToExpensy => 'Nexoへようこそ！';
 
   @override
   String get onboarding_restoreABackup => 'バックアップを復元';
 
   @override
-  String get onboarding_loadAPreviouslySaved => '以前に保存したExpensyのJSONファイルを読み込む';
+  String get onboarding_loadAPreviouslySaved => '以前に保存したNexoのJSONファイルを読み込む';
 
   @override
   String get onboarding_or => 'または';

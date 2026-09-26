@@ -27,7 +27,7 @@ class NotificationService {
   bool _initialized = false;
 
   static const _channelId = 'expensy_recurring';
-  static const _channelName = 'Recurring Payment Reminders';
+  static const _channelName = 'Lembretes de recorrentes';
   static const _channelDesc =
       'Reminders for your scheduled recurring payments and income';
 

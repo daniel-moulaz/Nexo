@@ -1,3 +1,4 @@
+import '../utils/finance_input.dart';
 // lib/screens/currency_converter_screen.dart
 import 'package:flutter/material.dart';
 import '../l10n/app_localizations.dart';
@@ -35,7 +36,7 @@ class _CurrencyConverterScreenState extends State<CurrencyConverterScreen> {
   }
 
   void _convert(AppProvider app) {
-    final amount = double.tryParse(_ctrl.text);
+    final amount = parseMoney(_ctrl.text);
     if (amount == null) {
       setState(() => _result = null);
       return;
@@ -268,7 +269,7 @@ class _CurrencyConverterScreenState extends State<CurrencyConverterScreen> {
                       color: cs.onSurface.withValues(alpha: 0.5))),
               const SizedBox(height: 10),
               _QuickConversions(
-                amount: double.tryParse(_ctrl.text) ?? 0,
+                amount: parseMoney(_ctrl.text) ?? 0,
                 from: _from,
                 app: app,
                 cs: cs,

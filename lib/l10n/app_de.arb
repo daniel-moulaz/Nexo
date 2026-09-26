@@ -101,7 +101,7 @@
     }
   },
   "recurring_paymentHistory": "Zahlungsverlauf",
-  "recurring_notificationPermissionDenied": "Benachrichtigungsberechtigung verweigert. Aktiviere sie unter Einstellungen → Apps → Expensy → Benachrichtigungen.",
+  "recurring_notificationPermissionDenied": "Benachrichtigungsberechtigung verweigert. Aktiviere sie unter Einstellungen → Apps → Nexo → Benachrichtigungen.",
   "recurring_remindMeAt": "Erinnere mich um",
   "recurring_editRecurring": "Wiederkehrende bearbeiten",
   "recurring_addRecurring": "Wiederkehrende Zahlung",
@@ -195,7 +195,7 @@
       "time": {}
     }
   },
-  "lended_person_notificationPermissionDenied": "Benachrichtigungsberechtigung verweigert. Aktiviere sie unter Einstellungen → Apps → Expensy → Benachrichtigungen.",
+  "lended_person_notificationPermissionDenied": "Benachrichtigungsberechtigung verweigert. Aktiviere sie unter Einstellungen → Apps → Nexo → Benachrichtigungen.",
   "lended_person_remindMeAtPrompt": "Erinnere mich um",
   "lended_person_editRecord": "Eintrag bearbeiten",
   "lended_person_addRecord": "Eintrag hinzufügen",
@@ -250,7 +250,7 @@
     }
   },
   "transactions_unsettled": "Offen",
-  "onboarding_restoreFailed": "Wiederherstellung fehlgeschlagen: Die Datei ist möglicherweise beschädigt oder kein Expensy-Backup.",
+  "onboarding_restoreFailed": "Wiederherstellung fehlgeschlagen: Die Datei ist möglicherweise beschädigt oder kein Nexo-Backup.",
   "onboarding_continue": "Weiter",
   "onboarding_getStarted": "Loslegen",
   "onboarding_yourPersonalTracker": "Dein persönlicher, 100% Offline-Finanztracker.\nHast du bereits ein Backup von einem anderen Gerät oder einer vorherigen Installation?",
@@ -290,7 +290,7 @@
   "backup_upgradedFrom": " (aktualisiert von v{originalVersion} → v{schemaVersion})",
   "backup_dataRestoredSuccessfully": "Daten erfolgreich wiederhergestellt!{vLabel}",
   "backup_restoreFailed": "Wiederherstellung fehlgeschlagen: {error}",
-  "backup_restoreFailedCorrupted": "Wiederherstellung fehlgeschlagen: Die Datei ist möglicherweise beschädigt oder kein Expensy-Backup.",
+  "backup_restoreFailedCorrupted": "Wiederherstellung fehlgeschlagen: Die Datei ist möglicherweise beschädigt oder kein Nexo-Backup.",
   "budget_noBudgetsYet": "Noch keine Budgets",
   "budget_tapToAddBudget": "Tippe auf +, um ein Ausgabenlimit pro Kategorie festzulegen",
   "budget_budgeted": "Budgetiert",
@@ -536,9 +536,9 @@
   "lended_color": "Farbe",
   "more_more": "Mehr",
   "onboarding_back": "Zurück",
-  "onboarding_welcomeToExpensy": "Willkommen bei Expensy!",
+  "onboarding_welcomeToExpensy": "Willkommen bei Nexo!",
   "onboarding_restoreABackup": "Ein Backup wiederherstellen",
-  "onboarding_loadAPreviouslySaved": "Laden Sie eine zuvor gespeicherte Expensy JSON-Datei",
+  "onboarding_loadAPreviouslySaved": "Laden Sie eine zuvor gespeicherte Nexo JSON-Datei",
   "onboarding_or": "oder",
   "onboarding_startFresh": "Neu anfangen",
   "onboarding_firstWhatShouldWeCal": "Zuerst, wie sollen wir Sie nennen?",

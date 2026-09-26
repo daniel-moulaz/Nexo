@@ -70,9 +70,8 @@ class _RecurringScreenState extends State<RecurringScreen>
         .where((r) => r.paymentType == 'income')
         .toList()
       ..sort((a, b) => a.nextDate.compareTo(b.nextDate));
-    final filteredExpenses = expenses
-        .where((r) => r.recurringType == _expenseFilter)
-        .toList();
+    final filteredExpenses =
+        expenses.where((r) => r.recurringType == _expenseFilter).toList();
     final shown = _tabs.index == 0 ? filteredExpenses : incomes;
     final monthly = _monthlyValue(shown);
 
@@ -361,7 +360,9 @@ class _RecurringTile extends StatelessWidget {
                           : recurring.recurringType == 'installment'
                               ? Icons.payments_outlined
                               : Icons.autorenew_rounded,
-                      color: category == null ? cs.primary : Color(category.colorValue),
+                      color: category == null
+                          ? cs.primary
+                          : Color(category.colorValue),
                     ),
                   ),
                   const SizedBox(width: 12),
@@ -428,17 +429,23 @@ class _RecurringTile extends StatelessWidget {
                 mainAxisAlignment: MainAxisAlignment.end,
                 children: [
                   TextButton.icon(
-                    onPressed: () async {
-                      await app.skipNextRecurring(recurring);
-                    },
+                    onPressed: recurring.endDate != null &&
+                            recurring.nextDate.isAfter(recurring.endDate!)
+                        ? null
+                        : () async {
+                            await app.skipNextRecurring(recurring);
+                          },
                     icon: const Icon(Icons.skip_next_rounded, size: 18),
                     label: const Text('Pular'),
                   ),
                   const SizedBox(width: 4),
                   FilledButton.tonalIcon(
-                    onPressed: () async {
-                      await app.markRecurringPaid(recurring);
-                    },
+                    onPressed: recurring.endDate != null &&
+                            recurring.nextDate.isAfter(recurring.endDate!)
+                        ? null
+                        : () async {
+                            await app.markRecurringPaid(recurring);
+                          },
                     icon: Icon(
                       recurring.paymentType == 'income'
                           ? Icons.check_rounded
@@ -591,11 +598,13 @@ class _RecurringEditorState extends State<_RecurringEditor> {
       return;
     }
     final service = NotificationService();
-    final allowed = await service.hasPermission() || await service.requestPermissions();
+    final allowed =
+        await service.hasPermission() || await service.requestPermissions();
     if (!mounted) return;
     if (!allowed) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Permita notificações para ativar lembretes.')),
+        const SnackBar(
+            content: Text('Permita notificações para ativar lembretes.')),
       );
       return;
     }
@@ -619,6 +628,16 @@ class _RecurringEditorState extends State<_RecurringEditor> {
         _accountId == null ||
         _categoryId == null ||
         !validInstallments) {
+      final errors = <String>[
+        if (_nameCtrl.text.trim().isEmpty) 'descrição',
+        if (amount == null || amount <= 0) 'valor',
+        if (frequency == null || frequency <= 0) 'frequência',
+        if (_accountId == null) 'conta',
+        if (_categoryId == null) 'categoria',
+        if (!validInstallments) 'quantidade de parcelas',
+      ];
+      ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Revise: ${errors.join(', ')}.')));
       return;
     }
 
@@ -641,7 +660,9 @@ class _RecurringEditorState extends State<_RecurringEditor> {
       freqVal: frequency,
       freqUnit: _frequencyUnit,
       startDate: _firstDate,
-      nextDate: existing?.nextDate ?? _firstDate,
+      nextDate: existing == null || existing.paidPayments == 0
+          ? _firstDate
+          : existing.nextDate,
       endDate: endDate,
       paidPayments: existing?.paidPayments ?? 0,
       reminderEnabled: _reminder,
@@ -650,10 +671,20 @@ class _RecurringEditorState extends State<_RecurringEditor> {
       notes: _notesCtrl.text.trim(),
     );
 
-    if (existing == null) {
-      await app.addRecurring(recurring);
-    } else {
-      await app.updateRecurring(recurring);
+    try {
+      if (existing == null) {
+        await app.addRecurring(recurring);
+      } else {
+        await app.updateRecurring(recurring);
+      }
+    } catch (_) {
+      if (mounted) {
+        setState(() => _saving = false);
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+            content: Text(
+                'Não foi possível salvar o recorrente. Tente novamente.')));
+      }
+      return;
     }
 
     if (!mounted) return;
@@ -723,7 +754,7 @@ class _RecurringEditorState extends State<_RecurringEditor> {
                       segments: const [
                         ButtonSegment(
                           value: 'subscription',
-                          label: Text('Fixa'),
+                          label: Text('Fixa/assinatura'),
                           icon: Icon(Icons.autorenew_rounded),
                         ),
                         ButtonSegment(
@@ -754,10 +785,12 @@ class _RecurringEditorState extends State<_RecurringEditor> {
                   const SizedBox(height: 12),
                   TextField(
                     controller: _amountCtrl,
-                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                    keyboardType:
+                        const TextInputType.numberWithOptions(decimal: true),
                     decoration: InputDecoration(
                       labelText: 'Valor por ocorrência',
-                      prefixText: '${currencyInfo(app.settings.currency).symbol} ',
+                      prefixText:
+                          '${currencyInfo(app.settings.currency).symbol} ',
                       errorText: _submitted && (amount == null || amount <= 0)
                           ? 'Informe um valor válido.'
                           : null,
@@ -785,22 +818,30 @@ class _RecurringEditorState extends State<_RecurringEditor> {
                       const SizedBox(width: 10),
                       Expanded(
                         child: DropdownButtonFormField<String>(
+                          isExpanded: true,
                           initialValue: _frequencyUnit,
-                          decoration: const InputDecoration(labelText: 'Período'),
+                          decoration:
+                              const InputDecoration(labelText: 'Período'),
                           items: const [
-                            DropdownMenuItem(value: 'days', child: Text('dia(s)')),
-                            DropdownMenuItem(value: 'weeks', child: Text('semana(s)')),
-                            DropdownMenuItem(value: 'months', child: Text('mês(es)')),
-                            DropdownMenuItem(value: 'years', child: Text('ano(s)')),
+                            DropdownMenuItem(
+                                value: 'days', child: Text('dia(s)')),
+                            DropdownMenuItem(
+                                value: 'weeks', child: Text('semana(s)')),
+                            DropdownMenuItem(
+                                value: 'months', child: Text('mês(es)')),
+                            DropdownMenuItem(
+                                value: 'years', child: Text('ano(s)')),
                           ],
                           onChanged: (value) {
-                            if (value != null) setState(() => _frequencyUnit = value);
+                            if (value != null)
+                              setState(() => _frequencyUnit = value);
                           },
                         ),
                       ),
                     ],
                   ),
-                  if (_type == 'expense' && _recurringType == 'installment') ...[
+                  if (_type == 'expense' &&
+                      _recurringType == 'installment') ...[
                     const SizedBox(height: 12),
                     TextField(
                       controller: _installmentsCtrl,
@@ -808,7 +849,8 @@ class _RecurringEditorState extends State<_RecurringEditor> {
                       decoration: InputDecoration(
                         labelText: 'Quantidade de parcelas',
                         hintText: 'Ex.: 12',
-                        prefixIcon: const Icon(Icons.format_list_numbered_rounded),
+                        prefixIcon:
+                            const Icon(Icons.format_list_numbered_rounded),
                         errorText: _submitted &&
                                 (installments == null || installments <= 0)
                             ? 'Informe a quantidade de parcelas.'
@@ -839,7 +881,8 @@ class _RecurringEditorState extends State<_RecurringEditor> {
                   const SizedBox(height: 8),
                   Text(
                     'Conta',
-                    style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w900),
+                    style: theme.textTheme.titleSmall
+                        ?.copyWith(fontWeight: FontWeight.w900),
                   ),
                   const SizedBox(height: 6),
                   if (accounts.isEmpty)
@@ -849,6 +892,7 @@ class _RecurringEditorState extends State<_RecurringEditor> {
                     )
                   else
                     DropdownButtonFormField<String>(
+                      isExpanded: true,
                       initialValue: accounts.any((a) => a.id == _accountId)
                           ? _accountId
                           : null,
@@ -873,7 +917,8 @@ class _RecurringEditorState extends State<_RecurringEditor> {
                   const SizedBox(height: 14),
                   Text(
                     'Categoria',
-                    style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w900),
+                    style: theme.textTheme.titleSmall
+                        ?.copyWith(fontWeight: FontWeight.w900),
                   ),
                   const SizedBox(height: 6),
                   if (categories.isEmpty)
@@ -895,7 +940,8 @@ class _RecurringEditorState extends State<_RecurringEditor> {
                             radius: 4,
                             backgroundColor: Color(category.colorValue),
                           ),
-                          onSelected: (_) => setState(() => _categoryId = category.id),
+                          onSelected: (_) =>
+                              setState(() => _categoryId = category.id),
                         );
                       }).toList(),
                     ),
@@ -925,14 +971,16 @@ class _RecurringEditorState extends State<_RecurringEditor> {
                           context: context,
                           initialTime: _reminderTime,
                         );
-                        if (picked != null) setState(() => _reminderTime = picked);
+                        if (picked != null)
+                          setState(() => _reminderTime = picked);
                       },
                     ),
                     SwitchListTile.adaptive(
                       contentPadding: EdgeInsets.zero,
                       title: const Text('Avisar também 2 dias antes'),
                       value: _earlyReminder,
-                      onChanged: (value) => setState(() => _earlyReminder = value),
+                      onChanged: (value) =>
+                          setState(() => _earlyReminder = value),
                     ),
                   ],
                   const SizedBox(height: 8),
