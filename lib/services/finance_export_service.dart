@@ -6,6 +6,7 @@ import 'package:intl/intl.dart';
 
 import '../models/models.dart';
 import '../providers/app_provider.dart';
+import 'finance_rules.dart';
 import 'transaction_metadata_service.dart';
 
 class FinanceExportService {
@@ -32,14 +33,14 @@ class FinanceExportService {
     _buildSummary(excel['Resumo'], app, txs, metadata, start, end);
     _buildTransactions(excel['Transações'], app, txs, metadata);
     _buildAccounts(excel['Contas'], app);
-    _buildCards(excel['Cartões'], app, txs);
+    _buildCards(excel['Cartões'], app, txs, metadata);
     _buildBudgets(excel['Orçamento'], app);
 
     final bytes = excel.encode();
     if (bytes == null) throw Exception('Não foi possível gerar o Excel.');
 
     final fileName =
-        'financas_${DateFormat('yyyy-MM-dd').format(start)}_a_${DateFormat('yyyy-MM-dd').format(end)}.xlsx';
+        'meu_fluxo_${DateFormat('yyyy-MM-dd').format(start)}_a_${DateFormat('yyyy-MM-dd').format(end)}.xlsx';
 
     return FilePicker.platform.saveFile(
       dialogTitle: 'Salvar relatório financeiro',
@@ -83,15 +84,19 @@ class FinanceExportService {
     double paid = 0;
     double pending = 0;
     double extraordinary = 0;
+    double neutralMovements = 0;
 
     for (final tx in txs) {
       final amount = _mainAmount(app, tx);
+      final meta = metadata[tx.id] ?? TransactionMetadata(transactionId: tx.id);
+      if (FinanceRules.isNeutral(tx, meta)) {
+        neutralMovements += amount;
+        continue;
+      }
       if (tx.type == 'income') {
         income += amount;
         continue;
       }
-      final meta = metadata[tx.id] ?? TransactionMetadata(transactionId: tx.id);
-      if (meta.excludeFromSpending) continue;
       if (meta.status == 'pending') {
         pending += amount;
       } else {
@@ -103,10 +108,11 @@ class FinanceExportService {
     final rows = <List<String>>[
       ['Período', '${DateFormat('dd/MM/yyyy').format(from)} a ${DateFormat('dd/MM/yyyy').format(to)}'],
       ['Moeda principal', app.settings.currency],
-      ['Receitas', income.toStringAsFixed(2)],
+      ['Receitas reais', income.toStringAsFixed(2)],
       ['Despesas pagas', paid.toStringAsFixed(2)],
       ['Despesas pendentes', pending.toStringAsFixed(2)],
       ['Despesas extraordinárias', extraordinary.toStringAsFixed(2)],
+      ['Movimentos neutros (transferência/reserva)', neutralMovements.toStringAsFixed(2)],
       ['Saldo do período (receitas - pagas)', (income - paid).toStringAsFixed(2)],
       ['Comprometido (pagas + pendentes)', (paid + pending).toStringAsFixed(2)],
     ];
@@ -139,6 +145,8 @@ class FinanceExportService {
       'Vencimento',
       'Classe',
       'Conta como gasto?',
+      'Parcela',
+      'Origem',
       'Observação',
     ];
     _header(sheet, headers);
@@ -146,6 +154,7 @@ class FinanceExportService {
     for (var i = 0; i < txs.length; i++) {
       final tx = txs[i];
       final meta = metadata[tx.id] ?? TransactionMetadata(transactionId: tx.id);
+      final neutral = FinanceRules.isNeutral(tx, meta);
       final status = meta.isOverdue
           ? 'Atrasado'
           : (meta.status == 'pending' ? 'Pendente' : 'Pago');
@@ -161,7 +170,9 @@ class FinanceExportService {
         tx.type == 'income' ? 'Recebido' : status,
         meta.dueDate == null ? '' : DateFormat('dd/MM/yyyy').format(meta.dueDate!),
         meta.expenseClass == 'extraordinary' ? 'Extraordinária' : 'Normal',
-        meta.excludeFromSpending ? 'Não' : 'Sim',
+        neutral ? 'Não' : 'Sim',
+        meta.installmentLabel,
+        meta.source,
         tx.note,
       ];
       for (var c = 0; c < values.length; c++) {
@@ -195,6 +206,7 @@ class FinanceExportService {
     Sheet sheet,
     AppProvider app,
     List<AppTransaction> txs,
+    Map<String, TransactionMetadata> metadata,
   ) {
     _header(sheet, const [
       'Cartão',
@@ -208,7 +220,10 @@ class FinanceExportService {
     for (var i = 0; i < cards.length; i++) {
       final card = cards[i];
       final total = txs
-          .where((t) => t.type == 'expense' && t.accountId == card.id)
+          .where((t) =>
+              t.type == 'expense' &&
+              t.accountId == card.id &&
+              !FinanceRules.isNeutral(t, metadata[t.id]))
           .fold<double>(0, (sum, t) => sum + t.amount);
       final values = [
         card.name,
