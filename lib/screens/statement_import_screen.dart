@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
+import '../database/db_helper.dart';
 import '../models/models.dart';
 import '../providers/app_provider.dart';
 import '../services/transaction_metadata_service.dart';
@@ -22,6 +23,7 @@ class _StatementImportScreenState extends State<StatementImportScreen> {
   String? _accountId;
   String? _fileName;
   bool _busy = false;
+  bool _applyToBalance = false;
   String? _message;
 
   Future<void> _pickFile() async {
@@ -63,13 +65,10 @@ class _StatementImportScreenState extends State<StatementImportScreen> {
     for (var i = 0; i < rawLines.length && i < 20; i++) {
       final line = rawLines[i];
       final sep = _detectSeparator(line);
-      final parts = _splitCsv(line, sep)
-          .map((e) => _normaliseHeader(e))
-          .toList();
-      final hasDate = parts.any(_isDateHeader);
-      final hasDescription = parts.any(_isDescriptionHeader);
-      final hasAmount = parts.any(_isAmountHeader);
-      if (hasDate && hasDescription && hasAmount) {
+      final parts = _splitCsv(line, sep).map(_normaliseHeader).toList();
+      if (parts.any(_isDateHeader) &&
+          parts.any(_isDescriptionHeader) &&
+          parts.any(_isAmountHeader)) {
         headerIndex = i;
         separator = sep;
         headers = parts;
@@ -78,7 +77,6 @@ class _StatementImportScreenState extends State<StatementImportScreen> {
     }
 
     if (headerIndex < 0) return [];
-
     final dateCol = headers.indexWhere(_isDateHeader);
     final descCol = headers.indexWhere(_isDescriptionHeader);
     final amountCol = headers.indexWhere(_isAmountHeader);
@@ -86,16 +84,18 @@ class _StatementImportScreenState extends State<StatementImportScreen> {
       (h) => ['tipo', 'type', 'natureza', 'transactiontype'].contains(h),
     );
 
-    final rows = <_ImportedRow>[];
+    final result = <_ImportedRow>[];
+    final seen = <String>{};
     for (var i = headerIndex + 1; i < rawLines.length; i++) {
       final cols = _splitCsv(rawLines[i], separator);
-      if (cols.length <= [dateCol, descCol, amountCol].reduce((a, b) => a > b ? a : b)) {
-        continue;
-      }
+      final maxRequired = [dateCol, descCol, amountCol]
+          .reduce((a, b) => a > b ? a : b);
+      if (cols.length <= maxRequired) continue;
+
       final date = _parseDate(cols[dateCol]);
       final amount = _parseAmount(cols[amountCol]);
       final description = cols[descCol].trim();
-      if (date == null || amount == null || description.isEmpty || amount == 0) {
+      if (date == null || amount == null || amount == 0 || description.isEmpty) {
         continue;
       }
 
@@ -105,7 +105,7 @@ class _StatementImportScreenState extends State<StatementImportScreen> {
       final looksIncome = explicitType.contains('receita') ||
           explicitType.contains('income') ||
           explicitType.contains('entrada') ||
-          amount > 0 && _looksLikeIncome(description);
+          (amount > 0 && _looksLikeIncome(description));
       final looksExpense = explicitType.contains('despesa') ||
           explicitType.contains('expense') ||
           explicitType.contains('saida') ||
@@ -113,8 +113,10 @@ class _StatementImportScreenState extends State<StatementImportScreen> {
       final type = looksIncome && !looksExpense ? 'income' : 'expense';
       final absoluteAmount = amount.abs();
       final rule = _ruleFor(description, type);
+      final key = _duplicateKey(date, description, absoluteAmount, type);
+      if (!seen.add(key)) continue;
 
-      rows.add(
+      result.add(
         _ImportedRow(
           date: date,
           description: description,
@@ -126,8 +128,16 @@ class _StatementImportScreenState extends State<StatementImportScreen> {
         ),
       );
     }
-    return rows;
+    return result;
   }
+
+  String _duplicateKey(
+    DateTime date,
+    String description,
+    double amount,
+    String type,
+  ) =>
+      '${DateFormat('yyyy-MM-dd').format(date)}|${description.trim().toLowerCase()}|${amount.toStringAsFixed(2)}|$type';
 
   String _detectSeparator(String line) {
     final semi = ';'.allMatches(line).length;
@@ -234,8 +244,25 @@ class _StatementImportScreenState extends State<StatementImportScreen> {
         d.contains('estorno');
   }
 
+  bool _looksNeutral(String d) {
+    return d.contains('reserva') ||
+        d.contains('transfer') ||
+        d.contains('entre contas') ||
+        d.contains('pagamento da fatura') ||
+        d.contains('pagamento de fatura') ||
+        (d.contains('fatura') && d.contains('pagamento'));
+  }
+
   _ImportRule _ruleFor(String description, String type) {
     final d = description.toLowerCase();
+    final neutral = _looksNeutral(d);
+    if (neutral) {
+      return _ImportRule(
+        type == 'income' ? 'freelance' : 'other_exp',
+        'Transferência/Reserva',
+        excludeFromSpending: true,
+      );
+    }
     if (type == 'income') {
       if (d.contains('salario') || d.contains('salário')) {
         return const _ImportRule('salary', 'Salário');
@@ -245,27 +272,34 @@ class _StatementImportScreenState extends State<StatementImportScreen> {
     if (d.contains('ifood') || d.contains('restaurante') || d.contains('lanche')) {
       return const _ImportRule('food_exp', 'Delivery/Lanche');
     }
-    if (d.contains('uber') || d.contains('99 ') || d.contains('posto') || d.contains('combust')) {
+    if (d.contains('uber') ||
+        d.contains('99 ') ||
+        d.contains('posto') ||
+        d.contains('combust')) {
       return const _ImportRule('transport', 'Transporte');
     }
-    if (d.contains('spotify') || d.contains('netflix') || d.contains('prime') || d.contains('youtube')) {
+    if (d.contains('spotify') ||
+        d.contains('netflix') ||
+        d.contains('prime') ||
+        d.contains('youtube')) {
       return const _ImportRule('bills', 'Assinaturas');
     }
-    if (d.contains('vivo') || d.contains('claro') || d.contains('tim ') || d.contains('internet')) {
+    if (d.contains('vivo') ||
+        d.contains('claro') ||
+        d.contains('tim ') ||
+        d.contains('internet')) {
       return const _ImportRule('bills', 'Telefone/Internet');
     }
-    if (d.contains('luz') || d.contains('energia') || d.contains('agua') || d.contains('água')) {
+    if (d.contains('luz') ||
+        d.contains('energia') ||
+        d.contains('agua') ||
+        d.contains('água')) {
       return const _ImportRule('bills', 'Contas da casa');
     }
     if (d.contains('farm') || d.contains('drogaria') || d.contains('consulta')) {
       return const _ImportRule('health', 'Saúde');
     }
-    final neutral = d.contains('reserva') ||
-        d.contains('transfer') ||
-        d.contains('entre contas') ||
-        d.contains('fatura') && d.contains('pagamento');
-    return _ImportRule('other_exp', neutral ? 'Transferência/Reserva' : 'Outros',
-        excludeFromSpending: neutral);
+    return const _ImportRule('other_exp', 'Outros');
   }
 
   Future<void> _importRows() async {
@@ -276,13 +310,25 @@ class _StatementImportScreenState extends State<StatementImportScreen> {
       _message = null;
     });
 
+    final existing = app.transactions
+        .map((t) => _duplicateKey(t.date, t.description, t.amount, t.type))
+        .toSet();
     var imported = 0;
+    var skipped = 0;
+
     for (final row in _rows.where((e) => e.selected)) {
-      final fallbackCategory = app.categories
-          .where((c) => c.type == row.type)
-          .firstOrNull;
+      final key = _duplicateKey(row.date, row.description, row.amount, row.type);
+      if (!existing.add(key)) {
+        skipped++;
+        continue;
+      }
+
+      final fallbackCategory =
+          app.categories.where((c) => c.type == row.type).firstOrNull;
       var category = app.categoryById(row.categoryId);
-      if (category == null || category.type != row.type) category = fallbackCategory;
+      if (category == null || category.type != row.type) {
+        category = fallbackCategory;
+      }
       if (category == null) continue;
 
       final tx = AppTransaction(
@@ -296,24 +342,34 @@ class _StatementImportScreenState extends State<StatementImportScreen> {
         currency: '',
         note: 'Importado de $_fileName',
       );
-      await app.addTransaction(tx);
-      if (row.type == 'expense') {
-        await TransactionMetadataService.instance.save(
-          TransactionMetadata(
-            transactionId: tx.id,
-            subcategory: row.subcategory,
-            source: 'import',
-            excludeFromSpending: row.excludeFromSpending,
-          ),
-        );
+
+      if (_applyToBalance) {
+        await app.addTransaction(tx);
+      } else {
+        await DBHelper.insertTransaction(tx);
       }
+
+      await TransactionMetadataService.instance.save(
+        TransactionMetadata(
+          transactionId: tx.id,
+          subcategory: row.subcategory,
+          source: 'import',
+          excludeFromSpending: row.excludeFromSpending,
+        ),
+      );
       imported++;
+    }
+
+    if (!_applyToBalance && imported > 0) {
+      await app.load();
     }
 
     if (!mounted) return;
     setState(() {
       _busy = false;
-      _message = '$imported lançamentos importados com sucesso.';
+      _message = skipped > 0
+          ? '$imported importados • $skipped duplicados ignorados.'
+          : '$imported lançamentos importados com sucesso.';
       _rows = [];
     });
   }
@@ -341,7 +397,7 @@ class _StatementImportScreenState extends State<StatementImportScreen> {
           ),
           const SizedBox(height: 6),
           const Text(
-            'O importador tenta reconhecer data, descrição e valor, aplica categorias automáticas e marca transferências/reserva para não inflar seus gastos.',
+            'Reconhece data, descrição e valor, tenta categorizar automaticamente e separa transferências/reserva dos gastos reais.',
           ),
           const SizedBox(height: 18),
           DropdownButtonFormField<String>(
@@ -355,7 +411,17 @@ class _StatementImportScreenState extends State<StatementImportScreen> {
                 .toList(),
             onChanged: (v) => setState(() => _accountId = v),
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 10),
+          SwitchListTile.adaptive(
+            contentPadding: EdgeInsets.zero,
+            value: _applyToBalance,
+            onChanged: (value) => setState(() => _applyToBalance = value),
+            title: const Text('Ajustar saldo da conta com a importação'),
+            subtitle: const Text(
+              'Desligado por padrão. Para extratos históricos, os lançamentos entram sem alterar o saldo atual.',
+            ),
+          ),
+          const SizedBox(height: 8),
           OutlinedButton.icon(
             onPressed: _busy ? null : _pickFile,
             icon: const Icon(Icons.upload_file_rounded),
@@ -367,10 +433,12 @@ class _StatementImportScreenState extends State<StatementImportScreen> {
           ],
           if (_rows.isNotEmpty) ...[
             const SizedBox(height: 18),
-            Text('Prévia (${_rows.where((e) => e.selected).length} selecionados)',
-                style: const TextStyle(fontWeight: FontWeight.w800)),
+            Text(
+              'Prévia (${_rows.where((e) => e.selected).length} selecionados)',
+              style: const TextStyle(fontWeight: FontWeight.w800),
+            ),
             const SizedBox(height: 8),
-            ..._rows.take(80).map(
+            ..._rows.take(100).map(
                   (row) => CheckboxListTile(
                     value: row.selected,
                     onChanged: (v) => setState(() => row.selected = v ?? true),
@@ -378,7 +446,7 @@ class _StatementImportScreenState extends State<StatementImportScreen> {
                     title: Text(row.description,
                         maxLines: 1, overflow: TextOverflow.ellipsis),
                     subtitle: Text(
-                      '${DateFormat('dd/MM/yyyy').format(row.date)} • ${row.subcategory}${row.excludeFromSpending ? ' • não conta como gasto' : ''}',
+                      '${DateFormat('dd/MM/yyyy').format(row.date)} • ${row.subcategory}${row.excludeFromSpending ? ' • neutro' : ''}',
                     ),
                     secondary: Text(
                       'R\$ ${row.amount.toStringAsFixed(2).replaceAll('.', ',')}',
