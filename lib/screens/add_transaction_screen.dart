@@ -53,7 +53,7 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
   void initState() {
     super.initState();
     final app = context.read<AppProvider>();
-    final accounts = app.nonBankAccounts.where((a) => !a.isGold).toList();
+    final accounts = app.accounts.where((a) => !a.isGold).toList();
 
     if (accounts.isNotEmpty) {
       _accountId = accounts.first.id;
@@ -312,7 +312,7 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
     final theme = Theme.of(context);
     final cs = theme.colorScheme;
     final cats = app.categories.where((c) => c.type == _type).toList();
-    final accounts = app.nonBankAccounts.where((a) => !a.isGold).toList();
+    final accounts = app.accounts.where((a) => !a.isGold).toList();
 
     final selectedAccount = app.accountById(_accountId ?? '');
     final accountCurrency = selectedAccount?.currency ?? app.settings.currency;
