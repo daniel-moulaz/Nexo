@@ -17,20 +17,12 @@ import 'services/quick_add_service.dart';
 import 'services/loan_reminder_service.dart';
 import 'services/credit_reminder_service.dart';
 
-/// Root navigator key so the "Quick Add Transaction" home screen widget can
-/// push [AddTransactionScreen] on top of whatever's currently showing,
-/// without MaterialApp itself needing to know about the widget at all.
-/// See HOMESCREEN_WIDGET.md §4.2 — this is the "push on top of MainShell"
-/// approach, preferred over swapping `home:` directly because it keeps
-/// MainShell as the true root for every cold-start path (consistent with
-/// CLAUDE.md §8) and back navigation "just works" via the normal
-/// ExpensyRoute pop transition.
 final GlobalKey<NavigatorState> rootNavigatorKey = GlobalKey<NavigatorState>();
 
-/// Awaiting [provider.load()] before [runApp] keeps the native LaunchTheme
-/// window background (launch_background.xml) visible for the entire startup
-/// duration.  Flutter only replaces it with the first Flutter frame, which is
-/// already the real app — no intermediate loading screen, no double icon flash.
+// TEMPORARY DIAGNOSTIC: keep true only long enough to confirm that Flutter can
+// render a basic MaterialApp after all startup services and provider.load().
+const bool _diagnosticRoot = true;
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await NotificationService().initialize();
@@ -41,7 +33,12 @@ void main() async {
   await CreditReminderService().initialize();
 
   final provider = AppProvider();
-  await provider.load(); // DB reads finish before Flutter draws anything
+  await provider.load();
+
+  if (_diagnosticRoot) {
+    runApp(const _DiagnosticApp());
+    return;
+  }
 
   runApp(
     ChangeNotifierProvider.value(
@@ -49,6 +46,47 @@ void main() async {
       child: const ExpensyApp(),
     ),
   );
+}
+
+class _DiagnosticApp extends StatelessWidget {
+  const _DiagnosticApp();
+
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      debugShowCheckedModeBanner: false,
+      theme: ThemeData(
+        colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF6750A4)),
+        useMaterial3: true,
+      ),
+      home: const Scaffold(
+        body: SafeArea(
+          child: Center(
+            child: Padding(
+              padding: EdgeInsets.all(24),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.check_circle_rounded, size: 72),
+                  SizedBox(height: 20),
+                  Text(
+                    'APP OK',
+                    style: TextStyle(fontSize: 32, fontWeight: FontWeight.w900),
+                  ),
+                  SizedBox(height: 10),
+                  Text(
+                    'Flutter está renderizando normalmente.\nTeste temporário de diagnóstico.',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(fontSize: 16),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
 }
 
 class ExpensyApp extends StatefulWidget {
@@ -65,9 +103,6 @@ class _ExpensyAppState extends State<ExpensyApp> {
   void initState() {
     super.initState();
 
-    // Cold start: were we launched directly from the widget tap? Checked
-    // once here (rather than in main(), before runApp) so it can safely
-    // push onto rootNavigatorKey after the very first frame is up.
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       final initialRoute = await QuickAddService.instance.getInitialRoute();
       if (initialRoute == QuickAddService.routeQuickAdd) {
@@ -75,7 +110,6 @@ class _ExpensyAppState extends State<ExpensyApp> {
       }
     });
 
-    // Warm start: app already alive in the background, widget tapped again.
     _quickAddSub = QuickAddService.instance.routeStream.listen((route) {
       if (route == QuickAddService.routeQuickAdd) {
         _pushQuickAdd();
@@ -84,9 +118,6 @@ class _ExpensyAppState extends State<ExpensyApp> {
   }
 
   void _pushQuickAdd() {
-    // onboarding screen has no bottom-nav shell to return to underneath it —
-    // skip the quick-add fast-path in that case and let onboarding proceed
-    // normally.
     final app = context.read<AppProvider>();
     if (!app.settings.onboarded) return;
 
@@ -103,8 +134,6 @@ class _ExpensyAppState extends State<ExpensyApp> {
 
   @override
   Widget build(BuildContext context) {
-    // Watch only the specific settings properties needed by MaterialApp.
-    // This prevents the entire app from rebuilding when transactions, accounts, etc. change.
     final settingsRecord = context.select<AppProvider,
         (bool, String, String, String, String, bool, bool)>((app) {
       final s = app.settings;
@@ -152,7 +181,7 @@ class _ExpensyAppState extends State<ExpensyApp> {
             darkTheme: buildTheme(
               seed: themeSeed,
               dark: true,
-              amoled: amoledSurfaces, // applies regardless of color source
+              amoled: amoledSurfaces,
               appFont: appFont,
               dynamicScheme: usesDynamic ? darkDynamic : null,
             ),
