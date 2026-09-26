@@ -9,7 +9,10 @@ import '../services/transaction_metadata_service.dart';
 import '../theme/app_theme.dart';
 import 'card_invoice_screen.dart';
 import 'finance_export_screen.dart';
+import 'financial_planning_screen.dart';
+import 'incomes_screen.dart';
 import 'statement_import_screen.dart';
+import 'transaction_search_screen.dart';
 
 class FinanceHomeScreen extends StatefulWidget {
   const FinanceHomeScreen({super.key});
@@ -94,6 +97,31 @@ class _Dashboard extends StatelessWidget {
     return '${months[date.month - 1]} de ${date.year}';
   }
 
+  String _money(double value, [String? currency]) {
+    if (app.settings.hideBalance) return '••••••';
+    return formatAmount(value, currency ?? app.settings.currency);
+  }
+
+  Future<void> _openMenuDestination(BuildContext context, String value) async {
+    switch (value) {
+      case 'planning':
+        await Navigator.of(context).push(
+          MaterialPageRoute(builder: (_) => const FinancialPlanningScreen()),
+        );
+        break;
+      case 'import':
+        await Navigator.of(context).push(
+          MaterialPageRoute(builder: (_) => const StatementImportScreen()),
+        );
+        break;
+      case 'export':
+        await Navigator.of(context).push(
+          MaterialPageRoute(builder: (_) => const FinanceExportScreen()),
+        );
+        break;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -130,7 +158,7 @@ class _Dashboard extends StatelessWidget {
     final remainingDays = (daysInMonth - now.day + 1).clamp(1, 31);
     final safeDaily = available > 0 ? available / remainingDays : 0.0;
     final safeWeekly = safeDaily * 7;
-    final normalCost = (paid - extraordinary).clamp(0.0, double.infinity);
+    final normalCost = (paid - extraordinary).clamp(0.0, double.infinity).toDouble();
 
     final pendingTx = monthTx.where((t) {
       if (t.type != 'expense') return false;
@@ -145,6 +173,31 @@ class _Dashboard extends StatelessWidget {
       });
 
     final cards = app.accounts.where((a) => a.type == 'credit').toList();
+    final subscriptions = app.recurring
+        .where((r) =>
+            r.paymentType == 'expense' && r.recurringType == 'subscription')
+        .toList();
+    final monthlySubscriptions = subscriptions.fold<double>(0, (sum, r) {
+      final amount = app.convertToMain(
+        r.amount,
+        app.accountById(r.accountId)?.currency ?? app.settings.currency,
+      );
+      switch (r.freqUnit) {
+        case 'days':
+          return sum + amount * (30 / r.freqVal);
+        case 'weeks':
+          return sum + amount * (4.345 / r.freqVal);
+        case 'years':
+          return sum + amount / (12 * r.freqVal);
+        default:
+          return sum + amount / r.freqVal;
+      }
+    });
+
+    final riskyBudgets = app.budgets.where((b) {
+      if (b.amount <= 0) return false;
+      return app.budgetSpent(b) / b.amount >= .75;
+    }).length;
 
     return Scaffold(
       appBar: AppBar(
@@ -168,23 +221,58 @@ class _Dashboard extends StatelessWidget {
         ),
         actions: [
           IconButton(
-            tooltip: 'Importar extrato',
-            icon: const Icon(Icons.upload_file_outlined),
-            onPressed: () => Navigator.of(context).push(
-              MaterialPageRoute(builder: (_) => const StatementImportScreen()),
+            tooltip: app.settings.hideBalance
+                ? 'Mostrar valores'
+                : 'Ocultar valores',
+            icon: Icon(app.settings.hideBalance
+                ? Icons.visibility_off_outlined
+                : Icons.visibility_outlined),
+            onPressed: () => app.updateSetting(
+              'hideBalance',
+              !app.settings.hideBalance,
             ),
           ),
           IconButton(
-            tooltip: 'Exportar Excel',
-            icon: const Icon(Icons.table_view_outlined),
+            tooltip: 'Buscar lançamentos',
+            icon: const Icon(Icons.search_rounded),
             onPressed: () => Navigator.of(context).push(
-              MaterialPageRoute(builder: (_) => const FinanceExportScreen()),
+              MaterialPageRoute(builder: (_) => const TransactionSearchScreen()),
             ),
+          ),
+          PopupMenuButton<String>(
+            tooltip: 'Mais ações',
+            onSelected: (value) => _openMenuDestination(context, value),
+            itemBuilder: (_) => const [
+              PopupMenuItem(
+                value: 'planning',
+                child: ListTile(
+                  leading: Icon(Icons.insights_outlined),
+                  title: Text('Planejamento'),
+                  contentPadding: EdgeInsets.zero,
+                ),
+              ),
+              PopupMenuItem(
+                value: 'import',
+                child: ListTile(
+                  leading: Icon(Icons.upload_file_outlined),
+                  title: Text('Importar extrato'),
+                  contentPadding: EdgeInsets.zero,
+                ),
+              ),
+              PopupMenuItem(
+                value: 'export',
+                child: ListTile(
+                  leading: Icon(Icons.table_view_outlined),
+                  title: Text('Exportar relatório'),
+                  contentPadding: EdgeInsets.zero,
+                ),
+              ),
+            ],
           ),
         ],
       ),
       body: ListView(
-        padding: const EdgeInsets.fromLTRB(16, 8, 16, 130),
+        padding: const EdgeInsets.fromLTRB(16, 8, 16, 140),
         children: [
           Container(
             padding: const EdgeInsets.all(20),
@@ -195,13 +283,15 @@ class _Dashboard extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Disponível após compromissos',
-                    style: theme.textTheme.labelLarge?.copyWith(
-                      color: cs.onSurfaceVariant,
-                    )),
+                Text(
+                  'Disponível após compromissos',
+                  style: theme.textTheme.labelLarge?.copyWith(
+                    color: cs.onSurfaceVariant,
+                  ),
+                ),
                 const SizedBox(height: 4),
                 Text(
-                  formatAmount(available, app.settings.currency),
+                  _money(available),
                   style: theme.textTheme.headlineLarge?.copyWith(
                     fontWeight: FontWeight.w900,
                     letterSpacing: -1,
@@ -214,7 +304,7 @@ class _Dashboard extends StatelessWidget {
                     Expanded(
                       child: _MiniStat(
                         label: 'Receitas',
-                        value: formatAmount(income, app.settings.currency),
+                        value: _money(income),
                         icon: Icons.arrow_downward_rounded,
                       ),
                     ),
@@ -222,15 +312,17 @@ class _Dashboard extends StatelessWidget {
                     Expanded(
                       child: _MiniStat(
                         label: 'Pago',
-                        value: formatAmount(paid, app.settings.currency),
+                        value: _money(paid),
                         icon: Icons.check_circle_outline_rounded,
                       ),
                     ),
                     const SizedBox(width: 8),
                     Expanded(
                       child: _MiniStat(
-                        label: 'Pendente',
-                        value: formatAmount(pending, app.settings.currency),
+                        label: overdueCount > 0
+                            ? 'Pendente ($overdueCount atraso${overdueCount == 1 ? '' : 's'})'
+                            : 'Pendente',
+                        value: _money(pending),
                         icon: Icons.schedule_rounded,
                         danger: overdueCount > 0,
                       ),
@@ -246,9 +338,12 @@ class _Dashboard extends StatelessWidget {
               Expanded(
                 child: _InsightCard(
                   title: 'Ritmo seguro',
-                  main: '${formatAmount(safeDaily, app.settings.currency)}/dia',
-                  subtitle:
-                      '${formatAmount(safeWeekly, app.settings.currency)}/semana',
+                  main: app.settings.hideBalance
+                      ? '••••••'
+                      : '${formatAmount(safeDaily, app.settings.currency)}/dia',
+                  subtitle: app.settings.hideBalance
+                      ? '••••••'
+                      : '${formatAmount(safeWeekly, app.settings.currency)}/semana',
                   icon: Icons.speed_rounded,
                 ),
               ),
@@ -256,19 +351,48 @@ class _Dashboard extends StatelessWidget {
               Expanded(
                 child: _InsightCard(
                   title: 'Custo normal',
-                  main: formatAmount(normalCost, app.settings.currency),
+                  main: _money(normalCost),
                   subtitle: extraordinary > 0
-                      ? 'Extra: ${formatAmount(extraordinary, app.settings.currency)}'
+                      ? 'Extra: ${_money(extraordinary)}'
                       : 'Sem extras no mês',
                   icon: Icons.home_work_outlined,
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 18),
+          if (subscriptions.isNotEmpty || riskyBudgets > 0) ...[
+            const SizedBox(height: 10),
+            Row(
+              children: [
+                if (subscriptions.isNotEmpty)
+                  Expanded(
+                    child: _InsightCard(
+                      title: 'Assinaturas',
+                      main: '${subscriptions.length}',
+                      subtitle: app.settings.hideBalance
+                          ? 'custo mensal oculto'
+                          : '${formatAmount(monthlySubscriptions, app.settings.currency)}/mês',
+                      icon: Icons.autorenew_rounded,
+                    ),
+                  ),
+                if (subscriptions.isNotEmpty && riskyBudgets > 0)
+                  const SizedBox(width: 10),
+                if (riskyBudgets > 0)
+                  Expanded(
+                    child: _InsightCard(
+                      title: 'Orçamentos',
+                      main: '$riskyBudgets em atenção',
+                      subtitle: 'acima de 75% do limite',
+                      icon: Icons.warning_amber_rounded,
+                    ),
+                  ),
+              ],
+            ),
+          ],
+          const SizedBox(height: 20),
           const _SectionHeader(
             title: 'Atalhos',
-            trailing: 'Organize tudo por aqui',
+            trailing: 'Tudo que você usa mais',
           ),
           const SizedBox(height: 8),
           Wrap(
@@ -279,6 +403,22 @@ class _Dashboard extends StatelessWidget {
                 label: 'Despesas',
                 icon: Icons.receipt_long_rounded,
                 onTap: () => app.tabIndexNotifier.value = 1,
+              ),
+              _QuickAction(
+                label: 'Receitas',
+                icon: Icons.south_west_rounded,
+                onTap: () => Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => const IncomesScreen()),
+                ),
+              ),
+              _QuickAction(
+                label: 'Planejamento',
+                icon: Icons.insights_rounded,
+                onTap: () => Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => const FinancialPlanningScreen(),
+                  ),
+                ),
               ),
               _QuickAction(
                 label: 'Recorrentes',
@@ -328,7 +468,7 @@ class _Dashboard extends StatelessWidget {
                       ? 'Sem vencimento'
                       : '${meta.isOverdue ? 'Atrasada' : 'Vence'} em ${DateFormat('dd/MM').format(due)}'),
                   trailing: Text(
-                    formatAmount(_mainAmount(tx), app.settings.currency),
+                    _money(_mainAmount(tx)),
                     style: TextStyle(
                       fontWeight: FontWeight.w900,
                       color: meta.isOverdue ? cs.error : null,
@@ -366,14 +506,11 @@ class _Dashboard extends StatelessWidget {
               title: const Text('Saldo total'),
               subtitle: Text(
                 app.totalSaved > 0
-                    ? 'Reservas/metas: ${formatAmount(app.totalSaved, app.settings.currency)}'
+                    ? 'Reservas/metas: ${_money(app.totalSaved)}'
                     : 'Acompanhe contas, reservas e bens',
               ),
               trailing: Text(
-                formatAmount(
-                  app.totalBalanceAll + app.totalAssetsValue,
-                  app.settings.currency,
-                ),
+                _money(app.totalBalanceAll + app.totalAssetsValue),
                 style: const TextStyle(fontWeight: FontWeight.w900),
               ),
             ),
@@ -398,6 +535,11 @@ class _CardInvoiceTile extends StatelessWidget {
   DateTime _safeDate(int year, int month, int day) {
     final max = DateTime(year, month + 1, 0).day;
     return DateTime(year, month, day.clamp(1, max));
+  }
+
+  String _display(double value, String currency) {
+    if (app.settings.hideBalance) return '••••••';
+    return formatAmount(value, currency);
   }
 
   @override
@@ -428,12 +570,11 @@ class _CardInvoiceTile extends StatelessWidget {
         ? null
         : (limit - total).clamp(0.0, double.infinity).toDouble();
 
-    final dueDay = card.dueDay;
     DateTime? due;
-    if (dueDay != null) {
+    if (card.dueDay != null) {
       final dueMonth = cycleEnd.month == 12 ? 1 : cycleEnd.month + 1;
       final dueYear = cycleEnd.month == 12 ? cycleEnd.year + 1 : cycleEnd.year;
-      due = _safeDate(dueYear, dueMonth, dueDay);
+      due = _safeDate(dueYear, dueMonth, card.dueDay!);
     }
 
     return Card(
@@ -443,16 +584,17 @@ class _CardInvoiceTile extends StatelessWidget {
           backgroundColor: Color(card.colorValue).withValues(alpha: 0.16),
           child: Icon(Icons.credit_card_rounded, color: Color(card.colorValue)),
         ),
-        title: Text(card.name,
-            style: const TextStyle(fontWeight: FontWeight.w800)),
+        title: Text(
+          card.name == 'Credit Card' ? 'Cartão de crédito' : card.name,
+          style: const TextStyle(fontWeight: FontWeight.w800),
+        ),
         subtitle: Text([
           'Fecha ${DateFormat('dd/MM').format(cycleEnd)}',
           if (due != null) 'vence ${DateFormat('dd/MM').format(due)}',
-          if (available != null)
-            'limite livre ${formatAmount(available, card.currency)}',
+          if (available != null) 'limite livre ${_display(available, card.currency)}',
         ].join(' • ')),
         trailing: Text(
-          formatAmount(total, card.currency),
+          _display(total, card.currency),
           style: const TextStyle(fontWeight: FontWeight.w900),
         ),
         onTap: () => Navigator.of(context).push(
@@ -492,11 +634,18 @@ class _MiniStat extends StatelessWidget {
         children: [
           Icon(icon, size: 18, color: danger ? cs.error : cs.primary),
           const SizedBox(height: 6),
-          Text(value,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(fontWeight: FontWeight.w900)),
-          Text(label, style: Theme.of(context).textTheme.labelSmall),
+          Text(
+            value,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(fontWeight: FontWeight.w900),
+          ),
+          Text(
+            label,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: Theme.of(context).textTheme.labelSmall,
+          ),
         ],
       ),
     );
@@ -532,16 +681,19 @@ class _InsightCard extends StatelessWidget {
           const SizedBox(height: 10),
           Text(title, style: Theme.of(context).textTheme.labelMedium),
           const SizedBox(height: 2),
-          Text(main,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style:
-                  const TextStyle(fontWeight: FontWeight.w900, fontSize: 17)),
+          Text(
+            main,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 17),
+          ),
           const SizedBox(height: 2),
-          Text(subtitle,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: Theme.of(context).textTheme.bodySmall),
+          Text(
+            subtitle,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: Theme.of(context).textTheme.bodySmall,
+          ),
         ],
       ),
     );
@@ -559,11 +711,13 @@ class _SectionHeader extends StatelessWidget {
     return Row(
       children: [
         Expanded(
-          child: Text(title,
-              style: Theme.of(context)
-                  .textTheme
-                  .titleMedium
-                  ?.copyWith(fontWeight: FontWeight.w900)),
+          child: Text(
+            title,
+            style: Theme.of(context)
+                .textTheme
+                .titleMedium
+                ?.copyWith(fontWeight: FontWeight.w900),
+          ),
         ),
         Text(trailing, style: Theme.of(context).textTheme.bodySmall),
       ],
