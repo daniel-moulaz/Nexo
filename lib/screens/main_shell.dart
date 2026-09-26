@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/app_provider.dart';
 import '../l10n/app_localizations.dart';
-import 'home_screen.dart';
+import 'finance_home_screen.dart';
 import 'expenses_screen.dart';
 import 'recurring_screen.dart';
 import 'accounts_screen.dart';
@@ -21,7 +21,7 @@ class _MainShellState extends State<MainShell> {
   int _index = 0;
 
   static const _screens = [
-    HomeScreen(),
+    FinanceHomeScreen(),
     ExpensesScreen(),
     RecurringScreen(),
     AccountsScreen(),
@@ -97,10 +97,10 @@ class _MainShellState extends State<MainShell> {
                     });
                   },
                   destinations: [
-                    NavigationDestination(
-                        icon: const Icon(Icons.home_outlined),
-                        selectedIcon: const Icon(Icons.home),
-                        label: l10n.main_home),
+                    const NavigationDestination(
+                        icon: Icon(Icons.home_outlined),
+                        selectedIcon: Icon(Icons.home_rounded),
+                        label: 'Início'),
                     const NavigationDestination(
                         icon: Icon(Icons.receipt_long_outlined),
                         selectedIcon: Icon(Icons.receipt_long),
@@ -109,14 +109,14 @@ class _MainShellState extends State<MainShell> {
                         icon: const Icon(Icons.repeat_rounded),
                         selectedIcon: const Icon(Icons.repeat_rounded),
                         label: l10n.main_recurring),
-                    NavigationDestination(
-                        icon: const Icon(Icons.account_balance_wallet_outlined),
-                        selectedIcon: const Icon(Icons.account_balance_wallet),
-                        label: l10n.main_accounts),
-                    NavigationDestination(
-                        icon: const Icon(Icons.pie_chart_outline_rounded),
-                        selectedIcon: const Icon(Icons.pie_chart_rounded),
-                        label: l10n.main_budgets),
+                    const NavigationDestination(
+                        icon: Icon(Icons.account_balance_wallet_outlined),
+                        selectedIcon: Icon(Icons.account_balance_wallet),
+                        label: 'Contas'),
+                    const NavigationDestination(
+                        icon: Icon(Icons.pie_chart_outline_rounded),
+                        selectedIcon: Icon(Icons.pie_chart_rounded),
+                        label: 'Orçamento'),
                     NavigationDestination(
                         icon: const Icon(Icons.more_horiz_outlined),
                         selectedIcon: const Icon(Icons.more_horiz),
