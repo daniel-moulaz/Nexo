@@ -57,6 +57,11 @@ class _PlanningBody extends StatelessWidget {
   double _mainAmount(AppTransaction tx) =>
       app.convertToMain(tx.amount, _currencyFor(tx));
 
+  String _money(double value) {
+    if (app.settings.hideBalance) return '••••••';
+    return formatAmount(value, app.settings.currency);
+  }
+
   bool _inMonth(DateTime date, DateTime month) =>
       date.year == month.year && date.month == month.month;
 
@@ -64,8 +69,7 @@ class _PlanningBody extends StatelessWidget {
     double total = 0;
     for (final tx in app.transactions) {
       if (tx.type != 'expense' || !_inMonth(tx.date, month)) continue;
-      final meta = metadata[tx.id];
-      if (FinanceRules.isNeutral(tx, meta)) continue;
+      if (FinanceRules.isNeutral(tx, metadata[tx.id])) continue;
       total += _mainAmount(tx);
     }
     return total;
@@ -75,8 +79,7 @@ class _PlanningBody extends StatelessWidget {
     double total = 0;
     for (final tx in app.transactions) {
       if (tx.type != 'income' || !_inMonth(tx.date, month)) continue;
-      final meta = metadata[tx.id];
-      if (FinanceRules.isNeutral(tx, meta)) continue;
+      if (FinanceRules.isNeutral(tx, metadata[tx.id])) continue;
       total += _mainAmount(tx);
     }
     return total;
@@ -102,6 +105,7 @@ class _PlanningBody extends StatelessWidget {
 
   List<_ForecastItem> _forecast(DateTime now, DateTime horizon) {
     final result = <_ForecastItem>[];
+
     for (final r in app.recurring) {
       var next = r.nextDate;
       var guard = 0;
@@ -119,13 +123,39 @@ class _PlanningBody extends StatelessWidget {
               app.accountById(r.accountId)?.currency ?? app.settings.currency,
             ),
             type: r.paymentType,
-            recurringType: r.recurringType,
+            source: r.recurringType == 'subscription'
+                ? 'Assinatura'
+                : 'Recorrente',
           ));
         }
         next = _advance(next, r);
         guard++;
       }
     }
+
+    for (final tx in app.transactions) {
+      if (tx.type != 'expense') continue;
+      final meta = metadata[tx.id];
+      if (meta == null || meta.status != 'pending' || meta.dueDate == null) {
+        continue;
+      }
+      if (FinanceRules.isNeutral(tx, meta)) continue;
+      final due = meta.dueDate!;
+      if (due.isBefore(DateTime(now.year, now.month, now.day)) ||
+          due.isAfter(horizon)) {
+        continue;
+      }
+      result.add(_ForecastItem(
+        date: due,
+        name: tx.description.trim().isEmpty
+            ? (app.categoryById(tx.categoryId)?.name ?? 'Despesa pendente')
+            : tx.description,
+        amount: _mainAmount(tx),
+        type: 'expense',
+        source: 'Pendente',
+      ));
+    }
+
     result.sort((a, b) => a.date.compareTo(b.date));
     return result;
   }
@@ -146,6 +176,67 @@ class _PlanningBody extends StatelessWidget {
       default:
         return amount / r.freqVal;
     }
+  }
+
+  String _normaliseMerchant(String value) {
+    return value
+        .toLowerCase()
+        .replaceAll(RegExp(r'\d+'), '')
+        .replaceAll(RegExp(r'[^a-záàâãéêíóôõúç ]'), ' ')
+        .replaceAll(RegExp(r'\s+'), ' ')
+        .trim();
+  }
+
+  List<_RecurringSuggestion> _detectRecurringSuggestions(DateTime now) {
+    final existingNames = app.recurring
+        .map((r) => _normaliseMerchant(r.name))
+        .where((e) => e.isNotEmpty)
+        .toSet();
+    final grouped = <String, List<AppTransaction>>{};
+    final since = now.subtract(const Duration(days: 150));
+
+    for (final tx in app.transactions) {
+      if (tx.type != 'expense' || tx.date.isBefore(since)) continue;
+      if (FinanceRules.isNeutral(tx, metadata[tx.id])) continue;
+      final key = _normaliseMerchant(tx.description);
+      if (key.length < 3 || existingNames.contains(key)) continue;
+      (grouped[key] ??= []).add(tx);
+    }
+
+    final suggestions = <_RecurringSuggestion>[];
+    for (final entry in grouped.entries) {
+      final list = entry.value..sort((a, b) => a.date.compareTo(b.date));
+      if (list.length < 2) continue;
+
+      final recent = list.length > 4 ? list.sublist(list.length - 4) : list;
+      final intervals = <int>[];
+      for (var i = 1; i < recent.length; i++) {
+        intervals.add(recent[i].date.difference(recent[i - 1].date).inDays.abs());
+      }
+      if (intervals.isEmpty) continue;
+      final monthlyLike = intervals.every((days) => days >= 20 && days <= 40);
+      if (!monthlyLike) continue;
+
+      final avgAmount = recent
+              .map(_mainAmount)
+              .reduce((a, b) => a + b) /
+          recent.length;
+      final maxDiff = recent
+          .map((tx) => (_mainAmount(tx) - avgAmount).abs())
+          .fold<double>(0, (a, b) => a > b ? a : b);
+      if (avgAmount > 0 && maxDiff / avgAmount > .20) continue;
+
+      final last = recent.last;
+      suggestions.add(_RecurringSuggestion(
+        name: last.description.trim().isEmpty ? entry.key : last.description,
+        amount: avgAmount,
+        occurrences: recent.length,
+        lastDate: last.date,
+      ));
+    }
+
+    suggestions.sort((a, b) => b.amount.compareTo(a.amount));
+    return suggestions.take(5).toList();
   }
 
   @override
@@ -172,12 +263,15 @@ class _PlanningBody extends StatelessWidget {
     final netForecast = expectedIncome - expectedExpense;
 
     final subscriptions = app.recurring
-        .where((r) => r.paymentType == 'expense' && r.recurringType == 'subscription')
+        .where((r) =>
+            r.paymentType == 'expense' && r.recurringType == 'subscription')
         .toList();
     final subscriptionsMonthly = subscriptions.fold<double>(
       0,
       (sum, r) => sum + _monthlyEquivalent(r),
     );
+
+    final suggestions = _detectRecurringSuggestions(now);
 
     final categoryTotals = <String, double>{};
     for (final tx in app.transactions) {
@@ -215,7 +309,8 @@ class _PlanningBody extends StatelessWidget {
       3,
       (i) => DateTime(now.year, now.month - i - 1),
     );
-    final historical = recentMonths.map(_expenseForMonth).where((v) => v > 0).toList();
+    final historical =
+        recentMonths.map(_expenseForMonth).where((v) => v > 0).toList();
     final averageExpense = historical.isEmpty
         ? currentExpense
         : historical.reduce((a, b) => a + b) / historical.length;
@@ -226,7 +321,8 @@ class _PlanningBody extends StatelessWidget {
               (sum, a) => sum + app.convertToMain(a.balance, a.currency),
             ) +
         app.totalSaved;
-    final reserveMonths = averageExpense > 0 ? reserveValue / averageExpense : 0.0;
+    final reserveMonths =
+        averageExpense > 0 ? reserveValue / averageExpense : 0.0;
 
     return Scaffold(
       appBar: AppBar(
@@ -264,7 +360,7 @@ class _PlanningBody extends StatelessWidget {
                 ),
                 const SizedBox(height: 14),
                 Text(
-                  formatAmount(netForecast, app.settings.currency),
+                  _money(netForecast),
                   style: theme.textTheme.headlineLarge?.copyWith(
                     fontWeight: FontWeight.w900,
                     color: netForecast < 0 ? cs.error : null,
@@ -276,7 +372,7 @@ class _PlanningBody extends StatelessWidget {
                     Expanded(
                       child: _Metric(
                         label: 'Entradas previstas',
-                        value: formatAmount(expectedIncome, app.settings.currency),
+                        value: _money(expectedIncome),
                         icon: Icons.south_west_rounded,
                       ),
                     ),
@@ -284,7 +380,7 @@ class _PlanningBody extends StatelessWidget {
                     Expanded(
                       child: _Metric(
                         label: 'Saídas previstas',
-                        value: formatAmount(expectedExpense, app.settings.currency),
+                        value: _money(expectedExpense),
                         icon: Icons.north_east_rounded,
                         danger: true,
                       ),
@@ -303,26 +399,26 @@ class _PlanningBody extends StatelessWidget {
                 : Icons.trending_up_rounded,
             title: 'Comparação com o mês passado',
             value: monthDelta == null
-                ? 'Ainda sem base suficiente'
+                ? 'Sem base ainda'
                 : '${monthDelta >= 0 ? '+' : ''}${monthDelta.toStringAsFixed(1).replaceAll('.', ',')}%',
-            subtitle: '${formatAmount(currentExpense, app.settings.currency)} gastos neste mês',
+            subtitle: '${_money(currentExpense)} gastos neste mês',
             danger: monthDelta != null && monthDelta > 10,
           ),
           _InsightTile(
             icon: Icons.category_outlined,
             title: 'Categoria que mais pesa',
             value: topCategory == null
-                ? 'Sem gastos categorizados'
+                ? 'Sem gastos'
                 : (app.categoryById(topCategory.key)?.name ?? 'Outros'),
             subtitle: topCategory == null
                 ? 'Comece registrando seus gastos'
-                : formatAmount(topCategory.value, app.settings.currency),
+                : _money(topCategory.value),
           ),
           _InsightTile(
             icon: Icons.autorenew_rounded,
             title: 'Assinaturas',
             value: '${subscriptions.length} ativa${subscriptions.length == 1 ? '' : 's'}',
-            subtitle: '${formatAmount(subscriptionsMonthly, app.settings.currency)}/mês estimado',
+            subtitle: '${_money(subscriptionsMonthly)}/mês estimado',
           ),
           _InsightTile(
             icon: Icons.savings_outlined,
@@ -330,7 +426,7 @@ class _PlanningBody extends StatelessWidget {
             value: reserveMonths <= 0
                 ? 'Sem cobertura calculável'
                 : '${reserveMonths.toStringAsFixed(1).replaceAll('.', ',')} meses',
-            subtitle: '${formatAmount(reserveValue, app.settings.currency)} em poupança/metas',
+            subtitle: '${_money(reserveValue)} em poupança/metas',
           ),
           if (currentIncome > 0)
             _InsightTile(
@@ -338,9 +434,42 @@ class _PlanningBody extends StatelessWidget {
               title: 'Comprometimento da renda',
               value:
                   '${((currentExpense / currentIncome) * 100).toStringAsFixed(0)}%',
-              subtitle: '${formatAmount(currentExpense, app.settings.currency)} de ${formatAmount(currentIncome, app.settings.currency)}',
+              subtitle: '${_money(currentExpense)} de ${_money(currentIncome)}',
               danger: currentExpense > currentIncome,
             ),
+          if (suggestions.isNotEmpty) ...[
+            const SizedBox(height: 18),
+            const _SectionTitle('Possíveis recorrências detectadas'),
+            const SizedBox(height: 4),
+            Text(
+              'O app encontrou cobranças parecidas em meses diferentes. Revise antes de cadastrar como recorrente.',
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: cs.onSurfaceVariant,
+              ),
+            ),
+            const SizedBox(height: 8),
+            ...suggestions.map(
+              (item) => Card(
+                child: ListTile(
+                  leading: const CircleAvatar(
+                    child: Icon(Icons.auto_awesome_rounded),
+                  ),
+                  title: Text(
+                    item.name,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  subtitle: Text(
+                    '${item.occurrences} cobranças parecidas • última em ${DateFormat('dd/MM').format(item.lastDate)}',
+                  ),
+                  trailing: Text(
+                    '${_money(item.amount)}/mês',
+                    style: const TextStyle(fontWeight: FontWeight.w900),
+                  ),
+                ),
+              ),
+            ),
+          ],
           if (riskyBudgets.isNotEmpty) ...[
             const SizedBox(height: 18),
             const _SectionTitle('Orçamentos em atenção'),
@@ -373,12 +502,12 @@ class _PlanningBody extends StatelessWidget {
                       ),
                       const SizedBox(height: 8),
                       LinearProgressIndicator(
-                        value: risk.ratio.clamp(0.0, 1.0),
+                        value: risk.ratio.clamp(0.0, 1.0).toDouble(),
                         borderRadius: BorderRadius.circular(8),
                       ),
                       const SizedBox(height: 6),
                       Text(
-                        '${formatAmount(risk.spent, app.settings.currency)} de ${formatAmount(risk.budget.amount, app.settings.currency)}',
+                        '${_money(risk.spent)} de ${_money(risk.budget.amount)}',
                         style: theme.textTheme.bodySmall,
                       ),
                     ],
@@ -395,12 +524,12 @@ class _PlanningBody extends StatelessWidget {
               child: Padding(
                 padding: EdgeInsets.all(18),
                 child: Text(
-                  'Nenhum pagamento recorrente previsto para os próximos 30 dias.',
+                  'Nenhum vencimento ou pagamento recorrente previsto para os próximos 30 dias.',
                 ),
               ),
             )
           else
-            ...forecast.take(12).map(
+            ...forecast.take(14).map(
               (item) => Card(
                 child: ListTile(
                   leading: CircleAvatar(
@@ -414,10 +543,10 @@ class _PlanningBody extends StatelessWidget {
                     overflow: TextOverflow.ellipsis,
                   ),
                   subtitle: Text(
-                    '${DateFormat('dd/MM/yyyy').format(item.date)}${item.recurringType == 'subscription' ? ' • assinatura' : ''}',
+                    '${DateFormat('dd/MM/yyyy').format(item.date)} • ${item.source}',
                   ),
                   trailing: Text(
-                    '${item.type == 'income' ? '+' : '-'}${formatAmount(item.amount, app.settings.currency)}',
+                    '${item.type == 'income' ? '+' : '-'}${_money(item.amount)}',
                     style: TextStyle(
                       fontWeight: FontWeight.w900,
                       color: item.type == 'income' ? Colors.green : cs.error,
@@ -499,7 +628,7 @@ class _InsightTile extends StatelessWidget {
         title: Text(title, style: const TextStyle(fontWeight: FontWeight.w800)),
         subtitle: Text(subtitle),
         trailing: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 120),
+          constraints: const BoxConstraints(maxWidth: 125),
           child: Text(
             value,
             textAlign: TextAlign.end,
@@ -535,14 +664,28 @@ class _ForecastItem {
   final String name;
   final double amount;
   final String type;
-  final String recurringType;
+  final String source;
 
   const _ForecastItem({
     required this.date,
     required this.name,
     required this.amount,
     required this.type,
-    required this.recurringType,
+    required this.source,
+  });
+}
+
+class _RecurringSuggestion {
+  final String name;
+  final double amount;
+  final int occurrences;
+  final DateTime lastDate;
+
+  const _RecurringSuggestion({
+    required this.name,
+    required this.amount,
+    required this.occurrences,
+    required this.lastDate,
   });
 }
 
