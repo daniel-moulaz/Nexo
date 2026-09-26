@@ -105,7 +105,11 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
 
     final grouped = <DateTime, List<AppTransaction>>{};
     for (final transaction in expenses) {
-      final day = DateTime(transaction.date.year, transaction.date.month, transaction.date.day);
+      final day = DateTime(
+        transaction.date.year,
+        transaction.date.month,
+        transaction.date.day,
+      );
       (grouped[day] ??= []).add(transaction);
     }
     final days = grouped.keys.toList()..sort((a, b) => b.compareTo(a));
@@ -127,10 +131,15 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
           ),
         ],
       ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => _openTransaction(),
-        icon: const Icon(Icons.add_rounded),
-        label: const Text('Despesa'),
+      floatingActionButton: Padding(
+        // MainShell draws its own floating bottom navigation on top of this
+        // nested screen. Lift the action so it never sits behind that bar.
+        padding: const EdgeInsets.only(bottom: 76),
+        child: FloatingActionButton.extended(
+          onPressed: () => _openTransaction(),
+          icon: const Icon(Icons.add_rounded),
+          label: const Text('Despesa'),
+        ),
       ),
       body: Column(
         children: [
@@ -142,7 +151,9 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
               decoration: BoxDecoration(
                 color: cs.primaryContainer.withValues(alpha: 0.55),
                 borderRadius: BorderRadius.circular(24),
-                border: Border.all(color: cs.outlineVariant.withValues(alpha: 0.45)),
+                border: Border.all(
+                  color: cs.outlineVariant.withValues(alpha: 0.45),
+                ),
               ),
               child: Column(
                 children: [
@@ -197,12 +208,9 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
           ),
           Expanded(
             child: expenses.isEmpty
-                ? _EmptyMonth(
-                    month: _monthLabel(_selectedMonth),
-                    onAdd: () => _openTransaction(),
-                  )
+                ? _EmptyMonth(month: _monthLabel(_selectedMonth))
                 : ListView.builder(
-                    padding: const EdgeInsets.fromLTRB(12, 2, 12, 140),
+                    padding: const EdgeInsets.fromLTRB(12, 2, 12, 170),
                     itemCount: days.length,
                     itemBuilder: (context, dayIndex) {
                       final day = days[dayIndex];
@@ -439,9 +447,8 @@ class _InfoChip extends StatelessWidget {
 
 class _EmptyMonth extends StatelessWidget {
   final String month;
-  final VoidCallback onAdd;
 
-  const _EmptyMonth({required this.month, required this.onAdd});
+  const _EmptyMonth({required this.month});
 
   @override
   Widget build(BuildContext context) {
@@ -449,7 +456,7 @@ class _EmptyMonth extends StatelessWidget {
     final cs = theme.colorScheme;
     return Center(
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 32),
+        padding: const EdgeInsets.fromLTRB(32, 0, 32, 92),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -476,17 +483,11 @@ class _EmptyMonth extends StatelessWidget {
             ),
             const SizedBox(height: 6),
             Text(
-              'As despesas lançadas neste mês vão aparecer aqui.',
+              'Toque em + Despesa para fazer o primeiro lançamento do mês.',
               textAlign: TextAlign.center,
               style: theme.textTheme.bodyMedium?.copyWith(
                 color: cs.onSurfaceVariant,
               ),
-            ),
-            const SizedBox(height: 18),
-            FilledButton.icon(
-              onPressed: onAdd,
-              icon: const Icon(Icons.add_rounded),
-              label: const Text('Adicionar despesa'),
             ),
           ],
         ),
