@@ -61,3 +61,5 @@ Avaliações na página oficial do Minhas Finanças pedem menor atrito em lança
 ## Escopo aprovado por decisão de produto
 
 Três frentes grandes: previsão/agenda, regras de importação, busca avançada. Melhorias menores: CSV, modo privado na busca, filtros que cabem na tela, datas inclusivas, indicação de vencidos, explicação de previsão, revisão de candidatos duplicados e validação de regras. Resultado e limites serão registrados na auditoria ao concluir os testes.
+
+Resultado para 1.3.0: as três frentes foram implementadas, incluindo proteção dos widgets. Conciliação nesta entrega significa revisão de candidatos e escolha entre ignorar a linha ou importar separadamente: não vincula registros nem quita pendências automaticamente. Não foi criada integração bancária, IA externa, tag ou split incompleto.
