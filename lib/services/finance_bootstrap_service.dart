@@ -30,6 +30,14 @@ class FinanceBootstrapService {
       await app.updateCategory(category.copyWith(name: desired));
     }
 
+    for (final account in List<Account>.from(app.accounts)) {
+      if (account.name == 'Main Account') {
+        await app.updateAccount(account.copyWith(name: 'Conta principal'));
+      } else if (account.name == 'Credit Card') {
+        await app.updateAccount(account.copyWith(name: 'Cartão de crédito'));
+      }
+    }
+
     for (final tx in app.transactions) {
       if (!FinanceRules.isImplicitNeutral(tx)) continue;
       final current = await TransactionMetadataService.instance.getFor(tx.id);
