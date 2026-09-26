@@ -64,7 +64,7 @@ class DailyReminderService {
     const androidDetails = AndroidNotificationDetails(
       'expensy_daily_reminder',
       'Lembrete de lançamentos',
-      channelDescription: 'Nightly nudge to log your daily spending.',
+      channelDescription: 'Lembrete diário para registrar seus gastos.',
       importance: Importance.high,
       priority: Priority.high,
       category: AndroidNotificationCategory.reminder,

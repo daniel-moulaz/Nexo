@@ -19,6 +19,7 @@ import 'transaction_search_screen.dart';
 import 'wishlist_screen.dart';
 import 'yearly_analysis_screen.dart';
 import 'agenda_screen.dart';
+import 'notification_inbox_screen.dart';
 
 class MoreScreen extends StatelessWidget {
   const MoreScreen({super.key});
@@ -34,6 +35,7 @@ class MoreScreen extends StatelessWidget {
     final loansLen = app.loans.where((l) => !l.isSettled).length;
 
     final items = <_Item>[
+      const _Item(icon: Icons.inbox_outlined, label: 'Sugestões de lançamentos', sub: 'Revisar notificações financeiras, sem registro automático', color: Color(0xFF00695C), screen: NotificationInboxScreen()),
       const _Item(
           icon: Icons.event_note,
           label: 'Agenda financeira',
@@ -176,6 +178,7 @@ class MoreScreen extends StatelessWidget {
                 'Análise anual'
               ],
               'Categorias e preferências': [
+                'Sugestões de lançamentos',
                 'Categorias',
                 'Backup',
                 'Backup e restauração',

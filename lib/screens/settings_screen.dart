@@ -8,6 +8,9 @@ import '../widgets/shared_widgets.dart';
 import '../l10n/app_localizations.dart';
 import '../utils/haptics.dart';
 import 'package:package_info_plus/package_info_plus.dart';
+import 'automation_settings_screen.dart';
+import 'reminder_settings_screen.dart';
+import 'security_settings_screen.dart';
 
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
@@ -31,6 +34,11 @@ class SettingsScreen extends StatelessWidget {
           child: ListView(
             padding: const EdgeInsets.all(16),
             children: [
+              Card(child: Column(children: [
+                ListTile(leading: const Icon(Icons.auto_awesome_outlined), title: const Text('Automação'), subtitle: const Text('Sugestões locais de notificações bancárias'), trailing: const Icon(Icons.chevron_right), onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AutomationSettingsScreen()))),
+                ListTile(leading: const Icon(Icons.notifications_outlined), title: const Text('Notificações'), subtitle: const Text('Contas, receitas, cartões e planejamento'), trailing: const Icon(Icons.chevron_right), onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ReminderSettingsScreen()))),
+                ListTile(leading: const Icon(Icons.lock_outline), title: const Text('Segurança'), subtitle: const Text('Bloqueio do Nexo e privacidade da tela'), trailing: const Icon(Icons.chevron_right), onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const SecuritySettingsScreen()))),
+              ])),
               // ── Appearance ────────────────────────────────────────────────
               SectionHeader(title: l10n.settings_appearance),
               Card(

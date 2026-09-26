@@ -1,7 +1,13 @@
 package com.ma.expensy
 
 import android.content.Intent
-import io.flutter.embedding.android.FlutterActivity
+import io.flutter.embedding.android.FlutterFragmentActivity
+import android.content.ComponentName
+import android.os.Build
+import android.os.Bundle
+import android.provider.Settings
+import android.app.NotificationManager
+import android.view.WindowManager
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.EventChannel
 import io.flutter.plugin.common.MethodChannel
@@ -20,13 +26,63 @@ import io.flutter.plugin.common.MethodChannel
  *                  event instead, since Dart isn't calling anything at that
  *                  point.
  */
-class MainActivity : FlutterActivity() {
+class MainActivity : FlutterFragmentActivity() {
+    private fun privacy() {
+        val p = getSharedPreferences("nexo_automation", 0)
+        if (Build.VERSION.SDK_INT >= 33) setRecentsScreenshotEnabled(!p.getBoolean("hide_recents", false))
+        if (p.getBoolean("block_capture", false)) window.addFlags(WindowManager.LayoutParams.FLAG_SECURE)
+        else window.clearFlags(WindowManager.LayoutParams.FLAG_SECURE)
+    }
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        privacy()
+    }
     private val methodChannelName = "com.ma.expensy/quick_add"
     private val eventChannelName = "com.ma.expensy/quick_add_stream"
     private var eventSink: EventChannel.EventSink? = null
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "com.ma.expensy/automation")
+            .setMethodCallHandler { call, result ->
+                val p = getSharedPreferences("nexo_automation", 0)
+                try {
+                    when (call.method) {
+                        "status" -> result.success(mapOf("enabled" to p.getBoolean("enabled", false),
+                            "apps" to p.getStringSet("apps", emptySet())!!.toList(),
+                            "access" to if (Build.VERSION.SDK_INT >= 27) (getSystemService(NOTIFICATION_SERVICE) as NotificationManager)
+                                .isNotificationListenerAccessGranted(ComponentName(this, FinancialNotificationListener::class.java))
+                                else (Settings.Secure.getString(contentResolver, "enabled_notification_listeners") ?: "").split(':')
+                                    .contains(ComponentName(this, FinancialNotificationListener::class.java).flattenToString()),
+                            "error" to p.getBoolean("queue_error", false),
+                            "recentsSupported" to (Build.VERSION.SDK_INT >= 33)))
+                        "configure" -> {
+                            p.edit().putBoolean("enabled", call.argument<Boolean>("enabled") == true)
+                                .putStringSet("apps", call.argument<List<String>>("apps")!!.toSet()).commit()
+                            result.success(null)
+                        }
+                        "settings" -> { startActivity(Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS)); result.success(null) }
+                        "queue" -> result.success(FinancialInboxQueue.read(this).toString())
+                        "ack" -> { FinancialInboxQueue.ack(this, call.argument<List<String>>("ids")!!.toSet()); result.success(null) }
+                        "privacy" -> {
+                            p.edit().putBoolean("hide_recents", call.argument<Boolean>("recents") == true)
+                                .putBoolean("block_capture", call.argument<Boolean>("capture") == true).commit()
+                            privacy(); result.success(null)
+                        }
+                        "apps" -> {
+                            val intent = Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER)
+                            val installed = packageManager.queryIntentActivities(intent, 0)
+                                .filter { it.activityInfo.packageName != packageName }
+                                .distinctBy { it.activityInfo.packageName }
+                                .map { mapOf("id" to it.activityInfo.packageName, "name" to it.loadLabel(packageManager).toString()) }
+                            val observed = p.getStringSet("observed_apps", emptySet())!!.filter { id -> id != packageName && installed.none { it["id"] == id } }
+                                .map { id -> mapOf("id" to id, "name" to try { packageManager.getApplicationLabel(packageManager.getApplicationInfo(id, 0)).toString() } catch (_: Exception) { id }) }
+                            result.success(installed + observed)
+                        }
+                        else -> result.notImplemented()
+                    }
+                } catch (_: Exception) { result.error("native_error", "Não foi possível acessar o recurso local.", null) }
+            }
 
         // Cold-start case: Dart calls this once at startup to read the
         // route extra the launching Intent (if any) was created with.

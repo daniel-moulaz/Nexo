@@ -38,13 +38,13 @@
   "settings_yourName": "Seu nome",
   "settings_cancel": "Cancelar",
   "settings_save": "Salvar",
-  "recurring_expenses": "Expenses ({count})",
+  "recurring_expenses": "Despesas ({count})",
   "@recurring_expenses": {
     "placeholders": {
       "count": {}
     }
   },
-  "recurring_incomeList": "Income ({count})",
+  "recurring_incomeList": "Receitas ({count})",
   "@recurring_incomeList": {
     "placeholders": {
       "count": {}
@@ -57,13 +57,13 @@
   "recurring_addExpense": "Adicionar Despesa",
   "recurring_addIncome": "Adicionar Renda",
   "recurring_tapPlusToAddOne": "Toque em + para adicionar um",
-  "recurring_fromOngoing": "From {date} · Ongoing",
+  "recurring_fromOngoing": "Desde {date} · Sem data final",
   "@recurring_fromOngoing": {
     "placeholders": {
       "date": {}
     }
   },
-  "recurring_paidPayments": "{paid}/{total} paid",
+  "recurring_paidPayments": "{paid}/{total} pagas",
   "@recurring_paidPayments": {
     "placeholders": {
       "paid": {},
@@ -86,15 +86,15 @@
   },
   "recurring_edit": "Editar",
   "recurring_skipBtn": "Pular",
-  "recurring_nextDate": "Next: {date}",
+  "recurring_nextDate": "Próxima: {date}",
   "@recurring_nextDate": {
     "placeholders": {
       "date": {}
     }
   },
   "recurring_pay": "Pagar",
-  "recurring_del": "Del",
-  "recurring_historyCount": "History ({count})",
+  "recurring_del": "Excluir",
+  "recurring_historyCount": "Histórico ({count})",
   "@recurring_historyCount": {
     "placeholders": {
       "count": {}
@@ -107,13 +107,13 @@
   "recurring_addRecurring": "Adicionar um pagamento recorrente",
   "recurring_name": "Nome",
   "recurring_amountPerPayment": "Montante por pagamento",
-  "recurring_firstDate": "First: {date}",
+  "recurring_firstDate": "Primeira: {date}",
   "@recurring_firstDate": {
     "placeholders": {
       "date": {}
     }
   },
-  "recurring_lastDate": "Last: {date}",
+  "recurring_lastDate": "Última: {date}",
   "@recurring_lastDate": {
     "placeholders": {
       "date": {}
@@ -139,7 +139,7 @@
   "accounts_txs": "Tx",
   "accounts_value": "Valor",
   "accounts_karat": "Quilate",
-  "accounts_pure": "{percentage}% pure",
+  "accounts_pure": "{percentage}% puro",
   "@accounts_pure": {
     "placeholders": {
       "percentage": {}
@@ -163,13 +163,13 @@
   "accounts_addAccountBtn": "Adicionar conta",
   "accounts_fetchingGoldPrice": "Buscando o preço do ouro…",
   "accounts_goldPriceUnavailable": "Preço do ouro indisponível — verifique sua conexão",
-  "lended_person_owesYou": "{name} owes you",
+  "lended_person_owesYou": "{name} deve a você",
   "@lended_person_owesYou": {
     "placeholders": {
       "name": {}
     }
   },
-  "lended_person_youOwe": "You owe {name}",
+  "lended_person_youOwe": "Você deve a {name}",
   "@lended_person_youOwe": {
     "placeholders": {
       "name": {}
@@ -183,13 +183,13 @@
   "lended_person_lent": "Quaresma",
   "lended_person_borrowed": "Emprestado",
   "lended_person_overdue": "Atrasado!",
-  "lended_person_due": "Due {date}",
+  "lended_person_due": "Vence em {date}",
   "@lended_person_due": {
     "placeholders": {
       "date": {}
     }
   },
-  "lended_person_reminderAt": "Reminder at {time}",
+  "lended_person_reminderAt": "Lembrete às {time}",
   "@lended_person_reminderAt": {
     "placeholders": {
       "time": {}
@@ -200,7 +200,7 @@
   "lended_person_editRecord": "Editar registro",
   "lended_person_addRecord": "Adicionar registro",
   "lended_person_amount": "Quantia",
-  "lended_person_dueColon": "Due: {date}",
+  "lended_person_dueColon": "Vencimento: {date}",
   "@lended_person_dueColon": {
     "placeholders": {
       "date": {}
@@ -230,20 +230,20 @@
   "transactions_tapPlusToAddOne": "Toque em + para adicionar um",
   "transactions_today": "Hoje",
   "transactions_yesterday": "Ontem",
-  "transactions_lentTo": "Lent to {name}",
+  "transactions_lentTo": "Emprestado para {name}",
   "@transactions_lentTo": {
     "placeholders": {
       "name": {}
     }
   },
-  "transactions_borrowedFrom": "Borrowed from {name}",
+  "transactions_borrowedFrom": "Emprestado de {name}",
   "@transactions_borrowedFrom": {
     "placeholders": {
       "name": {}
     }
   },
   "transactions_unknown": "Desconhecido",
-  "transactions_due": "Due {date}",
+  "transactions_due": "Vence em {date}",
   "@transactions_due": {
     "placeholders": {
       "date": {}
@@ -286,7 +286,7 @@
   "backup_categories": "Categorias",
   "backup_settings": "Configurações",
   "backup_backupSavedSuccessfully": "Backup salvo com sucesso:\n{savedPath}",
-  "backup_backupFailed": "Backup failed: {error}",
+  "backup_backupFailed": "Falha no backup: {error}",
   "backup_upgradedFrom": "(atualizado de v{originalVersion} → v{schemaVersion})",
   "backup_dataRestoredSuccessfully": "Dados restaurados com sucesso!{vLabel}",
   "backup_restoreFailed": "Falha na restauração: {error}",
@@ -299,15 +299,15 @@
   "budget_unknown": "Desconhecido",
   "budget_weeklyLabel": "Semanal",
   "budget_monthlyLabel": "Mensal",
-  "budget_overAmount": "{amount} over",
-  "budget_leftAmount": "{amount} left",
+  "budget_overAmount": "{amount} acima",
+  "budget_leftAmount": "{amount} restantes",
   "budget_percentUsed": "{percent}% usado",
   "budget_editBudget": "Editar orçamento",
   "budget_setBudget": "Adicionar novo orçamento",
   "budget_budgetAmount": "Montante do orçamento",
   "budget_previewFor": "Visualização de \\\"{catName}\\\"",
-  "budget_spentAmount": "Spent: {amount}",
-  "budget_ofAmount": "of {amount}",
+  "budget_spentAmount": "Gasto: {amount}",
+  "budget_ofAmount": "de {amount}",
   "budget_saveChanges": "Salvar alterações",
   "budget_budget": "Orçamento",
   "insights_other": "Outros",
@@ -317,8 +317,8 @@
   "insights_dailyAverage": "Média Diária",
   "insights_perDayBasedOn": "por dia · com base em {days} dias deste mês",
   "insights_incomeVsExpenses": "Receitas vs Despesas",
-  "insights_incomeAmount": "Income {amount}",
-  "insights_expensesAmount": "Expenses {amount}",
+  "insights_incomeAmount": "Receitas {amount}",
+  "insights_expensesAmount": "Despesas {amount}",
   "insights_percentSaved": "{percent}% economizados este mês",
   "insights_topSpendingCategories": "Principais categorias de gastos",
   "insights_percentOfTotal": "{percent}% do total",
@@ -357,20 +357,20 @@
   "more_currencyConverter": "Conversor de moeda",
   "more_currencyConverterSub": "Converta entre moedas instantaneamente",
   "more_wishlist": "Lista de desejos",
-  "more_wishlistSub": "{count, plural, =1{1 item} other{{count} items}}",
+  "more_wishlistSub": "{count, plural, =1{1 item} other{{count} itens}}",
   "more_lentMoney": "Dinheiro Emprestado",
-  "more_lentMoneySub": "{count} outstanding",
+  "more_lentMoneySub": "{count} em aberto",
   "more_assets": "Ativos",
-  "more_assetsSub": "{count, plural, =1{1 item} other{{count} items}}",
+  "more_assetsSub": "{count, plural, =1{1 item} other{{count} itens}}",
   "more_categories": "Categorias",
-  "more_categoriesSub": "{count, plural, =1{1 category} other{{count} categories}}",
+  "more_categoriesSub": "{count, plural, =1{1 categoria} other{{count} categorias}}",
   "more_exportTransactions": "Transações de exportação",
   "more_exportTransactionsSub": "Salvar como Excel (.xlsx)",
   "more_backupRestore": "Backup e restauração",
   "more_backupRestoreSub": "Salve ou carregue seus dados",
   "more_settings": "Configurações",
   "more_settingsSub": "Tema, moeda e preferências",
-  "home_greeting": "Hi, {name} 👋",
+  "home_greeting": "Olá, {name} 👋",
   "home_there": "aí",
   "home_income": "Renda",
   "home_expenses": "Despesas",
@@ -396,7 +396,7 @@
   "lended_youOwe": "Você deve",
   "lended_settledUp": "Resolvido",
   "lended_noActiveRecords": "Nenhum registro ativo",
-  "lended_activeRecords": "{count, plural, =1{1 active record} other{{count} active records}}",
+  "lended_activeRecords": "{count, plural, =1{1 registro ativo} other{{count} registros ativos}}",
   "lended_editPerson": "Editar Pessoa",
   "lended_addPerson": "Adicionar Pessoa",
   "lended_name": "Nome",
@@ -415,23 +415,23 @@
   "currency_converter_loadingRates": "Carregando taxas de câmbio…",
   "currency_converter_ratesUnavailable": "Taxas de câmbio indisponíveis. Conecte-se à Internet e sincronize.",
   "currency_converter_rateAgeJustNow": "Agora mesmo",
-  "currency_converter_rateAgeMins": "{minutes}m ago",
+  "currency_converter_rateAgeMins": "há {minutes} min",
   "currency_converter_rateAgeHours": "{hours}h atrás",
-  "currency_converter_rateAgeDays": "{days}d ago",
+  "currency_converter_rateAgeDays": "há {days} dias",
   "currency_converter_commonConversions": "Conversões comuns de {fromCurrency}",
-  "transfer_fromAcc": "From ({currency})",
-  "transfer_toAcc": "To ({currency})",
+  "transfer_fromAcc": "Origem ({currency})",
+  "transfer_toAcc": "Destino ({currency})",
   "transfer_exchangeRatesNotLoaded": "Taxas de câmbio não carregadas — o montante será transferido no estado em que se encontra",
   "transfer_amount": "Montante",
   "transfer_noteOptional": "Nota (opcional)",
   "export_from": "De",
   "export_to": "Para",
-  "export_txCount": "{count, plural, =1{1 transaction in range} other{{count} transactions in range}}",
-  "export_saved": "Saved: {path}",
+  "export_txCount": "{count, plural, =1{1 lançamento no período} other{{count} lançamentos no período}}",
+  "export_saved": "Salvo em: {path}",
   "export_complete": "Exportação concluída",
   "export_exporting": "Exportando...",
   "export_exportAsExcel": "Exportar como Excel",
-  "shared_widgets_deleteConfirm": "Delete \"{name}\"? This cannot be undone.",
+  "shared_widgets_deleteConfirm": "Excluir \"{name}\"? Essa ação não pode ser desfeita.",
   "shared_widgets_searchByCode": "Pesquise por código ou nome...",
   "accounts_accounts": "Contas",
   "accounts_totalBalance": "Saldo Total",
@@ -592,8 +592,8 @@
   "backup_automaticBackup": "Backup Automático",
   "backup_dailyAutoBackup": "Backup automático diário",
   "backup_runsDailyAt": "Funciona diariamente às {time}",
-  "backup_lastBackup": "Last backup: {time}",
-  "backup_savingTo": "Saving to: {path}",
+  "backup_lastBackup": "Último backup: {time}",
+  "backup_savingTo": "Salvando em: {path}",
   "backup_changeTime": "Alterar horário",
   "backup_changeFolder": "Alterar pasta",
   "budget_budgetsAndGoals": "Orçamentos e Metas",
@@ -601,7 +601,7 @@
   "savings_goalNotFound": "Meta não encontrada",
   "savings_savedSoFar": "Salvo até agora",
   "savings_target": "Meta",
-  "savings_targetDate": "Target Date: {date}",
+  "savings_targetDate": "Prazo: {date}",
   "savings_contribute": "Adicionar aporte",
   "savings_withdraw": "Retirar",
   "savings_noAccounts": "Nenhuma conta disponível. Adicione uma conta primeiro.",

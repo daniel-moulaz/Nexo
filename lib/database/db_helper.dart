@@ -8,7 +8,7 @@ import '../models/models.dart';
 class DBHelper {
   static Database? _db;
   static const String _dbName = 'expensy.db';
-  static const int _version = 22;
+  static const int _version = 23;
 
   /// Public accessor for the current DB/backup schema version, so UI code
   /// (e.g. the Backup screen) never has to hardcode a copy that can drift
@@ -475,6 +475,7 @@ class DBHelper {
     }
     if (oldV < 21) await _ensureFinanceSchema(db);
     if (oldV < 22) await _createImportRules(db);
+    if (oldV < 23) await _createSuggestions(db);
     if (oldV < 20) {
       try {
         await db
@@ -540,6 +541,23 @@ class DBHelper {
       AFTER DELETE ON transactions BEGIN
         DELETE FROM transaction_metadata WHERE transaction_id = OLD.id;
       END''');
+  }
+
+  static Future<void> _createSuggestions(Database db) async {
+    await db.execute('''CREATE TABLE IF NOT EXISTS notification_suggestions (
+      id TEXT PRIMARY KEY, app_id TEXT NOT NULL, amount_cents INTEGER NOT NULL,
+      description TEXT NOT NULL, kind TEXT NOT NULL, medium TEXT NOT NULL,
+      occurred_at INTEGER NOT NULL, status TEXT NOT NULL DEFAULT 'pending',
+      transaction_id TEXT
+    )''');
+  }
+
+  static Future<void> confirmSuggestion(DatabaseExecutor db, String id, String transactionId) async {
+    final changed = await db.update('notification_suggestions',
+        {'status': 'confirmed', 'transaction_id': transactionId},
+        where: 'id = ? AND status = ? AND occurred_at >= ?',
+        whereArgs: [id, 'pending', DateTime.now().subtract(const Duration(days: 7)).millisecondsSinceEpoch]);
+    if (changed != 1) throw StateError('Sugestão já resolvida ou expirada.');
   }
 
   static Future<void> _createImportRules(Database db) async {
@@ -710,6 +728,7 @@ class DBHelper {
 
     await _ensureFinanceSchema(db);
     await _createImportRules(db);
+    await _createSuggestions(db);
     await _insertDefaults(db);
   }
 
@@ -1120,6 +1139,7 @@ class DBHelper {
       db.query('card_invoice_payments'),
       db.query('net_worth_snapshots'),
       db.query('import_rules'),
+      db.query('notification_suggestions'),
     ]);
     return {
       'accounts': results[0],
@@ -1140,6 +1160,7 @@ class DBHelper {
       'card_invoice_payments': results[15],
       'net_worth_snapshots': results[16],
       'import_rules': results[17],
+      'notification_suggestions': results[18],
       'version': _version,
     };
   }
@@ -1168,6 +1189,7 @@ class DBHelper {
         'card_invoice_payments',
         'net_worth_snapshots',
         'import_rules',
+        'notification_suggestions',
       ]) {
         await txn.delete(table);
         final rows = (data[table] as List?)?.cast<Map<String, dynamic>>() ?? [];

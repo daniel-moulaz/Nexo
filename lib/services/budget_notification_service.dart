@@ -1,6 +1,7 @@
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import '../models/models.dart';
 import 'package:intl/intl.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class BudgetNotificationService {
   static final BudgetNotificationService _instance =
@@ -39,18 +40,19 @@ class BudgetNotificationService {
     final overAmount = spentAmount - budget.amount;
     if (overAmount <= 0) return;
 
-    final nf = NumberFormat.currency(locale: 'pt_BR', symbol: '');
-    final amountStr = nf.format(overAmount).trim();
 
     // Stable ID that resets daily so budget alerts don't spam.
     final today = DateFormat('yyyy-MM-dd').format(DateTime.now());
+    final prefs = await SharedPreferences.getInstance();
+    final seenKey = 'nexo_budget_alert_${budget.id}';
+    if (prefs.getString(seenKey) == today) return;
     final id = ('budget_${budget.id}_$today').hashCode & 0x7FFFFFFF;
 
     const androidDetails = AndroidNotificationDetails(
       'expensy_budget',
       'Alertas de orçamento e objetivos',
       channelDescription:
-          'Immediate alerts for exceeded budgets and completed goals.',
+          'Avisos de orçamentos ultrapassados e objetivos alcançados.',
       importance: Importance.high,
       priority: Priority.high,
       category: AndroidNotificationCategory.reminder,
@@ -63,16 +65,15 @@ class BudgetNotificationService {
     await _plugin.show(
       id,
       'Orçamento ultrapassado',
-      '${category.name} — $amountStr over your ${budget.period} limit',
+      'Um orçamento ultrapassou o limite. Confira os detalhes no Nexo.',
       details,
     );
+    await prefs.setString(seenKey, today);
   }
 
   Future<void> showGoalCompleted(SavingsGoal goal) async {
     if (!(await hasPermission())) return;
 
-    final nf = NumberFormat.currency(locale: 'pt_BR', symbol: '');
-    final amountStr = nf.format(goal.targetAmount).trim();
 
     // Stable ID that resets daily.
     final today = DateFormat('yyyy-MM-dd').format(DateTime.now());
@@ -82,7 +83,7 @@ class BudgetNotificationService {
       'expensy_budget',
       'Alertas de orçamento e objetivos',
       channelDescription:
-          'Immediate alerts for exceeded budgets and completed goals.',
+          'Avisos de orçamentos ultrapassados e objetivos alcançados.',
       importance: Importance.high,
       priority: Priority.high,
       category: AndroidNotificationCategory.reminder,
@@ -95,7 +96,7 @@ class BudgetNotificationService {
     await _plugin.show(
       id,
       'Objetivo alcançado',
-      'Você alcançou a meta de $amountStr para ${goal.name}!',
+      'Você alcançou um objetivo. Confira os detalhes no Nexo!',
       details,
     );
   }

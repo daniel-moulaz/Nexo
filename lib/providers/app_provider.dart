@@ -12,6 +12,8 @@ import '../services/finance_rules.dart';
 import '../services/billing_cycle.dart';
 import '../services/exchange_rate_service.dart';
 import '../services/notification_service.dart';
+import '../services/financial_reminders.dart';
+import '../services/nexo_security.dart';
 import '../services/lended_notification_service.dart';
 import '../services/budget_notification_service.dart';
 import '../services/daily_reminder_service.dart';
@@ -272,6 +274,7 @@ class AppProvider extends ChangeNotifier {
 
   Future<void> updateHomeWidgets() async {
     try {
+      final hidden = settings.hideBalance || NexoSecurity.instance.enabled || NexoSecurity.instance.storageError;
       final pinnedIds = settings.pinnedWidgetAccountIds;
       final pinnedAccounts =
           accounts.where((a) => pinnedIds.contains(a.id)).take(3).toList();
@@ -281,7 +284,7 @@ class AppProvider extends ChangeNotifier {
       final accountsJson = jsonEncode(pinnedAccounts
           .map((a) => {
                 'name': a.name,
-                'balance': settings.hideBalance
+                'balance': hidden
                     ? '••••'
                     : formatAmount(a.balance,
                         a.currency.isNotEmpty ? a.currency : settings.currency),
@@ -293,15 +296,15 @@ class AppProvider extends ChangeNotifier {
       final budgetData = budgets.map((b) {
         final spent = budgetSpent(b);
         return {
-          'hidden': settings.hideBalance,
-          'category': settings.hideBalance
+          'hidden': hidden,
+          'category': hidden
               ? 'Valores ocultos'
               : categoryById(b.categoryId)?.name ?? 'Orçamento',
-          'spent': settings.hideBalance ? 0.0 : spent,
-          'amount': settings.hideBalance ? 0.0 : b.amount,
+          'spent': hidden ? 0.0 : spent,
+          'amount': hidden ? 0.0 : b.amount,
           'progress':
-              !settings.hideBalance && b.amount > 0 ? spent / b.amount : 0.0,
-          'exceeded': !settings.hideBalance && spent > b.amount,
+              !hidden && b.amount > 0 ? spent / b.amount : 0.0,
+          'exceeded': !hidden && spent > b.amount,
           'currency': settings.currency,
         };
       }).toList();
@@ -728,10 +731,11 @@ class AppProvider extends ChangeNotifier {
     TransactionMetadataService.instance.revision.value++;
     notifyListeners();
     await updateHomeWidgets();
+    await FinancialReminders.instance.refresh(this);
   }
 
   Future<void> addTransaction(AppTransaction t,
-      {TransactionMetadata? metadata, bool generateInstallments = true}) async {
+      {TransactionMetadata? metadata, bool generateInstallments = true, String? suggestionId}) async {
     final db = await DBHelper.database;
     if (!t.amount.isFinite ||
         t.amount <= 0 ||
@@ -741,6 +745,7 @@ class AppProvider extends ChangeNotifier {
     }
     final meta = metadata ?? TransactionMetadata(transactionId: t.id);
     await db.transaction((txn) async {
+      if (suggestionId != null) await DBHelper.confirmSuggestion(txn, suggestionId, t.id);
       final current = meta.installmentCurrent ?? 1;
       final total =
           generateInstallments ? meta.installmentTotal ?? current : current;
@@ -873,6 +878,8 @@ class AppProvider extends ChangeNotifier {
     double? toAmount,
     String note = '',
     DateTime? invoiceCycleEnd,
+    String? suggestionId,
+    DateTime? occurredAt,
   }) async {
     if (fromId == toId ||
         !fromAmount.isFinite ||
@@ -895,7 +902,7 @@ class AppProvider extends ChangeNotifier {
           convertBetween(fromAmount, fromCurrency, toCurrency) ?? fromAmount;
     }
 
-    final now = DateTime.now();
+    final now = occurredAt ?? DateTime.now();
     final catId = categories.where((c) => c.type == 'expense').isNotEmpty
         ? categories.firstWhere((c) => c.type == 'expense').id
         : '';
@@ -953,6 +960,7 @@ class AppProvider extends ChangeNotifier {
           'paid_at': now.toIso8601String()
         });
       }
+      if (suggestionId != null) await DBHelper.confirmSuggestion(txn, suggestionId, debit.id);
       for (final tx in [debit, credit]) {
         await txn.insert('transactions', tx.toMap());
         await txn.insert(
@@ -981,6 +989,7 @@ class AppProvider extends ChangeNotifier {
     if (r.reminderEnabled) {
       await _notif.scheduleReminder(r, settings.currency);
     }
+    await FinancialReminders.instance.refresh(this);
   }
 
   Future<void> updateRecurring(RecurringPayment r) async {
@@ -991,6 +1000,7 @@ class AppProvider extends ChangeNotifier {
     if (r.reminderEnabled) {
       await _notif.scheduleReminder(r, settings.currency);
     }
+    await FinancialReminders.instance.refresh(this);
   }
 
   Future<void> deleteRecurring(String id) async {
@@ -1001,6 +1011,7 @@ class AppProvider extends ChangeNotifier {
     recurring = await DBHelper.getRecurring();
     recurringHistoryCount = await DBHelper.getRecurringHistoryCount();
     notifyListeners();
+    await FinancialReminders.instance.refresh(this);
   }
 
   Future<void> markRecurringPaid(RecurringPayment r) =>

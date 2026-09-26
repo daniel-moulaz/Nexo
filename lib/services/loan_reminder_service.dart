@@ -13,7 +13,7 @@ class LoanReminderService {
 
   static const _channelId = 'expensy_loans';
   static const _channelName = 'Lembretes de empréstimos';
-  static const _channelDesc = 'Reminders when a loan installment is due';
+  static const _channelDesc = 'Vencimento de parcelas de empréstimos';
 
   Future<void> initialize() async {
     if (_initialized) return;
@@ -117,7 +117,7 @@ class LoanReminderService {
       await _plugin.zonedSchedule(
         _notifId(l.id),
         'Pagamento de empréstimo',
-        '${l.name} installment is due today.',
+        'Uma parcela de empréstimo vence hoje. Confira no Nexo.',
         tzDate,
         _buildDetails(),
         androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,

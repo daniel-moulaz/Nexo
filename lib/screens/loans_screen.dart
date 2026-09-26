@@ -756,7 +756,7 @@ class _LoanSheetState extends State<LoanSheet> {
                         },
                         child: InputDecorator(
                           decoration: const InputDecoration(
-                            labelText: 'Reminder Time',
+                            labelText: 'Horário do lembrete',
                             prefixIcon: Icon(Icons.access_time),
                           ),
                           child: Text(_reminderTime),

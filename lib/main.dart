@@ -19,6 +19,9 @@ import 'services/quick_add_service.dart';
 import 'services/loan_reminder_service.dart';
 import 'services/credit_reminder_service.dart';
 import 'services/finance_bootstrap_service.dart';
+import 'services/nexo_security.dart';
+import 'services/financial_reminders.dart';
+import 'widgets/security_gate.dart';
 
 final GlobalKey<NavigatorState> rootNavigatorKey = GlobalKey<NavigatorState>();
 
@@ -34,8 +37,12 @@ void main() async {
   await CreditReminderService().initialize();
 
   final provider = AppProvider();
+  await NexoSecurity.instance.load();
   await provider.load();
   await FinanceBootstrapService.apply(provider);
+  NexoSecurity.instance.addListener(provider.updateHomeWidgets);
+  provider.addListener(() => FinancialReminders.instance.requestRefresh(provider));
+  FinancialReminders.instance.requestRefresh(provider);
 
   runApp(
     ChangeNotifierProvider.value(
@@ -124,6 +131,7 @@ class _ExpensyAppState extends State<ExpensyApp> {
             title: 'Nexo',
             navigatorKey: rootNavigatorKey,
             debugShowCheckedModeBanner: false,
+            builder: (context, child) => SecurityGate(child: child!),
             localizationsDelegates: AppLocalizations.localizationsDelegates,
             supportedLocales: AppLocalizations.supportedLocales,
             locale: languageCode == 'system' ? null : Locale(languageCode),

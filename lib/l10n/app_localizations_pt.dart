@@ -137,12 +137,12 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String recurring_expenses(Object count) {
-    return 'Expenses ($count)';
+    return 'Despesas ($count)';
   }
 
   @override
   String recurring_incomeList(Object count) {
-    return 'Income ($count)';
+    return 'Receitas ($count)';
   }
 
   @override
@@ -168,12 +168,12 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String recurring_fromOngoing(Object date) {
-    return 'From $date · Ongoing';
+    return 'Desde $date · Sem data final';
   }
 
   @override
   String recurring_paidPayments(Object paid, Object total) {
-    return '$paid/$total paid';
+    return '$paid/$total pagas';
   }
 
   @override
@@ -200,18 +200,18 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String recurring_nextDate(Object date) {
-    return 'Next: $date';
+    return 'Próxima: $date';
   }
 
   @override
   String get recurring_pay => 'Pagar';
 
   @override
-  String get recurring_del => 'Del';
+  String get recurring_del => 'Excluir';
 
   @override
   String recurring_historyCount(Object count) {
-    return 'History ($count)';
+    return 'Histórico ($count)';
   }
 
   @override
@@ -238,12 +238,12 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String recurring_firstDate(Object date) {
-    return 'First: $date';
+    return 'Primeira: $date';
   }
 
   @override
   String recurring_lastDate(Object date) {
-    return 'Last: $date';
+    return 'Última: $date';
   }
 
   @override
@@ -298,7 +298,7 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String accounts_pure(Object percentage) {
-    return '$percentage% pure';
+    return '$percentage% puro';
   }
 
   @override
@@ -359,12 +359,12 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String lended_person_owesYou(Object name) {
-    return '$name owes you';
+    return '$name deve a você';
   }
 
   @override
   String lended_person_youOwe(Object name) {
-    return 'You owe $name';
+    return 'Você deve a $name';
   }
 
   @override
@@ -394,12 +394,12 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String lended_person_due(Object date) {
-    return 'Due $date';
+    return 'Vence em $date';
   }
 
   @override
   String lended_person_reminderAt(Object time) {
-    return 'Reminder at $time';
+    return 'Lembrete às $time';
   }
 
   @override
@@ -420,7 +420,7 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String lended_person_dueColon(Object date) {
-    return 'Due: $date';
+    return 'Vencimento: $date';
   }
 
   @override
@@ -485,12 +485,12 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String transactions_lentTo(Object name) {
-    return 'Lent to $name';
+    return 'Emprestado para $name';
   }
 
   @override
   String transactions_borrowedFrom(Object name) {
-    return 'Borrowed from $name';
+    return 'Emprestado de $name';
   }
 
   @override
@@ -498,7 +498,7 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String transactions_due(Object date) {
-    return 'Due $date';
+    return 'Vence em $date';
   }
 
   @override
@@ -621,7 +621,7 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String backup_backupFailed(Object error) {
-    return 'Backup failed: $error';
+    return 'Falha no backup: $error';
   }
 
   @override
@@ -673,12 +673,12 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String budget_overAmount(Object amount) {
-    return '$amount over';
+    return '$amount acima';
   }
 
   @override
   String budget_leftAmount(Object amount) {
-    return '$amount left';
+    return '$amount restantes';
   }
 
   @override
@@ -702,12 +702,12 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String budget_spentAmount(Object amount) {
-    return 'Spent: $amount';
+    return 'Gasto: $amount';
   }
 
   @override
   String budget_ofAmount(Object amount) {
-    return 'of $amount';
+    return 'de $amount';
   }
 
   @override
@@ -742,12 +742,12 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String insights_incomeAmount(Object amount) {
-    return 'Income $amount';
+    return 'Receitas $amount';
   }
 
   @override
   String insights_expensesAmount(Object amount) {
-    return 'Expenses $amount';
+    return 'Despesas $amount';
   }
 
   @override
@@ -882,7 +882,7 @@ class AppLocalizationsPt extends AppLocalizations {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other: '$count items',
+      other: '$count itens',
       one: '1 item',
     );
     return '$_temp0';
@@ -893,7 +893,7 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String more_lentMoneySub(Object count) {
-    return '$count outstanding';
+    return '$count em aberto';
   }
 
   @override
@@ -904,7 +904,7 @@ class AppLocalizationsPt extends AppLocalizations {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other: '$count items',
+      other: '$count itens',
       one: '1 item',
     );
     return '$_temp0';
@@ -918,8 +918,8 @@ class AppLocalizationsPt extends AppLocalizations {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other: '$count categories',
-      one: '1 category',
+      other: '$count categorias',
+      one: '1 categoria',
     );
     return '$_temp0';
   }
@@ -944,7 +944,7 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String home_greeting(Object name) {
-    return 'Hi, $name 👋';
+    return 'Olá, $name 👋';
   }
 
   @override
@@ -1029,8 +1029,8 @@ class AppLocalizationsPt extends AppLocalizations {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other: '$count active records',
-      one: '1 active record',
+      other: '$count registros ativos',
+      one: '1 registro ativo',
     );
     return '$_temp0';
   }
@@ -1093,7 +1093,7 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String currency_converter_rateAgeMins(Object minutes) {
-    return '${minutes}m ago';
+    return 'há $minutes min';
   }
 
   @override
@@ -1103,7 +1103,7 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String currency_converter_rateAgeDays(Object days) {
-    return '${days}d ago';
+    return 'há $days dias';
   }
 
   @override
@@ -1113,12 +1113,12 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String transfer_fromAcc(Object currency) {
-    return 'From ($currency)';
+    return 'Origem ($currency)';
   }
 
   @override
   String transfer_toAcc(Object currency) {
-    return 'To ($currency)';
+    return 'Destino ($currency)';
   }
 
   @override
@@ -1142,15 +1142,15 @@ class AppLocalizationsPt extends AppLocalizations {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other: '$count transactions in range',
-      one: '1 transaction in range',
+      other: '$count lançamentos no período',
+      one: '1 lançamento no período',
     );
     return '$_temp0';
   }
 
   @override
   String export_saved(Object path) {
-    return 'Saved: $path';
+    return 'Salvo em: $path';
   }
 
   @override
@@ -1164,7 +1164,7 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String shared_widgets_deleteConfirm(Object name) {
-    return 'Delete \"$name\"? This cannot be undone.';
+    return 'Excluir \"$name\"? Essa ação não pode ser desfeita.';
   }
 
   @override
@@ -1631,12 +1631,12 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String backup_lastBackup(String time) {
-    return 'Last backup: $time';
+    return 'Último backup: $time';
   }
 
   @override
   String backup_savingTo(String path) {
-    return 'Saving to: $path';
+    return 'Salvando em: $path';
   }
 
   @override
@@ -1662,7 +1662,7 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String savings_targetDate(String date) {
-    return 'Target Date: $date';
+    return 'Prazo: $date';
   }
 
   @override

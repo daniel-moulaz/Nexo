@@ -18,7 +18,6 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:timezone/timezone.dart' as tz;
 import 'package:timezone/data/latest_all.dart' as tz_data;
 import '../models/models.dart';
-import '../theme/app_theme.dart';
 
 class LendedNotificationService {
   // ── Singleton ────────────────────────────────────────────────────────────
@@ -32,8 +31,8 @@ class LendedNotificationService {
 
   // ── Channel constants ────────────────────────────────────────────────────
   static const _channelId = 'expensy_lended';
-  static const _channelName = 'Lent & Borrowed Reminders';
-  static const _channelDesc = 'Reminders for lent and borrowed money due dates';
+  static const _channelName = 'Lembretes de dinheiro emprestado';
+  static const _channelDesc = 'Vencimentos de valores emprestados e recebidos';
 
   // ── Initialization ──────────────────────────────────────────────────────
 
@@ -123,8 +122,6 @@ class LendedNotificationService {
     final hour = int.tryParse(parts[0]) ?? 9;
     final minute = parts.length > 1 ? (int.tryParse(parts[1]) ?? 0) : 0;
 
-    final emoji = l.type == 'lent' ? '\u{1F4B8}' : '\u{1F4B0}';
-    final amount = formatAmount(l.amount, mainCurrency);
     final details = _buildDetails();
 
     // Convert the target local date+time to a UTC-based TZDateTime.
@@ -134,12 +131,12 @@ class LendedNotificationService {
     if (tzDate == null) return;
 
     final body = l.type == 'lent'
-        ? '$amount you lent to $personName is due today'
-        : '$amount you borrowed from $personName is due today';
+        ? 'Um valor emprestado está previsto para hoje. Confira no Nexo.'
+        : 'Um valor que você deve vence hoje. Confira no Nexo.';
 
     await _plugin.zonedSchedule(
       _notifId(l.id),
-      '$emoji Due: $personName',
+      'Nexo • dinheiro emprestado',
       body,
       tzDate,
       details,

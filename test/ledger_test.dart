@@ -11,9 +11,73 @@ import 'package:expensy/services/card_invoice_service.dart';
 import 'package:expensy/services/finance_export_service.dart';
 import 'package:excel/excel.dart' hide Border;
 import 'package:expensy/services/import_rules_service.dart';
+import 'package:expensy/services/notification_inbox.dart';
+import 'package:expensy/services/nexo_security.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:flutter/foundation.dart';
 
 void main() {
   late AppProvider app;
+  test('App lock hides widget values even with Home values visible', () async {
+    debugDefaultTargetPlatformOverride=TargetPlatform.linux;
+    FlutterSecureStorage.setMockInitialValues({'nexo_security_v1':'{"enabled":true}'});
+    await NexoSecurity.instance.load();
+    final payloads=<String,dynamic>{};
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger.setMockMethodCallHandler(const MethodChannel('home_widget'),(call) async {
+      if(call.method=='saveWidgetData')payloads[call.arguments['id']]=jsonDecode(call.arguments['data']);return true;
+    });
+    try {
+      app.settings.hideBalance=false;await app.updateHomeWidgets();
+      expect(NexoSecurity.instance.enabled,true);expect(NexoSecurity.instance.storageError,false);
+      expect((payloads['accounts_widget_data'] as List).first['balance'],'••••');
+    } finally {
+      FlutterSecureStorage.setMockInitialValues({});await NexoSecurity.instance.load();debugDefaultTargetPlatformOverride=null;
+    }
+  });
+  AppTransaction notificationTx(String id) => AppTransaction(id:id,type:'expense',amount:100,description:'Internet',accountId:'bank',categoryId:'bills',date:DateTime.now());
+  Map<String,dynamic> suggestion(String id) => {'id': id, 'app_id':'com.nu.production',
+    'amount_cents':10000, 'description':'Internet', 'kind':'expense', 'medium':'bank',
+    'occurred_at':DateTime.now().millisecondsSinceEpoch};
+  test('v22 upgrade preserves balances and suggestions survive backup restore', () async {
+    final db=await DBHelper.database;
+    await db.execute('DROP TABLE notification_suggestions'); await db.setVersion(22); await DBHelper.close();
+    expect(await (await DBHelper.database).getVersion(),23);
+    expect((await DBHelper.getAccounts()).firstWhere((a)=>a.id=='bank').balance,1000);
+    await NotificationInbox.ingest([suggestion('backup')]);
+    await DBHelper.importAll(await DBHelper.exportAll());
+    expect((await NotificationInbox.pending()).single['id'],'backup');
+  });
+  test('Notification replay and ignored suggestions never create money', () async {
+    final row=suggestion('same');
+    await NotificationInbox.ingest([row,row]); await NotificationInbox.ingest([row]);
+    expect(await NotificationInbox.pending(),hasLength(1));
+    await NotificationInbox.ignore('same'); await NotificationInbox.ingest([row]);
+    expect(await NotificationInbox.pending(),isEmpty);
+    expect(await DBHelper.getTransactions(),isEmpty);
+    expect((await DBHelper.getAccounts()).firstWhere((a)=>a.id=='bank').balance,1000);
+  });
+  test('Confirmation and transaction are atomic and cannot be repeated', () async {
+    await NotificationInbox.ingest([suggestion('confirm')]);
+    await app.addTransaction(notificationTx('notification:confirm'),suggestionId:'confirm');
+    await expectLater(app.addTransaction(notificationTx('another-id'),suggestionId:'confirm'),throwsStateError);
+    expect(app.transactions,hasLength(1)); expect(app.accountById('bank')!.balance,900);
+    expect(await NotificationInbox.pending(),isEmpty);
+    await NotificationInbox.ingest([suggestion('confirm')]);
+    expect(await NotificationInbox.pending(),isEmpty);
+    expect(ImportRulesService.candidates(app.transactions,accountId:'bank',date:DateTime.now(),amount:100,type:'expense'),hasLength(1));
+  });
+  test('Suggestion transfer remains neutral and expired suggestions cannot be confirmed', () async {
+    await NotificationInbox.ingest([suggestion('transfer')]);
+    await app.addTransfer(fromId:'bank',toId:'cash',fromAmount:100,suggestionId:'transfer');
+    expect(app.totalBalanceAll,1000); expect(app.reportTransactions,isEmpty);
+    await expectLater(app.addTransfer(fromId:'bank',toId:'cash',fromAmount:100,suggestionId:'transfer'),throwsStateError);
+    await NotificationInbox.ingest([suggestion('expired')]);
+    final future=DateTime.now().add(const Duration(days:8));
+    await NotificationInbox.ingest([],now:future);
+    await expectLater(app.addTransaction(notificationTx('expired-tx'),suggestionId:'expired'),throwsStateError);
+    final expired=(await (await DBHelper.database).query('notification_suggestions',where:'id = ?',whereArgs:['expired'])).single;
+    expect(expired['description'],'');expect(expired['amount_cents'],0);expect(expired['status'],'expired');
+  });
   test('Private widgets never persist balances or budget values', () async {
     final payloads=<String,dynamic>{};
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger.setMockMethodCallHandler(const MethodChannel('home_widget'),(call) async {
@@ -59,7 +123,7 @@ void main() {
     await db.setVersion(21);
     await DBHelper.close();
     final upgraded = await DBHelper.database;
-    expect(await upgraded.getVersion(), 22);
+    expect(await upgraded.getVersion(), DBHelper.schemaVersion);
     expect((await upgraded.query('accounts')).length, 3);
     await upgraded.insert('categories', {
       'id': 'rulecat',
