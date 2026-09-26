@@ -27,8 +27,10 @@ void main() {
       () async {
     debugDefaultTargetPlatformOverride = TargetPlatform.linux;
     addTearDown(() => debugDefaultTargetPlatformOverride = null);
-    FlutterSecureStorage.setMockInitialValues(
-        {'nexo_security_v1': 'invalid-json'});
+    FlutterSecureStorage.setMockInitialValues({
+      'nexo_security_v1': 'invalid-json',
+      'unrelated_secret': 'preserve-me'
+    });
     final denied = NexoSecurity(auth: TestDeviceAuth(false));
     await denied.load();
     expect(denied.storageError, true);
@@ -42,6 +44,8 @@ void main() {
     expect(allowed.storageError, false);
     expect(allowed.locked, false);
     expect(allowed.enabled, false);
+    expect(await const FlutterSecureStorage().read(key: 'unrelated_secret'),
+        'preserve-me');
   });
   test('Future reminders cancel when resolved and include unpaid cards only',
       () {
