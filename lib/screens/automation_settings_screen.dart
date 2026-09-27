@@ -97,9 +97,13 @@ class _AutomationSettingsScreenState extends State<AutomationSettingsScreen>
                 status['access'] == true ? 'Autorizado' : 'Não autorizado'),
             trailing: const Icon(Icons.open_in_new),
             onTap: () => NotificationInbox.channel.invokeMethod('settings')),
-        if (status['enabled'] == true && status['access'] != true)
+        if (status['enabled'] == true && status['access'] != true) ...[
           const Text(
               'A detecção está pausada. Autorize o acesso no Android para receber sugestões.'),
+          const SizedBox(height: 8),
+          const Text(
+              'Se aparecer “configurações restritas”, abra Configurações > Apps > Nexo > menu ⋮ > Permitir configurações restritas. Depois volte ao acesso às notificações e ative o Nexo.'),
+        ],
         if (status['error'] == true)
           const Text(
               'Uma sugestão não pôde ser armazenada com segurança. Abra novamente o Nexo e confira a proteção do aparelho.'),
