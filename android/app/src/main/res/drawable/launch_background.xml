@@ -1,13 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Shown while the Flutter engine is warming up (Android ≤ 11).
-     On Android 12+ the OS shows the adaptive icon automatically before this. -->
+<!--
+  Keep the native launch window deliberately minimal. The previous bitmap used
+  its intrinsic pixel size on some OEM launchers and briefly filled most of the
+  screen. Flutter paints the branded UI immediately afterwards, so a neutral
+  background avoids a stretched/oversized logo flash during startup.
+-->
 <layer-list xmlns:android="http://schemas.android.com/apk/res/android">
-    <!-- Same background the app uses so there is no colour flash -->
     <item android:drawable="?android:colorBackground" />
-    <!-- Centre the same icon that the OS splash shows on Android 12+ -->
-    <item>
-        <bitmap
-            android:gravity="center"
-            android:src="@drawable/splash_icon" />
-    </item>
 </layer-list>
