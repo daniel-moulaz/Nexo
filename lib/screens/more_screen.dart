@@ -9,15 +9,15 @@ import 'categories_screen.dart';
 import 'currency_converter_screen.dart';
 import 'finance_export_screen.dart';
 import 'financial_planning_screen.dart';
-import 'insights_screen.dart';
+import 'analysis_screen.dart';
 import 'lended_screen.dart';
 import 'loans_screen.dart';
 import 'settings_screen.dart';
 import 'statement_import_screen.dart';
-import 'statistics_screen.dart';
+
 import 'transaction_search_screen.dart';
 import 'wishlist_screen.dart';
-import 'yearly_analysis_screen.dart';
+
 import 'agenda_screen.dart';
 import 'notification_inbox_screen.dart';
 
@@ -35,7 +35,12 @@ class MoreScreen extends StatelessWidget {
     final loansLen = app.loans.where((l) => !l.isSettled).length;
 
     final items = <_Item>[
-      const _Item(icon: Icons.inbox_outlined, label: 'Sugestões de lançamentos', sub: 'Revisar notificações financeiras, sem registro automático', color: Color(0xFF00695C), screen: NotificationInboxScreen()),
+      const _Item(
+          icon: Icons.inbox_outlined,
+          label: 'Sugestões de lançamentos',
+          sub: 'Revisar notificações financeiras, sem registro automático',
+          color: Color(0xFF00695C),
+          screen: NotificationInboxScreen()),
       const _Item(
           icon: Icons.event_note,
           label: 'Agenda financeira',
@@ -71,26 +76,11 @@ class MoreScreen extends StatelessWidget {
         screen: FinanceExportScreen(),
       ),
       const _Item(
-        icon: Icons.bar_chart_outlined,
-        label: 'Estatísticas',
-        sub: 'Gráficos e resumo mensal',
-        color: Color(0xFF1565C0),
-        screen: StatisticsScreen(),
-      ),
-      const _Item(
-        icon: Icons.insights_outlined,
-        label: 'Informações e tendências',
-        sub: 'Médias, categorias e padrões de gastos',
-        color: Color(0xFF00838F),
-        screen: InsightsScreen(),
-      ),
-      const _Item(
-        icon: Icons.calendar_month_outlined,
-        label: 'Análise anual',
-        sub: 'Fluxo de caixa e visão mês a mês',
-        color: Color(0xFF2E7D32),
-        screen: YearlyAnalysisScreen(),
-      ),
+          icon: Icons.bar_chart_outlined,
+          label: 'Análises',
+          sub: 'Categorias, comparações e fechamento mensal',
+          color: Color(0xFF1565C0),
+          screen: AnalysisScreen()),
       const _Item(
         icon: Icons.currency_exchange_rounded,
         label: 'Conversor de moeda',
@@ -173,9 +163,7 @@ class MoreScreen extends StatelessWidget {
               'Relatórios e arquivos': [
                 'Relatório financeiro',
                 'Importar extrato',
-                'Estatísticas',
-                'Informações e tendências',
-                'Análise anual'
+                'Análises'
               ],
               'Categorias e preferências': [
                 'Sugestões de lançamentos',

@@ -4,6 +4,32 @@ import org.junit.Assert.*
 import org.junit.Test
 
 class FinancialNotificationParserTest {
+    @Test fun diagnosticsAndConfidenceAreConservative() {
+        assertEquals("multiple_amounts", FinancialNotificationParser.analyze("Compra aprovada R$ 20,00 e R$ 20,00").reason)
+        assertEquals("sensitive", FinancialNotificationParser.analyze("Compra aprovada R$ 20,00 codigo 123456").reason)
+        assertEquals("balance_or_invoice", FinancialNotificationParser.analyze("Pagamento de fatura R$ 20,00").reason)
+        assertEquals("medium", FinancialNotificationParser.parse("Pagamento realizado R$ 20,00")!!.confidence)
+        assertEquals("high", FinancialNotificationParser.parse("Compra de R$ 20,00 aprovada em LOJA")!!.confidence)
+        assertNull(FinancialNotificationParser.parse("Pagamento R$ 20,00"))
+        assertNull(FinancialNotificationParser.parse("Compra aprovada? Confirme se reconhece R$ 20,00"))
+        assertNull(FinancialNotificationParser.parse("Compra aprovada R$ 20,00 não realizada"))
+        assertNull(FinancialNotificationParser.parse("Pix recebido e pix enviado R$ 20,00"))
+        assertNull(FinancialNotificationParser.parse("Compra aprovada US$ 20,00"))
+        assertNull(FinancialNotificationParser.parse("Compra aprovada -R$ 20,00"))
+    }
+    @Test fun expandedTemplatesAreNotTwoEvents() {
+        val result = FinancialNotificationParser.analyzeParts("Compra aprovada R$ 20,00", "Compra aprovada R$ 20,00 em LOJA")
+        assertEquals(2000L, result.suggestion!!.cents)
+        assertEquals("LOJA", result.suggestion!!.description)
+        assertEquals("multiple_amounts", FinancialNotificationParser.analyzeParts("Compra aprovada R$ 20,00", "Outra compra R$ 20,00").reason)
+        assertEquals("income", FinancialNotificationParser.parse("Você recebeu um Pix de R$ 120,00")!!.kind)
+        assertEquals("expense", FinancialNotificationParser.parse("Você enviou um Pix de R$ 120,00")!!.kind)
+    }
+    @Test fun recipientAndCardNumbersAreNotRetained() {
+        assertEquals("Pix recebido", FinancialNotificationParser.parse("Pix recebido R$ 20,00 de Fulano CPF 12345678900")!!.description)
+        assertEquals("Compra / pagamento", FinancialNotificationParser.parse("Compra aprovada R$ 20,00 em LOJA cartao 1234")!!.description)
+        assertEquals("unknown", FinancialNotificationParser.parse("Compra no credito R$ 20,00 com debito")!!.medium)
+    }
     @Test fun purchaseAndBrazilianMoney() {
         val item = FinancialNotificationParser.parse("Compra aprovada de R$ 1.234,56 em IFOOD")!!
         assertEquals(123456L, item.cents)

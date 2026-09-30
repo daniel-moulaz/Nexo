@@ -9,6 +9,7 @@ import '../models/models.dart';
 import '../providers/app_provider.dart';
 import 'finance_rules.dart';
 import 'transaction_metadata_service.dart';
+import 'billing_cycle.dart';
 
 class FinanceExportService {
   static String csvCell(String value, {bool numeric = false}) {
@@ -128,7 +129,8 @@ class FinanceExportService {
       } else {
         paid += amount;
       }
-      if (meta.expenseClass == 'extraordinary') extraordinary += amount;
+      if (!meta.isPending && meta.expenseClass == 'extraordinary')
+        extraordinary += amount;
     }
 
     final rows = <List<String>>[
@@ -183,6 +185,14 @@ class FinanceExportService {
       'Parcela',
       'Origem',
       'Observação',
+      'transaction_id',
+      'data_hora',
+      'account_id',
+      'tipo_conta',
+      'cartao',
+      'ciclo_fatura',
+      'destination_account_id',
+      'origem_tecnica',
     ];
     _header(sheet, headers);
 
@@ -190,6 +200,18 @@ class FinanceExportService {
       final tx = txs[i];
       final meta = metadata[tx.id] ?? TransactionMetadata(transactionId: tx.id);
       final neutral = FinanceRules.isNeutral(tx, meta);
+      final account = app.accountById(tx.accountId);
+      final destination = meta.source.startsWith('transfer:') &&
+              tx.type == 'expense'
+          ? app.transactions
+                  .where((other) =>
+                      other.id != tx.id &&
+                      other.type == 'income' &&
+                      app.transactionMetadata[other.id]?.source == meta.source)
+                  .firstOrNull
+                  ?.accountId ??
+              ''
+          : '';
       final status = meta.isOverdue
           ? 'Atrasado'
           : (meta.status == 'pending' ? 'Pendente' : 'Pago');
@@ -225,6 +247,18 @@ class FinanceExportService {
                 }[meta.source] ??
                 meta.source,
         tx.note,
+        tx.id,
+        tx.date.toIso8601String(),
+        tx.accountId,
+        account?.type ?? '',
+        account?.type == 'credit' ? account!.name : '',
+        account?.type == 'credit'
+            ? DateFormat('yyyy-MM-dd').format(BillingCycle.forDate(
+                    tx.date, account!.statementDay, account.dueDay)
+                .end)
+            : '',
+        destination,
+        meta.source,
       ];
       for (var c = 0; c < values.length; c++) {
         sheet

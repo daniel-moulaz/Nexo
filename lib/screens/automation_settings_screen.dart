@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import '../services/notification_inbox.dart';
 import 'notification_inbox_screen.dart';
+import '../services/notification_service.dart';
+import '../services/notification_preferences.dart';
+import 'import_rules_screen.dart';
 
 class AutomationSettingsScreen extends StatefulWidget {
   const AutomationSettingsScreen({super.key});
@@ -16,6 +19,37 @@ class _AutomationSettingsScreenState extends State<AutomationSettingsScreen>
   Set<String> selected = {};
   bool busy = true;
   String? error;
+  static const reasons = {
+    'none': 'Nenhuma notificação observada ainda',
+    'created': 'Sugestão criada para revisão',
+    'duplicate': 'Evento duplicado',
+    'unrecognized': 'Formato não reconhecido',
+    'multiple_amounts': 'Múltiplos valores; revisão ambígua',
+    'not_financial': 'Evento não confirmado ou não financeiro',
+    'sensitive': 'Conteúdo sensível descartado',
+    'balance_or_invoice': 'Saldo, limite ou fatura; não é consumo confirmado',
+    'app_not_allowed': 'App não autorizado; conteúdo não lido',
+    'group_summary': 'Resumo agrupado ignorado',
+    'old': 'Notificação antiga ou horário inválido',
+    'queue_error': 'Não foi possível guardar a sugestão com segurança',
+  };
+
+  Future<void> notifyReview(bool enabled) async {
+    setState(() => busy = true);
+    try {
+      if (enabled) await NotificationService().requestPermissions();
+      await NotificationInbox.channel
+          .invokeMethod('notifyReview', {'enabled': enabled});
+      await load();
+    } catch (_) {
+      if (mounted)
+        setState(() {
+          busy = false;
+          error = 'Não foi possível configurar o aviso. Tente novamente.';
+        });
+    }
+  }
+
   @override
   void initState() {
     super.initState();
@@ -107,6 +141,63 @@ class _AutomationSettingsScreenState extends State<AutomationSettingsScreen>
         if (status['error'] == true)
           const Text(
               'Uma sugestão não pôde ser armazenada com segurança. Abra novamente o Nexo e confira a proteção do aparelho.'),
+        SwitchListTile(
+            contentPadding: EdgeInsets.zero,
+            title: const Text('Avisar quando houver compra para revisar'),
+            subtitle: const Text(
+                'Aviso discreto, sempre sem valor ou estabelecimento. Nunca registra sozinho.'),
+            value: status['notifyReview'] == true,
+            onChanged: busy ? null : notifyReview),
+        if (status['notifyReview'] == true &&
+            status['notificationsAllowed'] != true)
+          const Text(
+              'O Android bloqueou os avisos do Nexo. As sugestões continuam disponíveis na caixa de revisão.'),
+        Card(
+            child: ExpansionTile(
+                title: const Text('Diagnóstico'),
+                subtitle:
+                    Text(reasons[status['lastResult']] ?? reasons['none']!),
+                children: [
+              ListTile(
+                  title: const Text('Automação'),
+                  subtitle:
+                      Text(status['enabled'] == true ? 'Ativa' : 'Desativada')),
+              ListTile(
+                  title: const Text('Apps permitidos'),
+                  subtitle: Text(selected.isEmpty
+                      ? 'Nenhum; selecione abaixo'
+                      : selected
+                          .map((id) =>
+                              apps
+                                  .where((a) => a['id'] == id)
+                                  .firstOrNull?['name'] ??
+                              NotificationInbox.knownApps[id] ??
+                              id)
+                          .join(', '))),
+              ListTile(
+                  title: const Text('Último evento observado'),
+                  subtitle: Text((status['lastAnalyzed'] as num? ?? 0) == 0
+                      ? 'Ainda não observado'
+                      : 'Há ${DateTime.now().difference(DateTime.fromMillisecondsSinceEpoch((status['lastAnalyzed'] as num).toInt())).inMinutes.clamp(0, 999999)} min')),
+              ListTile(
+                  title: const Text('Resultado'),
+                  subtitle:
+                      Text(reasons[status['lastResult']] ?? reasons['none']!)),
+              if (status['confidence'] == 'high' ||
+                  status['confidence'] == 'medium')
+                ListTile(
+                    title: const Text('Confiança do padrão'),
+                    subtitle: Text(status['confidence'] == 'high'
+                        ? 'Alta • evento explícito'
+                        : 'Média • confirme a natureza da operação')),
+              const Padding(
+                  padding: EdgeInsets.all(16),
+                  child: Text(
+                      'Somente horário e motivo genérico são guardados no diagnóstico. Nenhum texto, valor, senha ou código é armazenado aqui. O formato dos bancos pode mudar.')),
+              TextButton(
+                  onPressed: busy ? null : load,
+                  child: const Text('Atualizar diagnóstico')),
+            ])),
         ListTile(
             contentPadding: EdgeInsets.zero,
             title: const Text('Sugestões de lançamentos'),
@@ -115,6 +206,25 @@ class _AutomationSettingsScreenState extends State<AutomationSettingsScreen>
                 context,
                 MaterialPageRoute(
                     builder: (_) => const NotificationInboxScreen()))),
+        ListTile(
+            contentPadding: EdgeInsets.zero,
+            title: const Text('Regras de categoria'),
+            subtitle:
+                const Text('Regras locais para notificações e importações'),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => Navigator.push(context,
+                MaterialPageRoute(builder: (_) => const ImportRulesScreen()))),
+        ListTile(
+            contentPadding: EdgeInsets.zero,
+            title: const Text('Esquecer contas sugeridas'),
+            subtitle: const Text(
+                'Remove apenas as escolhas lembradas neste aparelho'),
+            onTap: () async {
+              await NotificationPreferences.clear();
+              if (context.mounted)
+                ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Associações removidas.')));
+            }),
         const Divider(),
         const Text(
             'Apps permitidos • selecione apenas bancos e carteiras de sua confiança'),

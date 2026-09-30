@@ -10,7 +10,8 @@ void main() {
   setUpAll(() async {
     sqfliteFfiInit();
     databaseFactory = databaseFactoryFfi;
-    final dir = await Directory.systemTemp.createTemp('nexo-notification-test-');
+    final dir =
+        await Directory.systemTemp.createTemp('nexo-notification-test-');
     await databaseFactory.setDatabasesPath(dir.path);
   });
 
@@ -48,10 +49,46 @@ void main() {
     expect(scrubbed['description'], '');
     expect(scrubbed['amount_cents'], 0);
 
-    await NotificationInbox.ingest([], now: start.add(const Duration(days: 91)));
+    await NotificationInbox.ingest([],
+        now: start.add(const Duration(days: 91)));
     expect(
         await db.query('notification_suggestions',
             where: 'id = ?', whereArgs: ['old']),
         isEmpty);
+  });
+  test('Malformed future and oversized rows cannot become suggestions',
+      () async {
+    final now = DateTime.now();
+    await NotificationInbox.ingest([
+      suggestion('future', now.add(const Duration(days: 1))),
+      {...suggestion('oversized', now), 'amount_cents': 100000000001},
+      {...suggestion('description', now), 'description': 'x' * 81},
+      {...suggestion('medium', now), 'medium': 'unsupported'},
+    ], now: now);
+    expect(await NotificationInbox.pending(), isEmpty);
+  });
+  test('Undo ignore cannot resurrect expired or confirmed rows', () async {
+    final now = DateTime.now();
+    await NotificationInbox.ingest([suggestion('undo', now)]);
+    await NotificationInbox.ignore('undo');
+    expect(await NotificationInbox.pending(), isEmpty);
+    await NotificationInbox.undoIgnore('undo');
+    expect(await NotificationInbox.pending(), hasLength(1));
+    final db = await DBHelper.database;
+    await db.update('notification_suggestions', {'status': 'confirmed'},
+        where: 'id = ?', whereArgs: ['undo']);
+    await NotificationInbox.undoIgnore('undo');
+    expect(await NotificationInbox.pending(), isEmpty);
+    await db.update(
+        'notification_suggestions',
+        {
+          'status': 'ignored',
+          'occurred_at':
+              now.subtract(const Duration(days: 8)).millisecondsSinceEpoch
+        },
+        where: 'id = ?',
+        whereArgs: ['undo']);
+    await NotificationInbox.undoIgnore('undo');
+    expect(await NotificationInbox.pending(), isEmpty);
   });
 }

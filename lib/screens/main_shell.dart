@@ -10,6 +10,11 @@ import 'accounts_screen.dart';
 import 'budget_screen.dart';
 import 'more_screen.dart';
 import '../utils/haptics.dart';
+import 'analysis_screen.dart';
+import 'agenda_screen.dart';
+import 'transaction_search_screen.dart';
+import 'settings_screen.dart';
+import 'statement_import_screen.dart';
 
 class MainShell extends StatefulWidget {
   const MainShell({super.key});
@@ -19,6 +24,15 @@ class MainShell extends StatefulWidget {
 
 class _MainShellState extends State<MainShell> {
   int _index = 0;
+  AppProvider? _app;
+  final Set<int> _visited = {0};
+  Widget get _body {
+    _visited.add(_index);
+    return IndexedStack(index: _index, children: [
+      for (var i = 0; i < _screens.length; i++)
+        _visited.contains(i) ? _screens[i] : const SizedBox.shrink(),
+    ]);
+  }
 
   static const _screens = [
     FinanceHomeScreen(),
@@ -27,17 +41,31 @@ class _MainShellState extends State<MainShell> {
     AccountsScreen(),
     BudgetScreen(),
     MoreScreen(),
+    AnalysisScreen(),
+    AgendaScreen(),
+    TransactionSearchScreen(),
+    SettingsScreen(),
+    StatementImportScreen(),
   ];
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
     final app = context.read<AppProvider>();
-    app.tabIndexNotifier.removeListener(_onTabChange);
-    app.tabIndexNotifier.addListener(_onTabChange);
+    if (_app != app) {
+      _app?.tabIndexNotifier.removeListener(_onTabChange);
+      _app = app;
+      app.tabIndexNotifier.addListener(_onTabChange);
+    }
     if (_index != app.tabIndexNotifier.value) {
       _index = app.tabIndexNotifier.value;
     }
+  }
+
+  @override
+  void dispose() {
+    _app?.tabIndexNotifier.removeListener(_onTabChange);
+    super.dispose();
   }
 
   void _onTabChange() {
@@ -52,6 +80,43 @@ class _MainShellState extends State<MainShell> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
+    if (MediaQuery.sizeOf(context).width >= 900) {
+      return Scaffold(
+          body: Row(children: [
+        SizedBox(
+            width: 220,
+            child: SafeArea(
+                child: ListView(children: [
+              const Padding(
+                  padding: EdgeInsets.all(24),
+                  child: Text('Nexo',
+                      style: TextStyle(
+                          fontSize: 28, fontWeight: FontWeight.w800))),
+              for (final entry in const [
+                (0, 'Resumo', Icons.dashboard_outlined),
+                (8, 'Transações', Icons.receipt_long_outlined),
+                (3, 'Contas e cartões', Icons.account_balance_wallet_outlined),
+                (2, 'Recorrentes', Icons.repeat),
+                (4, 'Orçamentos e objetivos', Icons.pie_chart_outline),
+                (6, 'Análises', Icons.bar_chart),
+                (7, 'Agenda', Icons.event_note),
+                (10, 'Importar', Icons.upload_file_outlined),
+                (9, 'Configurações', Icons.settings_outlined),
+                (5, 'Mais', Icons.more_horiz),
+              ])
+                ListTile(
+                    selected: _index == entry.$1,
+                    leading: Icon(entry.$3),
+                    title: Text(entry.$2),
+                    onTap: () => context
+                        .read<AppProvider>()
+                        .tabIndexNotifier
+                        .value = entry.$1),
+            ]))),
+        const VerticalDivider(width: 1),
+        Expanded(child: _body),
+      ]));
+    }
     return PopScope(
       canPop: _index == 0,
       onPopInvokedWithResult: (didPop, result) {
@@ -65,7 +130,7 @@ class _MainShellState extends State<MainShell> {
       },
       child: Scaffold(
         extendBody: false,
-        body: FadeIndexedStack(index: _index, children: _screens),
+        body: _body,
         bottomNavigationBar: SafeArea(
           child: Padding(
             padding: const EdgeInsets.fromLTRB(8, 0, 8, 8),
@@ -85,8 +150,9 @@ class _MainShellState extends State<MainShell> {
                   }),
                 ),
                 child: NavigationBar(
-                  labelBehavior: NavigationDestinationLabelBehavior.onlyShowSelected,
-                  selectedIndex: _index,
+                  labelBehavior:
+                      NavigationDestinationLabelBehavior.onlyShowSelected,
+                  selectedIndex: _index.clamp(0, 5),
                   animationDuration: const Duration(milliseconds: 120),
                   onDestinationSelected: (i) {
                     AppHaptics.tap(context, HapticStrength.selection);

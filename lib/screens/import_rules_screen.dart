@@ -116,7 +116,7 @@ class _ImportRulesScreenState extends State<ImportRulesScreen> {
 
   @override
   Widget build(BuildContext context) => Scaffold(
-      appBar: AppBar(title: const Text('Regras de importação')),
+      appBar: AppBar(title: const Text('Regras de categoria')),
       floatingActionButton: FloatingActionButton(
           onPressed: () => _edit(),
           tooltip: 'Nova regra',
@@ -133,7 +133,23 @@ class _ImportRulesScreenState extends State<ImportRulesScreen> {
                 padding: const EdgeInsets.fromLTRB(16, 16, 16, 96),
                 children: [
                   const Text(
-                      'Aplicadas somente à prévia de novas importações. O texto mais específico tem prioridade. Não alteram lançamentos antigos nem o saldo.'),
+                      'Sugerem categorias na revisão de notificações e importações. O texto mais específico tem prioridade. Não alteram lançamentos antigos nem o saldo.'),
+                  Wrap(spacing: 8, children: [
+                    for (final example in const [
+                      ('IFOOD', 'Delivery'),
+                      ('UBER', 'Transporte por app'),
+                      ('NETFLIX', 'Streaming'),
+                      ('POSTO', 'Combustível')
+                    ])
+                      ActionChip(
+                          label: Text('Exemplo: ${example.$1}'),
+                          onPressed: () => _edit(ImportRule(
+                              id: context.read<AppProvider>().newId(),
+                              pattern: example.$1,
+                              type: 'expense',
+                              categoryId: '',
+                              subcategory: example.$2))),
+                  ]),
                   if (snapshot.data!.isEmpty)
                     const Padding(
                         padding: EdgeInsets.all(24),

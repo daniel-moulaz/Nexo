@@ -13,6 +13,7 @@ import 'theme/app_theme.dart';
 import 'screens/main_shell.dart';
 import 'screens/onboarding_screen.dart';
 import 'screens/add_transaction_screen.dart';
+import 'screens/notification_inbox_screen.dart';
 import 'services/notification_service.dart';
 import 'services/lended_notification_service.dart';
 import 'services/quick_add_service.dart';
@@ -41,7 +42,8 @@ void main() async {
   await provider.load();
   await FinanceBootstrapService.apply(provider);
   NexoSecurity.instance.addListener(provider.updateHomeWidgets);
-  provider.addListener(() => FinancialReminders.instance.requestRefresh(provider));
+  provider
+      .addListener(() => FinancialReminders.instance.requestRefresh(provider));
   FinancialReminders.instance.requestRefresh(provider);
 
   runApp(
@@ -70,12 +72,16 @@ class _ExpensyAppState extends State<ExpensyApp> {
       final initialRoute = await QuickAddService.instance.getInitialRoute();
       if (initialRoute == QuickAddService.routeQuickAdd) {
         _pushQuickAdd();
+      } else if (initialRoute == 'notification_inbox') {
+        _pushInbox();
       }
     });
 
     _quickAddSub = QuickAddService.instance.routeStream.listen((route) {
       if (route == QuickAddService.routeQuickAdd) {
         _pushQuickAdd();
+      } else if (route == 'notification_inbox') {
+        _pushInbox();
       }
     });
   }
@@ -87,6 +93,12 @@ class _ExpensyAppState extends State<ExpensyApp> {
     rootNavigatorKey.currentState?.push(
       ExpensySlideUpRoute(builder: (_) => const AddTransactionScreen()),
     );
+  }
+
+  void _pushInbox() {
+    if (!mounted || !context.read<AppProvider>().settings.onboarded) return;
+    rootNavigatorKey.currentState?.push(
+        MaterialPageRoute(builder: (_) => const NotificationInboxScreen()));
   }
 
   @override
@@ -122,8 +134,7 @@ class _ExpensyAppState extends State<ExpensyApp> {
     return DynamicColorBuilder(
       builder: (ColorScheme? lightDynamic, ColorScheme? darkDynamic) {
         final view = View.of(context);
-        final mediaQueryData =
-            MediaQueryData.fromView(view).copyWith(accessibleNavigation: false);
+        final mediaQueryData = MediaQueryData.fromView(view);
 
         return MediaQuery(
           data: mediaQueryData,

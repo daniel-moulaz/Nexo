@@ -8,6 +8,7 @@ import '../theme/app_theme.dart';
 import '../utils/finance_input.dart';
 import '../widgets/shared_widgets.dart' show showCurrencyPicker;
 import 'transfer_screen.dart';
+import '../services/entry_defaults.dart';
 
 class AddTransactionScreen extends StatefulWidget {
   final AppTransaction? existing;
@@ -57,8 +58,11 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
     final app = context.read<AppProvider>();
     final accounts = app.accounts.where((a) => !a.isGold).toList();
     if (accounts.isNotEmpty) {
-      _accountId = accounts.first.id;
-      _currency = accounts.first.currency;
+      final recent = EntryDefaults.recentAccount(
+              accounts, app.transactions, app.transactionMetadata, _type) ??
+          accounts.first;
+      _accountId = recent.id;
+      _currency = recent.currency;
     }
     _selectFirstCategory(app, _type);
 

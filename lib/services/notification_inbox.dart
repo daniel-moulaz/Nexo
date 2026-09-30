@@ -16,12 +16,10 @@ class NotificationInbox {
   static Future<void> ingest(List<dynamic> rows, {DateTime? now}) async {
     final db = await DBHelper.database;
     final reference = now ?? DateTime.now();
-    final cutoff = reference
-        .subtract(const Duration(days: 7))
-        .millisecondsSinceEpoch;
-    final tombstoneCutoff = reference
-        .subtract(const Duration(days: 90))
-        .millisecondsSinceEpoch;
+    final cutoff =
+        reference.subtract(const Duration(days: 7)).millisecondsSinceEpoch;
+    final tombstoneCutoff =
+        reference.subtract(const Duration(days: 90)).millisecondsSinceEpoch;
     await db.transaction((txn) async {
       for (final raw in rows) {
         final row = Map<String, dynamic>.from(raw as Map);
@@ -31,7 +29,14 @@ class NotificationInbox {
             row['occurred_at'] is! int ||
             row['amount_cents'] is! int) continue;
         if ((row['amount_cents'] as int) <= 0 ||
+            (row['amount_cents'] as int) > 100000000000 ||
             (row['occurred_at'] as int) < cutoff ||
+            (row['occurred_at'] as int) >
+                reference
+                    .add(const Duration(minutes: 1))
+                    .millisecondsSinceEpoch ||
+            (row['description'] as String).length > 80 ||
+            !['credit', 'bank', 'unknown'].contains(row['medium']) ||
             !['income', 'expense', 'refund', 'transfer'].contains(row['kind']))
           continue;
         await txn.insert(
@@ -89,4 +94,15 @@ class NotificationInbox {
   static Future<void> ignore(String id) async => (await DBHelper.database)
       .update('notification_suggestions', {'status': 'ignored'},
           where: 'id = ? AND status = ?', whereArgs: [id, 'pending']);
+
+  static Future<void> undoIgnore(String id) async => (await DBHelper.database)
+      .update('notification_suggestions', {'status': 'pending'},
+          where: 'id = ? AND status = ? AND occurred_at >= ?',
+          whereArgs: [
+            id,
+            'ignored',
+            DateTime.now()
+                .subtract(const Duration(days: 7))
+                .millisecondsSinceEpoch
+          ]);
 }

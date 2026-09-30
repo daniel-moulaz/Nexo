@@ -55,6 +55,11 @@ class MainActivity : FlutterFragmentActivity() {
                                 else (Settings.Secure.getString(contentResolver, "enabled_notification_listeners") ?: "").split(':')
                                     .contains(ComponentName(this, FinancialNotificationListener::class.java).flattenToString()),
                             "error" to p.getBoolean("queue_error", false),
+                            "lastAnalyzed" to p.getLong("last_analyzed", 0),
+                            "lastResult" to p.getString("last_result", "none"),
+                            "confidence" to p.getString("last_confidence", ""),
+                            "notifyReview" to p.getBoolean("notify_review", false),
+                            "notificationsAllowed" to (Build.VERSION.SDK_INT < 24 || (getSystemService(NOTIFICATION_SERVICE) as NotificationManager).areNotificationsEnabled()),
                             "recentsSupported" to (Build.VERSION.SDK_INT >= 33)))
                         "configure" -> {
                             p.edit().putBoolean("enabled", call.argument<Boolean>("enabled") == true)
@@ -62,6 +67,7 @@ class MainActivity : FlutterFragmentActivity() {
                             result.success(null)
                         }
                         "settings" -> { startActivity(Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS)); result.success(null) }
+                        "notifyReview" -> { p.edit().putBoolean("notify_review", call.argument<Boolean>("enabled") == true).commit(); result.success(null) }
                         "queue" -> result.success(FinancialInboxQueue.read(this).toString())
                         "ack" -> { FinancialInboxQueue.ack(this, call.argument<List<String>>("ids")!!.toSet()); result.success(null) }
                         "privacy" -> {
@@ -90,6 +96,7 @@ class MainActivity : FlutterFragmentActivity() {
             .setMethodCallHandler { call, result ->
                 if (call.method == "getInitialRoute") {
                     result.success(intent?.getStringExtra(QuickAddWidgetProvider.EXTRA_ROUTE))
+                    intent?.removeExtra(QuickAddWidgetProvider.EXTRA_ROUTE)
                 } else {
                     result.notImplemented()
                 }
