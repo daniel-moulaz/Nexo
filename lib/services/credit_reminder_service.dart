@@ -1,10 +1,12 @@
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import '../models/models.dart';
+import 'platform_capabilities.dart';
 
 /// Compatibility adapter: central reminders replace unconditional bill alerts.
 class CreditReminderService {
   final _plugin = FlutterLocalNotificationsPlugin();
   Future<void> initialize() async {
+    if (!PlatformCapabilities.scheduledNotifications) return;
     await _plugin.initialize(const InitializationSettings(
         android: AndroidInitializationSettings('ic_notification')));
   }
@@ -16,6 +18,7 @@ class CreditReminderService {
           ?.areNotificationsEnabled() ??
       false;
   Future<void> cancelReminder(String id) async {
+    if (!PlatformCapabilities.scheduledNotifications) return;
     var hash = 0;
     for (final c in id.codeUnits) {
       hash = 31 * hash + c;

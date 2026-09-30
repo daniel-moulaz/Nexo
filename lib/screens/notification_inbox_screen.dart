@@ -10,6 +10,8 @@ import '../utils/finance_input.dart';
 import '../theme/app_theme.dart';
 import '../services/notification_preferences.dart';
 import 'automation_settings_screen.dart';
+import '../services/platform_capabilities.dart';
+import '../widgets/android_feature_notice.dart';
 
 class NotificationInboxScreen extends StatefulWidget {
   const NotificationInboxScreen({super.key});
@@ -41,6 +43,7 @@ class _NotificationInboxScreenState extends State<NotificationInboxScreen>
   }
 
   Future<void> reload() async {
+    if (!PlatformCapabilities.bankNotifications) return;
     try {
       await NotificationInbox.sync();
       final result = await NotificationInbox.pending();
@@ -58,6 +61,11 @@ class _NotificationInboxScreenState extends State<NotificationInboxScreen>
 
   @override
   Widget build(BuildContext context) {
+    if (!PlatformCapabilities.bankNotifications)
+      return const AndroidFeatureNotice(
+          title: 'Sugestões',
+          explanation:
+              'A detecção bancária funciona no Android. Esta versão Windows é local e não recebe sugestões do celular.');
     final app = context.watch<AppProvider>();
     return Scaffold(
         appBar: AppBar(title: const Text('Sugestões de lançamentos'), actions: [

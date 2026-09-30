@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
+import '../services/platform_capabilities.dart';
 
 const Map<String, Color> kSeedColors = {
   'violet': Color(0xFF6750A4),
@@ -84,6 +85,7 @@ const Map<String, String> kFonts = {
 };
 
 TextTheme _applyFont(String font, TextTheme base) {
+  if (PlatformCapabilities.windows) return base.apply(fontFamily: 'Segoe UI');
   switch (font) {
     case 'plus_jakarta_sans':
       return GoogleFonts.plusJakartaSansTextTheme(base);
@@ -210,7 +212,8 @@ class ExpensyRoute<T> extends MaterialPageRoute<T> {
 class ExpensySlideUpRoute<T> extends PageRouteBuilder<T> {
   ExpensySlideUpRoute({required WidgetBuilder builder, super.settings})
       : super(
-          pageBuilder: (context, animation, secondaryAnimation) => builder(context),
+          pageBuilder: (context, animation, secondaryAnimation) =>
+              builder(context),
           transitionsBuilder: (context, animation, secondaryAnimation, child) {
             final curved = CurvedAnimation(
               parent: animation,

@@ -1,5 +1,5 @@
 import 'dart:convert';
-import 'package:flutter/foundation.dart';
+import 'platform_capabilities.dart';
 import 'package:flutter/services.dart';
 import 'package:sqflite/sqflite.dart';
 import '../database/db_helper.dart';
@@ -70,7 +70,7 @@ class NotificationInbox {
   }
 
   static Future<void> sync() async {
-    if (defaultTargetPlatform != TargetPlatform.android || _syncing) return;
+    if (!PlatformCapabilities.bankNotifications || _syncing) return;
     _syncing = true;
     try {
       final text = await channel.invokeMethod<String>('queue');

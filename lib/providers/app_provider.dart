@@ -14,6 +14,8 @@ import '../services/exchange_rate_service.dart';
 import '../services/notification_service.dart';
 import '../services/financial_reminders.dart';
 import '../services/nexo_security.dart';
+import '../services/platform_capabilities.dart';
+import '../services/file_output.dart';
 import '../services/lended_notification_service.dart';
 import '../services/budget_notification_service.dart';
 import '../services/daily_reminder_service.dart';
@@ -273,8 +275,11 @@ class AppProvider extends ChangeNotifier {
   }
 
   Future<void> updateHomeWidgets() async {
+    if (!PlatformCapabilities.homeWidgets) return;
     try {
-      final hidden = settings.hideBalance || NexoSecurity.instance.enabled || NexoSecurity.instance.storageError;
+      final hidden = settings.hideBalance ||
+          NexoSecurity.instance.enabled ||
+          NexoSecurity.instance.storageError;
       final pinnedIds = settings.pinnedWidgetAccountIds;
       final pinnedAccounts =
           accounts.where((a) => pinnedIds.contains(a.id)).take(3).toList();
@@ -302,8 +307,7 @@ class AppProvider extends ChangeNotifier {
               : categoryById(b.categoryId)?.name ?? 'Orçamento',
           'spent': hidden ? 0.0 : spent,
           'amount': hidden ? 0.0 : b.amount,
-          'progress':
-              !hidden && b.amount > 0 ? spent / b.amount : 0.0,
+          'progress': !hidden && b.amount > 0 ? spent / b.amount : 0.0,
           'exceeded': !hidden && spent > b.amount,
           'currency': settings.currency,
         };
@@ -735,7 +739,9 @@ class AppProvider extends ChangeNotifier {
   }
 
   Future<void> addTransaction(AppTransaction t,
-      {TransactionMetadata? metadata, bool generateInstallments = true, String? suggestionId}) async {
+      {TransactionMetadata? metadata,
+      bool generateInstallments = true,
+      String? suggestionId}) async {
     final db = await DBHelper.database;
     if (!t.amount.isFinite ||
         t.amount <= 0 ||
@@ -745,7 +751,8 @@ class AppProvider extends ChangeNotifier {
     }
     final meta = metadata ?? TransactionMetadata(transactionId: t.id);
     await db.transaction((txn) async {
-      if (suggestionId != null) await DBHelper.confirmSuggestion(txn, suggestionId, t.id);
+      if (suggestionId != null)
+        await DBHelper.confirmSuggestion(txn, suggestionId, t.id);
       final current = meta.installmentCurrent ?? 1;
       final total =
           generateInstallments ? meta.installmentTotal ?? current : current;
@@ -960,7 +967,8 @@ class AppProvider extends ChangeNotifier {
           'paid_at': now.toIso8601String()
         });
       }
-      if (suggestionId != null) await DBHelper.confirmSuggestion(txn, suggestionId, debit.id);
+      if (suggestionId != null)
+        await DBHelper.confirmSuggestion(txn, suggestionId, debit.id);
       for (final tx in [debit, credit]) {
         await txn.insert('transactions', tx.toMap());
         await txn.insert(
@@ -1028,21 +1036,26 @@ class AppProvider extends ChangeNotifier {
       if (rows.isEmpty) return;
       final skipped = await txn.query('recurring_history',
           where: 'recurring_id = ? AND action = ?',
-          whereArgs: [expected.id, 'skipped'], orderBy: 'date ASC');
+          whereArgs: [expected.id, 'skipped'],
+          orderBy: 'date ASC');
       final r = RecurringPayment.fromMap(rows.first,
-          skippedOccurrences: skipped.map(RecurringHistoryEntry.fromMap).toList());
+          skippedOccurrences:
+              skipped.map(RecurringHistoryEntry.fromMap).toList());
       if (skip && !r.canSkip) {
         throw StateError('Uma parcela continua devida e não pode ser pulada.');
       }
       // A stale screen or double tap must never complete another occurrence.
       if (r.nextDate != expected.nextDate ||
-          r.nextActionDate != expected.nextActionDate || !r.canComplete) return;
+          r.nextActionDate != expected.nextActionDate ||
+          !r.canComplete) return;
       // Old skipped installments remain debts. Explicit payment repairs only
       // that occurrence, without advancing or consuming the schedule twice.
-      final recovery = r.hasSkippedInstallments ? r.skippedOccurrences.first : null;
+      final recovery =
+          r.hasSkippedInstallments ? r.skippedOccurrences.first : null;
       final date = recovery?.date ?? r.nextDate;
       final amount = recovery?.amount ?? r.amount;
-      final occurrenceId = recovery?.id ?? 'recurring:${r.id}:${date.toIso8601String()}';
+      final occurrenceId =
+          recovery?.id ?? 'recurring:${r.id}:${date.toIso8601String()}';
       if (!skip) {
         final tx = AppTransaction(
             id: occurrenceId,
@@ -1059,8 +1072,9 @@ class AppProvider extends ChangeNotifier {
             TransactionMetadata(
               transactionId: tx.id,
               source: 'recurring',
-              installmentCurrent:
-                  r.recurringType == 'installment' ? r.installmentNumberAt(date) : null,
+              installmentCurrent: r.recurringType == 'installment'
+                  ? r.installmentNumberAt(date)
+                  : null,
               installmentTotal:
                   r.recurringType == 'installment' ? r.totalPayments : null,
             ).toMap());
@@ -1072,25 +1086,25 @@ class AppProvider extends ChangeNotifier {
         await txn.update('recurring_history', {'action': 'paid'},
             where: 'id = ?', whereArgs: [recovery.id]);
       } else {
-      await txn.insert(
-          'recurring_history',
-          RecurringHistoryEntry(
-            id: occurrenceId,
-            recurringId: r.id,
-            action: skip ? 'skipped' : 'paid',
-            date: r.nextDate,
-            amount: r.amount,
-            currency: accountById(r.accountId)?.currency ?? settings.currency,
-          ).toMap());
-      final next = r.calcNextDate();
-      await txn.update(
-          'recurring_payments',
-          {
-            'next_date': next.toIso8601String(),
-            'paid_payments': r.completedOccurrences + 1
-          },
-          where: 'id = ?',
-          whereArgs: [r.id]);
+        await txn.insert(
+            'recurring_history',
+            RecurringHistoryEntry(
+              id: occurrenceId,
+              recurringId: r.id,
+              action: skip ? 'skipped' : 'paid',
+              date: r.nextDate,
+              amount: r.amount,
+              currency: accountById(r.accountId)?.currency ?? settings.currency,
+            ).toMap());
+        final next = r.calcNextDate();
+        await txn.update(
+            'recurring_payments',
+            {
+              'next_date': next.toIso8601String(),
+              'paid_payments': r.completedOccurrences + 1
+            },
+            where: 'id = ?',
+            whereArgs: [r.id]);
       }
     });
     _historyCache.remove(expected.id);
@@ -1664,11 +1678,10 @@ class AppProvider extends ChangeNotifier {
     final uint8 = Uint8List.fromList(utf8.encode(json));
     final ts = DateTime.now().millisecondsSinceEpoch;
 
-    final savePath = await FilePicker.platform.saveFile(
-      dialogTitle: 'Save Expensy Backup',
-      fileName: 'expensy_backup_$ts.json',
-      type: FileType.custom,
-      allowedExtensions: ['json'],
+    final savePath = await FileOutput.save(
+      title: 'Salvar backup do Nexo',
+      name: 'nexo_backup_$ts.json',
+      extension: 'json',
       bytes: uint8,
     );
     return savePath;

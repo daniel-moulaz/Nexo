@@ -33,12 +33,14 @@ void main() {
     });
     try {
       app.settings.hideBalance = false;
+      debugDefaultTargetPlatformOverride = TargetPlatform.android;
       await app.updateHomeWidgets();
       expect(NexoSecurity.instance.enabled, true);
       expect(NexoSecurity.instance.storageError, false);
       expect(
           (payloads['accounts_widget_data'] as List).first['balance'], '••••');
     } finally {
+      debugDefaultTargetPlatformOverride = TargetPlatform.linux;
       FlutterSecureStorage.setMockInitialValues({});
       await NexoSecurity.instance.load();
       debugDefaultTargetPlatformOverride = null;

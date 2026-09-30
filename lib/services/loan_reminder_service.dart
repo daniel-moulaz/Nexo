@@ -2,6 +2,7 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:timezone/timezone.dart' as tz;
 import 'package:timezone/data/latest_all.dart' as tz_data;
 import '../models/models.dart';
+import 'platform_capabilities.dart';
 
 class LoanReminderService {
   static final LoanReminderService _instance = LoanReminderService._();
@@ -16,10 +17,10 @@ class LoanReminderService {
   static const _channelDesc = 'Vencimento de parcelas de empréstimos';
 
   Future<void> initialize() async {
+    if (!PlatformCapabilities.scheduledNotifications) return;
     if (_initialized) return;
     tz_data.initializeTimeZones();
-    const androidSettings =
-        AndroidInitializationSettings('ic_notification');
+    const androidSettings = AndroidInitializationSettings('ic_notification');
     await _plugin
         .initialize(const InitializationSettings(android: androidSettings));
     _initialized = true;
@@ -50,7 +51,8 @@ class LoanReminderService {
     for (var i = 0; i < loanId.length; i++) {
       hash = 31 * hash + loanId.codeUnitAt(i);
     }
-    return (hash & 0x7FFFFFFF) + 1000000; // offset distinct from credit, recurring, lended
+    return (hash & 0x7FFFFFFF) +
+        1000000; // offset distinct from credit, recurring, lended
   }
 
   tz.TZDateTime? _nextReminderDate(
@@ -129,6 +131,7 @@ class LoanReminderService {
   }
 
   Future<void> cancelReminder(String loanId) async {
+    if (!PlatformCapabilities.scheduledNotifications) return;
     await _ensureInit();
     await _plugin.cancel(_notifId(loanId));
   }

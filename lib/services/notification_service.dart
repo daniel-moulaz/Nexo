@@ -1,4 +1,4 @@
-import 'dart:io';
+import 'platform_capabilities.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import '../models/models.dart';
 
@@ -6,12 +6,13 @@ import '../models/models.dart';
 class NotificationService {
   final _plugin = FlutterLocalNotificationsPlugin();
   Future<void> initialize() async {
+    if (!PlatformCapabilities.scheduledNotifications) return;
     await _plugin.initialize(const InitializationSettings(
         android: AndroidInitializationSettings('ic_notification')));
   }
 
   Future<bool> requestPermissions() async {
-    if (!Platform.isAndroid) return false;
+    if (!PlatformCapabilities.scheduledNotifications) return false;
     return await _plugin
             .resolvePlatformSpecificImplementation<
                 AndroidFlutterLocalNotificationsPlugin>()
@@ -26,6 +27,7 @@ class NotificationService {
           ?.areNotificationsEnabled() ??
       false;
   Future<void> cancelReminder(String id) async {
+    if (!PlatformCapabilities.scheduledNotifications) return;
     await _plugin.cancel(id.hashCode & 0x7fffffff);
     await _plugin.cancel('${id}_adv'.hashCode & 0x7fffffff);
   }

@@ -1,7 +1,7 @@
 name: expensy
 description: Nexo — controle financeiro pessoal brasileiro com dados locais.
 publish_to: 'none'
-version: 1.5.0+16
+version: 1.5.1+17
 
 environment:
   sdk: '>=3.3.0 <4.0.0'
@@ -12,6 +12,7 @@ dependencies:
   flutter_localizations:
     sdk: flutter
   sqflite: 2.3.3+1
+  sqflite_common_ffi: ^2.4.3
   path: ^1.9.0
   path_provider: ^2.1.4
   fl_chart: ^0.68.0
@@ -41,7 +42,6 @@ dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^4.0.0
-  sqflite_common_ffi: ^2.4.3
 
 flutter:
   generate: true

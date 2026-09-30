@@ -1,6 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
-import 'package:flutter/foundation.dart';
+import 'platform_capabilities.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:timezone/timezone.dart' as tz;
@@ -111,12 +111,13 @@ class FinancialReminders {
   }
 
   void requestRefresh(AppProvider app) {
+    if (!PlatformCapabilities.scheduledNotifications) return;
     _debounce?.cancel();
     _debounce = Timer(const Duration(milliseconds: 500), () => refresh(app));
   }
 
   Future<void> refresh(AppProvider app) async {
-    if (defaultTargetPlatform != TargetPlatform.android) return;
+    if (!PlatformCapabilities.scheduledNotifications) return;
     if (_running) {
       await _completion!.future;
       return refresh(app);

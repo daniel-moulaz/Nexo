@@ -13,7 +13,7 @@
 // passed, the notification is simply not scheduled (the UI already shows a
 // hint about this to the user).
 
-import 'dart:io';
+import 'platform_capabilities.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:timezone/timezone.dart' as tz;
 import 'package:timezone/data/latest_all.dart' as tz_data;
@@ -41,14 +41,14 @@ class LendedNotificationService {
   /// notification channel so it's immediately visible in system settings
   /// even before any reminder is ever scheduled.
   Future<void> initialize() async {
+    if (!PlatformCapabilities.scheduledNotifications) return;
     if (_initialized) return;
 
     // Timezone definitions — safe to call multiple times if the recurring
     // service already called it; tz_data tracks its own init state.
     tz_data.initializeTimeZones();
 
-    const androidSettings =
-        AndroidInitializationSettings('ic_notification');
+    const androidSettings = AndroidInitializationSettings('ic_notification');
     await _plugin
         .initialize(const InitializationSettings(android: androidSettings));
     _initialized = true;
@@ -75,7 +75,7 @@ class LendedNotificationService {
   /// Request POST_NOTIFICATIONS (Android 13+) and SCHEDULE_EXACT_ALARM
   /// (Android 12+). Returns true when the app can post notifications.
   Future<bool> requestPermissions() async {
-    if (!Platform.isAndroid) return false;
+    if (!PlatformCapabilities.scheduledNotifications) return false;
     await _ensureInit();
     final android = _plugin.resolvePlatformSpecificImplementation<
         AndroidFlutterLocalNotificationsPlugin>();
@@ -89,7 +89,7 @@ class LendedNotificationService {
 
   /// Whether the app currently holds notification permission.
   Future<bool> hasPermission() async {
-    if (!Platform.isAndroid) return false;
+    if (!PlatformCapabilities.scheduledNotifications) return false;
     await _ensureInit();
     final android = _plugin.resolvePlatformSpecificImplementation<
         AndroidFlutterLocalNotificationsPlugin>();
@@ -115,7 +115,10 @@ class LendedNotificationService {
     String mainCurrency, {
     required String personName,
   }) async {
-    if (!l.reminderEnabled || l.isSettled || l.dueDate == null) return;
+    if (!PlatformCapabilities.scheduledNotifications ||
+        !l.reminderEnabled ||
+        l.isSettled ||
+        l.dueDate == null) return;
     await _ensureInit();
 
     final parts = l.reminderTime.split(':');
@@ -149,6 +152,7 @@ class LendedNotificationService {
 
   /// Cancel the lended reminder for [lendedId].
   Future<void> cancelLendedReminder(String lendedId) async {
+    if (!PlatformCapabilities.scheduledNotifications) return;
     await _ensureInit();
     await _plugin.cancel(_notifId(lendedId));
   }
@@ -166,6 +170,7 @@ class LendedNotificationService {
     String mainCurrency, {
     String Function(String personId)? personNameOf,
   }) async {
+    if (!PlatformCapabilities.scheduledNotifications) return;
     await _ensureInit();
     // Cancel all previously scheduled lended notifications. We only cancel
     // our own — recurring notifications use different IDs and a different

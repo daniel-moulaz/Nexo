@@ -1,5 +1,6 @@
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:timezone/timezone.dart' as tz;
+import 'platform_capabilities.dart';
 
 class DailyReminderService {
   static final DailyReminderService _instance =
@@ -12,9 +13,9 @@ class DailyReminderService {
   bool _initialized = false;
 
   Future<void> initialize() async {
+    if (!PlatformCapabilities.scheduledNotifications) return;
     if (_initialized) return;
-    const androidInit =
-        AndroidInitializationSettings('ic_notification');
+    const androidInit = AndroidInitializationSettings('ic_notification');
     const initSettings = InitializationSettings(android: androidInit);
     await _plugin.initialize(initSettings);
     _initialized = true;
@@ -88,6 +89,7 @@ class DailyReminderService {
   }
 
   Future<void> cancelDailyReminder() async {
+    if (!PlatformCapabilities.scheduledNotifications) return;
     await _plugin.cancel(dailyReminderId);
   }
 }

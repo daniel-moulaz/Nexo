@@ -1,5 +1,6 @@
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import '../models/models.dart';
+import 'platform_capabilities.dart';
 import 'package:intl/intl.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -14,9 +15,9 @@ class BudgetNotificationService {
   bool _initialized = false;
 
   Future<void> initialize() async {
+    if (!PlatformCapabilities.scheduledNotifications) return;
     if (_initialized) return;
-    const androidInit =
-        AndroidInitializationSettings('ic_notification');
+    const androidInit = AndroidInitializationSettings('ic_notification');
     const initSettings = InitializationSettings(android: androidInit);
     await _plugin.initialize(initSettings);
     _initialized = true;
@@ -39,7 +40,6 @@ class BudgetNotificationService {
     if (!(await hasPermission())) return;
     final overAmount = spentAmount - budget.amount;
     if (overAmount <= 0) return;
-
 
     // Stable ID that resets daily so budget alerts don't spam.
     final today = DateFormat('yyyy-MM-dd').format(DateTime.now());
@@ -73,7 +73,6 @@ class BudgetNotificationService {
 
   Future<void> showGoalCompleted(SavingsGoal goal) async {
     if (!(await hasPermission())) return;
-
 
     // Stable ID that resets daily.
     final today = DateFormat('yyyy-MM-dd').format(DateTime.now());
