@@ -31,6 +31,23 @@ class _StatementImportScreenState extends State<StatementImportScreen> {
   List<ImportRule> _customRules = [];
 
   Future<void> _pickFile() async {
+    if (_busy) return;
+    setState(() {
+      _busy = true;
+      _message = null;
+    });
+    try {
+      await _readSelectedFile();
+    } catch (_) {
+      if (mounted)
+        setState(() => _message =
+            'Não foi possível ler o arquivo. Confira se ele existe, se você tem permissão e se é um CSV, TXT ou OFX de até 10 MB. Nenhum lançamento foi alterado.');
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  Future<void> _readSelectedFile() async {
     try {
       _customRules = await ImportRulesService.load();
     } catch (_) {
@@ -43,11 +60,13 @@ class _StatementImportScreenState extends State<StatementImportScreen> {
     final result = await FilePicker.platform.pickFiles(
       type: FileType.custom,
       allowedExtensions: const ['csv', 'txt', 'ofx'],
-      withData: true,
+      withData: false,
     );
     if (result == null || result.files.isEmpty) return;
 
     final file = result.files.first;
+    if (file.size > 10 * 1024 * 1024)
+      throw const FormatException('Arquivo muito grande');
     final bytes = file.bytes ??
         (file.path == null ? null : await File(file.path!).readAsBytes());
     if (bytes == null) return;
@@ -55,6 +74,9 @@ class _StatementImportScreenState extends State<StatementImportScreen> {
     final decoded = utf8.decode(bytes, allowMalformed: true);
     final content = decoded.contains('�') ? latin1.decode(bytes) : decoded;
     final parsed = _parse(content);
+    if (parsed.length > 10000)
+      throw const FormatException('Divida o extrato em arquivos menores');
+    if (!mounted) return;
     setState(() {
       _rows = parsed;
       _fileName = file.name;
@@ -396,7 +418,11 @@ class _StatementImportScreenState extends State<StatementImportScreen> {
         category = fallbackCategory;
       }
       if (category == null) {
-        setState(() { _busy = false; _message = 'Cadastre uma categoria de ${row.type == 'income' ? 'receita' : 'despesa'} antes de importar.'; });
+        setState(() {
+          _busy = false;
+          _message =
+              'Cadastre uma categoria de ${row.type == 'income' ? 'receita' : 'despesa'} antes de importar.';
+        });
         return;
       }
 
