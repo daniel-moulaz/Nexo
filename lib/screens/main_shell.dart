@@ -15,6 +15,9 @@ import 'agenda_screen.dart';
 import 'transaction_search_screen.dart';
 import 'settings_screen.dart';
 import 'statement_import_screen.dart';
+import 'add_transaction_screen.dart';
+import '../services/nexo_security.dart';
+import 'package:flutter/services.dart';
 
 class MainShell extends StatefulWidget {
   const MainShell({super.key});
@@ -24,6 +27,7 @@ class MainShell extends StatefulWidget {
 
 class _MainShellState extends State<MainShell> {
   int _index = 0;
+  final searchFocus = FocusNode();
   AppProvider? _app;
   final Set<int> _visited = {0};
   Widget get _body {
@@ -34,19 +38,52 @@ class _MainShellState extends State<MainShell> {
     ]);
   }
 
-  static const _screens = [
-    FinanceHomeScreen(),
-    ExpensesScreen(),
-    RecurringScreen(),
-    AccountsScreen(),
-    BudgetScreen(),
-    MoreScreen(),
-    AnalysisScreen(),
-    AgendaScreen(),
-    TransactionSearchScreen(),
-    SettingsScreen(),
-    StatementImportScreen(),
-  ];
+  List<Widget> get _screens => [
+        FinanceHomeScreen(),
+        ExpensesScreen(),
+        RecurringScreen(),
+        AccountsScreen(),
+        BudgetScreen(),
+        MoreScreen(),
+        AnalysisScreen(),
+        AgendaScreen(),
+        TransactionSearchScreen(searchFocus: searchFocus),
+        SettingsScreen(),
+        StatementImportScreen(),
+      ];
+
+  @override
+  void initState() {
+    super.initState();
+    HardwareKeyboard.instance.addHandler(_handleDesktopKey);
+  }
+
+  bool _handleDesktopKey(KeyEvent event) {
+    final keyboard = HardwareKeyboard.instance;
+    if (!mounted ||
+        event is! KeyDownEvent ||
+        !keyboard.isControlPressed ||
+        keyboard.isAltPressed ||
+        keyboard.isMetaPressed ||
+        keyboard.isShiftPressed ||
+        MediaQuery.sizeOf(context).width < 900 ||
+        !_canUseShortcut) {
+      return false;
+    }
+    if (event.logicalKey == LogicalKeyboardKey.keyN) {
+      Navigator.push(context,
+          MaterialPageRoute(builder: (_) => const AddTransactionScreen()));
+      return true;
+    }
+    if (event.logicalKey == LogicalKeyboardKey.keyF) {
+      _app!.tabIndexNotifier.value = 8;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) searchFocus.requestFocus();
+      });
+      return true;
+    }
+    return false;
+  }
 
   @override
   void didChangeDependencies() {
@@ -64,6 +101,8 @@ class _MainShellState extends State<MainShell> {
 
   @override
   void dispose() {
+    HardwareKeyboard.instance.removeHandler(_handleDesktopKey);
+    searchFocus.dispose();
     _app?.tabIndexNotifier.removeListener(_onTabChange);
     super.dispose();
   }
@@ -112,6 +151,12 @@ class _MainShellState extends State<MainShell> {
                         .read<AppProvider>()
                         .tabIndexNotifier
                         .value = entry.$1),
+              const Divider(),
+              const Padding(
+                  padding: EdgeInsets.all(16),
+                  child: Text(
+                      'Ctrl+N  Novo lançamento\nCtrl+F  Buscar transações',
+                      style: TextStyle(fontSize: 12))),
             ]))),
         const VerticalDivider(width: 1),
         Expanded(child: _body),
@@ -196,6 +241,12 @@ class _MainShellState extends State<MainShell> {
       ),
     );
   }
+
+  bool get _canUseShortcut =>
+      ModalRoute.of(context)?.isCurrent == true &&
+      NexoSecurity.instance.ready &&
+      !NexoSecurity.instance.locked &&
+      !NexoSecurity.instance.storageError;
 }
 
 class FadeIndexedStack extends StatefulWidget {

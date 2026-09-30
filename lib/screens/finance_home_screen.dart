@@ -14,6 +14,9 @@ import 'budget_screen.dart';
 import 'notification_inbox_screen.dart';
 import 'transaction_search_screen.dart';
 import 'transfer_screen.dart';
+import '../widgets/monthly_flow_chart.dart';
+import '../services/platform_capabilities.dart';
+import 'statement_import_screen.dart';
 
 class FinanceHomeScreen extends StatefulWidget {
   const FinanceHomeScreen({super.key});
@@ -238,16 +241,32 @@ class _FinanceHomeScreenState extends State<FinanceHomeScreen> {
                     child: ConstrainedBox(
                         constraints: const BoxConstraints(maxWidth: 1440),
                         child: Column(children: [
-                          summary,
+                          if (size.maxWidth >= 1000)
+                            Row(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Expanded(child: summary),
+                                  const SizedBox(width: 16),
+                                  Expanded(child: forecast),
+                                ])
+                          else
+                            summary,
                           const SizedBox(height: 12),
                           Row(children: [
-                            for (final action in const [
+                            for (final action in [
                               ('Análises', Icons.bar_chart, AnalysisScreen()),
-                              (
-                                'Sugestões',
-                                Icons.inbox_outlined,
-                                NotificationInboxScreen()
-                              ),
+                              if (PlatformCapabilities.bankNotifications)
+                                (
+                                  'Sugestões',
+                                  Icons.inbox_outlined,
+                                  NotificationInboxScreen()
+                                )
+                              else
+                                (
+                                  'Importar',
+                                  Icons.upload_file_outlined,
+                                  const StatementImportScreen()
+                                ),
                               ('Agenda', Icons.event_note, AgendaScreen()),
                             ])
                               Expanded(
@@ -260,20 +279,21 @@ class _FinanceHomeScreenState extends State<FinanceHomeScreen> {
                                       ]))),
                           ]),
                           const SizedBox(height: 12),
-                          if (size.maxWidth >= 1000)
+                          if (size.maxWidth >= 1000) ...[
                             Row(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Expanded(
-                                      child: Column(children: [
-                                    forecast,
-                                    const SizedBox(height: 16),
-                                    budget
-                                  ])),
+                                  Expanded(child: categories),
                                   const SizedBox(width: 16),
-                                  Expanded(child: categories)
-                                ])
-                          else ...[
+                                  Expanded(
+                                      child: AnalysisCard(
+                                          title:
+                                              'Receitas × despesas • 6 meses',
+                                          child: MonthlyFlowChart(app: app)))
+                                ]),
+                            const SizedBox(height: 16),
+                            budget,
+                          ] else ...[
                             forecast,
                             const SizedBox(height: 16),
                             categories,

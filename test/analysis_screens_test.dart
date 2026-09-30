@@ -15,6 +15,10 @@ import 'package:expensy/l10n/app_localizations.dart';
 import 'package:expensy/screens/analysis_screen.dart';
 import 'package:expensy/screens/finance_home_screen.dart';
 import 'package:expensy/screens/main_shell.dart';
+import 'package:expensy/screens/transaction_search_screen.dart';
+import 'package:expensy/screens/add_transaction_screen.dart';
+import 'package:expensy/services/nexo_security.dart';
+import 'package:flutter/foundation.dart';
 import 'package:expensy/services/transaction_metadata_service.dart';
 
 void main() {
@@ -97,12 +101,23 @@ void main() {
     const Size(360, 800),
     const Size(412, 915),
     const Size(1280, 720),
-    const Size(1920, 1080)
+    const Size(1366, 768),
+    const Size(1920, 1080),
+    const Size(2560, 1440)
   ]) {
-    for (final screen in ['home', 'analysis', 'closing', 'shell']) {
+    for (final screen in [
+      'home',
+      'analysis',
+      'closing',
+      'shell',
+      'transactions'
+    ]) {
       testWidgets(
           '$screen ${size.width.toInt()} responsive with accessible text',
           (tester) async {
+        if (size.width >= 900)
+          debugDefaultTargetPlatformOverride = TargetPlatform.windows;
+        addTearDown(() => debugDefaultTargetPlatformOverride = null);
         tester.view.physicalSize = size;
         tester.view.devicePixelRatio = 1;
         addTearDown(tester.view.resetPhysicalSize);
@@ -113,6 +128,7 @@ void main() {
           'home' => const FinanceHomeScreen(),
           'analysis' => const AnalysisScreen(),
           'closing' => const AnalysisScreen(closing: true),
+          'transactions' => const TransactionSearchScreen(),
           _ => const MainShell(),
         };
         await tester.pumpWidget(ChangeNotifierProvider.value(
@@ -176,9 +192,79 @@ void main() {
           expect(tester.takeException(), isNull);
         }
         await tester.pumpWidget(const SizedBox());
+        debugDefaultTargetPlatformOverride = null;
       });
     }
   }
+  testWidgets('Desktop keyboard, persistent search and dynamic resize',
+      (tester) async {
+    debugDefaultTargetPlatformOverride = TargetPlatform.windows;
+    addTearDown(() => debugDefaultTargetPlatformOverride = null);
+    tester.view.physicalSize = const Size(1280, 720);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    final security = NexoSecurity.instance;
+    security.ready = true;
+    security.locked = false;
+    final app = fixture();
+    await tester.pumpWidget(ChangeNotifierProvider.value(
+        value: app,
+        child: MaterialApp(
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            locale: const Locale('pt'),
+            home: const MainShell())));
+    await tester.runAsync(
+        () => Future<void>.delayed(const Duration(milliseconds: 150)));
+    await tester.pumpAndSettle();
+    Future<void> chord(LogicalKeyboardKey key) async {
+      await tester.sendKeyDownEvent(LogicalKeyboardKey.controlLeft);
+      await tester.sendKeyEvent(key);
+      await tester.sendKeyUpEvent(LogicalKeyboardKey.controlLeft);
+      await tester.pumpAndSettle();
+    }
+
+    // Give the desktop shell a focused control before keyboard navigation.
+    await tester.tap(find.text('Transações'));
+    await tester.pumpAndSettle();
+    await chord(LogicalKeyboardKey.keyF);
+    await tester.enterText(find.byType(TextField), 'Compra demonstrativa 8');
+    await tester.pumpAndSettle();
+    expect(find.text('1 resultado'), findsOneWidget);
+    expect(find.byType(DataTable), findsOneWidget);
+    await tester.tap(find.text('Resumo'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Transações'));
+    await tester.pumpAndSettle();
+    expect(find.text('1 resultado'), findsOneWidget);
+    for (final size in [
+      const Size(960, 640),
+      const Size(1366, 768),
+      const Size(1920, 1080),
+      const Size(2560, 1440)
+    ]) {
+      tester.view.physicalSize = size;
+      await tester.pumpAndSettle();
+      expect(tester.takeException(), isNull);
+    }
+    security.locked = true;
+    await chord(LogicalKeyboardKey.keyN);
+    expect(find.byType(AddTransactionScreen), findsNothing);
+    security.locked = false;
+    await chord(LogicalKeyboardKey.keyN);
+    expect(find.byType(AddTransactionScreen), findsOneWidget);
+    await chord(LogicalKeyboardKey.keyN);
+    expect(
+        find.byType(AddTransactionScreen, skipOffstage: false), findsOneWidget);
+    expect(app.transactions, hasLength(24));
+    await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+    await tester.pumpAndSettle();
+    expect(find.byType(AddTransactionScreen), findsNothing);
+    expect(find.text('1 resultado'), findsOneWidget);
+    await tester.pumpWidget(const SizedBox());
+    security.ready = false;
+    debugDefaultTargetPlatformOverride = null;
+  });
   testWidgets('Privacy hides charts and financial amounts', (tester) async {
     final app = fixture()..settings.hideBalance = true;
     await tester.pumpWidget(ChangeNotifierProvider.value(

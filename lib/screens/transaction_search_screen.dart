@@ -9,9 +9,11 @@ import '../theme/app_theme.dart';
 import 'add_transaction_screen.dart';
 import '../services/transaction_filter.dart';
 import '../utils/finance_input.dart';
+import '../widgets/desktop_transaction_table.dart';
 
 class TransactionSearchScreen extends StatefulWidget {
-  const TransactionSearchScreen({super.key});
+  final FocusNode? searchFocus;
+  const TransactionSearchScreen({super.key, this.searchFocus});
 
   @override
   State<TransactionSearchScreen> createState() =>
@@ -194,11 +196,18 @@ class _TransactionSearchScreenState extends State<TransactionSearchScreen> {
       appBar: AppBar(
         actions: [
           IconButton(
+              tooltip: 'Novo lançamento (Ctrl+N)',
+              icon: const Icon(Icons.add),
+              onPressed: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                      builder: (_) => const AddTransactionScreen()))),
+          IconButton(
               tooltip: 'Filtros',
               onPressed: _filters,
               icon: const Icon(Icons.filter_alt_outlined))
         ],
-        title: const Text('Buscar lançamentos',
+        title: const Text('Transações',
             style: TextStyle(fontWeight: FontWeight.w900)),
       ),
       body: Builder(
@@ -227,6 +236,7 @@ class _TransactionSearchScreenState extends State<TransactionSearchScreen> {
                 padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
                 child: TextField(
                   controller: _controller,
+                  focusNode: widget.searchFocus,
                   autofocus: true,
                   onChanged: (value) => setState(() => _query = value),
                   decoration: InputDecoration(
@@ -295,19 +305,22 @@ class _TransactionSearchScreenState extends State<TransactionSearchScreen> {
                           ),
                         ),
                       )
-                    : ListView.builder(
-                        padding: const EdgeInsets.fromLTRB(12, 4, 12, 24),
-                        itemCount: filtered.length,
-                        itemBuilder: (context, index) {
-                          final tx = filtered[index];
-                          final account = app.accountById(tx.accountId);
-                          final category = app.categoryById(tx.categoryId);
-                          final txMeta = meta[tx.id];
-                          final currency = tx.currency.isNotEmpty
-                              ? tx.currency
-                              : (account?.currency ?? app.settings.currency);
-                          final status =
-                              tx.type == 'income' && txMeta?.isPending != true
+                    : MediaQuery.sizeOf(context).width >= 900
+                        ? DesktopTransactionTable(app: app, rows: filtered)
+                        : ListView.builder(
+                            padding: const EdgeInsets.fromLTRB(12, 4, 12, 24),
+                            itemCount: filtered.length,
+                            itemBuilder: (context, index) {
+                              final tx = filtered[index];
+                              final account = app.accountById(tx.accountId);
+                              final category = app.categoryById(tx.categoryId);
+                              final txMeta = meta[tx.id];
+                              final currency = tx.currency.isNotEmpty
+                                  ? tx.currency
+                                  : (account?.currency ??
+                                      app.settings.currency);
+                              final status = tx.type == 'income' &&
+                                      txMeta?.isPending != true
                                   ? 'Recebido'
                                   : (txMeta?.isOverdue == true
                                       ? 'Atrasado'
@@ -315,52 +328,54 @@ class _TransactionSearchScreenState extends State<TransactionSearchScreen> {
                                           ? 'Pendente'
                                           : 'Pago');
 
-                          return Card(
-                            child: ListTile(
-                              title: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      tx.description.trim().isEmpty
-                                          ? (category?.name ?? 'Lançamento')
-                                          : tx.description,
-                                      maxLines: 2,
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
-                                    Text(
-                                        app.settings.hideBalance
-                                            ? '••••'
-                                            : '${tx.type == 'income' ? '+' : '-'}${formatAmount(tx.amount, currency)}',
-                                        style: const TextStyle(
-                                            fontWeight: FontWeight.w800))
-                                  ]),
-                              subtitle: Text(
-                                [
-                                  DateFormat('dd/MM/yyyy').format(tx.date),
-                                  if (account != null) account.name,
-                                  if (category != null) category.name,
-                                  if ((txMeta?.subcategory ?? '').isNotEmpty)
-                                    txMeta!.subcategory,
-                                  status,
-                                ].join(' • '),
-                                maxLines: 2,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                              onTap: () async {
-                                await Navigator.of(context).push(
-                                  MaterialPageRoute(
-                                    builder: (_) => AddTransactionScreen(
-                                      existing: tx,
-                                      initialType: tx.type,
-                                    ),
+                              return Card(
+                                child: ListTile(
+                                  title: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          tx.description.trim().isEmpty
+                                              ? (category?.name ?? 'Lançamento')
+                                              : tx.description,
+                                          maxLines: 2,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                        Text(
+                                            app.settings.hideBalance
+                                                ? '••••'
+                                                : '${tx.type == 'income' ? '+' : '-'}${formatAmount(tx.amount, currency)}',
+                                            style: const TextStyle(
+                                                fontWeight: FontWeight.w800))
+                                      ]),
+                                  subtitle: Text(
+                                    [
+                                      DateFormat('dd/MM/yyyy').format(tx.date),
+                                      if (account != null) account.name,
+                                      if (category != null) category.name,
+                                      if ((txMeta?.subcategory ?? '')
+                                          .isNotEmpty)
+                                        txMeta!.subcategory,
+                                      status,
+                                    ].join(' • '),
+                                    maxLines: 2,
+                                    overflow: TextOverflow.ellipsis,
                                   ),
-                                );
-                                if (mounted) setState(() {});
-                              },
-                            ),
-                          );
-                        },
-                      ),
+                                  onTap: () async {
+                                    await Navigator.of(context).push(
+                                      MaterialPageRoute(
+                                        builder: (_) => AddTransactionScreen(
+                                          existing: tx,
+                                          initialType: tx.type,
+                                        ),
+                                      ),
+                                    );
+                                    if (mounted) setState(() {});
+                                  },
+                                ),
+                              );
+                            },
+                          ),
               ),
             ],
           );
