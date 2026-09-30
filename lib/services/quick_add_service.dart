@@ -10,6 +10,7 @@
 //   - Warm start: [routeStream] fires whenever the widget is tapped while
 //     the app is already alive (Activity gets onNewIntent instead).
 import 'package:flutter/services.dart';
+import 'platform_capabilities.dart';
 
 class QuickAddService {
   QuickAddService._();
@@ -27,6 +28,7 @@ class QuickAddService {
   /// Reads the route extra (if any) the app was cold-started with.
   /// Returns null if the app wasn't launched from the widget.
   Future<String?> getInitialRoute() async {
+    if (!PlatformCapabilities.homeWidgets) return null;
     try {
       return await _methodChannel.invokeMethod<String>('getInitialRoute');
     } on PlatformException {
@@ -37,6 +39,7 @@ class QuickAddService {
   /// Fires with the route string every time the widget is tapped while the
   /// app is already running in the background (Activity's onNewIntent).
   Stream<String?> get routeStream {
+    if (!PlatformCapabilities.homeWidgets) return const Stream.empty();
     return _routeStream ??=
         _eventChannel.receiveBroadcastStream().cast<String?>();
   }

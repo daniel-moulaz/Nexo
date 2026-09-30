@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../services/nexo_security.dart';
+import '../services/platform_capabilities.dart';
 
 class SecuritySettingsScreen extends StatefulWidget {
   const SecuritySettingsScreen({super.key});
@@ -29,7 +30,8 @@ class _SecuritySettingsScreenState extends State<SecuritySettingsScreen> {
                       FilteringTextInputFormatter.digitsOnly,
                       LengthLimitingTextInputFormatter(6)
                     ],
-                    decoration: const InputDecoration(labelText: '6 dígitos')),
+                    decoration: const InputDecoration(labelText: '6 dígitos'),
+                    onSubmitted: (_) => Navigator.pop(c, ctrl.text)),
                 actions: [
                   TextButton(
                       onPressed: () => Navigator.pop(c),
@@ -45,6 +47,9 @@ class _SecuritySettingsScreenState extends State<SecuritySettingsScreen> {
   }
 
   Future<bool> authorize() async {
+    if (PlatformCapabilities.windows &&
+        !security.enabled &&
+        !security.storageError) return true;
     if (await security.deviceAuth()) return true;
     if (!mounted || !security.enabled) return false;
     final pin = await askPin('Confirme o PIN atual');
@@ -74,8 +79,9 @@ class _SecuritySettingsScreenState extends State<SecuritySettingsScreen> {
         return;
       }
       await security.setPin(pin);
-      message =
-          'Bloqueio ativado. Guarde seu PIN; a autenticação do aparelho é a alternativa de recuperação.';
+      message = PlatformCapabilities.deviceAuthentication
+          ? 'Bloqueio ativado. Guarde seu PIN; a autenticação do aparelho é a alternativa de recuperação.'
+          : 'Bloqueio ativado. Guarde seu PIN: Windows Hello e recuperação sem PIN ainda não estão disponíveis.';
     } catch (_) {
       message = 'Não foi possível salvar a proteção local.';
     } finally {
@@ -112,8 +118,9 @@ class _SecuritySettingsScreenState extends State<SecuritySettingsScreen> {
       body: ListView(padding: const EdgeInsets.all(16), children: [
         const Text('Bloqueio do Nexo',
             style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
-        const Text(
-            'Biometria ou bloqueio do Android, com PIN de 6 dígitos do Nexo como alternativa. Segredos ficam protegidos no aparelho e não entram no backup financeiro.'),
+        Text(PlatformCapabilities.windows
+            ? 'PIN local de 6 dígitos. A proteção fica no armazenamento seguro do seu usuário Windows e não entra no backup financeiro. O PIN bloqueia a interface; o arquivo SQLite não é criptografado por ele.'
+            : 'Biometria ou bloqueio do Android, com PIN de 6 dígitos do Nexo como alternativa. Segredos ficam protegidos no aparelho e não entram no backup financeiro.'),
         ListTile(
             contentPadding: EdgeInsets.zero,
             title: Text(security.enabled ? 'Alterar PIN' : 'Ativar bloqueio'),
@@ -145,16 +152,22 @@ class _SecuritySettingsScreenState extends State<SecuritySettingsScreen> {
             subtitle: const Text(
                 'Disponível no Android 13 ou superior. Não impede screenshots.'),
             value: security.hideRecents,
-            onChanged: busy ? null : (v) => configure(recents: v)),
+            onChanged: busy || !PlatformCapabilities.captureProtection
+                ? null
+                : (v) => configure(recents: v)),
         SwitchListTile(
             contentPadding: EdgeInsets.zero,
             title: const Text('Bloquear capturas de tela'),
-            subtitle: const Text(
-                'Opcional. Também impede gravação e compartilhamento da tela.'),
+            subtitle: Text(PlatformCapabilities.captureProtection
+                ? 'Opcional. Também impede gravação e compartilhamento da tela.'
+                : 'Disponível no Android'),
             value: security.blockCapture,
-            onChanged: busy ? null : (v) => configure(capture: v)),
-        const Text(
-            'Esqueceu o PIN? Desbloqueie com a autenticação do aparelho e defina um novo PIN aqui. Se perder também esse acesso, não há recuperação secreta pelo Nexo. Reinstalar pode apagar dados: mantenha um backup financeiro seguro.'),
+            onChanged: busy || !PlatformCapabilities.captureProtection
+                ? null
+                : (v) => configure(capture: v)),
+        Text(PlatformCapabilities.deviceAuthentication
+            ? 'Esqueceu o PIN? Desbloqueie com a autenticação do aparelho e defina um novo PIN aqui. Se perder também esse acesso, não há recuperação secreta pelo Nexo. Reinstalar pode apagar dados: mantenha um backup financeiro seguro.'
+            : 'Windows Hello ainda não está disponível. Não há recuperação secreta do PIN. Guarde-o e mantenha um backup financeiro em local seguro. O bloqueio também oculta a tela quando a janela perde o foco.'),
         if (busy) const LinearProgressIndicator(),
         if (message != null) Text(message!),
       ]));

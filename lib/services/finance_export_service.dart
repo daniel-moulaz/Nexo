@@ -2,7 +2,7 @@ import 'dart:typed_data';
 import 'dart:convert';
 
 import 'package:excel/excel.dart';
-import 'package:file_picker/file_picker.dart';
+import 'file_output.dart';
 import 'package:intl/intl.dart';
 
 import '../models/models.dart';
@@ -27,12 +27,11 @@ class FinanceExportService {
   static Future<String?> exportCsv(AppProvider app,
       {required DateTime from, required DateTime to}) async {
     final csv = await buildCsv(app, from: from, to: to);
-    return FilePicker.platform.saveFile(
-        dialogTitle: 'Salvar lançamentos CSV',
-        fileName:
+    return FileOutput.save(
+        title: 'Salvar lançamentos CSV',
+        name:
             'nexo_${DateFormat('yyyy-MM-dd').format(from)}_${DateFormat('yyyy-MM-dd').format(to)}.csv',
-        type: FileType.custom,
-        allowedExtensions: const ['csv'],
+        extension: 'csv',
         bytes: Uint8List.fromList(utf8.encode(csv)));
   }
 
@@ -44,12 +43,11 @@ class FinanceExportService {
     final excel = await buildWorkbook(app, from: from, to: to);
     final bytes = excel.encode();
     if (bytes == null) throw StateError('Não foi possível gerar o Excel.');
-    return FilePicker.platform.saveFile(
-        dialogTitle: 'Salvar relatório financeiro',
-        fileName:
+    return FileOutput.save(
+        title: 'Salvar relatório financeiro',
+        name:
             'nexo_${DateFormat('yyyy-MM-dd').format(from)}_a_${DateFormat('yyyy-MM-dd').format(to)}.xlsx',
-        type: FileType.custom,
-        allowedExtensions: const ['xlsx'],
+        extension: 'xlsx',
         bytes: Uint8List.fromList(bytes));
   }
 

@@ -2,6 +2,8 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import '../database/db_helper.dart';
+import '../database/database_platform.dart';
+import '../services/platform_capabilities.dart';
 import '../providers/app_provider.dart';
 import '../l10n/app_localizations.dart';
 import 'package:provider/provider.dart';
@@ -150,8 +152,7 @@ class _BackupScreenState extends State<BackupScreen> {
           app.recurringHistoryCount),
       _CountRow(Icons.pie_chart_outline_rounded, l10n.backup_budgets,
           app.budgets.length),
-      _CountRow(
-          Icons.savings_outlined, 'Objetivos', app.savingsGoals.length),
+      _CountRow(Icons.savings_outlined, 'Objetivos', app.savingsGoals.length),
       _CountRow(Icons.payments_outlined, 'Aportes e retiradas',
           app.savingsContributions.length),
       _CountRow(Icons.star_outline_rounded, l10n.backup_wishlist,
@@ -182,6 +183,14 @@ class _BackupScreenState extends State<BackupScreen> {
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(20),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          if (PlatformCapabilities.windows)
+            FutureBuilder<String>(
+              future: DatabasePlatform.path,
+              builder: (context, snapshot) => Padding(
+                  padding: const EdgeInsets.only(bottom: 16),
+                  child: SelectableText(
+                      'Banco local neste computador:\n${snapshot.data ?? 'Carregando caminho…'}\nBackups e relatórios são salvos na pasta escolhida por você. Não há sincronização com o celular.')),
+            ),
           // ── What's included ────────────────────────────────────────────
           Row(children: [
             Expanded(

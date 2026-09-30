@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../services/nexo_security.dart';
+import '../services/platform_capabilities.dart';
 
 class SecurityGate extends StatefulWidget {
   final Widget child;
@@ -73,97 +74,116 @@ class _SecurityGateState extends State<SecurityGate>
     final blocked =
         !security.ready || security.locked || (away && security.enabled);
     return Stack(children: [
-      Offstage(
-          offstage: blocked,
-          child: ExcludeSemantics(excluding: blocked, child: widget.child)),
+      FocusScope(
+          canRequestFocus: !blocked,
+          descendantsAreFocusable: !blocked,
+          child: Offstage(
+              offstage: blocked,
+              child:
+                  ExcludeSemantics(excluding: blocked, child: widget.child))),
       if (blocked)
         Positioned.fill(
             child: Material(
                 child: Padding(
-                    padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(context).bottom),
-                    child: SafeArea(child: Center(
-                        child: SingleChildScrollView(
-                            padding: const EdgeInsets.all(28),
-                            child: ConstrainedBox(
-                                constraints:
-                                    const BoxConstraints(maxWidth: 380),
-                                child: Column(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      const Icon(Icons.lock_outline, size: 48),
-                                      const SizedBox(height: 16),
-                                      Text('Nexo',
-                                          style: Theme.of(context)
-                                              .textTheme
-                                              .headlineLarge),
-                                      const Text(
-                                          'Desbloqueie para acessar suas finanças.'),
-                                      const SizedBox(height: 24),
-                                      if (security.storageError) ...[
-                                        const Text(
-                                            'Não foi possível ler a proteção local. Seus dados não foram apagados.'),
-                                        TextButton(
-                                            onPressed: security.load,
-                                            child:
-                                                const Text('Tentar novamente')),
-                                        TextButton(
-                                            onPressed: busy
-                                                ? null
-                                                : () async {
-                                                    setState(() => busy = true);
-                                                    final ok = await security
-                                                        .recoverStorage();
-                                                    if (mounted)
-                                                      setState(() {
-                                                        busy = false;
-                                                        message = ok
-                                                            ? null
-                                                            : 'Não foi possível recuperar a proteção. Nenhum dado financeiro foi apagado.';
-                                                      });
-                                                  },
-                                            child: const Text(
-                                                'Recuperar com bloqueio do aparelho')),
-                                        if (message != null) Text(message!),
-                                      ] else if (security.ready && !away) ...[
-                                        FilledButton.icon(
-                                            onPressed: busy
-                                                ? null
-                                                : () => unlock(true),
-                                            icon: const Icon(Icons.fingerprint),
-                                            label: const Text(
-                                                'Biometria ou bloqueio do aparelho')),
-                                        const SizedBox(height: 16),
-                                        TextField(
-                                            controller: pin,
-                                            obscureText: true,
-                                            enableSuggestions: false,
-                                            autocorrect: false,
-                                            keyboardType: TextInputType.number,
-                                            inputFormatters: [
-                                              FilteringTextInputFormatter
-                                                  .digitsOnly,
-                                              LengthLimitingTextInputFormatter(
-                                                  6)
-                                            ],
-                                            decoration: const InputDecoration(
-                                                labelText:
-                                                    'PIN do Nexo • 6 dígitos'),
-                                            onSubmitted: (_) => unlock(false)),
-                                        TextButton(
-                                            onPressed: busy
-                                                ? null
-                                                : () => unlock(false),
-                                            child: const Text(
-                                                'Desbloquear com PIN')),
-                                        if (busy)
-                                          const LinearProgressIndicator(),
-                                        if (message != null) Text(message!),
-                                        const Text(
-                                            'Esqueceu o PIN? Use a autenticação do aparelho acima e defina um novo PIN em Segurança.',
-                                            textAlign: TextAlign.center),
-                                      ] else
-                                        const CircularProgressIndicator(),
-                                    ])))))))),
+                    padding: EdgeInsets.only(
+                        bottom: MediaQuery.viewInsetsOf(context).bottom),
+                    child: SafeArea(
+                        child: Center(
+                            child: SingleChildScrollView(
+                                padding: const EdgeInsets.all(28),
+                                child: ConstrainedBox(
+                                    constraints:
+                                        const BoxConstraints(maxWidth: 380),
+                                    child: Column(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          const Icon(Icons.lock_outline,
+                                              size: 48),
+                                          const SizedBox(height: 16),
+                                          Text('Nexo',
+                                              style: Theme.of(context)
+                                                  .textTheme
+                                                  .headlineLarge),
+                                          const Text(
+                                              'Desbloqueie para acessar suas finanças.'),
+                                          const SizedBox(height: 24),
+                                          if (security.storageError) ...[
+                                            const Text(
+                                                'Não foi possível ler a proteção local. Seus dados não foram apagados.'),
+                                            TextButton(
+                                                onPressed: security.load,
+                                                child: const Text(
+                                                    'Tentar novamente')),
+                                            if (PlatformCapabilities
+                                                .deviceAuthentication)
+                                              TextButton(
+                                                  onPressed: busy
+                                                      ? null
+                                                      : () async {
+                                                          setState(() =>
+                                                              busy = true);
+                                                          final ok = await security
+                                                              .recoverStorage();
+                                                          if (mounted)
+                                                            setState(() {
+                                                              busy = false;
+                                                              message = ok
+                                                                  ? null
+                                                                  : 'Não foi possível recuperar a proteção. Nenhum dado financeiro foi apagado.';
+                                                            });
+                                                        },
+                                                  child: const Text(
+                                                      'Recuperar com bloqueio do aparelho')),
+                                            if (message != null) Text(message!),
+                                          ] else if (security.ready &&
+                                              !away) ...[
+                                            if (PlatformCapabilities
+                                                .deviceAuthentication)
+                                              FilledButton.icon(
+                                                  onPressed: busy
+                                                      ? null
+                                                      : () => unlock(true),
+                                                  icon: const Icon(
+                                                      Icons.fingerprint),
+                                                  label: const Text(
+                                                      'Biometria ou bloqueio do aparelho')),
+                                            const SizedBox(height: 16),
+                                            TextField(
+                                                controller: pin,
+                                                obscureText: true,
+                                                enableSuggestions: false,
+                                                autocorrect: false,
+                                                keyboardType:
+                                                    TextInputType.number,
+                                                inputFormatters: [
+                                                  FilteringTextInputFormatter
+                                                      .digitsOnly,
+                                                  LengthLimitingTextInputFormatter(
+                                                      6)
+                                                ],
+                                                decoration: const InputDecoration(
+                                                    labelText:
+                                                        'PIN do Nexo • 6 dígitos'),
+                                                onSubmitted: (_) =>
+                                                    unlock(false)),
+                                            TextButton(
+                                                onPressed: busy
+                                                    ? null
+                                                    : () => unlock(false),
+                                                child: const Text(
+                                                    'Desbloquear com PIN')),
+                                            if (busy)
+                                              const LinearProgressIndicator(),
+                                            if (message != null) Text(message!),
+                                            Text(
+                                                PlatformCapabilities
+                                                        .deviceAuthentication
+                                                    ? 'Esqueceu o PIN? Use a autenticação do aparelho acima e defina um novo PIN em Segurança.'
+                                                    : 'Use seu PIN local. Windows Hello e recuperação sem PIN não estão disponíveis nesta versão.',
+                                                textAlign: TextAlign.center),
+                                          ] else
+                                            const CircularProgressIndicator(),
+                                        ])))))))),
     ]);
   }
 }

@@ -25,7 +25,9 @@ void main() {
   test(
       'Unreadable protection fails closed and recovery requires device authentication',
       () async {
-    debugDefaultTargetPlatformOverride = TargetPlatform.linux;
+    debugDefaultTargetPlatformOverride = TargetPlatform.android;
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(NexoSecurity.channel, (call) async => null);
     addTearDown(() => debugDefaultTargetPlatformOverride = null);
     FlutterSecureStorage.setMockInitialValues({
       'nexo_security_v1': 'invalid-json',
@@ -117,11 +119,17 @@ void main() {
   test('Recurring today remains available for its custom reminder time', () {
     final now = DateTime(2026, 9, 5, 12);
     final forecast = CashForecast(100, 50, [
-      ForecastEvent(date: DateTime(2026, 9, 5), title: 'r', accountId: 'a',
-          kind: 'recurring', id: 'r', currency: 'BRL', amount: -50)
+      ForecastEvent(
+          date: DateTime(2026, 9, 5),
+          title: 'r',
+          accountId: 'a',
+          kind: 'recurring',
+          id: 'r',
+          currency: 'BRL',
+          amount: -50)
     ], []);
-    final plans = ReminderPlanner.build(forecast,
-        {...FinancialReminders.defaults, 'recurring': true}, now);
+    final plans = ReminderPlanner.build(
+        forecast, {...FinancialReminders.defaults, 'recurring': true}, now);
     expect(plans, hasLength(1));
     // The scheduler substitutes the registered time before checking it is future.
     expect(plans.single.key, startsWith('recurring:r:'));

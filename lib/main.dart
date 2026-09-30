@@ -23,11 +23,36 @@ import 'services/finance_bootstrap_service.dart';
 import 'services/nexo_security.dart';
 import 'services/financial_reminders.dart';
 import 'widgets/security_gate.dart';
+import 'services/desktop_profile.dart';
 
 final GlobalKey<NavigatorState> rootNavigatorKey = GlobalKey<NavigatorState>();
 
-void main() async {
+void main(List<String> arguments) async {
   WidgetsFlutterBinding.ensureInitialized();
+  try {
+    await DesktopProfile.initialize(arguments);
+    await startNexo();
+  } catch (_) {
+    runApp(MaterialApp(
+        home: Scaffold(
+            body: Center(
+                child: Padding(
+      padding: const EdgeInsets.all(32),
+      child: Column(mainAxisSize: MainAxisSize.min, children: [
+        const Icon(Icons.folder_off_outlined, size: 48),
+        const Text('Não foi possível abrir o Nexo.'),
+        const Text(
+            'Confira espaço e permissão na pasta de dados. Nenhum banco foi apagado. Feche outras janelas do Nexo e tente novamente.',
+            textAlign: TextAlign.center),
+        FilledButton(
+            onPressed: () => main(arguments),
+            child: const Text('Tentar novamente')),
+      ]),
+    )))));
+  }
+}
+
+Future<void> startNexo() async {
   Intl.defaultLocale = 'pt_BR';
   await initializeDateFormatting('pt_BR');
   await NotificationService().initialize();
@@ -142,7 +167,12 @@ class _ExpensyAppState extends State<ExpensyApp> {
             title: 'Nexo',
             navigatorKey: rootNavigatorKey,
             debugShowCheckedModeBanner: false,
-            builder: (context, child) => SecurityGate(child: child!),
+            builder: (context, child) => DesktopProfile.isTest
+                ? Banner(
+                    message: 'TESTE LOCAL',
+                    location: BannerLocation.topEnd,
+                    child: SecurityGate(child: child!))
+                : SecurityGate(child: child!),
             localizationsDelegates: AppLocalizations.localizationsDelegates,
             supportedLocales: AppLocalizations.supportedLocales,
             locale: languageCode == 'system' ? null : Locale(languageCode),

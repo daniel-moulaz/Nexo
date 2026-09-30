@@ -1,13 +1,12 @@
 // lib/database/db_helper.dart
 import 'package:sqflite/sqflite.dart' hide Transaction;
 import 'package:intl/intl.dart';
-import 'package:path/path.dart';
 import 'package:flutter/foundation.dart';
 import '../models/models.dart';
+import 'database_platform.dart';
 
 class DBHelper {
   static Database? _db;
-  static const String _dbName = 'expensy.db';
   static const int _version = 23;
 
   /// Public accessor for the current DB/backup schema version, so UI code
@@ -26,7 +25,7 @@ class DBHelper {
   }
 
   static Future<Database> _open() async {
-    final path = join(await getDatabasesPath(), _dbName);
+    final path = await DatabasePlatform.path;
     return openDatabase(path,
         version: _version, onCreate: _onCreate, onUpgrade: _onUpgrade);
   }
@@ -552,11 +551,18 @@ class DBHelper {
     )''');
   }
 
-  static Future<void> confirmSuggestion(DatabaseExecutor db, String id, String transactionId) async {
+  static Future<void> confirmSuggestion(
+      DatabaseExecutor db, String id, String transactionId) async {
     final changed = await db.update('notification_suggestions',
         {'status': 'confirmed', 'transaction_id': transactionId},
         where: 'id = ? AND status = ? AND occurred_at >= ?',
-        whereArgs: [id, 'pending', DateTime.now().subtract(const Duration(days: 7)).millisecondsSinceEpoch]);
+        whereArgs: [
+          id,
+          'pending',
+          DateTime.now()
+              .subtract(const Duration(days: 7))
+              .millisecondsSinceEpoch
+        ]);
     if (changed != 1) throw StateError('Sugestão já resolvida ou expirada.');
   }
 
@@ -837,8 +843,10 @@ class DBHelper {
       final entry = RecurringHistoryEntry.fromMap(row);
       (byRecurring[entry.recurringId] ??= []).add(entry);
     }
-    return rows.map((row) => RecurringPayment.fromMap(row,
-        skippedOccurrences: byRecurring[row['id']] ?? const [])).toList();
+    return rows
+        .map((row) => RecurringPayment.fromMap(row,
+            skippedOccurrences: byRecurring[row['id']] ?? const []))
+        .toList();
   }
 
   static Future<void> insertRecurring(RecurringPayment r) async =>

@@ -2,6 +2,7 @@ import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter/widgets.dart';
 import '../providers/app_provider.dart';
+import '../services/platform_capabilities.dart';
 
 enum HapticStrength { selection, light, medium, heavy }
 
@@ -9,7 +10,7 @@ class AppHaptics {
   static void tap(BuildContext context,
       [HapticStrength strength = HapticStrength.light]) {
     final enabled = context.read<AppProvider>().settings.hapticsEnabled;
-    if (!enabled) return;
+    if (!enabled || !PlatformCapabilities.android) return;
 
     switch (strength) {
       case HapticStrength.selection:

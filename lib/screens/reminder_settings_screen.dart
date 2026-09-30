@@ -3,6 +3,8 @@ import 'package:provider/provider.dart';
 import '../providers/app_provider.dart';
 import '../services/financial_reminders.dart';
 import '../services/notification_service.dart';
+import '../services/platform_capabilities.dart';
+import '../widgets/android_feature_notice.dart';
 
 class ReminderSettingsScreen extends StatefulWidget {
   const ReminderSettingsScreen({super.key});
@@ -39,6 +41,11 @@ class _ReminderSettingsScreenState extends State<ReminderSettingsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    if (!PlatformCapabilities.scheduledNotifications)
+      return const AndroidFeatureNotice(
+          title: 'Notificações',
+          explanation:
+              'Os avisos do sistema estão disponíveis no Android. No Windows, consulte vencimentos e compromissos na Agenda e no Resumo, mesmo sem internet.');
     final app = context.watch<AppProvider>();
     return Scaffold(
         appBar: AppBar(title: const Text('Notificações')),

@@ -7,6 +7,8 @@ import 'package:flutter/services.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:local_auth/local_auth.dart';
 import 'package:local_auth_android/local_auth_android.dart';
+import 'platform_capabilities.dart';
+import 'desktop_profile.dart';
 
 class PinVerifier {
   static bool valid(String pin) => RegExp(r'^\d{6}$').hasMatch(pin);
@@ -35,7 +37,9 @@ class PinVerifier {
 class NexoSecurity extends ChangeNotifier {
   static final instance = NexoSecurity();
   static const channel = MethodChannel('com.ma.expensy/automation');
-  static const storageKey = 'nexo_security_v1';
+  static String get storageKey => DesktopProfile.isTest
+      ? 'nexo_windows_qa_security_v1'
+      : 'nexo_security_v1';
   final FlutterSecureStorage storage;
   final LocalAuthentication auth;
   NexoSecurity({FlutterSecureStorage? storage, LocalAuthentication? auth})
@@ -78,6 +82,7 @@ class NexoSecurity extends ChangeNotifier {
   Future<void> _save() =>
       storage.write(key: storageKey, value: jsonEncode(_data));
   Future<bool> recoverStorage() async {
+    if (!PlatformCapabilities.deviceAuthentication) return false;
     if (!storageError || authenticating) return false;
     authenticating = true;
     try {
@@ -104,7 +109,7 @@ class NexoSecurity extends ChangeNotifier {
   }
 
   Future<void> applyPrivacy() async {
-    if (defaultTargetPlatform != TargetPlatform.android) return;
+    if (!PlatformCapabilities.captureProtection) return;
     await channel.invokeMethod(
         'privacy', {'recents': hideRecents, 'capture': blockCapture});
   }
@@ -131,6 +136,7 @@ class NexoSecurity extends ChangeNotifier {
   }
 
   Future<bool> deviceAuth({bool biometricOnly = false}) async {
+    if (!PlatformCapabilities.deviceAuthentication) return false;
     if (authenticating || storageError) return false;
     authenticating = true;
     try {

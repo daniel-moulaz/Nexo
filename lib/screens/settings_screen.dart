@@ -11,6 +11,7 @@ import 'package:package_info_plus/package_info_plus.dart';
 import 'automation_settings_screen.dart';
 import 'reminder_settings_screen.dart';
 import 'security_settings_screen.dart';
+import '../services/platform_capabilities.dart';
 
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
@@ -34,10 +35,38 @@ class SettingsScreen extends StatelessWidget {
           child: ListView(
             padding: const EdgeInsets.all(16),
             children: [
-              Card(child: Column(children: [
-                ListTile(leading: const Icon(Icons.auto_awesome_outlined), title: const Text('Automação'), subtitle: const Text('Sugestões locais de notificações bancárias'), trailing: const Icon(Icons.chevron_right), onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AutomationSettingsScreen()))),
-                ListTile(leading: const Icon(Icons.notifications_outlined), title: const Text('Notificações'), subtitle: const Text('Contas, receitas, cartões e planejamento'), trailing: const Icon(Icons.chevron_right), onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ReminderSettingsScreen()))),
-                ListTile(leading: const Icon(Icons.lock_outline), title: const Text('Segurança'), subtitle: const Text('Bloqueio do Nexo e privacidade da tela'), trailing: const Icon(Icons.chevron_right), onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const SecuritySettingsScreen()))),
+              Card(
+                  child: Column(children: [
+                ListTile(
+                    leading: const Icon(Icons.auto_awesome_outlined),
+                    title: const Text('Automação'),
+                    subtitle: const Text(
+                        'Sugestões locais de notificações bancárias'),
+                    trailing: const Icon(Icons.chevron_right),
+                    onTap: () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                            builder: (_) => const AutomationSettingsScreen()))),
+                ListTile(
+                    leading: const Icon(Icons.notifications_outlined),
+                    title: const Text('Notificações'),
+                    subtitle:
+                        const Text('Contas, receitas, cartões e planejamento'),
+                    trailing: const Icon(Icons.chevron_right),
+                    onTap: () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                            builder: (_) => const ReminderSettingsScreen()))),
+                ListTile(
+                    leading: const Icon(Icons.lock_outline),
+                    title: const Text('Segurança'),
+                    subtitle:
+                        const Text('Bloqueio do Nexo e privacidade da tela'),
+                    trailing: const Icon(Icons.chevron_right),
+                    onTap: () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                            builder: (_) => const SecuritySettingsScreen()))),
               ])),
               // ── Appearance ────────────────────────────────────────────────
               SectionHeader(title: l10n.settings_appearance),
@@ -229,8 +258,10 @@ class SettingsScreen extends StatelessWidget {
                                           fontWeight: FontWeight.w700,
                                           fontSize: 14)),
                                   Text(
-                                      kFonts[s.appFont] ??
-                                          l10n.settings_systemDefault,
+                                      PlatformCapabilities.windows
+                                          ? 'Segoe UI • disponível offline'
+                                          : kFonts[s.appFont] ??
+                                              l10n.settings_systemDefault,
                                       style: TextStyle(
                                           fontSize: 12,
                                           color: cs.onSurface
@@ -241,8 +272,13 @@ class SettingsScreen extends StatelessWidget {
                           Wrap(
                               spacing: 8,
                               runSpacing: 8,
-                              children: kFonts.entries.map((e) {
-                                final sel = s.appFont == e.key;
+                              children: kFonts.entries
+                                  .where((e) =>
+                                      !PlatformCapabilities.windows ||
+                                      e.key == 'default')
+                                  .map((e) {
+                                final sel = PlatformCapabilities.windows ||
+                                    s.appFont == e.key;
                                 return GestureDetector(
                                   onTap: () =>
                                       app.updateSetting('appFont', e.key),
@@ -378,13 +414,16 @@ class SettingsScreen extends StatelessWidget {
                       title: Text(l10n.settings_budgetAlerts,
                           style: const TextStyle(
                               fontWeight: FontWeight.w700, fontSize: 14)),
-                      subtitle:
-                          const Text('Notify when a budget or goal is reached'),
+                      subtitle: Text(PlatformCapabilities.scheduledNotifications
+                          ? 'Avisar quando um orçamento ou objetivo atingir o limite'
+                          : 'Disponível no Android'),
                       value: s.budgetAlertsEnabled,
-                      onChanged: (v) {
-                        AppHaptics.tap(context, HapticStrength.selection);
-                        app.updateSetting('budgetAlertsEnabled', v);
-                      },
+                      onChanged: !PlatformCapabilities.scheduledNotifications
+                          ? null
+                          : (v) {
+                              AppHaptics.tap(context, HapticStrength.selection);
+                              app.updateSetting('budgetAlertsEnabled', v);
+                            },
                     ),
                     const Divider(height: 1, indent: 56),
                     SwitchListTile.adaptive(
@@ -393,12 +432,16 @@ class SettingsScreen extends StatelessWidget {
                       title: Text(l10n.settings_dailyReminder,
                           style: const TextStyle(
                               fontWeight: FontWeight.w700, fontSize: 14)),
-                      subtitle: const Text('Remind to log transactions daily'),
+                      subtitle: Text(PlatformCapabilities.scheduledNotifications
+                          ? 'Lembrete diário para registrar lançamentos'
+                          : 'Disponível no Android'),
                       value: s.dailyReminderEnabled,
-                      onChanged: (v) {
-                        AppHaptics.tap(context, HapticStrength.selection);
-                        app.updateSetting('dailyReminderEnabled', v);
-                      },
+                      onChanged: !PlatformCapabilities.scheduledNotifications
+                          ? null
+                          : (v) {
+                              AppHaptics.tap(context, HapticStrength.selection);
+                              app.updateSetting('dailyReminderEnabled', v);
+                            },
                     ),
                     if (s.dailyReminderEnabled) ...[
                       ListTile(
