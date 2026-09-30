@@ -350,6 +350,7 @@ class _SuggestionReviewScreenState extends State<SuggestionReviewScreen> {
               'Escolha a conta correta. Pix entre suas próprias contas é transferência, não receita ou despesa.'),
           DropdownButtonFormField<String>(
               initialValue: type,
+              isExpanded: true,
               decoration: const InputDecoration(labelText: 'Tipo'),
               items: const [
                 DropdownMenuItem(value: 'expense', child: Text('Despesa')),
@@ -357,7 +358,8 @@ class _SuggestionReviewScreenState extends State<SuggestionReviewScreen> {
                     value: 'income', child: Text('Receita / reembolso')),
                 DropdownMenuItem(
                     value: 'transfer',
-                    child: Text('Transferência entre minhas contas'))
+                    child: Text('Transferência entre minhas contas',
+                        overflow: TextOverflow.ellipsis))
               ],
               onChanged: busy
                   ? null
