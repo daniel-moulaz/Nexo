@@ -1,5 +1,7 @@
 # Nexo — auditorias 1.2.0 e 1.3.0
 
+Auditoria da rodada 1.5, com Home/Análises e automação: [NEXO_EVOLUTION_2026.md](NEXO_EVOLUTION_2026.md). Schema permanece 23; main e dados existentes preservados.
+
 A seção final registra a rodada de produto 1.3.0. Os resultados e hashes de 1.2.0 abaixo são históricos.
 
 ## Base 1.2.0

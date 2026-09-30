@@ -1,5 +1,11 @@
 # Roadmap Nexo
 
+## Rodada 1.5 — 30/09/2026
+
+Home analítica, Análises unificadas com filtros/drill-down, fechamento mensal recalculado, diagnóstico privado das notificações, aviso opcional de revisão, associações locais de conta e preparação responsiva. Escopo e evidências em [NEXO_EVOLUTION_2026.md](NEXO_EVOLUTION_2026.md). Propostas técnicas em [NEXO_SYNC_ARCHITECTURE.md](NEXO_SYNC_ARCHITECTURE.md) e [NEXO_DESKTOP.md](NEXO_DESKTOP.md). Sync real e distribuição Windows ainda não habilitados.
+
+As seções abaixo registram o planejamento histórico de 1.3 e devem ser lidas junto da atualização 1.5.
+
 ## Agora
 
 Previsão explicada e agenda por período; regras locais para categorizar importações; busca avançada; CSV; revisão de duplicatas, privacidade e layout. Critério de entrega: testes financeiros, migração/backup, telas pequenas, analyze e ambos APKs aprovados.

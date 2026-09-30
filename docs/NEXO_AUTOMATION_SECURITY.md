@@ -1,5 +1,7 @@
 # Automação local, lembretes e segurança — Nexo 1.4
 
+Atualização 1.5: diagnóstico por motivo, padrões/confiança, fila com memória após ack, aviso genérico opcional, associações locais e revisão com data editável documentados em [NEXO_EVOLUTION_2026.md](NEXO_EVOLUTION_2026.md). O texto abaixo permanece como histórico da implementação 1.4.
+
 Pesquisa e implementação em 26/09/2026. Base: commit a5b6091, schema 22; pull sem divergência, pub get e analyze aprovados, 66 testes da base aprovados. Nenhuma integração bancária remota.
 
 ## Referências e decisões
