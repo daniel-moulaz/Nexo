@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../database/db_helper.dart';
 import '../models/models.dart';
 import '../providers/app_provider.dart';
+import '../services/recurring_projection.dart';
 import '../theme/app_theme.dart';
 import '../utils/finance_input.dart';
 import '../utils/snackbar.dart';
@@ -67,19 +68,27 @@ class _RecurringDetailScreenState extends State<RecurringDetailScreen> {
     final account = app.accountById(r.accountId);
     final category = app.categoryById(r.categoryId);
     final currency = account?.currency ?? app.settings.currency;
+    String money(double value, [String? originalCurrency]) =>
+        app.settings.hideBalance
+            ? '••••'
+            : formatAmount(value, originalCurrency ?? currency);
+    final upcoming = RecurringProjection.calculate([r],
+        until: DateTime(
+            DateTime.now().year + 1, DateTime.now().month, DateTime.now().day),
+        registeredIds: app.transactions.map((t) => t.id).toSet());
     final total = r.totalPayments;
-    final progress = total != null && total > 0
-        ? r.progress
-        : null;
+    final progress = total != null && total > 0 ? r.progress : null;
     final today = DateTime.now();
     final startToday = DateTime(today.year, today.month, today.day);
-    final next = DateTime(r.nextActionDate.year, r.nextActionDate.month, r.nextActionDate.day);
+    final next = DateTime(
+        r.nextActionDate.year, r.nextActionDate.month, r.nextActionDate.day);
     final days = next.difference(startToday).inDays;
     final overdue = days < 0;
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(r.name, style: const TextStyle(fontWeight: FontWeight.w900)),
+        title:
+            Text(r.name, style: const TextStyle(fontWeight: FontWeight.w900)),
         actions: [
           IconButton(
             tooltip: 'Editar',
@@ -118,7 +127,8 @@ class _RecurringDetailScreenState extends State<RecurringDetailScreen> {
                       ),
                     ),
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 9, vertical: 5),
                       decoration: BoxDecoration(
                         color: overdue
                             ? cs.errorContainer
@@ -126,11 +136,13 @@ class _RecurringDetailScreenState extends State<RecurringDetailScreen> {
                         borderRadius: BorderRadius.circular(999),
                       ),
                       child: Text(
-                        overdue
-                            ? 'Atrasada'
-                            : days == 0
-                                ? 'Vence hoje'
-                                : 'Em $days dia${days == 1 ? '' : 's'}',
+                        !r.canComplete
+                            ? 'Encerrada'
+                            : overdue
+                                ? 'Atrasada'
+                                : days == 0
+                                    ? 'Vence hoje'
+                                    : 'Em $days dia${days == 1 ? '' : 's'}',
                         style: TextStyle(
                           fontWeight: FontWeight.w800,
                           fontSize: 11,
@@ -142,21 +154,30 @@ class _RecurringDetailScreenState extends State<RecurringDetailScreen> {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  formatAmount(r.nextActionAmount, currency),
+                  r.canComplete
+                      ? money(r.nextActionAmount)
+                      : 'Cronograma concluído',
                   style: Theme.of(context).textTheme.headlineMedium?.copyWith(
                         fontWeight: FontWeight.w900,
                       ),
                 ),
                 const SizedBox(height: 4),
-                Text('${_frequency(r)} • próxima em ${ptDate(r.nextActionDate)}'),
+                Text(r.canComplete
+                    ? '${_frequency(r)} • próxima em ${ptDate(r.nextActionDate)}'
+                    : _frequency(r)),
                 Text('${r.paidPayments} pagas • ${r.skippedPayments} puladas'),
+                if (r.remainingPayments != null)
+                  Text(
+                      '${r.remainingPayments} ${r.canSkip ? 'ocorrências' : 'parcelas'} restantes'),
                 if (r.hasSkippedInstallments)
-                  const Text('Parcelas puladas anteriormente continuam devidas. Pagar regulariza a mais antiga sem avançar o cronograma.'),
+                  const Text(
+                      'Parcelas puladas anteriormente continuam devidas. Pagar regulariza a mais antiga sem avançar o cronograma.'),
                 if (progress != null) ...[
                   const SizedBox(height: 14),
                   ClipRRect(
                     borderRadius: BorderRadius.circular(8),
-                    child: LinearProgressIndicator(value: progress, minHeight: 7),
+                    child:
+                        LinearProgressIndicator(value: progress, minHeight: 7),
                   ),
                   const SizedBox(height: 5),
                   Text(
@@ -170,7 +191,10 @@ class _RecurringDetailScreenState extends State<RecurringDetailScreen> {
           const SizedBox(height: 14),
           Card(
             elevation: 0,
-            child: Column(
+            child: ExpansionTile(
+              title: const Text('Dados do compromisso'),
+              subtitle: Text(
+                  '${account?.name ?? 'Conta removida'} • ${_frequency(r)}'),
               children: [
                 _InfoTile(
                   icon: Icons.account_balance_wallet_outlined,
@@ -210,30 +234,67 @@ class _RecurringDetailScreenState extends State<RecurringDetailScreen> {
           const SizedBox(height: 14),
           Row(
             children: [
-              if (r.canSkip) Expanded(
-                child: OutlinedButton.icon(
-                  onPressed: !r.canComplete ? null : () async {
-                    await app.skipNextRecurring(r);
-                    await _loadHistory();
-                  },
-                  icon: const Icon(Icons.skip_next_rounded),
-                  label: const Text('Pular próxima'),
+              if (r.canSkip)
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: !r.canComplete
+                        ? null
+                        : () async {
+                            await confirmRecurringAction(context, app, r,
+                                skip: true);
+                            await _loadHistory();
+                          },
+                    icon: const Icon(Icons.skip_next_rounded),
+                    label: const Text('Pular próxima'),
+                  ),
                 ),
-              ),
               if (r.canSkip) const SizedBox(width: 10),
               Expanded(
                 child: FilledButton.icon(
-                  onPressed: !r.canComplete ? null : () async {
-                    await app.markRecurringPaid(r);
-                    await _loadHistory();
-                  },
+                  onPressed: !r.canComplete
+                      ? null
+                      : () async {
+                          await confirmRecurringAction(context, app, r);
+                          await _loadHistory();
+                        },
                   icon: const Icon(Icons.done_all_rounded),
-                  label: Text(r.paymentType == 'income' ? 'Recebida' : 'Paga'),
+                  label: Text(r.paymentType == 'income'
+                      ? 'Registrar recebimento'
+                      : 'Registrar pagamento'),
                 ),
               ),
             ],
           ),
           const SizedBox(height: 22),
+          if (r.canComplete)
+            Card(
+                child: ExpansionTile(
+              title: const Text('Próximos vencimentos'),
+              subtitle: const Text(
+                  'Até 12 meses • previsão, sem registrar lançamentos'),
+              children: [
+                for (final e in upcoming.occurrences.take(12))
+                  ListTile(
+                      title: Text(ptDate(e.date)),
+                      subtitle: Text(e.date.isBefore(startToday)
+                          ? 'Em atraso'
+                          : 'Previsto'),
+                      trailing: Text(money(e.amount))),
+                if (upcoming.occurrences.length > 12)
+                  const Padding(
+                      padding: EdgeInsets.all(12),
+                      child: Text(
+                          'Primeiros 12 vencimentos. Consulte Próximos meses na lista para ver os totais.')),
+                if (upcoming.incomplete)
+                  const Text(
+                      'Projeção parcial. Revise a frequência e as datas.'),
+              ],
+            )),
+          if (_history != null)
+            Padding(
+                padding: const EdgeInsets.symmetric(vertical: 12),
+                child: Text(
+                    'Registrado como ${r.paymentType == 'income' ? 'recebido' : 'pago'}: ${money(_history!.where((h) => h.action == 'paid').fold<double>(0, (s, h) => s + app.convertToMain(h.amount, h.currency)), app.settings.currency)}')),
           Text(
             'Histórico',
             style: Theme.of(context).textTheme.titleMedium?.copyWith(
@@ -252,7 +313,11 @@ class _RecurringDetailScreenState extends State<RecurringDetailScreen> {
               ),
             )
           else
-            ..._history!.map((entry) => _HistoryTile(entry: entry, installment: !r.canSkip)),
+            ..._history!.map((entry) => _HistoryTile(
+                entry: entry,
+                installment: !r.canSkip,
+                income: r.paymentType == 'income',
+                hide: app.settings.hideBalance)),
         ],
       ),
     );
@@ -317,8 +382,13 @@ class _InfoTile extends StatelessWidget {
 class _HistoryTile extends StatelessWidget {
   final RecurringHistoryEntry entry;
   final bool installment;
+  final bool income, hide;
 
-  const _HistoryTile({required this.entry, required this.installment});
+  const _HistoryTile(
+      {required this.entry,
+      required this.installment,
+      required this.income,
+      required this.hide});
 
   @override
   Widget build(BuildContext context) {
@@ -330,12 +400,16 @@ class _HistoryTile extends StatelessWidget {
           child: Icon(paid ? Icons.check_rounded : Icons.skip_next_rounded),
         ),
         title: Text(
-          paid ? 'Registrada como paga' : installment ? 'Parcela não paga' : 'Ocorrência pulada',
+          paid
+              ? (income ? 'Registrada como recebida' : 'Registrada como paga')
+              : installment
+                  ? 'Parcela não paga'
+                  : 'Ocorrência pulada',
           style: const TextStyle(fontWeight: FontWeight.w800),
         ),
         subtitle: Text(ptDate(entry.date)),
         trailing: Text(
-          formatAmount(entry.amount, entry.currency),
+          hide ? '••••' : formatAmount(entry.amount, entry.currency),
           style: const TextStyle(fontWeight: FontWeight.w900),
         ),
       ),

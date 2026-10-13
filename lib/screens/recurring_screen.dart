@@ -1,16 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-
+import '../database/db_helper.dart';
 import '../models/models.dart';
 import '../providers/app_provider.dart';
 import '../services/notification_service.dart';
+import '../services/recurring_projection.dart';
 import '../theme/app_theme.dart';
 import '../utils/finance_input.dart';
 import 'recurring_detail_screen.dart';
+import 'debt_overview_screen.dart';
+import 'agenda_screen.dart';
 
 class RecurringScreen extends StatefulWidget {
   const RecurringScreen({super.key});
-
   @override
   State<RecurringScreen> createState() => _RecurringScreenState();
 }
@@ -18,7 +20,9 @@ class RecurringScreen extends StatefulWidget {
 class _RecurringScreenState extends State<RecurringScreen>
     with SingleTickerProviderStateMixin {
   late final TabController _tabs;
-  String _expenseFilter = 'subscription';
+  String _expenseFilter = 'all', _view = 'active';
+  Future<List<RecurringHistoryEntry>>? _history;
+  int? _historyCount;
 
   @override
   void initState() {
@@ -35,243 +39,259 @@ class _RecurringScreenState extends State<RecurringScreen>
     super.dispose();
   }
 
-  double _monthlyValue(Iterable<RecurringPayment> items) {
-    double total = 0;
-    for (final r in items) {
-      final freq = r.freqVal <= 0 ? 1 : r.freqVal;
-      switch (r.freqUnit) {
-        case 'days':
-          total += r.amount * 30.44 / freq;
-          break;
-        case 'weeks':
-          total += r.amount * 4.345 / freq;
-          break;
-        case 'years':
-          total += r.amount / (12 * freq);
-          break;
-        default:
-          total += r.amount / freq;
-      }
-    }
-    return total;
+  void _open(RecurringPayment r) {
+    final app = context.read<AppProvider>();
+    Navigator.push(
+        context,
+        ExpensyRoute(
+            builder: (_) => RecurringDetailScreen(
+                recurring: r,
+                fmt: (v) => formatAmount(
+                    v,
+                    app.accountById(r.accountId)?.currency ??
+                        app.settings.currency))));
   }
 
   @override
   Widget build(BuildContext context) {
     final app = context.watch<AppProvider>();
-    final theme = Theme.of(context);
-    final cs = theme.colorScheme;
-
-    final expenses = app.recurring
-        .where((r) => r.paymentType == 'expense')
+    final today = RecurringProjection.day(DateTime.now());
+    final until = DateTime(today.year, today.month + 3, 0);
+    final type = _tabs.index == 0 ? 'expense' : 'income';
+    final filtered = app.recurring
+        .where((r) =>
+            r.paymentType == type &&
+            (_tabs.index == 1 ||
+                _expenseFilter == 'all' ||
+                r.recurringType == _expenseFilter))
         .toList()
       ..sort((a, b) => a.nextActionDate.compareTo(b.nextActionDate));
-    final incomes = app.recurring
-        .where((r) => r.paymentType == 'income')
-        .toList()
-      ..sort((a, b) => a.nextActionDate.compareTo(b.nextActionDate));
-    final filteredExpenses =
-        expenses.where((r) => r.recurringType == _expenseFilter).toList();
-    final shown = _tabs.index == 0 ? filteredExpenses : incomes;
-    final monthly = _monthlyValue(shown);
-
+    final active = filtered.where((r) => r.canComplete).toList();
+    final shown = _view == 'ended'
+        ? filtered.where((r) => !r.canComplete).toList()
+        : active;
+    final projection = RecurringProjection.calculate(active,
+        until: until, registeredIds: app.transactions.map((t) => t.id).toSet());
+    double sum(Iterable<RecurringOccurrence> rows) => rows.fold(
+        0,
+        (s, e) =>
+            s +
+            app.convertToMain(
+                e.amount,
+                app.accountById(e.recurring.accountId)?.currency ??
+                    app.settings.currency));
+    String money(double amount) => app.settings.hideBalance
+        ? '••••'
+        : formatAmount(amount, app.settings.currency);
+    final overdue = projection.occurrences.where((e) => e.date.isBefore(today));
+    final thisMonth = projection.occurrences.where((e) =>
+        !e.date.isBefore(today) &&
+        e.date.isBefore(DateTime(today.year, today.month + 1)));
+    final future =
+        projection.occurrences.where((e) => !e.date.isBefore(today)).toList();
+    if (_view == 'history' &&
+        (_history == null || _historyCount != app.recurringHistoryCount)) {
+      _historyCount = app.recurringHistoryCount;
+      _history = DBHelper.getAllRecurringHistory();
+    }
     return Scaffold(
       appBar: AppBar(
-        automaticallyImplyLeading: false,
-        title: const Text(
-          'Recorrentes',
-          style: TextStyle(fontWeight: FontWeight.w900),
-        ),
+        title: const Text('Recorrentes'),
+        automaticallyImplyLeading: Navigator.canPop(context),
         actions: [
-          Padding(
-            padding: const EdgeInsets.only(right: 16),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                Text(
-                  'Receitas / despesas',
-                  style: theme.textTheme.labelSmall?.copyWith(
-                    color: cs.onSurfaceVariant,
-                  ),
-                ),
-                Text(
-                  '${formatAmount(_monthlyValue(incomes), app.settings.currency)} / ${formatAmount(_monthlyValue(expenses), app.settings.currency)}',
-                  style: const TextStyle(fontWeight: FontWeight.w800),
-                ),
-              ],
-            ),
-          ),
+          IconButton(
+              tooltip: 'Adicionar recorrente',
+              icon: const Icon(Icons.add),
+              onPressed: () => openRecurringSheet(context, defaultType: type)),
         ],
-        bottom: TabBar(
-          controller: _tabs,
-          tabs: [
-            Tab(text: 'Despesas (${expenses.length})'),
-            Tab(text: 'Receitas (${incomes.length})'),
-          ],
-        ),
+        bottom: TabBar(controller: _tabs, tabs: const [
+          Tab(text: 'Despesas'),
+          Tab(text: 'Receitas'),
+        ]),
       ),
-      floatingActionButton: Padding(
-        padding: const EdgeInsets.only(bottom: 76),
-        child: FloatingActionButton.extended(
-          onPressed: () => openRecurringSheet(
-            context,
-            defaultType: _tabs.index == 0 ? 'expense' : 'income',
-          ),
-          icon: const Icon(Icons.add_rounded),
-          label: const Text('Adicionar'),
-        ),
-      ),
-      body: Column(
-        children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
-            child: Row(
-              children: [
-                Expanded(
-                  child: _SummaryCard(
-                    title: 'Mensal',
-                    value: formatAmount(monthly, app.settings.currency),
-                    icon: Icons.calendar_month_outlined,
-                  ),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: _SummaryCard(
-                    title: 'Semanal',
-                    value: formatAmount(monthly / 4.345, app.settings.currency),
-                    icon: Icons.date_range_outlined,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          if (_tabs.index == 0)
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 2, 16, 8),
-              child: SegmentedButton<String>(
-                segments: const [
-                  ButtonSegment(
-                    value: 'subscription',
-                    label: Text('Fixas / assinaturas'),
-                    icon: Icon(Icons.autorenew_rounded),
-                  ),
-                  ButtonSegment(
-                    value: 'installment',
-                    label: Text('Parceladas'),
-                    icon: Icon(Icons.payments_outlined),
-                  ),
-                ],
-                selected: {_expenseFilter},
-                onSelectionChanged: (value) {
-                  setState(() => _expenseFilter = value.first);
-                },
-              ),
-            ),
-          Expanded(
-            child: shown.isEmpty
-                ? _EmptyRecurring(
-                    isIncome: _tabs.index == 1,
-                    installment: _expenseFilter == 'installment',
-                  )
-                : ListView.builder(
-                    padding: const EdgeInsets.fromLTRB(12, 4, 12, 150),
-                    itemCount: shown.length,
-                    itemBuilder: (_, index) => _RecurringTile(
-                      recurring: shown[index],
-                    ),
-                  ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _SummaryCard extends StatelessWidget {
-  final String title;
-  final String value;
-  final IconData icon;
-
-  const _SummaryCard({
-    required this.title,
-    required this.value,
-    required this.icon,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: cs.primaryContainer.withValues(alpha: .45),
-        borderRadius: BorderRadius.circular(18),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Icon(icon, size: 19, color: cs.primary),
-          const SizedBox(height: 8),
-          Text(title, style: Theme.of(context).textTheme.labelMedium),
-          const SizedBox(height: 2),
-          Text(
-            value,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 17),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _EmptyRecurring extends StatelessWidget {
-  final bool isIncome;
-  final bool installment;
-
-  const _EmptyRecurring({
-    required this.isIncome,
-    required this.installment,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-    final title = isIncome
-        ? 'Nenhuma receita recorrente'
-        : installment
-            ? 'Nenhuma compra parcelada'
-            : 'Nenhuma despesa fixa';
-    final subtitle = isIncome
-        ? 'Cadastre salário, aluguel recebido ou outra entrada que se repete.'
-        : installment
-            ? 'Use parceladas para compromissos com quantidade definida.'
-            : 'Cadastre assinaturas, internet, aluguel e outras contas fixas.';
-
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(30),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
+      body: ListView(
+          padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
           children: [
-            Icon(
-              Icons.repeat_rounded,
-              size: 62,
-              color: cs.onSurfaceVariant.withValues(alpha: .35),
-            ),
-            const SizedBox(height: 14),
-            Text(
-              title,
-              textAlign: TextAlign.center,
-              style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 18),
-            ),
-            const SizedBox(height: 6),
-            Text(subtitle, textAlign: TextAlign.center),
-          ],
-        ),
-      ),
+            Wrap(spacing: 8, children: [
+              for (final e in const {
+                'active': 'Em aberto',
+                'future': 'Próximos meses',
+                'history': 'Histórico',
+                'ended': 'Encerradas'
+              }.entries)
+                ChoiceChip(
+                    label: Text(e.value),
+                    selected: _view == e.key,
+                    onSelected: (_) => setState(() => _view = e.key)),
+            ]),
+            if (_tabs.index == 0)
+              Wrap(spacing: 8, children: [
+                for (final e in const {
+                  'all': 'Todas',
+                  'subscription': 'Fixas / assinaturas',
+                  'installment': 'Parceladas'
+                }.entries)
+                  FilterChip(
+                      label: Text(e.value),
+                      selected: _expenseFilter == e.key,
+                      onSelected: (_) =>
+                          setState(() => _expenseFilter = e.key)),
+              ]),
+            if (_view == 'active' || _view == 'future') ...[
+              Card(
+                  child: Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(type == 'expense'
+                                ? 'A pagar até o fim do mês'
+                                : 'A receber até o fim do mês'),
+                            Text(money(sum(thisMonth)),
+                                style:
+                                    Theme.of(context).textTheme.headlineSmall),
+                            Text(
+                                '${thisMonth.length} vencimentos de hoje até ${ptDate(DateTime(today.year, today.month + 1, 0))}'),
+                            if (overdue.isNotEmpty)
+                              Padding(
+                                  padding: const EdgeInsets.only(top: 8),
+                                  child: Text(
+                                      'Em atraso: ${money(sum(overdue))} • ${overdue.length} vencimentos',
+                                      style: TextStyle(
+                                          color: Theme.of(context)
+                                              .colorScheme
+                                              .error))),
+                            const SizedBox(height: 8),
+                            const Text(
+                                'Somente recorrentes cadastradas. Valores no cartão entram na fatura; não são débito imediato em conta.',
+                                style: TextStyle(fontSize: 12)),
+                            if (projection.incomplete)
+                              const Text(
+                                  'Projeção parcial: revise frequências inválidas ou muito antigas.'),
+                          ]))),
+            ],
+            if (_view == 'active') ...[
+              Wrap(spacing: 8, children: [
+                TextButton.icon(
+                    onPressed: () => Navigator.push(
+                        context,
+                        ExpensyRoute(
+                            builder: (_) => const DebtOverviewScreen())),
+                    icon: const Icon(Icons.account_balance_outlined),
+                    label: const Text('Dívidas e compromissos')),
+                TextButton.icon(
+                    onPressed: () => Navigator.push(context,
+                        ExpensyRoute(builder: (_) => const AgendaScreen())),
+                    icon: const Icon(Icons.event_note),
+                    label: const Text('Ver saldo previsto')),
+              ]),
+              if (shown.isEmpty)
+                const Padding(
+                    padding: EdgeInsets.all(24),
+                    child: Text(
+                        'Nenhuma recorrência em aberto neste filtro. Use + para cadastrar uma conta fixa ou receita.')),
+              for (final r in shown) _RecurringTile(recurring: r),
+            ],
+            if (_view == 'ended') ...[
+              const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 12),
+                  child: Text(
+                      'Cronogramas concluídos. O histórico continua disponível.')),
+              if (shown.isEmpty)
+                const Text('Nenhuma recorrência encerrada neste filtro.'),
+              for (final r in shown) _RecurringTile(recurring: r),
+            ],
+            if (_view == 'future') ...[
+              const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 12),
+                  child: Text(
+                      'Previsão pelo calendário • não registra pagamentos')),
+              for (var offset = 0; offset < 3; offset++)
+                ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    title: Text(
+                        '${(today.month + offset - 1) % 12 + 1}/${DateTime(today.year, today.month + offset).year}'),
+                    trailing: Text(money(sum(future.where((e) =>
+                        e.date.year ==
+                            DateTime(today.year, today.month + offset).year &&
+                        e.date.month ==
+                            DateTime(today.year, today.month + offset)
+                                .month))))),
+              for (final e in future.take(80))
+                Card(
+                    child: ListTile(
+                        title: Text(e.recurring.name),
+                        subtitle: Text(
+                            '${ptDate(e.date)} • ${app.accountById(e.recurring.accountId)?.name ?? 'Conta removida'}'),
+                        trailing: Text(app.settings.hideBalance
+                            ? '••••'
+                            : formatAmount(
+                                e.amount,
+                                app
+                                        .accountById(e.recurring.accountId)
+                                        ?.currency ??
+                                    app.settings.currency)),
+                        onTap: () => _open(e.recurring))),
+              if (future.isEmpty)
+                const Text('Nenhum vencimento previsto nestes três meses.'),
+              if (future.length > 80)
+                const Text(
+                    'Exibindo os primeiros 80 vencimentos. Os totais incluem todo o período.'),
+            ],
+            if (_view == 'history')
+              FutureBuilder<List<RecurringHistoryEntry>>(
+                  future: _history,
+                  builder: (context, snapshot) {
+                    if (snapshot.hasError)
+                      return TextButton(
+                          onPressed: () => setState(() {
+                                _history = DBHelper.getAllRecurringHistory();
+                              }),
+                          child: const Text(
+                              'Não foi possível carregar. Tentar novamente'));
+                    if (!snapshot.hasData)
+                      return const Center(child: CircularProgressIndicator());
+                    final ids = filtered.map((r) => r.id).toSet();
+                    final rows = snapshot.data!
+                        .where((h) => ids.contains(h.recurringId))
+                        .toList();
+                    final paid = rows.where((h) => h.action == 'paid');
+                    final total = paid.fold<double>(0,
+                        (s, h) => s + app.convertToMain(h.amount, h.currency));
+                    return Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Padding(
+                              padding: const EdgeInsets.symmetric(vertical: 16),
+                              child: Text(
+                                  'Registrado como ${type == 'income' ? 'recebido' : 'pago'}: ${money(total)} • ${paid.length} ocorrências')),
+                          const Text(
+                              'Datas de vencimento das ocorrências. Pular não é pagar.'),
+                          if (rows.isEmpty)
+                            const Padding(
+                                padding: EdgeInsets.all(24),
+                                child: Text(
+                                    'Ainda não há histórico neste filtro.')),
+                          for (final h in rows.take(100))
+                            Card(
+                                child: ListTile(
+                                    title: Text(filtered
+                                        .firstWhere(
+                                            (r) => r.id == h.recurringId)
+                                        .name),
+                                    subtitle: Text(
+                                        '${ptDate(h.date)} • ${h.action == 'paid' ? (type == 'income' ? 'Recebida' : 'Paga') : 'Pulada / não paga'}'),
+                                    trailing: Text(app.settings.hideBalance
+                                        ? '••••'
+                                        : formatAmount(h.amount, h.currency)),
+                                    onTap: () => _open(filtered.firstWhere(
+                                        (r) => r.id == h.recurringId)))),
+                          if (rows.length > 100)
+                            const Text(
+                                'Mostrando as 100 ocorrências mais recentes. Total de todo o histórico deste filtro.'),
+                        ]);
+                  }),
+          ]),
     );
   }
 }
@@ -321,15 +341,15 @@ class _RecurringTile extends StatelessWidget {
     final days = due.difference(now).inDays;
     final overdue = days < 0;
     final total = recurring.totalPayments;
-    final progress = total != null && total > 0
-        ? recurring.progress
-        : null;
+    final progress = total != null && total > 0 ? recurring.progress : null;
 
-    final dueLabel = overdue
-        ? 'Atrasada há ${days.abs()} dia${days.abs() == 1 ? '' : 's'}'
-        : days == 0
-            ? 'Vence hoje'
-            : 'Vence em $days dia${days == 1 ? '' : 's'}';
+    final dueLabel = !recurring.canComplete
+        ? 'Encerrada'
+        : overdue
+            ? 'Atrasada há ${days.abs()} dia${days.abs() == 1 ? '' : 's'}'
+            : days == 0
+                ? 'Vence hoje'
+                : 'Vence em $days dia${days == 1 ? '' : 's'}';
 
     return Card(
       elevation: 0,
@@ -395,7 +415,10 @@ class _RecurringTile extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.end,
                     children: [
                       Text(
-                        formatAmount(recurring.nextActionAmount, currency),
+                        app.settings.hideBalance
+                            ? '••••'
+                            : formatAmount(
+                                recurring.nextActionAmount, currency),
                         style: const TextStyle(fontWeight: FontWeight.w900),
                       ),
                       Text(
@@ -419,30 +442,34 @@ class _RecurringTile extends StatelessWidget {
                 Align(
                   alignment: Alignment.centerRight,
                   child: Text(
-                    '${recurring.progressPayments}/$total ${recurring.canSkip ? 'concluídas' : 'pagas'} • ${(progress * 100).toStringAsFixed(0)}%',
+                    '${recurring.progressPayments}/$total ${recurring.canSkip ? 'concluídas' : 'pagas'} • ${recurring.remainingPayments} restantes',
                     style: Theme.of(context).textTheme.labelSmall,
                   ),
                 ),
               ],
               const SizedBox(height: 8),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.end,
+              Wrap(
+                alignment: WrapAlignment.end,
                 children: [
-                  if (recurring.canSkip) TextButton.icon(
-                    onPressed: !recurring.canComplete
-                        ? null
-                        : () async {
-                            await app.skipNextRecurring(recurring);
-                          },
-                    icon: const Icon(Icons.skip_next_rounded, size: 18),
-                    label: const Text('Pular'),
-                  ),
+                  if (recurring.canSkip)
+                    TextButton.icon(
+                      onPressed: !recurring.canComplete
+                          ? null
+                          : () async {
+                              await confirmRecurringAction(
+                                  context, app, recurring,
+                                  skip: true);
+                            },
+                      icon: const Icon(Icons.skip_next_rounded, size: 18),
+                      label: const Text('Pular'),
+                    ),
                   const SizedBox(width: 4),
                   FilledButton.tonalIcon(
                     onPressed: !recurring.canComplete
                         ? null
                         : () async {
-                            await app.markRecurringPaid(recurring);
+                            await confirmRecurringAction(
+                                context, app, recurring);
                           },
                     icon: Icon(
                       recurring.paymentType == 'income'
@@ -451,7 +478,9 @@ class _RecurringTile extends StatelessWidget {
                       size: 18,
                     ),
                     label: Text(
-                      recurring.paymentType == 'income' ? 'Recebida' : 'Paga',
+                      recurring.paymentType == 'income'
+                          ? 'Registrar recebimento'
+                          : 'Registrar pagamento',
                     ),
                   ),
                 ],
@@ -461,6 +490,50 @@ class _RecurringTile extends StatelessWidget {
         ),
       ),
     );
+  }
+}
+
+Future<void> confirmRecurringAction(
+    BuildContext context, AppProvider app, RecurringPayment recurring,
+    {bool skip = false}) async {
+  final account = app.accountById(recurring.accountId);
+  final value = app.settings.hideBalance
+      ? 'valor oculto'
+      : formatAmount(recurring.nextActionAmount,
+          account?.currency ?? app.settings.currency);
+  final accepted = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+              title:
+                  Text(skip ? 'Pular esta ocorrência?' : 'Confirmar registro?'),
+              content: Text(skip
+                  ? '${recurring.name} • ${ptDate(recurring.nextActionDate)}\nNão registra pagamento nem altera saldo. A próxima ocorrência seguirá o calendário.'
+                  : '${recurring.name} • $value\nVencimento: ${ptDate(recurring.nextActionDate)}\nConta: ${account?.name ?? 'Conta removida'}\n${account?.type == 'credit' ? 'Será registrado no cartão; a conta bancária só muda ao pagar a fatura.' : 'Este registro altera o saldo da conta.'}'),
+              actions: [
+                TextButton(
+                    onPressed: () => Navigator.pop(ctx, false),
+                    child: const Text('Cancelar')),
+                FilledButton(
+                    onPressed: () => Navigator.pop(ctx, true),
+                    child: Text(skip ? 'Pular ocorrência' : 'Confirmar'))
+              ]));
+  if (accepted != true || !context.mounted) return;
+  try {
+    if (skip) {
+      await app.skipNextRecurring(recurring);
+    } else {
+      await app.markRecurringPaid(recurring);
+    }
+    if (context.mounted)
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(skip
+              ? 'Ocorrência pulada, sem pagamento.'
+              : 'Registro concluído. Histórico atualizado.')));
+  } catch (_) {
+    if (context.mounted)
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text(
+              'Não foi possível concluir. Confira o histórico antes de tentar novamente.')));
   }
 }
 
