@@ -56,7 +56,17 @@ Novos testes cobrem atrasados aplicados uma vez, limite do período, conversão 
 - Correções encontradas nessa validação: material dos botões para feedback de toque visível; título e marcador de data adaptados ao texto ampliado; valores dos lançamentos/vencimentos abaixo da descrição para não esmagar as linhas em telas pequenas; drilldown de receitas sem reembolsos; horizonte preservado ao abrir a agenda.
 - Esc foi exercitado somente pelo teste de widget já existente, nunca por Computer Use.
 
-Builds e instalação serão registrados após sua conclusão. As demais alterações preexistentes do workspace foram preservadas; o pacote é compilado sobre esse estado de trabalho, não sobre um checkout limpo apenas dos novos commits da Home.
+### Distribuição e aparelho
+
+- Android Release compilado: `build/distribution/Nexo-1.5.4+20-android.apk`.
+- SHA-256 do APK: `3B969AD91E1DF2468E3FF30224A8D83800796E947C056A8465F3B49595346D21`.
+- Identidade conferida no APK: `com.ma.expensy`, versão `1.5.4`, código `20`, rótulo Nexo. Certificado SHA-256 preservado: `54d668e0f56caf801de429377a7a3066dbe0ed74779f04bac1ba1d2a5b112096`.
+- Atualização autorizada instalada no aparelho conectado pelo modo de substituição (`install -r`): **Success**. O gerenciador de pacotes confirmou 1.5.4/20; primeira instalação permaneceu em 26/09/2026, sem desinstalação ou limpeza. Abertura respondeu `Status: ok` e processo ativo. Nenhum banco real foi lido ou copiado.
+- Após o desbloqueio normal pelo usuário, a hierarquia da interface confirmou os novos blocos no aparelho: saldo, cartões, previsão do fim do mês, Entrou/Gastou, Dívidas e Recorrentes. A rolagem alcançou a previsão e categorias. Selecionar 90 dias marcou o controle e mostrou a data final esperada (11/01, a partir de 13/10); a Agenda abriu mantendo 90 dias. Foram registrados somente rótulos e posições, sem valores financeiros ou cópia do banco. A revisão visual detalhada de cores/espaçamentos foi feita nas capturas sintéticas; esta conferência no aparelho usou a hierarquia de acessibilidade.
+- Android Debug também compilado em `build/app/outputs/flutter-apk/app-debug.apk`. O celular recebeu somente a variante Release. Avisos preexistentes sobre versões futuras de AGP/Kotlin e traduções de outros idiomas permaneceram; não foram trocadas dependências nesta rodada.
+- Windows Release compilado: `build/distribution/Nexo-1.5.4+20-windows-x64.zip`, SHA-256 `0882CD4AFF2C6926F9DECB82C100D7D220258B5F878FA337D1B211E4152C2CFB`. ZIP conferido com executável, DLLs e `data/`; metadados do executável confirmam Nexo 1.5.4+20. Para executar, extrair a pasta completa e abrir `Nexo.exe`. Não distribuir somente o executável. Esta rodada não executou a homologação nativa completa do Windows.
+
+As demais alterações preexistentes do workspace foram preservadas; o pacote é compilado sobre esse estado de trabalho, não sobre um checkout limpo apenas dos novos commits da Home. Commits desta rodada: `f3fdba1` (cálculos de cartão e testes) e `516ab5b` (Home, previsão, navegação, versão e regressões).
 
 ## Limitações mantidas
 
