@@ -11,13 +11,15 @@ import 'card_invoice_screen.dart';
 import 'recurring_detail_screen.dart';
 
 class AgendaScreen extends StatefulWidget {
-  const AgendaScreen({super.key});
+  final int initialDays;
+  const AgendaScreen({super.key, this.initialDays = 7})
+      : assert(initialDays == -1 || initialDays >= 0 && initialDays <= 90);
   @override
   State<AgendaScreen> createState() => _AgendaScreenState();
 }
 
 class _AgendaScreenState extends State<AgendaScreen> {
-  int _days = 7;
+  late int _days = widget.initialDays;
   bool _busy = false;
   Future<List<Map<String, dynamic>>> _payments() async =>
       (await DBHelper.database).query('card_invoice_payments');
@@ -131,6 +133,7 @@ class _AgendaScreenState extends State<AgendaScreen> {
                         7: '7 dias',
                         15: '15 dias',
                         30: '30 dias',
+                        90: '90 dias',
                         -1: 'Este mês'
                       }.entries)
                         ChoiceChip(
@@ -236,7 +239,9 @@ class _AgendaScreenState extends State<AgendaScreen> {
                                             child: Text(event.amount >= 0
                                                 ? 'Receber'
                                                 : 'Pagar')),
-                                        if (event.kind == 'recurring' && app.recurring.any((r) => r.id == event.id && r.canSkip))
+                                        if (event.kind == 'recurring' &&
+                                            app.recurring.any((r) =>
+                                                r.id == event.id && r.canSkip))
                                           TextButton(
                                               onPressed: _busy
                                                   ? null
