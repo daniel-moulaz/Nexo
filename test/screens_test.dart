@@ -146,7 +146,7 @@ void main() {
       }
       expect(renderingError, isNull);
       if (entry.key == 'recurring') {
-        await tester.tap(find.byType(FloatingActionButton));
+        await tester.tap(find.byTooltip('Adicionar recorrente'));
         await tester.pumpAndSettle();
         expect(find.text('Novo recorrente'), findsOneWidget);
         await tester.enterText(find.byType(TextField).at(0), 'Internet teste');

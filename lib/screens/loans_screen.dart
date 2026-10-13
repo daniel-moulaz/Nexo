@@ -46,7 +46,8 @@ class _LoansScreenState extends State<LoansScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(l10n.loans_title, style: const TextStyle(fontWeight: FontWeight.w800)),
+        title: Text(l10n.loans_title,
+            style: const TextStyle(fontWeight: FontWeight.w800)),
         backgroundColor: cs.primary,
         foregroundColor: cs.onPrimary,
       ),
@@ -60,19 +61,23 @@ class _LoansScreenState extends State<LoansScreen> {
                 children: [
                   _SumChip(
                     label: l10n.loans_outstandingDebt,
-                    value: formatAmount(app.totalOutstandingLoanDebt, cur),
+                    value: app.settings.hideBalance
+                        ? '••••'
+                        : formatAmount(app.totalOutstandingLoanDebt, cur),
                     color: const Color(0xFF4A148C),
                   ),
                   const SizedBox(width: 8),
                   _SumChip(
-                    label: l10n.loans_monthlyObligation,
-                    value: formatAmount(app.totalMonthlyLoanObligation, cur),
+                    label: 'Média mensal dos contratos',
+                    value: app.settings.hideBalance
+                        ? '••••'
+                        : formatAmount(app.totalMonthlyLoanObligation, cur),
                     color: cs.primary,
                   ),
                 ],
               ),
             ),
-          
+
           Expanded(
             child: app.loans.isEmpty
                 ? Center(
@@ -94,14 +99,17 @@ class _LoansScreenState extends State<LoansScreen> {
                               barColor: _barColor(app.loanProgress(l)),
                               onTap: () => Navigator.push(
                                 context,
-                                ExpensyRoute(builder: (_) => LoanDetailScreen(loan: l)),
+                                ExpensyRoute(
+                                    builder: (_) => LoanDetailScreen(loan: l)),
                               ),
-                              onLongPress: () => _openSheet(context, existing: l),
+                              onLongPress: () =>
+                                  _openSheet(context, existing: l),
                             )),
                       ],
                       if (settledLoans.isNotEmpty) ...[
                         Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 4),
+                          padding: const EdgeInsets.symmetric(
+                              vertical: 12, horizontal: 4),
                           child: Text(
                             l10n.loans_settled,
                             style: TextStyle(
@@ -120,9 +128,12 @@ class _LoansScreenState extends State<LoansScreen> {
                                 barColor: const Color(0xFF2E7D32),
                                 onTap: () => Navigator.push(
                                   context,
-                                  ExpensyRoute(builder: (_) => LoanDetailScreen(loan: l)),
+                                  ExpensyRoute(
+                                      builder: (_) =>
+                                          LoanDetailScreen(loan: l)),
                                 ),
-                                onLongPress: () => _openSheet(context, existing: l),
+                                onLongPress: () =>
+                                    _openSheet(context, existing: l),
                               ),
                             )),
                       ],
@@ -131,9 +142,10 @@ class _LoansScreenState extends State<LoansScreen> {
           ),
         ],
       ),
-      floatingActionButton: FloatingActionButton(
+      floatingActionButton: FloatingActionButton.extended(
         onPressed: () => _openSheet(context),
-        child: const Icon(Icons.add),
+        icon: const Icon(Icons.add),
+        label: const Text('Adicionar empréstimo'),
       ),
     );
   }
@@ -142,7 +154,8 @@ class _LoansScreenState extends State<LoansScreen> {
 class _SumChip extends StatelessWidget {
   final String label, value;
   final Color color;
-  const _SumChip({required this.label, required this.value, required this.color});
+  const _SumChip(
+      {required this.label, required this.value, required this.color});
 
   @override
   Widget build(BuildContext context) => Expanded(
@@ -185,209 +198,68 @@ class _LoanCard extends StatelessWidget {
   final Loan loan;
   final AppProvider app;
   final Color barColor;
-  final VoidCallback onTap;
-  final VoidCallback onLongPress;
-
-  const _LoanCard({
-    required this.loan,
-    required this.app,
-    required this.barColor,
-    required this.onTap,
-    required this.onLongPress,
-  });
-
+  final VoidCallback onTap, onLongPress;
+  const _LoanCard(
+      {required this.loan,
+      required this.app,
+      required this.barColor,
+      required this.onTap,
+      required this.onLongPress});
   @override
   Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-    final cur = loan.currency;
-    final l10n = AppLocalizations.of(context)!;
-    final progress = app.loanProgress(loan);
+    String money(double v) =>
+        app.settings.hideBalance ? '••••' : formatAmount(v, loan.currency);
+    final paid = app.loanTotalPaid(loan);
     final remaining = app.loanRemaining(loan);
-
-    final df = DateFormat('dd/MM/yyyy');
-
+    final count =
+        app.loanPaymentsFor(loan.id).where((p) => p.amount > 0).length;
     return Card(
-      margin: const EdgeInsets.only(bottom: 10),
-      clipBehavior: Clip.antiAlias,
-      child: InkWell(
-        onTap: onTap,
-        onLongPress: onLongPress,
-        child: Padding(
-          padding: const EdgeInsets.all(14),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          loan.name,
-                          style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 15),
-                        ),
-                        const SizedBox(height: 2),
-                        Text(
-                          '${df.format(loan.startDate)} - ${df.format(loan.endDate)}',
-                          style: TextStyle(
-                            fontSize: 11,
-                            color: cs.onSurface.withValues(alpha: 0.5),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.end,
+        margin: const EdgeInsets.only(bottom: 10),
+        child: InkWell(
+            onTap: onTap,
+            borderRadius: BorderRadius.circular(16),
+            child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
+                      Row(children: [
+                        Expanded(
+                            child: Text(loan.name,
+                                style:
+                                    Theme.of(context).textTheme.titleMedium)),
+                        IconButton(
+                            tooltip: 'Editar empréstimo',
+                            onPressed: onLongPress,
+                            icon: const Icon(Icons.edit_outlined))
+                      ]),
                       Text(
-                        formatAmount(loan.monthlyPayment, cur),
-                        style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 15),
-                      ),
+                          loan.isSettled
+                              ? 'Marcado como quitado'
+                              : 'Falta pagar',
+                          style: Theme.of(context).textTheme.labelLarge),
+                      Text(money(remaining),
+                          style: Theme.of(context).textTheme.headlineSmall),
+                      const SizedBox(height: 8),
+                      LinearProgressIndicator(
+                          value: app.loanProgress(loan), color: barColor),
+                      const SizedBox(height: 8),
                       Text(
-                        l10n.loans_monthlyPayment,
-                        style: TextStyle(
-                          fontSize: 10,
-                          fontWeight: FontWeight.w600,
-                          color: cs.onSurface.withValues(alpha: 0.5),
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-              const SizedBox(height: 12),
-              LinearProgressCard(value: progress, color: barColor),
-              const SizedBox(height: 5),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    l10n.recurring_paidPayments(
-                        app.loanPaymentsFor(loan.id).length.toString(),
-                        loan.durationMonths.toString()),
-                    style: TextStyle(
-                      fontSize: 11,
-                      color: cs.onSurface.withValues(alpha: 0.55),
-                    ),
-                  ),
-                  Text(
-                    '${l10n.loans_remaining}: ${formatAmount(remaining, cur)}',
-                    style: TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w700,
-                      color: remaining > 0 ? cs.primary : const Color(0xFF2E7D32),
-                    ),
-                  ),
-                ],
-              ),
-              if (!loan.isSettled) ...[
-                const SizedBox(height: 10),
-                const Divider(height: 1, thickness: 0.5),
-                const SizedBox(height: 4),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    if (loan.reminderEnabled)
-                      Row(
-                        children: [
-                          Icon(Icons.notifications_active_outlined, size: 12, color: cs.primary),
-                          const SizedBox(width: 4),
-                          Text(
-                            'Due: Day ${loan.reminderDay} @ ${loan.reminderTime}',
-                            style: TextStyle(
-                              fontSize: 10,
-                              fontWeight: FontWeight.w600,
-                              color: cs.primary,
-                            ),
-                          ),
-                        ],
-                      )
-                    else
-                      const SizedBox.shrink(),
-                    Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        _Btn(
-                            icon: Icons.skip_next_outlined,
-                            label: l10n.recurring_skipBtn,
-                            color: const Color(0xFF785900),
-                            onTap: () async {
-                              final ok = await showDialog<bool>(
-                                  context: context,
-                                  builder: (ctx) => AlertDialog(
-                                        title: Text(l10n.recurring_skipNextPayment),
-                                        content: const Text('Skip the next loan installment?'),
-                                        actions: [
-                                          TextButton(
-                                              onPressed: () => Navigator.pop(ctx, false),
-                                              child: Text(l10n.recurring_cancel)),
-                                          FilledButton(
-                                              onPressed: () => Navigator.pop(ctx, true),
-                                              child: Text(l10n.recurring_skip)),
-                                        ],
-                                      ));
-                              if (ok == true && context.mounted) {
-                                await app.skipLoanInstallment(loan);
-                                if (context.mounted) {
-                                  showAppSnackbar(context, 'Skipped loan installment');
-                                }
-                              }
-                            }),
-                        const SizedBox(width: 6),
-                        _Btn(
-                            icon: Icons.check_circle_outline,
-                            label: l10n.recurring_pay,
-                            color: cs.primary,
-                            onTap: () async {
-                              await app.payLoanInstallment(loan);
-                              if (context.mounted) {
-                                showAppSnackbar(context, 'Pagamento registrado: ${formatAmount(loan.monthlyPayment, cur)}');
-                              }
-                            }),
-                      ],
-                    ),
-                  ],
-                ),
-              ],
-            ],
-          ),
-        ),
-      ),
-    );
+                          'Pago: ${money(paid)} • $count pagamentos registrados'),
+                      Text('Total do contrato: ${money(loan.totalPayable)}'),
+                      Text(
+                          'Média contratual: ${money(loan.monthlyPayment)}/mês'),
+                      Text('Fim do contrato: ${ptDate(loan.endDate)}'),
+                      if (loan.reminderEnabled)
+                        Text(
+                            'Lembrete: dia ${loan.reminderDay} às ${loan.reminderTime}'),
+                      const SizedBox(height: 8),
+                      TextButton.icon(
+                          onPressed: onTap,
+                          icon: const Icon(Icons.chevron_right),
+                          label: const Text('Histórico e registrar pagamento')),
+                    ]))));
   }
-}
-
-class _Btn extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final Color color;
-  final VoidCallback onTap;
-  const _Btn(
-      {required this.icon,
-      required this.label,
-      required this.color,
-      required this.onTap});
-  @override
-  Widget build(BuildContext context) => GestureDetector(
-        onTap: onTap,
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 5),
-          decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(8)),
-          child: Row(mainAxisSize: MainAxisSize.min, children: [
-            Icon(icon, size: 13, color: color),
-            const SizedBox(width: 3),
-            Text(label,
-                style: TextStyle(
-                    fontSize: 11, fontWeight: FontWeight.w700, color: color)),
-          ]),
-        ),
-      );
 }
 
 class LoanSheet extends StatefulWidget {
@@ -434,7 +306,8 @@ class _LoanSheetState extends State<LoanSheet> {
   }
 
   int get _durationMonths {
-    final months = (_endDate.year - _startDate.year) * 12 + (_endDate.month - _startDate.month);
+    final months = (_endDate.year - _startDate.year) * 12 +
+        (_endDate.month - _startDate.month);
     return months < 1 ? 1 : months;
   }
 
@@ -474,8 +347,11 @@ class _LoanSheetState extends State<LoanSheet> {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text(
-                    widget.existing == null ? l10n.loans_addLoan : l10n.loans_editLoan,
-                    style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                    widget.existing == null
+                        ? l10n.loans_addLoan
+                        : l10n.loans_editLoan,
+                    style: const TextStyle(
+                        fontSize: 18, fontWeight: FontWeight.bold),
                   ),
                 ],
               ),
@@ -489,7 +365,8 @@ class _LoanSheetState extends State<LoanSheet> {
                   prefixIcon: const Icon(Icons.label_outline),
                 ),
                 textInputAction: TextInputAction.next,
-                validator: (val) => val == null || val.trim().isEmpty ? 'Required' : null,
+                validator: (val) =>
+                    val == null || val.trim().isEmpty ? 'Required' : null,
                 onChanged: (val) => setState(() => _name = val),
               ),
               const SizedBox(height: 12),
@@ -501,7 +378,8 @@ class _LoanSheetState extends State<LoanSheet> {
                   labelText: l10n.loans_amount,
                   prefixIcon: const Icon(Icons.account_balance_wallet_outlined),
                 ),
-                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                keyboardType:
+                    const TextInputType.numberWithOptions(decimal: true),
                 textInputAction: TextInputAction.next,
                 validator: (val) {
                   if (val == null || val.trim().isEmpty) return 'Required';
@@ -509,7 +387,8 @@ class _LoanSheetState extends State<LoanSheet> {
                   if (num == null || num <= 0) return 'Invalid';
                   return null;
                 },
-                onChanged: (val) => setState(() => _principal = parseMoney(val) ?? 0.0),
+                onChanged: (val) =>
+                    setState(() => _principal = parseMoney(val) ?? 0.0),
               ),
               const SizedBox(height: 16),
 
@@ -527,19 +406,23 @@ class _LoanSheetState extends State<LoanSheet> {
                   if (picked != null) setState(() => _currency = picked);
                 },
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
                   decoration: BoxDecoration(
                     color: cs.surfaceContainerHigh,
                     borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: cs.primary.withValues(alpha: 0.5)),
+                    border:
+                        Border.all(color: cs.primary.withValues(alpha: 0.5)),
                   ),
                   child: Row(children: [
-                    Icon(Icons.monetization_on_outlined, size: 18, color: cs.primary),
+                    Icon(Icons.monetization_on_outlined,
+                        size: 18, color: cs.primary),
                     const SizedBox(width: 10),
                     Expanded(
                         child: Text(
                             '$_currency  ${currencyInfo(_currency).symbol}  —  ${currencyInfo(_currency).name}',
-                            style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14))),
+                            style: const TextStyle(
+                                fontWeight: FontWeight.w600, fontSize: 14))),
                     const Icon(Icons.arrow_drop_down_rounded),
                   ]),
                 ),
@@ -562,7 +445,8 @@ class _LoanSheetState extends State<LoanSheet> {
                           setState(() {
                             _startDate = res;
                             if (_endDate.isBefore(_startDate)) {
-                              _endDate = _startDate.add(const Duration(days: 30));
+                              _endDate =
+                                  _startDate.add(const Duration(days: 30));
                             }
                           });
                         }
@@ -572,7 +456,8 @@ class _LoanSheetState extends State<LoanSheet> {
                           labelText: l10n.loans_startDate,
                           prefixIcon: const Icon(Icons.calendar_today_outlined),
                         ),
-                        child: Text(DateFormat('dd/MM/yyyy').format(_startDate)),
+                        child:
+                            Text(DateFormat('dd/MM/yyyy').format(_startDate)),
                       ),
                     ),
                   ),
@@ -605,19 +490,22 @@ class _LoanSheetState extends State<LoanSheet> {
                 padding: const EdgeInsets.only(top: 4, left: 4),
                 child: Text(
                   'Duração: ${l10n.loans_durationMonths(_durationMonths)}',
-                  style: TextStyle(fontSize: 11, color: cs.onSurface.withValues(alpha: 0.6)),
+                  style: TextStyle(
+                      fontSize: 11, color: cs.onSurface.withValues(alpha: 0.6)),
                 ),
               ),
               const SizedBox(height: 12),
 
               // Interest Rate (Optional)
               TextFormField(
-                initialValue: _interestRate != null ? _interestRate.toString() : '',
+                initialValue:
+                    _interestRate != null ? _interestRate.toString() : '',
                 decoration: InputDecoration(
                   labelText: l10n.loans_interestRateOptional,
                   prefixIcon: const Icon(Icons.percent_outlined),
                 ),
-                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                keyboardType:
+                    const TextInputType.numberWithOptions(decimal: true),
                 textInputAction: TextInputAction.next,
                 validator: (val) {
                   if (val != null && val.trim().isNotEmpty) {
@@ -677,8 +565,14 @@ class _LoanSheetState extends State<LoanSheet> {
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            Text(l10n.loans_monthlyPayment, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
-                            Text(formatAmount(_monthlyPayment, _currency), style: TextStyle(fontSize: 15, fontWeight: FontWeight.w900, color: cs.primary)),
+                            Text(l10n.loans_monthlyPayment,
+                                style: const TextStyle(
+                                    fontSize: 12, fontWeight: FontWeight.w600)),
+                            Text(formatAmount(_monthlyPayment, _currency),
+                                style: TextStyle(
+                                    fontSize: 15,
+                                    fontWeight: FontWeight.w900,
+                                    color: cs.primary)),
                           ],
                         ),
                         if (_interestRate != null && _interestRate! > 0) ...[
@@ -686,8 +580,12 @@ class _LoanSheetState extends State<LoanSheet> {
                           Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
-                              Text(l10n.loans_totalPayable, style: const TextStyle(fontSize: 11)),
-                              Text(formatAmount(_totalPayable, _currency), style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700)),
+                              Text(l10n.loans_totalPayable,
+                                  style: const TextStyle(fontSize: 11)),
+                              Text(formatAmount(_totalPayable, _currency),
+                                  style: const TextStyle(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w700)),
                             ],
                           ),
                         ],
@@ -700,14 +598,17 @@ class _LoanSheetState extends State<LoanSheet> {
               // Reminder Toggle
               SwitchListTile(
                 value: _reminderEnabled,
-                title: Text(l10n.loans_paymentReminder, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
+                title: Text(l10n.loans_paymentReminder,
+                    style: const TextStyle(
+                        fontSize: 14, fontWeight: FontWeight.bold)),
                 contentPadding: EdgeInsets.zero,
                 onChanged: (val) async {
                   if (val) {
                     final granted = await LoanReminderService().hasPermission();
                     if (!granted) {
                       if (context.mounted) {
-                        showAppSnackbar(context, 'Notifications permission required');
+                        showAppSnackbar(
+                            context, 'Notifications permission required');
                       }
                       return;
                     }
@@ -726,7 +627,8 @@ class _LoanSheetState extends State<LoanSheet> {
                           prefixIcon: const Icon(Icons.today),
                         ),
                         items: List.generate(31, (i) => i + 1)
-                            .map((day) => DropdownMenuItem(value: day, child: Text(day.toString())))
+                            .map((day) => DropdownMenuItem(
+                                value: day, child: Text(day.toString())))
                             .toList(),
                         onChanged: (val) {
                           if (val != null) {
@@ -742,7 +644,9 @@ class _LoanSheetState extends State<LoanSheet> {
                           final timeParts = _reminderTime.split(':');
                           final initialTime = TimeOfDay(
                             hour: int.tryParse(timeParts[0]) ?? 9,
-                            minute: timeParts.length > 1 ? (int.tryParse(timeParts[1]) ?? 0) : 0,
+                            minute: timeParts.length > 1
+                                ? (int.tryParse(timeParts[1]) ?? 0)
+                                : 0,
                           );
                           final res = await showTimePicker(
                             context: context,
@@ -750,7 +654,8 @@ class _LoanSheetState extends State<LoanSheet> {
                           );
                           if (res != null) {
                             setState(() {
-                              _reminderTime = '${res.hour.toString().padLeft(2, '0')}:${res.minute.toString().padLeft(2, '0')}';
+                              _reminderTime =
+                                  '${res.hour.toString().padLeft(2, '0')}:${res.minute.toString().padLeft(2, '0')}';
                             });
                           }
                         },

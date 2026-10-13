@@ -20,6 +20,8 @@ import 'wishlist_screen.dart';
 
 import 'agenda_screen.dart';
 import 'notification_inbox_screen.dart';
+import 'debt_overview_screen.dart';
+import 'financial_checkup_screen.dart';
 
 class MoreScreen extends StatelessWidget {
   const MoreScreen({super.key});
@@ -35,6 +37,18 @@ class MoreScreen extends StatelessWidget {
     final loansLen = app.loans.where((l) => !l.isSettled).length;
 
     final items = <_Item>[
+      const _Item(
+          icon: Icons.fact_check_outlined,
+          label: 'Revisão financeira',
+          sub: 'Resumo de 3 ou 7 dias e próximos compromissos',
+          color: Color(0xFF00695C),
+          screen: FinancialCheckupScreen()),
+      const _Item(
+          icon: Icons.account_balance_outlined,
+          label: 'Dívidas e compromissos',
+          sub: 'Cartões, empréstimos, parcelas e despesas pendentes',
+          color: Color(0xFF6750A4),
+          screen: DebtOverviewScreen()),
       const _Item(
           icon: Icons.inbox_outlined,
           label: 'Sugestões de lançamentos',
@@ -156,6 +170,9 @@ class MoreScreen extends StatelessWidget {
           children: [
             for (final group in <String, List<String>>{
               'Planejamento': [
+                'Revisão financeira',
+                'Dívidas e compromissos',
+                'Empréstimos',
                 'Agenda financeira',
                 'Planejamento',
                 'Buscar lançamentos'
@@ -176,7 +193,6 @@ class MoreScreen extends StatelessWidget {
                 'Conversor de moeda',
                 'Lista de desejos',
                 'Dinheiro emprestado',
-                'Empréstimos',
                 'Patrimônio',
                 'Ativos'
               ],
