@@ -81,6 +81,8 @@ flutter build apk --release
 
 **Windows:** é necessário Visual Studio com **Desktop development with C++** e Windows SDK. Ative o Modo de Desenvolvedor do Windows se o Flutter solicitar suporte a links simbólicos.
 
+Se `flutter pub get` resolver as dependências mas parar por falta de suporte a links, há uma alternativa local em NTFS: execute `./tool/prepare_windows_plugins.ps1` no PowerShell e repita `flutter pub get`. O script prepara os links dos plugins sem alterar o SDK nem as configurações do sistema.
+
 ```sh
 flutter run -d windows
 flutter build windows --release
