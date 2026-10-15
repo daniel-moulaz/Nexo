@@ -1,165 +1,122 @@
 <div align="center">
 
-<img src="assets/splash_icon.png" alt="Expensy Logo" width="120" height="120" style="border-radius: 24px"/>
+# Nexo
 
-# Expensy
+### Seu dinheiro, com clareza.
 
-### A finance tracker that stays on your phone, not in the cloud
+Controle financeiro pessoal para entender o passado, acompanhar o presente e organizar os próximos compromissos.
 
-[![Flutter](https://img.shields.io/badge/Flutter-3.3%2B-02569B?logo=flutter&logoColor=white)](https://flutter.dev)
-[![Android](https://img.shields.io/badge/Android-5.0%2B-3DDC84?logo=android&logoColor=white)](https://android.com)
-[![Version](https://img.shields.io/badge/Version-1.1.0-brightgreen)](https://github.com/mina-android/Expensy/releases)
-[![License](https://img.shields.io/badge/License-MIT-blue)](LICENSE)
+![Flutter](https://img.shields.io/badge/Flutter-02569B?logo=flutter&logoColor=white)
+![Android](https://img.shields.io/badge/Android-3DDC84?logo=android&logoColor=white)
+![Windows](https://img.shields.io/badge/Windows-0078D4)
+![Local first](https://img.shields.io/badge/Dados-locais-00695C)
+[![MIT](https://img.shields.io/badge/Licen%C3%A7a-MIT-blue)](LICENSE)
 
-No sign-up. No cloud sync. No ads. Your data lives on your device and nowhere else.
-
-[**Download**](#-installation) · [**Features**](#-features) · [**Screenshots**](#-screenshots) · [**Build from Source**](#-build-from-source)
+[Conheça o app](#um-painel-para-o-dia-a-dia) · [Telas](#telas) · [Executar](#executar-o-projeto) · [Documentação](#documentação)
 
 </div>
 
----
+## Um painel para o dia a dia
 
-## Why I built this
+O Nexo reúne saldo, gastos, cartões, dívidas e previsão de caixa em uma experiência compartilhada entre Android e Windows. O foco é reduzir trabalho manual sem perder a precisão dos registros.
 
-I got tired of finance apps that ask for an account before they'll even let you add a transaction, then quietly sync everything to a server somewhere. Expensy doesn't do any of that. There's no login screen, no backend, no analytics SDK phoning home. It's just a local SQLite database on your phone. The only time it touches the network is to fetch exchange rates and the day's gold price — everything else, from your account balances to your spending history, never leaves the device. Uninstall the app and there's nothing left behind to "delete your data" from, because it was never anywhere else to begin with.
+- **Home analítica:** saldo em contas, cartões em aberto, entradas e gastos do mês, comparação mensal e maior categoria.
+- **Visão do futuro:** projeção de 7, 30 ou 90 dias, próximos vencimentos e alertas de compromissos atrasados.
+- **Organização financeira:** contas, transferências, cartões e faturas, recorrentes, parcelamentos, empréstimos, orçamentos e objetivos.
+- **Análises acessíveis:** despesas por categoria, filtros, detalhes dos lançamentos e fechamento mensal.
+- **Menos digitação:** repetição de lançamentos e sugestões revisáveis a partir de notificações bancárias autorizadas no Android.
+- **Seus arquivos:** importação com revisão, exportação CSV/XLSX e backup/restauração.
+- **Proteção local:** PIN, ocultação de valores e recursos de segurança conforme a plataforma.
 
----
+## Telas
 
-## ✨ What's in it
+As imagens abaixo foram geradas com **dados fictícios de teste**. Não representam finanças pessoais reais.
 
-I've tried to make this a genuinely complete money app rather than just a transaction logger:
+<p align="center">
+  <img src="docs/images/nexo-home-mobile.png" width="320" alt="Home do Nexo com saldo, resumo mensal e atalhos usando dados fictícios" />
+</p>
 
-- **Accounts** for however you actually keep money — bank, cash, savings, credit card, e-wallet, or gold — each with its own currency, and you can drag them into whatever order makes sense to you
-- **Linked cards**, so a credit or debit card can sit under a parent bank account and roll up into one total instead of being tracked separately
-- **Gold accounts** that value themselves automatically from live gold prices, tracked by karat and grams
-- A unified **transaction list** — income, expenses, and lent/borrowed money all in one chronological view, with search, filters, swipe-to-delete, bulk selection, and tap-to-edit
-- **Transfers** between accounts with automatic currency conversion baked in
-- **Recurring payments** for subscriptions, installments, rent, salary — with reminders and a full payment history
-- **Budgets**, monthly or weekly, per category, with progress bars and a push notification the moment you go over
-- **Statistics & Insights** — charts, trends, month-over-month comparisons, the stuff that actually tells you where your money went
-- A built-in **currency converter** using live rates
-- **Savings goals** you can contribute to or withdraw from, with a nudge when you hit the target
-- **Assets & a wishlist**, for tracking what you own and what you're saving up for
-- **Lent & borrowed money**, so you can actually remember who owes who, with due-date reminders
-- **Yearly Analysis** — a 24-month planned cash flow forecast for recurring income, expenses, loans, and lent/borrowed due dates
-- An optional **nightly reminder** if you haven't logged anything that day
-- **Backup & restore** to a single JSON file that's entirely yours — and if you're coming from GreenStash, it can import your data directly
-- A UI that's meant to feel fast — smooth at 120Hz even with a few thousand transactions sitting in the list
+<p align="center">
+  <img src="docs/images/nexo-home-desktop.png" width="1100" alt="Painel do Nexo com previsão de caixa e categorias usando dados fictícios" />
+</p>
 
-And because a finance app is something you'll look at every day, I spent real time on how it looks: a sleek **floating Material 3 navigation bar**, Material You theming, 29 accent colors, 10 fonts, a proper AMOLED dark mode, and a few home-screen widgets (quick-add, accounts, budget progress) so you don't always have to open the app just to log something.
+## Precisão antes de automação
 
----
+- Despesas pendentes não reduzem o saldo atual.
+- Transferências e reservas não viram consumo.
+- Compras no cartão entram na fatura; pagar a fatura não cria uma segunda despesa de consumo.
+- Sugestões de notificações exigem revisão antes de virar lançamentos.
+- A previsão usa compromissos cadastrados. Não presume salário nem gastos futuros desconhecidos.
 
-## 📸 Screenshots
+## Estado do projeto
 
-<div align="center">
-  <img src="screenshots/home.png" width="32%" alt="Home" />
-  <img src="screenshots/transactions.png" width="32%" alt="Transactions" />
-  <img src="screenshots/recurring.png" width="32%" alt="Recurring" />
-  <br>
-  <img src="screenshots/accounts.png" width="32%" alt="Accounts" />
-  <img src="screenshots/budgets.png" width="32%" alt="Budgets" />
-  <img src="screenshots/statistics.png" width="32%" alt="Statistics" />
-</div>
+| Área | Situação |
+| --- | --- |
+| Android | Em uso; versão de referência **1.5.4+20** |
+| Windows | Aplicativo nativo com SQLite, navegação lateral e tabela de transações; homologação completa ainda em andamento |
+| Funcionamento offline | Registros e consultas locais; cotações externas dependem de conexão |
+| Sincronização celular ↔ PC | Planejada. Hoje cada instalação mantém sua própria base |
+| Telegram/WhatsApp | Proposta documentada; sem bot em produção |
 
----
+Não há uma publicação oficial do Nexo na Play Store neste repositório. A seção de código não inclui APKs, bancos pessoais, backups ou credenciais de assinatura. Não use o banco SQLite aberto em uma pasta compartilhada entre dispositivos como substituto de sincronização.
 
-## 🌍 Localization
+## Executar o projeto
 
-I wanted this to feel native for more than just English speakers, so it's currently translated into 11 languages (see `lib/l10n/`):
+Use Flutter e Dart compatíveis com `pubspec.yaml`. O ambiente utilizado na rodada 1.5.4 foi Flutter **3.47.5**. Confira a instalação com `flutter doctor -v`.
 
-🇺🇸 English · 🇪🇸 Spanish · 🇸🇦 Arabic (with RTL support) · 🇫🇷 French · 🇩🇪 German · 🇮🇳 Hindi · 🇮🇹 Italian · 🇯🇵 Japanese · 🇵🇹 Portuguese · 🇷🇺 Russian · 🇨🇳 Chinese
-
-Some of these are more complete than others — check the `.arb` files under `lib/l10n/` if you're curious how far along a given language is. If you speak one of these natively and something reads awkwardly, a PR fixing it would genuinely make the app better for someone. See [Contributing](#-contributing).
-
----
-
-## 📲 Installation
-
-1. Grab the latest APK from [**Releases**](https://github.com/mina-android/Expensy/releases)
-2. Enable **Install Unknown Apps** for your file manager (Settings → Security)
-3. Open the APK and install it
-
-That's it — no account to create. Requires Android 5.0 or newer.
-
----
-
-## 🛠 Build from Source
-
-**Prerequisites:** [Flutter SDK 3.3+](https://flutter.dev/docs/get-started/install), Java JDK 11+
-
-```bash
-git clone https://github.com/mina-android/Expensy.git
-cd Expensy
+```sh
+git clone https://github.com/daniel-moulaz/Nexo.git
+cd Nexo
 flutter pub get
-flutter run
-
-# Signed release APK (universal)
-flutter build apk --release
-
-# Signed split-per-ABI APKs (smaller download per architecture)
-flutter build apk --split-per-abi --release
-
-# Signed Play Store bundle
-flutter build appbundle --release
+flutter analyze
+flutter test --concurrency=1
 ```
 
-If `android/key.properties` is present, release builds automatically pick it up and sign with `expensy.jks`. You'll find the output in `build/app/outputs/flutter-apk/` (`app-release.apk`, `app-arm64-v8a-release.apk`, ...) and `build/app/outputs/bundle/release/` (`app-release.aab`).
+**Android:** instale Android SDK e o JDK compatível com o Gradle do projeto, conecte um dispositivo de teste e execute:
 
-<details>
-<summary><strong>Running into build trouble?</strong></summary>
+```sh
+flutter run -d <id-do-dispositivo>
+flutter build apk --release
+```
 
-- **`flutter pub get` fails:** `flutter clean && flutter pub get`
-- **Gradle errors:** make sure `gradle-wrapper.properties` points at Gradle **8.11.1**, not 9.x
-- **Weird path/drive-letter errors on Windows:** add `kotlin.incremental=false` and `org.gradle.configuration-cache=false` to `android/gradle.properties`
-- **Missing SDK licenses:** `flutter doctor --android-licenses`
-- **Notifications not firing:** check Settings → Apps → Expensy → Notifications, and don't forget "Alarms & Reminders" on Android 12+
+**Windows:** é necessário Visual Studio com **Desktop development with C++** e Windows SDK. Ative o Modo de Desenvolvedor do Windows se o Flutter solicitar suporte a links simbólicos.
 
-</details>
+```sh
+flutter run -d windows
+flutter build windows --release
+```
 
----
+O bundle Windows fica em `build/windows/x64/runner/Release/`. Distribua a **pasta inteira**, incluindo DLLs e `data/`, e execute `Nexo.exe`.
 
-## 🔒 Privacy, actually
+Credenciais de assinatura ficam apenas na máquina de desenvolvimento. Sem configuração de assinatura própria, o projeto usa a assinatura de depuração como fallback; esse build não equivale a uma distribuição pública assinada. Para atualizar uma instalação existente sem perder compatibilidade, preserve seu certificado.
 
-- Everything is stored locally in SQLite — nothing ever leaves your device
-- Exchange rates come from free public APIs that don't need a key or an account
-- No analytics, no crash reporting, no ads, no trackers of any kind
-- Backups are plain JSON files that live wherever you put them, not on some server
-- Uninstall the app and it's genuinely gone — there's nothing left in a cloud somewhere to worry about
+## Arquitetura e dados
 
----
+- **Flutter/Dart:** interface e regras financeiras compartilhadas.
+- **SQLite:** armazenamento local; `sqflite` no Android e `sqflite_common_ffi` no Windows.
+- **Provider:** estado do aplicativo.
+- **Kotlin:** integrações Android, incluindo análise conservadora de notificações autorizadas.
+- **Testes:** regras contábeis, persistência, importação/exportação, segurança, navegação e layouts.
 
-## 🗺 Roadmap
+Os identificadores técnicos `com.ma.expensy`, `expensy.db` e o nome do pacote Dart `expensy` são preservados para compatibilidade. O nome apresentado ao usuário é **Nexo**.
 
-- [ ] iOS support
-- [x] Home screen widgets (quick-add, add transaction, accounts, budget progress)
-- [x] Multiple languages (11 and counting)
-- [ ] Recurring payment auto-pay
-- [x] Budgets per category
-- [x] Savings goals
-- [x] Loans with reminders
-- [x] Push notifications for recurring payments and lent/borrowed money
+## Documentação
 
----
+- [Home, pesquisa de UX e validação da versão 1.5.4](docs/NEXO_HOME_2026_10.md)
+- [Dívidas, recorrentes e revisão financeira](docs/NEXO_USABILITY_2026_10.md)
+- [Painel, análises e automação](docs/NEXO_EVOLUTION_2026.md)
+- [Arquitetura proposta para sincronização](docs/NEXO_SYNC_ARCHITECTURE.md)
+- [Proposta de lançamento por conversa](docs/NEXO_CONVERSATIONAL_ENTRY.md)
+- [Roadmap](docs/NEXO_ROADMAP.md)
 
-## 🤝 Contributing
+Os documentos registram diferentes etapas do desenvolvimento; consulte a data e a versão de cada relatório. Builds, capturas privadas e bases temporárias não fazem parte do código publicado.
 
-1. Fork the repo
-2. Create a branch: `git checkout -b feature/my-feature`
-3. Commit and push your changes
-4. Open a Pull Request
+## Desenvolvimento e origem
 
-Please run `flutter analyze` before submitting — keeps the diff clean for review.
+O Nexo é desenvolvido por [Daniel Moulaz](https://github.com/daniel-moulaz) a partir do [Expensy, de Mina Android](https://github.com/mina-android/Expensy), sob licença MIT. A evolução inclui adaptação brasileira, revisão contábil, automação local, experiência desktop e novas formas de visualizar compromissos financeiros.
 
----
+O histórico e a autoria do projeto original são preservados. Este repositório tem apresentação e evolução próprias; não é o repositório oficial do Expensy.
 
-## License
+Contribuições devem manter testes relevantes, compatibilidade dos dados e migrações explícitas quando necessárias. Nunca inclua bancos pessoais, notificações reais, PINs, tokens, keystores ou arquivos de configuração locais em commits ou issues.
 
-MIT License — see [LICENSE](LICENSE) for details.
-Copyright © 2026 [Mina Android](https://github.com/mina-android)
-
-<div align="center">
-
-Made with ❤️ and Flutter · [**More projects**](https://github.com/mina-android)
-
-</div>
+Licença [MIT](LICENSE), com os avisos de autoria originais preservados.
