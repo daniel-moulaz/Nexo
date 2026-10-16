@@ -1,4 +1,6 @@
-# Sincronização Nexo — design técnico, não implementado
+# Sincronização Nexo — arquitetura
+
+Atualização em 16/10/2026: há um **protótipo local isolado**, ainda sem integração ao aplicativo ou backend. Implementação, testes, limitações e configuração necessária estão em [NEXO_SYNC_IMPLEMENTATION.md](NEXO_SYNC_IMPLEMENTATION.md). O Nexo instalado ainda não sincroniza; o desenho abaixo continua sendo o alvo de produção.
 
 Revisão: 30/09/2026. Base local: SQLite `expensy.db`, schema 23. Não há servidor, cliente de sync, conta externa, transmissão, credencial ou custo contratado nesta rodada. Não chamar sincronização de pronta com base nos testes locais existentes.
 
