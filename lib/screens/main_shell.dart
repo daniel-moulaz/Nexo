@@ -222,7 +222,7 @@ class _MainShellState extends State<MainShell> {
                     NavigationDestination(
                         icon: const Icon(Icons.repeat_rounded),
                         selectedIcon: const Icon(Icons.repeat_rounded),
-                        label: l10n.main_recurring),
+                        label: 'Rotina'),
                     const NavigationDestination(
                         icon: Icon(Icons.account_balance_wallet_outlined),
                         selectedIcon: Icon(Icons.account_balance_wallet),

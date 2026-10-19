@@ -327,7 +327,7 @@ class _FinanceHomeScreenState extends State<FinanceHomeScreen>
                               data.realized.where((t) => t.type == 'expense'),
                               'Despesas · ${ptMonthYear(month)}'))),
                   const SizedBox(height: 8),
-                  if (!app.settings.hideBalance)
+                  if (!app.settings.hideBalance && previous.expense > 0)
                     _Comparison(
                         current: data.expense,
                         previous: previous.expense,
@@ -404,8 +404,33 @@ class _FinanceHomeScreenState extends State<FinanceHomeScreen>
               ]);
             });
 
+            final firstShortfall = timeline?.points
+                .where((point) => point.balance < 0)
+                .firstOrNull;
             final attention = overdue.isEmpty
-                ? null
+                ? firstShortfall == null || app.settings.hideBalance
+                    ? null
+                    : Material(
+                        color: cs.errorContainer,
+                        borderRadius: BorderRadius.circular(18),
+                        child: ListTile(
+                          leading: Icon(Icons.event_busy_outlined,
+                              color: cs.onErrorContainer),
+                          title: Text(
+                            'Previsão abaixo de zero em ${ptShortDate(firstShortfall.date)}',
+                            style: TextStyle(
+                                color: cs.onErrorContainer,
+                                fontWeight: FontWeight.bold),
+                          ),
+                          subtitle: Text(
+                              'Confira entradas e vencimentos na agenda.',
+                              style: TextStyle(color: cs.onErrorContainer)),
+                          trailing: Icon(Icons.chevron_right,
+                              color: cs.onErrorContainer),
+                          onTap: () =>
+                              _open(AgendaScreen(initialDays: _horizon)),
+                        ),
+                      )
                 : Material(
                     color: cs.errorContainer,
                     borderRadius: BorderRadius.circular(18),
@@ -711,20 +736,46 @@ class _FinanceHomeScreenState extends State<FinanceHomeScreen>
                                   else ...[
                                     hero,
                                     const SizedBox(height: 12),
+                                    if (attention != null) ...[
+                                      attention,
+                                      const SizedBox(height: 12),
+                                    ],
                                     monthCard
                                   ],
                                   const SizedBox(height: 12),
                                   actions,
-                                  ListTile(
-                                    leading: const Icon(Icons.show_chart),
-                                    title: const Text('Investimentos'),
-                                    subtitle: const Text(
-                                        'Carteira, aportes e proventos'),
-                                    trailing: const Icon(Icons.chevron_right),
-                                    onTap: () =>
-                                        _open(const InvestmentsScreen()),
-                                  ),
-                                  if (attention != null) ...[
+                                  const SizedBox(height: 8),
+                                  Wrap(spacing: 8, runSpacing: 4, children: [
+                                    for (final link
+                                        in <(String, IconData, Widget)>[
+                                      (
+                                        'Análises',
+                                        Icons.bar_chart,
+                                        AnalysisScreen(initialMonth: month)
+                                      ),
+                                      (
+                                        'Agenda',
+                                        Icons.event_note,
+                                        const AgendaScreen()
+                                      ),
+                                      (
+                                        'Revisão de 3 ou 7 dias',
+                                        Icons.fact_check_outlined,
+                                        const FinancialCheckupScreen()
+                                      ),
+                                      (
+                                        'Investimentos',
+                                        Icons.show_chart,
+                                        const InvestmentsScreen()
+                                      ),
+                                    ])
+                                      ActionChip(
+                                        avatar: Icon(link.$2, size: 18),
+                                        label: Text(link.$1),
+                                        onPressed: () => _open(link.$3),
+                                      ),
+                                  ]),
+                                  if (wide && attention != null) ...[
                                     const SizedBox(height: 12),
                                     attention
                                   ],

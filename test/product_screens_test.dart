@@ -78,6 +78,8 @@ void main() {
         await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 100)));
         await tester.pumpAndSettle();
         if (screen == 'list' && installment) {
+          await tester.tap(find.text('Todos os tipos'));
+          await tester.pumpAndSettle();
           await tester.tap(find.text('Parceladas'));
           await tester.pumpAndSettle();
         }
