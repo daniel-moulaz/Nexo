@@ -10,6 +10,7 @@ import '../providers/app_provider.dart';
 import '../theme/app_theme.dart';
 import '../utils/finance_input.dart';
 import '../widgets/analysis_widgets.dart';
+import '../widgets/investment_market_info.dart';
 
 String _money(BuildContext context, int cents) =>
     context.read<AppProvider>().settings.hideBalance
@@ -21,7 +22,8 @@ const _trackingNotice =
     'Carteira de acompanhamento em reais. Compras, vendas e proventos aqui não alteram suas contas, receitas ou despesas. Não some esta carteira a saldos que já incluem esses investimentos.';
 
 class InvestmentsScreen extends StatefulWidget {
-  const InvestmentsScreen({super.key});
+  final bool active;
+  const InvestmentsScreen({super.key, this.active = true});
   @override
   State<InvestmentsScreen> createState() => _InvestmentsScreenState();
 }
@@ -44,6 +46,12 @@ class _InvestmentsScreenState extends State<InvestmentsScreen> {
   void dispose() {
     InvestmentRepository.revision.removeListener(_reload);
     super.dispose();
+  }
+
+  @override
+  void didUpdateWidget(covariant InvestmentsScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.active && !oldWidget.active) _autoQuotes();
   }
 
   void _reload() {
@@ -77,7 +85,7 @@ class _InvestmentsScreenState extends State<InvestmentsScreen> {
       if (positions.isEmpty) {
         if (mounted)
           setState(() => _quoteStatus =
-              'Cadastre uma ação brasileira com ticker para consultar. Demais classes usam preço manual nesta versão.');
+              'Cadastre uma ação, FII ou ETF brasileiro com ticker para consultar. Renda fixa e cripto usam preço manual.');
         return;
       }
       if (!await InvestmentQuoteSettings.claimRefresh()) {
@@ -95,6 +103,12 @@ class _InvestmentsScreenState extends State<InvestmentsScreen> {
         if (!mounted) break;
         try {
           final quote = await InvestmentQuotes().fetch(ticker, token: token);
+          if (quote.market != null) {
+            // Optional metadata must never prevent the core price update.
+            try {
+              await MarketCache.save(ticker, quote.market!);
+            } catch (_) {}
+          }
           for (final p
               in positions.where((p) => p.investment.ticker == ticker)) {
             await repository.price(
@@ -121,6 +135,7 @@ class _InvestmentsScreenState extends State<InvestmentsScreen> {
   Future<void> _settings() async {
     await showDialog<void>(
         context: context, builder: (_) => const _QuoteSettingsDialog());
+    _reload();
   }
 
   Future<void> _create() async {
@@ -147,10 +162,15 @@ class _InvestmentsScreenState extends State<InvestmentsScreen> {
                     child: CircularProgressIndicator(strokeWidth: 2))
                 : const Icon(Icons.refresh)),
       ]),
-      floatingActionButton: FloatingActionButton.extended(
-          onPressed: _create,
-          icon: const Icon(Icons.add),
-          label: const Text('Adicionar investimento')),
+      floatingActionButton: MediaQuery.sizeOf(context).width < 900
+          ? FloatingActionButton(
+              tooltip: 'Adicionar investimento',
+              onPressed: _create,
+              child: const Icon(Icons.add))
+          : FloatingActionButton.extended(
+              onPressed: _create,
+              icon: const Icon(Icons.add),
+              label: const Text('Adicionar investimento')),
       body: FutureBuilder<List<InvestmentPosition>>(
           future: _data,
           builder: (context, snapshot) {
@@ -246,7 +266,6 @@ class _InvestmentsScreenState extends State<InvestmentsScreen> {
                                               'Cadastrar primeiro investimento')),
                                     ])),
                               if (all.isNotEmpty) ...[
-                                const SizedBox(height: 16),
                                 const SizedBox(height: 16),
                                 TextField(
                                     decoration: const InputDecoration(
@@ -461,6 +480,9 @@ class _PositionCard extends StatelessWidget {
               const Icon(Icons.chevron_right),
             ]),
             const SizedBox(height: 12),
+            if (p.investment.canQuote)
+              InvestmentMarketInfo(
+                  ticker: p.investment.ticker, priceAt: p.investment.priceAt),
             if (p.quantity > 0)
               _PositionChange(change: p.unrealized, cost: p.cost)
             else
@@ -636,6 +658,11 @@ class _InvestmentDetailState extends State<_InvestmentDetail> {
                                       change: p.unrealized, cost: p.cost),
                                 const SizedBox(height: 12),
                                 Text(_source(p.investment)),
+                                if (p.investment.canQuote)
+                                  InvestmentMarketInfo(
+                                      ticker: p.investment.ticker,
+                                      priceAt: p.investment.priceAt,
+                                      expanded: true),
                                 if (DateTime.now()
                                         .difference(p.investment.priceAt) >
                                     const Duration(days: 2))
@@ -854,7 +881,7 @@ class _OperationDialogState extends State<_OperationDialog> {
                           decoration: const InputDecoration(
                               labelText: 'Ticker (opcional)',
                               helperText:
-                                  'Ex.: PETR4. Cotações online: ações brasileiras.')),
+                                  'Ex.: PETR4. Online: ações, FIIs e ETFs brasileiros, conforme cobertura.')),
                       TextField(
                           controller: institution,
                           maxLength: 120,
@@ -1071,7 +1098,7 @@ class _QuoteSettingsDialogState extends State<_QuoteSettingsDialog> {
                             'Guardada no armazenamento seguro; fora do backup.')),
                 const SizedBox(height: 12),
                 const Text(
-                    'Sem chave: PETR4, VALE3, ITUB4 e MGLU3 para teste. Outros códigos dependem do seu plano. FIIs, ETFs, renda fixa e cripto usam preço manual nesta versão. Não é cotação garantida em tempo real.'),
+                    'Sem chave: PETR4, VALE3, ITUB4 e MGLU3 para teste. Ações, FIIs e ETFs dependem da cobertura do seu plano. Logos são carregados do servidor de imagens da brapi, sem sua chave. Renda fixa e cripto usam preço manual. Não é cotação em tempo real.'),
                 if (error != null)
                   Text(error!,
                       style: TextStyle(

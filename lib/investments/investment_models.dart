@@ -39,7 +39,8 @@ class Investment {
       required this.priceMicros,
       required this.priceAt,
       this.priceSource = 'manual'});
-  bool get canQuote => assetClass == 'Ações' && ticker.isNotEmpty;
+  bool get canQuote =>
+      ['Ações', 'FIIs', 'ETFs'].contains(assetClass) && ticker.isNotEmpty;
   Map<String, Object?> toMap() => {
         'id': id,
         'name': name,
