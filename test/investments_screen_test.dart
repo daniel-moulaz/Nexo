@@ -153,6 +153,9 @@ void main() {
     final app = await mount(tester, const Size(1280, 900), private: true);
     expect(find.text('Distribuição oculta no modo privado.'), findsOneWidget);
     expect(find.textContaining('R\$'), findsNothing);
+    expect(find.textContaining('%'), findsNothing);
+    expect(find.text('Ganho na posição'), findsNothing);
+    expect(find.text('Perda na posição'), findsNothing);
     app.settings.hideBalance = false;
     app.notifyListeners();
     await tester.pumpAndSettle();
@@ -164,6 +167,57 @@ void main() {
     await settle(tester);
     expect(find.text('Histórico'), findsOneWidget);
     expect(find.text('Informar preço'), findsOneWidget);
+    await tester.pumpWidget(const SizedBox());
+  });
+  testWidgets(
+      'each asset shows signed change, remaining cost and no daily return',
+      (tester) async {
+    await tester.runAsync(() async {
+      await seed();
+      await repo.price(
+          'asset1', 10 * investmentScale, DateTime.now(), 'manual');
+      await repo.price(
+          'asset2', 20 * investmentScale, DateTime.now(), 'manual');
+    });
+    await mount(tester, const Size(1280, 900));
+    expect(find.text('+50,00%'), findsOneWidget);
+    expect(find.text('−50,00%'), findsOneWidget);
+    expect(find.text('0,00%'), findsWidgets);
+    expect(find.text('Preço médio'), findsNWidgets(3));
+    expect(find.text('Último preço'), findsNWidgets(3));
+    final gain = tester.widget<Text>(find.text('+50,00%'));
+    final loss = tester.widget<Text>(find.text('−50,00%'));
+    expect(gain.style!.color, const Color(0xff146c43));
+    expect(loss.style!.color, const Color(0xffb3261e));
+    expect(tester.getTopLeft(find.text('Empresa de demonstração')).dy,
+        lessThan(tester.getTopLeft(find.text('Distribuição por classe')).dy));
+    expect(find.textContaining('Não é o rendimento do dia.'), findsOneWidget);
+    expect(await tester.runAsync(() => DBHelper.getTransactions()), isEmpty);
+    await tester.pumpWidget(const SizedBox());
+  });
+  testWidgets('zero cost never invents a percentage', (tester) async {
+    await tester.runAsync(() async {
+      final now = DateTime.now();
+      await repo.create(
+          Investment(
+              id: 'free',
+              name: 'Posição sem custo',
+              assetClass: 'Ações',
+              priceMicros: 10 * investmentScale,
+              priceAt: now),
+          InvestmentOperation(
+              id: 'free-op',
+              investmentId: 'free',
+              kind: 'opening',
+              quantity: investmentScale,
+              cents: 0,
+              date: now,
+              createdAt: now));
+    });
+    await mount(tester, const Size(412, 915));
+    expect(find.text('Sem base percentual'), findsNWidgets(2));
+    expect(find.textContaining('Infinity'), findsNothing);
+    expect(find.textContaining('NaN'), findsNothing);
     await tester.pumpWidget(const SizedBox());
   });
   testWidgets(
