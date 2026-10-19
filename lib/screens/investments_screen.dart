@@ -11,6 +11,8 @@ import '../theme/app_theme.dart';
 import '../utils/finance_input.dart';
 import '../widgets/analysis_widgets.dart';
 import '../widgets/investment_market_info.dart';
+import '../widgets/investment_price_chart.dart';
+import '../widgets/portfolio_charts.dart';
 
 String _money(BuildContext context, int cents) =>
     context.read<AppProvider>().settings.hideBalance
@@ -267,6 +269,14 @@ class _InvestmentsScreenState extends State<InvestmentsScreen> {
                                     ])),
                               if (all.isNotEmpty) ...[
                                 const SizedBox(height: 16),
+                                PortfolioCharts(
+                                    positions: all,
+                                    onAsset: (id) => Navigator.push(
+                                        context,
+                                        MaterialPageRoute(
+                                            builder: (_) =>
+                                                _InvestmentDetail(id: id)))),
+                                const SizedBox(height: 16),
                                 TextField(
                                     decoration: const InputDecoration(
                                         labelText:
@@ -450,6 +460,7 @@ class _PositionCard extends StatelessWidget {
                 decimalDigits: p.investment.priceMicros % 10000 == 0 ? 2 : 6)
             .format(p.investment.priceMicros / investmentScale);
     return Card(
+      key: ValueKey('investment-position-${p.investment.id}'),
       clipBehavior: Clip.antiAlias,
       child: InkWell(
         onTap: onTap,
@@ -658,6 +669,11 @@ class _InvestmentDetailState extends State<_InvestmentDetail> {
                                       change: p.unrealized, cost: p.cost),
                                 const SizedBox(height: 12),
                                 Text(_source(p.investment)),
+                                if (p.investment.canQuote) ...[
+                                  const SizedBox(height: 16),
+                                  InvestmentPriceChart(
+                                      ticker: p.investment.ticker),
+                                ],
                                 if (p.investment.canQuote)
                                   InvestmentMarketInfo(
                                       ticker: p.investment.ticker,

@@ -161,7 +161,8 @@ void main() {
     await tester.pumpAndSettle();
     await tester.enterText(find.byType(TextField), 'Empresa');
     await tester.pumpAndSettle();
-    expect(find.text('Fundo de demonstração'), findsNothing);
+    expect(
+        find.byKey(const ValueKey('investment-position-asset2')), findsNothing);
     await tester.ensureVisible(find.text('Empresa de demonstração'));
     await tester.tap(find.text('Empresa de demonstração'));
     await settle(tester);
@@ -234,8 +235,8 @@ void main() {
     await settle(tester);
     final created = await tester.runAsync(() => repo.load());
     expect(created!.single.cost, 10000);
-    await tester.ensureVisible(find.text('Carteira sintética'));
-    await tester.tap(find.text('Carteira sintética'));
+    await tester.ensureVisible(find.text('Carteira sintética').last);
+    await tester.tap(find.text('Carteira sintética').last);
     await settle(tester);
     await tester.tap(find.text('Registrar operação'));
     await tester.pumpAndSettle();

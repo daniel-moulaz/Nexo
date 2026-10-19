@@ -12,6 +12,16 @@ class QuoteFailure implements Exception {
   String toString() => message;
 }
 
+/// The free plan accepts one concurrent request, including historical data.
+class InvestmentApiQueue {
+  static Future<void> _tail = Future<void>.value();
+  static Future<T> run<T>(Future<T> Function() action) {
+    final result = _tail.then((_) => action());
+    _tail = result.then<void>((_) {}, onError: (Object _, StackTrace __) {});
+    return result;
+  }
+}
+
 class InvestmentQuote {
   final int priceMicros;
   final DateTime date;
@@ -101,7 +111,9 @@ class InvestmentQuotes {
       {http.Client Function()? clientFactory,
       this.timeout = const Duration(seconds: 15)})
       : clientFactory = clientFactory ?? http.Client.new;
-  Future<InvestmentQuote> fetch(String ticker, {String? token}) async {
+  Future<InvestmentQuote> fetch(String ticker, {String? token}) =>
+      InvestmentApiQueue.run(() => _fetch(ticker, token: token));
+  Future<InvestmentQuote> _fetch(String ticker, {String? token}) async {
     if (!RegExp(r'^[A-Z0-9]{2,12}$').hasMatch(ticker)) {
       throw const QuoteFailure('Código do ativo inválido.');
     }
