@@ -55,4 +55,6 @@ O commit desta rodada inclui a validação de backup já pendente em DBHelper po
 
 ## Próximos passos
 
+Inspeção posterior em 19/10/2026: Home e carteira vazia da versão 1.6.0 abertas no Android real, com orientação inicial e botão de cadastro visíveis. Não foram criados investimentos de teste na base pessoal. A revisão seguinte de usabilidade está em `NEXO_UX_REVIEW_2026_10.md`.
+
 Vinculação explícita e transacional ao caixa, conciliação de posições antigas para evitar dupla contagem, edição de cadastro, eventos corporativos, cotações específicas de FIIs/ETFs, séries históricas e performance ponderada por fluxos, exportação tabular da carteira. Priorizar corretude antes de automatizar movimentações.

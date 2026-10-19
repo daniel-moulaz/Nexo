@@ -125,18 +125,40 @@ class _RecurringScreenState extends State<RecurringScreen>
                     onSelected: (_) => setState(() => _view = e.key)),
             ]),
             if (_tabs.index == 0)
-              Wrap(spacing: 8, children: [
-                for (final e in const {
-                  'all': 'Todas',
-                  'subscription': 'Fixas / assinaturas',
-                  'installment': 'Parceladas'
-                }.entries)
-                  FilterChip(
-                      label: Text(e.value),
-                      selected: _expenseFilter == e.key,
-                      onSelected: (_) =>
-                          setState(() => _expenseFilter = e.key)),
-              ]),
+              Align(
+                alignment: Alignment.centerLeft,
+                child: PopupMenuButton<String>(
+                  tooltip: 'Filtrar tipo de recorrência',
+                  initialValue: _expenseFilter,
+                  onSelected: (value) => setState(() => _expenseFilter = value),
+                  itemBuilder: (_) => [
+                    for (final e in const {
+                      'all': 'Todos os tipos',
+                      'subscription': 'Fixas / assinaturas',
+                      'installment': 'Parceladas',
+                    }.entries)
+                      CheckedPopupMenuItem(
+                        value: e.key,
+                        checked: _expenseFilter == e.key,
+                        child: Text(e.value),
+                      ),
+                  ],
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    child: Row(mainAxisSize: MainAxisSize.min, children: [
+                      const Icon(Icons.filter_list, size: 20),
+                      const SizedBox(width: 8),
+                      Flexible(
+                          child: Text(const {
+                        'all': 'Todos os tipos',
+                        'subscription': 'Fixas / assinaturas',
+                        'installment': 'Parceladas',
+                      }[_expenseFilter]!)),
+                      const Icon(Icons.arrow_drop_down),
+                    ]),
+                  ),
+                ),
+              ),
             if (_view == 'active' || _view == 'future') ...[
               Card(
                   child: Padding(
@@ -151,7 +173,7 @@ class _RecurringScreenState extends State<RecurringScreen>
                                 style:
                                     Theme.of(context).textTheme.headlineSmall),
                             Text(
-                                '${thisMonth.length} vencimentos de hoje até ${ptDate(DateTime(today.year, today.month + 1, 0))}'),
+                                '${thisMonth.length} ${thisMonth.length == 1 ? 'vencimento' : 'vencimentos'} de hoje até ${ptDate(DateTime(today.year, today.month + 1, 0))}'),
                             if (overdue.isNotEmpty)
                               Padding(
                                   padding: const EdgeInsets.only(top: 8),
