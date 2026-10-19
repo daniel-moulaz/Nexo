@@ -43,7 +43,11 @@ Análise final limpa. Uma execução completa teve 245 aprovados e um overflow n
 
 Windows Release compilado e empacotado em `build/distribution/Nexo-1.6.0+21-windows-x64.zip`; SHA-256 `8E3A564F742960609B7B26AF2A6965C4650DDA771F33A49741FF61E7F980A121`. Distribuir toda a pasta extraída. Não houve homologação nativa/manual desta carteira no EXE; os fluxos foram exercitados por testes de widgets e SQLite FFI.
 
-Android Release **não concluído**: `:app:mergeReleaseNativeLibs` falhou com “Espaço insuficiente no disco” ao extrair as bibliotecas Flutter. Retry automático interrompido e intermediários regeneráveis limpos para devolver espaço. Não houve mudança de assinatura, applicationId ou instalação no celular. O aparelho permanece na versão anterior. Necessário liberar espaço adicional antes de reconstruir; não instalar build parcial.
+Android Release **concluído em 19/10/2026**, após o usuário liberar espaço (39 GB livres no início; aproximadamente 28 GB depois do build). A tentativa anterior havia falhado por falta de espaço em `:app:mergeReleaseNativeLibs`; não foi erro de código. Build final em 274 segundos, APK universal com arm64-v8a, armeabi-v7a e x86_64.
+
+Artefato: `build/distribution/Nexo-1.6.0+21-android.apk`, SHA-256 `B7C9E71C60CFF68D7459E9B0FD73D2B089182856A2ADEAE579A71EBB47896B78`. `aapt` confirmou `com.ma.expensy`, nome Nexo, versionName 1.6.0 e versionCode 21. `apksigner` confirmou integridade e o mesmo certificado do APK 1.5.4 anterior (SHA-256 `54d668e0f56caf801de429377a7a3066dbe0ed74779f04bac1ba1d2a5b112096`). A assinatura legada é de desenvolvimento; foi preservada, não trocada por uma assinatura de distribuição pública.
+
+Instalação no Android conectado concluída com `adb install -r`: Success, versão instalada 1.6.0+21 confirmada pelo package manager. Sem uninstall, clear-data, alteração de identidade ou cópia do banco real. Abertura e inspeção visual após atualização aguardam o usuário deixar o Nexo em primeiro plano; não declarar homologação funcional nativa completa apenas pela instalação. Não foram criados investimentos de teste na base pessoal.
 
 Limpeza autorizada pelo usuário: caches de download npm, arquivos temporários de compilação Flutter encerrada, cache de páginas Chrome/Edge (sem cookies, histórico ou senhas), ZIPs Gradle já extraídos e cache de transforms após falha. Dados pessoais, backups, instaladores Nexo e versões de código preservados.
 
