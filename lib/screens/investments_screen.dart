@@ -209,20 +209,16 @@ class _InvestmentsScreenState extends State<InvestmentsScreen> {
                                           (
                                             'Custo da posição',
                                             _money(context, sum((p) => p.cost))
-                                          ),
-                                          (
-                                            'Variação não realizada',
-                                            _money(context,
-                                                sum((p) => p.unrealized))
-                                          ),
-                                          (
-                                            'Compras neste mês',
-                                            _money(context, monthly)
                                           )
                                         ]),
                                         const SizedBox(height: 12),
+                                        _PositionChange(
+                                          change: sum((p) => p.unrealized),
+                                          cost: sum((p) => p.cost),
+                                        ),
+                                        const SizedBox(height: 8),
                                         const Text(
-                                            'Referência = quantidade × último preço informado ou consultado. Não representa saldo disponível nem rentabilidade do período.'),
+                                            'Variação sobre o custo da posição atual, sem vendas e proventos. Não é o rendimento do dia.'),
                                       ])),
                               if (_quoteStatus != null)
                                 Padding(
@@ -251,6 +247,40 @@ class _InvestmentsScreenState extends State<InvestmentsScreen> {
                                     ])),
                               if (all.isNotEmpty) ...[
                                 const SizedBox(height: 16),
+                                const SizedBox(height: 16),
+                                TextField(
+                                    decoration: const InputDecoration(
+                                        labelText:
+                                            'Buscar ativo ou instituição',
+                                        prefixIcon: Icon(Icons.search)),
+                                    onChanged: (v) =>
+                                        setState(() => _search = v)),
+                                const SizedBox(height: 12),
+                                Wrap(spacing: 8, children: [
+                                  for (final c in [
+                                    'Todas',
+                                    ...investmentClasses
+                                  ])
+                                    ChoiceChip(
+                                        label: Text(c),
+                                        selected: c == _class,
+                                        onSelected: (_) =>
+                                            setState(() => _class = c))
+                                ]),
+                                const SizedBox(height: 12),
+                                if (shown.isEmpty)
+                                  const Text(
+                                      'Nenhum investimento neste filtro.'),
+                                for (final p in shown)
+                                  _PositionCard(
+                                    position: p,
+                                    onTap: () => Navigator.push(
+                                        context,
+                                        MaterialPageRoute(
+                                            builder: (_) => _InvestmentDetail(
+                                                id: p.investment.id))),
+                                  ),
+                                const SizedBox(height: 24),
                                 LayoutBuilder(builder: (context, c) {
                                   final allocation = AnalysisCard(
                                       title: 'Distribuição por classe',
@@ -277,6 +307,10 @@ class _InvestmentsScreenState extends State<InvestmentsScreen> {
                                                 'Proventos recebidos',
                                                 _money(context,
                                                     sum((p) => p.income))
+                                              ),
+                                              (
+                                                'Compras neste mês',
+                                                _money(context, monthly)
                                               )
                                             ]),
                                             const SizedBox(height: 12),
@@ -298,50 +332,6 @@ class _InvestmentsScreenState extends State<InvestmentsScreen> {
                                         Expanded(child: results)
                                       ]);
                                 }),
-                                const SizedBox(height: 16),
-                                TextField(
-                                    decoration: const InputDecoration(
-                                        labelText:
-                                            'Buscar ativo ou instituição',
-                                        prefixIcon: Icon(Icons.search)),
-                                    onChanged: (v) =>
-                                        setState(() => _search = v)),
-                                const SizedBox(height: 12),
-                                Wrap(spacing: 8, children: [
-                                  for (final c in [
-                                    'Todas',
-                                    ...investmentClasses
-                                  ])
-                                    ChoiceChip(
-                                        label: Text(c),
-                                        selected: c == _class,
-                                        onSelected: (_) =>
-                                            setState(() => _class = c))
-                                ]),
-                                const SizedBox(height: 12),
-                                if (shown.isEmpty)
-                                  const Text(
-                                      'Nenhum investimento neste filtro.'),
-                                for (final p in shown)
-                                  Card(
-                                      child: ListTile(
-                                    leading: const Icon(Icons.show_chart),
-                                    title: Text(p.investment.name),
-                                    subtitle: Text(
-                                        '${p.investment.assetClass}${p.investment.ticker.isEmpty ? '' : ' · ${p.investment.ticker}'}\n${p.quantity == 0 ? 'Posição encerrada' : private ? '••••' : '${_quantity(p.quantity)} unidades'} · ${_source(p.investment)}'),
-                                    isThreeLine: true,
-                                    trailing: ConstrainedBox(
-                                        constraints:
-                                            const BoxConstraints(maxWidth: 135),
-                                        child: Text(_money(context, p.value),
-                                            style: const TextStyle(
-                                                fontWeight: FontWeight.bold))),
-                                    onTap: () => Navigator.push(
-                                        context,
-                                        MaterialPageRoute(
-                                            builder: (_) => _InvestmentDetail(
-                                                id: p.investment.id))),
-                                  )),
                               ],
                               const SizedBox(height: 16),
                               const Text(_trackingNotice),
@@ -356,6 +346,148 @@ String _source(Investment i) => '${switch (i.priceSource) {
       'entrada' => 'Preço de entrada',
       _ => 'Preço manual'
     }} · ${ptDate(i.priceAt.toLocal())}';
+
+/// Price return on remaining cost, deliberately not time-weighted performance.
+class _PositionChange extends StatelessWidget {
+  final int change, cost;
+  const _PositionChange({required this.change, required this.cost});
+
+  @override
+  Widget build(BuildContext context) {
+    final private = context.watch<AppProvider>().settings.hideBalance;
+    final dark = Theme.of(context).brightness == Brightness.dark;
+    final color = private || change == 0
+        ? Theme.of(context).colorScheme.onSurfaceVariant
+        : change > 0
+            ? (dark ? const Color(0xff69dbad) : const Color(0xff146c43))
+            : (dark ? const Color(0xffffa4a4) : const Color(0xffb3261e));
+    final sign = change > 0
+        ? '+'
+        : change < 0
+            ? '−'
+            : '';
+    final percent = cost > 0
+        ? '$sign${NumberFormat('0.00', 'pt_BR').format(change.abs() * 100 / cost)}%'
+        : 'Sem base percentual';
+    return Semantics(
+      label: 'Variação da posição',
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        decoration: BoxDecoration(
+          color: color.withValues(alpha: .10),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Wrap(
+            spacing: 8,
+            runSpacing: 4,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            children: [
+              Icon(
+                  private || change == 0
+                      ? Icons.horizontal_rule
+                      : change > 0
+                          ? Icons.trending_up
+                          : Icons.trending_down,
+                  size: 20,
+                  color: color),
+              Text(private ? '••••' : '$sign${_money(context, change.abs())}',
+                  style: TextStyle(color: color, fontWeight: FontWeight.w800)),
+              if (!private)
+                Text(percent,
+                    style:
+                        TextStyle(color: color, fontWeight: FontWeight.w700)),
+              Text(
+                  private
+                      ? 'Variação oculta'
+                      : change > 0
+                          ? 'Ganho na posição'
+                          : change < 0
+                              ? 'Perda na posição'
+                              : 'Sem variação',
+                  style: TextStyle(color: color, fontSize: 12)),
+            ]),
+      ),
+    );
+  }
+}
+
+class _PositionCard extends StatelessWidget {
+  final InvestmentPosition position;
+  final VoidCallback onTap;
+  const _PositionCard({required this.position, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    final p = position;
+    final private = context.watch<AppProvider>().settings.hideBalance;
+    final average = p.quantity == 0
+        ? null
+        : roundedRatio(p.cost, investmentScale, p.quantity);
+    final price = private
+        ? '••••'
+        : NumberFormat.currency(
+                locale: 'pt_BR',
+                symbol: 'R\$',
+                decimalDigits: p.investment.priceMicros % 10000 == 0 ? 2 : 6)
+            .format(p.investment.priceMicros / investmentScale);
+    return Card(
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child:
+              Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Row(children: [
+              Expanded(
+                  child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                    if (p.investment.ticker.isNotEmpty)
+                      Text(p.investment.ticker,
+                          style: Theme.of(context)
+                              .textTheme
+                              .titleMedium
+                              ?.copyWith(fontWeight: FontWeight.w800)),
+                    Text(p.investment.name,
+                        style: TextStyle(
+                            fontWeight: p.investment.ticker.isEmpty
+                                ? FontWeight.w800
+                                : FontWeight.normal)),
+                    Text(
+                        '${p.investment.assetClass} · ${p.quantity == 0 ? 'Posição encerrada' : private ? '••••' : '${_quantity(p.quantity)} unidades'}',
+                        style: Theme.of(context).textTheme.bodySmall),
+                  ])),
+              const Icon(Icons.chevron_right),
+            ]),
+            const SizedBox(height: 12),
+            if (p.quantity > 0)
+              _PositionChange(change: p.unrealized, cost: p.cost)
+            else
+              Text('Resultado das vendas: ${_money(context, p.realized)}'),
+            const SizedBox(height: 12),
+            AnalysisMetrics(values: [
+              ('Valor atual', _money(context, p.value)),
+              ('Custo da posição', _money(context, p.cost)),
+              (
+                'Preço médio',
+                private
+                    ? '••••'
+                    : average == null
+                        ? '—'
+                        : _money(context, average)
+              ),
+              ('Último preço', price),
+            ]),
+            const SizedBox(height: 8),
+            Text(_source(p.investment),
+                style: Theme.of(context).textTheme.bodySmall),
+          ]),
+        ),
+      ),
+    );
+  }
+}
 
 class _Allocation extends StatelessWidget {
   final Map<String, int> groups;
@@ -485,10 +617,23 @@ class _InvestmentDetailState extends State<_InvestmentDetail> {
                                     private ? '••••' : _quantity(p.quantity)
                                   ),
                                   (
-                                    'Variação da posição',
-                                    _money(context, p.unrealized)
+                                    'Preço médio',
+                                    private
+                                        ? '••••'
+                                        : p.quantity == 0
+                                            ? '—'
+                                            : _money(
+                                                context,
+                                                roundedRatio(
+                                                    p.cost,
+                                                    investmentScale,
+                                                    p.quantity))
                                   )
                                 ]),
+                                const SizedBox(height: 12),
+                                if (p.quantity > 0)
+                                  _PositionChange(
+                                      change: p.unrealized, cost: p.cost),
                                 const SizedBox(height: 12),
                                 Text(_source(p.investment)),
                                 if (DateTime.now()
