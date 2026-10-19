@@ -13,7 +13,9 @@ import '../widgets/desktop_transaction_table.dart';
 
 class TransactionSearchScreen extends StatefulWidget {
   final FocusNode? searchFocus;
-  const TransactionSearchScreen({super.key, this.searchFocus});
+  final bool autofocus;
+  const TransactionSearchScreen(
+      {super.key, this.searchFocus, this.autofocus = true});
 
   @override
   State<TransactionSearchScreen> createState() =>
@@ -237,7 +239,7 @@ class _TransactionSearchScreenState extends State<TransactionSearchScreen> {
                 child: TextField(
                   controller: _controller,
                   focusNode: widget.searchFocus,
-                  autofocus: true,
+                  autofocus: widget.autofocus,
                   onChanged: (value) => setState(() => _query = value),
                   decoration: InputDecoration(
                     hintText: 'iFood, internet, Mercado Pago, 25/09...',

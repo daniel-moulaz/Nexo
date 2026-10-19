@@ -15,7 +15,82 @@ class QuoteFailure implements Exception {
 class InvestmentQuote {
   final int priceMicros;
   final DateTime date;
-  const InvestmentQuote(this.priceMicros, this.date);
+  final MarketSnapshot? market;
+  const InvestmentQuote(this.priceMicros, this.date, {this.market});
+}
+
+/// Public market data only. Missing optional fields never invalidate a price.
+class MarketSnapshot {
+  final DateTime date;
+  final Map<String, Object> fields;
+  const MarketSnapshot(this.date, this.fields);
+  static const numeric = [
+    'regularMarketChange',
+    'regularMarketChangePercent',
+    'regularMarketOpen',
+    'regularMarketPreviousClose',
+    'regularMarketDayLow',
+    'regularMarketDayHigh',
+    'fiftyTwoWeekLow',
+    'fiftyTwoWeekHigh',
+    'regularMarketVolume',
+    'marketCap',
+  ];
+  factory MarketSnapshot.parse(Map data, DateTime date) {
+    final fields = <String, Object>{};
+    for (final key in numeric) {
+      final v = data[key];
+      if (v is num &&
+          v.isFinite &&
+          v.abs() <= 1e16 &&
+          (key.contains('Change') || v >= 0)) fields[key] = v;
+    }
+    final logo = data['logourl'];
+    if (logo is String && logo.length < 512) {
+      final uri = Uri.tryParse(logo);
+      if (uri != null &&
+          uri.scheme == 'https' &&
+          uri.host == 'icons.brapi.dev' &&
+          uri.userInfo.isEmpty &&
+          uri.port == 443 &&
+          uri.query.isEmpty &&
+          uri.fragment.isEmpty &&
+          RegExp(r'^/icons/[A-Za-z0-9_-]+\.svg$').hasMatch(uri.path)) {
+        fields['logourl'] = logo;
+      }
+    }
+    return MarketSnapshot(date, fields);
+  }
+  num? value(String key) => fields[key] is num ? fields[key] as num : null;
+  String? get logo => fields['logourl'] as String?;
+}
+
+/// Rebuildable public cache, separate from financial backups and SQLite schema.
+class MarketCache {
+  static String get _prefix => DesktopProfile.isTest ? 'market_qa_' : 'market_';
+  static Future<MarketSnapshot?> read(String ticker) async {
+    try {
+      final raw =
+          (await SharedPreferences.getInstance()).getString('$_prefix$ticker');
+      if (raw == null || raw.length > 8192) return null;
+      final json = jsonDecode(raw) as Map;
+      return MarketSnapshot.parse(
+          json['fields'] as Map, DateTime.parse(json['date'] as String));
+    } catch (_) {
+      return null;
+    }
+  }
+
+  static Future<void> save(String ticker, MarketSnapshot snapshot) async {
+    final old = await read(ticker);
+    if (old != null && old.date.isAfter(snapshot.date)) return;
+    await (await SharedPreferences.getInstance()).setString(
+        '$_prefix$ticker',
+        jsonEncode({
+          'date': snapshot.date.toUtc().toIso8601String(),
+          'fields': snapshot.fields
+        }));
+  }
 }
 
 /// Only sends a ticker. Never sends balances, quantities, operations or names.
@@ -77,7 +152,8 @@ class InvestmentQuotes {
                 DateTime.now().toUtc().add(const Duration(minutes: 5)))) {
           throw const FormatException();
         }
-        return InvestmentQuote((price * 1000000).round(), date);
+        return InvestmentQuote((price * 1000000).round(), date,
+            market: MarketSnapshot.parse(data, date));
       })()
           .timeout(timeout);
     } on QuoteFailure {

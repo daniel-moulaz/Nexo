@@ -2,7 +2,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/app_provider.dart';
-import '../l10n/app_localizations.dart';
 import 'finance_home_screen.dart';
 import 'expenses_v2_screen.dart';
 import 'recurring_screen.dart';
@@ -27,6 +26,8 @@ class MainShell extends StatefulWidget {
 }
 
 class _MainShellState extends State<MainShell> {
+  // Keep internal route IDs stable for Home shortcuts and desktop navigation.
+  static const _mobileTabs = [0, 8, 3, 11, 5];
   int _index = 0;
   final searchFocus = FocusNode();
   AppProvider? _app;
@@ -48,10 +49,10 @@ class _MainShellState extends State<MainShell> {
         MoreScreen(),
         AnalysisScreen(),
         AgendaScreen(),
-        TransactionSearchScreen(searchFocus: searchFocus),
+        TransactionSearchScreen(searchFocus: searchFocus, autofocus: false),
         SettingsScreen(),
         StatementImportScreen(),
-        InvestmentsScreen(),
+        InvestmentsScreen(active: _index == 11),
       ];
 
   @override
@@ -120,7 +121,6 @@ class _MainShellState extends State<MainShell> {
 
   @override
   Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context)!;
     if (MediaQuery.sizeOf(context).width >= 900) {
       return Scaffold(
           body: Row(children: [
@@ -198,16 +198,20 @@ class _MainShellState extends State<MainShell> {
                   }),
                 ),
                 child: NavigationBar(
-                  labelBehavior:
-                      NavigationDestinationLabelBehavior.onlyShowSelected,
-                  selectedIndex: _index.clamp(0, 5),
+                  labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
+                  selectedIndex: _mobileTabs.contains(_index)
+                      ? _mobileTabs.indexOf(_index)
+                      : _index == 1
+                          ? 1
+                          : 4,
                   animationDuration: const Duration(milliseconds: 120),
                   onDestinationSelected: (i) {
+                    FocusScope.of(context).unfocus();
                     AppHaptics.tap(context, HapticStrength.selection);
                     final app = context.read<AppProvider>();
                     setState(() {
-                      _index = i;
-                      app.tabIndexNotifier.value = i;
+                      _index = _mobileTabs[i];
+                      app.tabIndexNotifier.value = _index;
                     });
                   },
                   destinations: [
@@ -218,23 +222,19 @@ class _MainShellState extends State<MainShell> {
                     const NavigationDestination(
                         icon: Icon(Icons.receipt_long_outlined),
                         selectedIcon: Icon(Icons.receipt_long),
-                        label: 'Despesas'),
-                    NavigationDestination(
-                        icon: const Icon(Icons.repeat_rounded),
-                        selectedIcon: const Icon(Icons.repeat_rounded),
-                        label: 'Rotina'),
+                        label: 'Extrato'),
                     const NavigationDestination(
                         icon: Icon(Icons.account_balance_wallet_outlined),
                         selectedIcon: Icon(Icons.account_balance_wallet),
                         label: 'Contas'),
                     const NavigationDestination(
-                        icon: Icon(Icons.pie_chart_outline_rounded),
-                        selectedIcon: Icon(Icons.pie_chart_rounded),
-                        label: 'Orçamento'),
+                        icon: Icon(Icons.show_chart),
+                        selectedIcon: Icon(Icons.show_chart),
+                        label: 'Investir'),
                     NavigationDestination(
                         icon: const Icon(Icons.more_horiz_outlined),
                         selectedIcon: const Icon(Icons.more_horiz),
-                        label: l10n.main_more),
+                        label: 'Mais'),
                   ],
                 ),
               ),

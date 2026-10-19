@@ -4,7 +4,8 @@ import 'package:provider/provider.dart';
 import '../providers/app_provider.dart';
 import '../theme/app_theme.dart';
 import 'assets_screen.dart';
-import 'investments_screen.dart';
+import 'recurring_screen.dart';
+import 'budget_screen.dart';
 import 'backup_screen.dart';
 import 'categories_screen.dart';
 import 'currency_converter_screen.dart';
@@ -16,7 +17,6 @@ import 'loans_screen.dart';
 import 'settings_screen.dart';
 import 'statement_import_screen.dart';
 
-import 'transaction_search_screen.dart';
 import 'wishlist_screen.dart';
 
 import 'agenda_screen.dart';
@@ -39,11 +39,17 @@ class MoreScreen extends StatelessWidget {
 
     final items = <_Item>[
       const _Item(
-          icon: Icons.show_chart,
-          label: 'Investimentos',
-          sub: 'Carteira, compras, vendas, proventos e cotações',
+          icon: Icons.repeat,
+          label: 'Recorrentes e assinaturas',
+          sub: 'Contas que se repetem e próximas cobranças',
           color: Color(0xFF00897B),
-          screen: InvestmentsScreen()),
+          screen: RecurringScreen()),
+      const _Item(
+          icon: Icons.pie_chart_outline,
+          label: 'Orçamentos e objetivos',
+          sub: 'Limites de gastos e metas para guardar dinheiro',
+          color: Color(0xFF00897B),
+          screen: BudgetScreen()),
       const _Item(
           icon: Icons.fact_check_outlined,
           label: 'Revisão financeira',
@@ -70,17 +76,10 @@ class MoreScreen extends StatelessWidget {
           screen: AgendaScreen()),
       const _Item(
         icon: Icons.auto_graph_rounded,
-        label: 'Planejamento',
+        label: 'Previsão detalhada',
         sub: 'Previsão de caixa, assinaturas, reserva e alertas',
         color: Color(0xFF6750A4),
         screen: FinancialPlanningScreen(),
-      ),
-      const _Item(
-        icon: Icons.search_rounded,
-        label: 'Buscar lançamentos',
-        sub: 'Encontre despesas e receitas por nome, conta ou categoria',
-        color: Color(0xFF0061A4),
-        screen: TransactionSearchScreen(),
       ),
       const _Item(
         icon: Icons.upload_file_rounded,
@@ -91,7 +90,7 @@ class MoreScreen extends StatelessWidget {
       ),
       const _Item(
         icon: Icons.table_view_rounded,
-        label: 'Relatório financeiro',
+        label: 'Exportar relatório',
         sub: 'Excel e CSV para análise e portabilidade',
         color: Color(0xFF2E7D32),
         screen: FinanceExportScreen(),
@@ -127,7 +126,7 @@ class MoreScreen extends StatelessWidget {
       ),
       _Item(
         icon: Icons.inventory_2_outlined,
-        label: 'Ativos',
+        label: 'Bens e patrimônio',
         sub:
             '$assetsLen ${assetsLen == 1 ? 'item cadastrado' : 'itens cadastrados'}',
         color: const Color(0xFF1565C0),
@@ -171,47 +170,50 @@ class MoreScreen extends StatelessWidget {
             const Text('Mais', style: TextStyle(fontWeight: FontWeight.w900)),
         backgroundColor: cs.primaryContainer,
         foregroundColor: cs.onPrimaryContainer,
+        actions: [
+          IconButton(
+              tooltip: 'Configurações',
+              icon: const Icon(Icons.settings_outlined),
+              onPressed: () => Navigator.push(context,
+                  ExpensyRoute(builder: (_) => const SettingsScreen())))
+        ],
       ),
       body: ListView(
           padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
           children: [
             for (final group in <String, List<String>>{
-              'Planejamento': [
-                'Investimentos',
-                'Revisão financeira',
-                'Dívidas e compromissos',
-                'Empréstimos',
+              'Planejar e acompanhar': [
                 'Agenda financeira',
-                'Planejamento',
-                'Buscar lançamentos'
+                'Recorrentes e assinaturas',
+                'Orçamentos e objetivos',
+                'Dívidas e compromissos',
+                'Análises',
+                'Revisão financeira',
               ],
-              'Relatórios e arquivos': [
-                'Relatório financeiro',
-                'Importar extrato',
-                'Análises'
-              ],
-              'Categorias e preferências': [
+              'Organizar e proteger': [
                 'Sugestões de lançamentos',
+                'Importar extrato',
+                'Exportar relatório',
                 'Categorias',
-                'Backup',
                 'Backup e restauração',
                 'Configurações'
               ],
-              'Ferramentas avançadas': [
-                'Conversor de moeda',
-                'Lista de desejos',
+              'Outros controles': [
+                'Empréstimos',
                 'Dinheiro emprestado',
-                'Patrimônio',
-                'Ativos'
+                'Bens e patrimônio',
+                'Lista de desejos',
+                'Previsão detalhada',
+                'Conversor de moeda',
               ],
             }.entries)
               Card(
                   child: ExpansionTile(
                       title: Text(group.key),
-                      initiallyExpanded: group.key == 'Planejamento',
+                      initiallyExpanded: group.key == 'Planejar e acompanhar',
                       children: [
-                    for (final item in items
-                        .where((item) => group.value.contains(item.label)))
+                    for (final item in group.value.map((label) =>
+                        items.singleWhere((item) => item.label == label)))
                       ListTile(
                           leading: Icon(item.icon, color: item.color),
                           title: Text(item.label),
