@@ -30,6 +30,7 @@ import 'recurring_screen.dart';
 import 'transaction_search_screen.dart';
 import 'transfer_screen.dart';
 import 'statement_import_screen.dart';
+import 'investments_screen.dart';
 
 class FinanceHomeScreen extends StatefulWidget {
   const FinanceHomeScreen({super.key});
@@ -714,6 +715,15 @@ class _FinanceHomeScreenState extends State<FinanceHomeScreen>
                                   ],
                                   const SizedBox(height: 12),
                                   actions,
+                                  ListTile(
+                                    leading: const Icon(Icons.show_chart),
+                                    title: const Text('Investimentos'),
+                                    subtitle: const Text(
+                                        'Carteira, aportes e proventos'),
+                                    trailing: const Icon(Icons.chevron_right),
+                                    onTap: () =>
+                                        _open(const InvestmentsScreen()),
+                                  ),
                                   if (attention != null) ...[
                                     const SizedBox(height: 12),
                                     attention

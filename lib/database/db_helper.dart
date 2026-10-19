@@ -4,10 +4,11 @@ import 'package:intl/intl.dart';
 import 'package:flutter/foundation.dart';
 import '../models/models.dart';
 import 'database_platform.dart';
+import '../investments/investment_repository.dart';
 
 class DBHelper {
   static Database? _db;
-  static const int _version = 23;
+  static const int _version = 24;
 
   /// Public accessor for the current DB/backup schema version, so UI code
   /// (e.g. the Backup screen) never has to hardcode a copy that can drift
@@ -475,6 +476,7 @@ class DBHelper {
     if (oldV < 21) await _ensureFinanceSchema(db);
     if (oldV < 22) await _createImportRules(db);
     if (oldV < 23) await _createSuggestions(db);
+    if (oldV < 24) await InvestmentRepository.createSchema(db);
     if (oldV < 20) {
       try {
         await db
@@ -735,6 +737,7 @@ class DBHelper {
     await _ensureFinanceSchema(db);
     await _createImportRules(db);
     await _createSuggestions(db);
+    await InvestmentRepository.createSchema(db);
     await _insertDefaults(db);
   }
 
@@ -1148,6 +1151,8 @@ class DBHelper {
       db.query('net_worth_snapshots'),
       db.query('import_rules'),
       db.query('notification_suggestions'),
+      db.query('investments'),
+      db.query('investment_operations'),
     ]);
     return {
       'accounts': results[0],
@@ -1169,11 +1174,26 @@ class DBHelper {
       'net_worth_snapshots': results[16],
       'import_rules': results[17],
       'notification_suggestions': results[18],
+      'investments': results[19],
+      'investment_operations': results[20],
       'version': _version,
     };
   }
 
   static Future<void> importAll(Map<String, dynamic> data) async {
+    validateBackup(data);
+    try {
+      InvestmentRepository.decode(
+          ((data['investments'] as List?) ?? [])
+              .map((r) => Map<String, dynamic>.from(r as Map))
+              .toList(),
+          ((data['investment_operations'] as List?) ?? [])
+              .map((r) => Map<String, dynamic>.from(r as Map))
+              .toList());
+    } catch (_) {
+      throw const FormatException(
+          'Carteira de investimentos inválida. Nenhum dado foi alterado.');
+    }
     final db = await database;
     _normaliseBackup(data);
 
@@ -1198,6 +1218,8 @@ class DBHelper {
         'net_worth_snapshots',
         'import_rules',
         'notification_suggestions',
+        'investments',
+        'investment_operations',
       ]) {
         await txn.delete(table);
         final rows = (data[table] as List?)?.cast<Map<String, dynamic>>() ?? [];
@@ -1210,6 +1232,60 @@ class DBHelper {
         await batch.commit(noResult: true);
       }
     });
+    InvestmentRepository.revision.value++;
+  }
+
+  /// Reject incomplete or ambiguous restores before deleting any live row.
+  static void validateBackup(Map<String, dynamic> data) {
+    final version = data['version'] ?? 1;
+    if (version is! int || version < 1 || version > _version) {
+      throw const FormatException(
+          'Versão de backup não suportada. Nenhum dado foi alterado.');
+    }
+    const tables = [
+      'accounts',
+      'categories',
+      'transactions',
+      'recurring_payments',
+      'wishlist',
+      'lended_people',
+      'lended_money',
+      'assets',
+      'budgets',
+      'recurring_history',
+      'savings_goals',
+      'savings_contributions',
+      'loans',
+      'loan_payments',
+      'transaction_metadata',
+      'card_invoice_payments',
+      'net_worth_snapshots',
+      'import_rules',
+      'notification_suggestions',
+      'investments',
+      'investment_operations',
+    ];
+    for (final table in tables) {
+      final required = version == _version ||
+          (version >= 23 &&
+              !['investments', 'investment_operations'].contains(table)) ||
+          const ['accounts', 'categories', 'transactions'].contains(table);
+      if (!data.containsKey(table) && !required) continue;
+      final rows = data[table];
+      if (rows is! List || rows.any((row) => row is! Map)) {
+        throw const FormatException(
+            'Backup incompleto ou inválido. Nenhum dado foi alterado.');
+      }
+      final ids = <Object>{};
+      for (final row in rows.cast<Map>()) {
+        final id = row['id'] ??
+            (table == 'transaction_metadata' ? row['transaction_id'] : null);
+        if (id != null && !ids.add(id)) {
+          throw const FormatException(
+              'Backup contém identificadores duplicados. Nenhum dado foi alterado.');
+        }
+      }
+    }
   }
 
   static void _normaliseBackup(Map<String, dynamic> data) {
