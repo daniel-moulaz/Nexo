@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../providers/app_provider.dart';
 import '../theme/app_theme.dart';
 import 'assets_screen.dart';
+import 'investments_screen.dart';
 import 'backup_screen.dart';
 import 'categories_screen.dart';
 import 'currency_converter_screen.dart';
@@ -37,6 +38,12 @@ class MoreScreen extends StatelessWidget {
     final loansLen = app.loans.where((l) => !l.isSettled).length;
 
     final items = <_Item>[
+      const _Item(
+          icon: Icons.show_chart,
+          label: 'Investimentos',
+          sub: 'Carteira, compras, vendas, proventos e cotações',
+          color: Color(0xFF00897B),
+          screen: InvestmentsScreen()),
       const _Item(
           icon: Icons.fact_check_outlined,
           label: 'Revisão financeira',
@@ -170,6 +177,7 @@ class MoreScreen extends StatelessWidget {
           children: [
             for (final group in <String, List<String>>{
               'Planejamento': [
+                'Investimentos',
                 'Revisão financeira',
                 'Dívidas e compromissos',
                 'Empréstimos',

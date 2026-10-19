@@ -94,7 +94,7 @@ void main() {
       () async {
     expect((await DBHelper.database).path, endsWith('expensy.db'));
     expect((await DBHelper.database).path, startsWith(directory.path));
-    expect(await (await DBHelper.database).getVersion(), 23);
+    expect(await (await DBHelper.database).getVersion(), DBHelper.schemaVersion);
     await app.addTransaction(tx('one'));
     await DBHelper.close();
     expect((await DBHelper.getTransactions()).single.id, 'one');
@@ -110,7 +110,7 @@ void main() {
     await db.execute('DROP TABLE notification_suggestions');
     await db.setVersion(22);
     await DBHelper.close();
-    expect(await (await DBHelper.database).getVersion(), 23);
+    expect(await (await DBHelper.database).getVersion(), DBHelper.schemaVersion);
     expect(
         (await DBHelper.getAccounts())
             .firstWhere((a) => a.id == 'bank')

@@ -15,6 +15,7 @@ import 'agenda_screen.dart';
 import 'transaction_search_screen.dart';
 import 'settings_screen.dart';
 import 'statement_import_screen.dart';
+import 'investments_screen.dart';
 import 'add_transaction_screen.dart';
 import '../services/nexo_security.dart';
 import 'package:flutter/services.dart';
@@ -50,6 +51,7 @@ class _MainShellState extends State<MainShell> {
         TransactionSearchScreen(searchFocus: searchFocus),
         SettingsScreen(),
         StatementImportScreen(),
+        InvestmentsScreen(),
       ];
 
   @override
@@ -135,6 +137,7 @@ class _MainShellState extends State<MainShell> {
                 (0, 'Resumo', Icons.dashboard_outlined),
                 (8, 'Transações', Icons.receipt_long_outlined),
                 (3, 'Contas e cartões', Icons.account_balance_wallet_outlined),
+                (11, 'Investimentos', Icons.show_chart),
                 (2, 'Recorrentes', Icons.repeat),
                 (4, 'Orçamentos e objetivos', Icons.pie_chart_outline),
                 (6, 'Análises', Icons.bar_chart),
