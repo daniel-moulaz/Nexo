@@ -45,7 +45,7 @@ void main() {
       await icons.load();
     }
   });
-  AppProvider fixture() {
+  AppProvider fixture({bool includeCard = false}) {
     final app = AppProvider();
     app.settings.currency = 'BRL';
     app.settings.languageCode = 'pt';
@@ -56,7 +56,18 @@ void main() {
           type: 'bank',
           balance: 2500,
           currency: 'BRL',
-          colorValue: 0xff00695c)
+          colorValue: 0xff00695c),
+      if (includeCard)
+        Account(
+            id: 'card',
+            name: 'Cartão de demonstração',
+            type: 'credit',
+            balance: -600,
+            currency: 'BRL',
+            colorValue: 0xff6750a4,
+            statementDay: 20,
+            dueDay: 27,
+            linkedAccountId: 'bank'),
     ];
     app.categories = [
       AppCategory(
@@ -80,7 +91,27 @@ void main() {
             description: 'Compra demonstrativa $i',
             accountId: 'bank',
             categoryId: i.isEven ? 'food' : 'transport',
-            date: DateTime(now.year, now.month, i % 10 + 1))
+            date: DateTime(now.year, now.month, i % now.day + 1)),
+      if (includeCard)
+        AppTransaction(
+            id: 'card-current',
+            type: 'expense',
+            amount: 400,
+            description: 'Compra no cartão',
+            accountId: 'card',
+            categoryId: 'transport',
+            date: now,
+            currency: 'BRL'),
+      if (includeCard)
+        AppTransaction(
+            id: 'card-prior',
+            type: 'expense',
+            amount: 200,
+            description: 'Compra anterior no cartão',
+            accountId: 'card',
+            categoryId: 'transport',
+            date: DateTime(now.year, now.month - 1, 1),
+            currency: 'BRL'),
     ];
     app.transactionMetadata = {
       for (final t in app.transactions)
@@ -122,7 +153,7 @@ void main() {
         tester.view.devicePixelRatio = 1;
         addTearDown(tester.view.resetPhysicalSize);
         addTearDown(tester.view.resetDevicePixelRatio);
-        final app = fixture();
+        final app = fixture(includeCard: screen == 'home' || screen == 'shell');
         final boundary = GlobalKey();
         final page = switch (screen) {
           'home' => const FinanceHomeScreen(),
@@ -180,7 +211,11 @@ void main() {
           await tester.tap(find.text('Alimentação').first);
           await tester.pumpAndSettle();
           expect(find.byType(AnalysisEntriesScreen), findsOneWidget);
-          expect(find.text('Compra demonstrativa 8'), findsOneWidget);
+          final expected = app.transactions
+              .where((t) => t.categoryId == 'food')
+              .toList()
+            ..sort((a, b) => b.date.compareTo(a.date));
+          expect(find.text(expected.first.description), findsOneWidget);
           expect(find.text('Compra demonstrativa 1'), findsNothing);
           expect(tester.takeException(), isNull);
         }
@@ -263,6 +298,73 @@ void main() {
     expect(find.text('1 resultado'), findsOneWidget);
     await tester.pumpWidget(const SizedBox());
     security.ready = false;
+    debugDefaultTargetPlatformOverride = null;
+  });
+  testWidgets(
+      'Desktop table sorts, pages, edits and repeats without autosaving',
+      (tester) async {
+    debugDefaultTargetPlatformOverride = TargetPlatform.windows;
+    addTearDown(() => debugDefaultTargetPlatformOverride = null);
+    tester.view.physicalSize = const Size(1920, 1080);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    final app = fixture();
+    await tester.pumpWidget(ChangeNotifierProvider.value(
+        value: app,
+        child: MaterialApp(
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            locale: const Locale('pt'),
+            home: const TransactionSearchScreen())));
+    await tester.pumpAndSettle();
+    expect(tester.widget<DataTable>(find.byType(DataTable)).rows.length, 20);
+    await tester.tap(find.byTooltip('Próxima página'));
+    await tester.pumpAndSettle();
+    expect(tester.widget<DataTable>(find.byType(DataTable)).rows.length, 4);
+    expect(find.textContaining('Página 2 de 2'), findsOneWidget);
+    await tester.tap(find.text('Descrição'));
+    await tester.pumpAndSettle();
+    final table = tester.widget<DataTable>(find.byType(DataTable));
+    expect(table.sortColumnIndex, 1);
+    expect(table.sortAscending, isTrue);
+    expect(find.textContaining('Página 1 de 2'), findsOneWidget);
+    await tester.tap(find.text('Compra demonstrativa 0'));
+    await tester.pumpAndSettle();
+    expect(
+        tester
+            .widget<AddTransactionScreen>(find.byType(AddTransactionScreen))
+            .existing!
+            .id,
+        'demo0');
+    await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+    await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('Ações do lançamento').first);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Repetir como novo…'));
+    await tester.pumpAndSettle();
+    final form =
+        tester.widget<AddTransactionScreen>(find.byType(AddTransactionScreen));
+    expect(form.existing, isNull);
+    expect(form.template!.id, 'demo0');
+    expect(app.transactions, hasLength(24));
+    final amount = find.byType(TextField).first;
+    await tester.enterText(amount, '0');
+    final previousFocus = FocusManager.instance.primaryFocus;
+    await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+    await tester.pumpAndSettle();
+    expect(FocusManager.instance.primaryFocus, isNot(previousFocus));
+    await tester.sendKeyDownEvent(LogicalKeyboardKey.controlLeft);
+    await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+    await tester.sendKeyUpEvent(LogicalKeyboardKey.controlLeft);
+    await tester.pumpAndSettle();
+    expect(find.text('Informe um valor maior que zero.'), findsOneWidget);
+    expect(app.transactions, hasLength(24));
+    await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+    await tester.pumpAndSettle();
+    expect(find.byType(AddTransactionScreen), findsNothing);
+    expect(app.transactions, hasLength(24));
+    expect(tester.takeException(), isNull);
+    await tester.pumpWidget(const SizedBox());
     debugDefaultTargetPlatformOverride = null;
   });
   testWidgets('Privacy hides charts and financial amounts', (tester) async {

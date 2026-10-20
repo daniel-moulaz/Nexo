@@ -233,7 +233,7 @@ class FinanceExportService {
             ? ''
             : DateFormat('dd/MM/yyyy').format(meta.dueDate!),
         meta.expenseClass == 'extraordinary' ? 'Extraordinária' : 'Normal',
-        neutral ? 'Não' : 'Sim',
+        !neutral && tx.type == 'expense' ? 'Sim' : 'Não',
         meta.installmentLabel,
         meta.source.startsWith('transfer:')
             ? 'Transferência'
