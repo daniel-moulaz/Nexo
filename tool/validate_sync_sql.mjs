@@ -72,6 +72,14 @@ try {
     assert.equal(row.all_rls_enabled, true);
     assert.equal(row.anonymous_blocked, true);
   });
+  await test('protocol 2 remote smoke script passes and rolls back', async () => {
+    const results = await db.exec(await readFile(new URL('../supabase/tests/sync_protocol_v2_smoke.sql', import.meta.url), 'utf8'));
+    const row = results.at(-1).rows[0];
+    assert.equal(row.validation, 'synthetic_v2_smoke_passed');
+    assert.equal(row.persisted_datasets, 0);
+    assert.equal(row.persisted_balances, 0);
+    assert.equal(row.all_rls_enabled, true);
+  });
   await test('all private tables have RLS and no direct client write access', async () => {
     const rows = (await db.query(`select relname, relrowsecurity from pg_class c
       join pg_namespace n on n.oid = c.relnamespace
