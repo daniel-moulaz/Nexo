@@ -73,7 +73,8 @@ Future<void> startNexo() async {
   final syncConfig = SyncConfig.current;
   SupabaseAuth.app = syncConfig == null ? null : SupabaseAuth(syncConfig);
   SyncController.instance = SyncController.forApp(
-      syncConfig, SupabaseAuth.app, provider.reloadFromStorage);
+      syncConfig, SupabaseAuth.app, provider.reloadFromStorage,
+      real: !DesktopProfile.isTest);
   // Never blocks opening the app: offline or signed out just waits.
   unawaited(SyncController.instance?.start());
   NexoSecurity.instance.addListener(provider.updateHomeWidgets);

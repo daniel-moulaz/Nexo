@@ -43,6 +43,10 @@ const _serverCodes = {
   'invalid_requires',
   'invalid_requirement',
   'duplicate_effect',
+  'invalid_dataset',
+  'invalid_label',
+  'real_dataset_exists',
+  'dataset_kind_mismatch',
 };
 
 /// Authenticated transport for the isolated synthetic Supabase lab.
@@ -110,16 +114,16 @@ class SupabaseSyncTransport implements SyncRemote {
   Future<Object?> _rpc(String name, Map<String, dynamic> parameters) async {
     final token = await accessToken();
     _requireUserSession(token);
-    final request = http.Request(
-        'POST', projectUrl.resolve('/rest/v1/rpc/nexo_sync_lab_$name'))
-      ..followRedirects = false
-      ..headers.addAll({
-        'apikey': publishableKey,
-        'Authorization': 'Bearer $token',
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
-      })
-      ..body = jsonEncode(parameters);
+    final request =
+        http.Request('POST', projectUrl.resolve('/rest/v1/rpc/$name'))
+          ..followRedirects = false
+          ..headers.addAll({
+            'apikey': publishableKey,
+            'Authorization': 'Bearer $token',
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+          })
+          ..body = jsonEncode(parameters);
     final client = _clientFactory();
     try {
       return await _send(client, request).timeout(timeout);
@@ -187,7 +191,7 @@ class SupabaseSyncTransport implements SyncRemote {
   }
 
   Future<void> createSyntheticDataset(String datasetId, String epoch) async {
-    final result = await _rpc('create', {
+    final result = await _rpc('nexo_sync_lab_create', {
       'p_dataset_id': datasetId,
       'p_epoch': epoch,
       'p_device_id': deviceId,
@@ -204,13 +208,39 @@ class SupabaseSyncTransport implements SyncRemote {
 
   @override
   Future<void> setDatasetLabel(String datasetId, String label) async {
-    await _rpc('set_label', {'p_dataset_id': datasetId, 'p_label': label});
+    await _rpc('nexo_sync_lab_set_label',
+        {'p_dataset_id': datasetId, 'p_label': label});
   }
 
-  /// Named datasets of the signed-in person (newest first).
+  /// Creates or opens a dataset of the given kind and registers this device.
+  /// The server refuses opening a real dataset as synthetic and vice versa.
   @override
-  Future<List<RemoteDataset>> listDatasets() async {
-    final result = await _rpc('list_datasets', const {});
+  Future<void> openDataset(String datasetId, String epoch,
+      {required bool real}) async {
+    final result = await _rpc('nexo_sync_open', {
+      'p_dataset_id': datasetId,
+      'p_epoch': epoch,
+      'p_device_id': deviceId,
+      'p_real': real,
+    });
+    requireSync(
+        result is Map &&
+            result['dataset_id'] == datasetId &&
+            result['epoch'] == epoch &&
+            result['real'] == real,
+        'invalid_dataset_response');
+  }
+
+  /// Removes the server copy of a dataset of the signed-in person.
+  @override
+  Future<void> deleteDataset(String datasetId) async {
+    await _rpc('nexo_sync_delete_dataset', {'p_dataset_id': datasetId});
+  }
+
+  /// Named datasets of one kind of the signed-in person (newest first).
+  @override
+  Future<List<RemoteDataset>> listDatasets({bool real = false}) async {
+    final result = await _rpc('nexo_sync_list_datasets', {'p_real': real});
     try {
       return [
         for (final d in result as List)
@@ -228,8 +258,8 @@ class SupabaseSyncTransport implements SyncRemote {
 
   /// Synthetic lab only: revokes [device] in a dataset owned by the user.
   Future<void> revokeDevice(String datasetId, String device) async {
-    await _rpc(
-        'revoke_device', {'p_dataset_id': datasetId, 'p_device_id': device});
+    await _rpc('nexo_sync_lab_revoke_device',
+        {'p_dataset_id': datasetId, 'p_device_id': device});
   }
 
   Future<SyncReceipt> _receipt(Object? data) async {
@@ -253,7 +283,7 @@ class SupabaseSyncTransport implements SyncRemote {
   Future<SyncPushResult> push(SyncOperation operation) async {
     requireSync(operation.deviceId == deviceId, 'wrong_local_device');
     final hash = await operation.digest();
-    final result = await _rpc('push', {
+    final result = await _rpc('nexo_sync_lab_push', {
       'p_payload': operation.encode(),
       'p_hash': hash,
     });
@@ -297,7 +327,7 @@ class SupabaseSyncTransport implements SyncRemote {
   }) async {
     requireSync(after >= 0 && limit > 0 && limit <= 100, 'invalid_page');
     final pageLimit = min(limit, _pageOperations);
-    final result = await _rpc('pull', {
+    final result = await _rpc('nexo_sync_lab_pull', {
       'p_dataset_id': datasetId,
       'p_epoch': epoch,
       'p_device_id': deviceId,

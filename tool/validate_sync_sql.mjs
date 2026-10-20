@@ -363,6 +363,45 @@ try {
     await denies(() => user(A, tx => rpc(tx, 'nexo_sync_lab_set_label', [ds2, ''])), '22023');
     await denies(() => user(null, tx => rpc(tx, 'nexo_sync_lab_list_datasets', []), 'anon'), '42501');
   });
+  // ── One real dataset per owner, never mixed with synthetic ones ──────
+  await test('real dataset: one per owner, kind enforced, owner-only', async () => {
+    await db.exec(await readFile(new URL('../supabase/migrations/202610210001_sync_real_datasets.sql', import.meta.url), 'utf8'));
+    const real = randomUUID(), realEpoch = randomUUID(), dev = randomUUID();
+    const opened = await user(A, tx => rpc(tx, 'nexo_sync_open', [real, realEpoch, dev, true]));
+    assert.equal(opened.real, true);
+    assert.equal(opened.revision, 0);
+    // Idempotent for the same device and a second device of the same dataset.
+    await user(A, tx => rpc(tx, 'nexo_sync_open', [real, realEpoch, dev, true]));
+    await user(A, tx => rpc(tx, 'nexo_sync_open', [real, realEpoch, randomUUID(), true]));
+    await denies(() => user(A, tx => rpc(tx, 'nexo_sync_open', [randomUUID(), randomUUID(), randomUUID(), true])), '23505');
+    // A synthetic profile cannot open the real dataset, nor the reverse.
+    await denies(() => user(A, tx => rpc(tx, 'nexo_sync_open', [real, realEpoch, randomUUID(), false])), '22023');
+    await denies(() => user(A, tx => rpc(tx, 'nexo_sync_open', [ds2, ep2, randomUUID(), true])), '22023');
+    await denies(() => user(A, tx => create(tx, randomUUID(), real, realEpoch)), '22023');
+    await denies(() => user(A, tx => rpc(tx, 'nexo_sync_open', [real, randomUUID(), randomUUID(), true])), '22023');
+    // Another person neither opens, lists nor deletes it, and may have their own.
+    await denies(() => user(B, tx => rpc(tx, 'nexo_sync_open', [real, realEpoch, randomUUID(), true])), '42501');
+    await user(B, tx => rpc(tx, 'nexo_sync_open', [randomUUID(), randomUUID(), randomUUID(), true]));
+    await user(A, tx => rpc(tx, 'nexo_sync_lab_set_label', [real, 'Nexo do Daniel']));
+    const listed = await user(A, tx => rpc(tx, 'nexo_sync_list_datasets', [true]));
+    assert.deepEqual(listed.map(d => [d.id, d.real, d.devices]), [[real, true, 2]]);
+    assert(!(await user(A, tx => rpc(tx, 'nexo_sync_list_datasets', [false]))).some(d => d.id === real));
+    assert.deepEqual(await user(B, tx => rpc(tx, 'nexo_sync_list_datasets', [true])), []);
+    await denies(() => user(B, tx => rpc(tx, 'nexo_sync_delete_dataset', [real])), '42501');
+    await denies(() => user(null, tx => rpc(tx, 'nexo_sync_open', [real, realEpoch, dev, true]), 'anon'), '42501');
+    // Real data follows protocol 2 like the lab: push, pull, then delete.
+    const operation = { protocol: 1, id: randomUUID(), dataset_id: real, epoch: realEpoch,
+      device_id: dev, created_at: '2026-10-21T12:00:00.000Z', edits: [edit('conta', 0, { n: 1 })] };
+    const payload = canonical(operation);
+    const pushed = await user(A, tx => rpc(tx, 'nexo_sync_lab_push', [payload, hash(payload)]));
+    assert.equal(pushed.status, 'accepted');
+    assert.equal((await user(A, tx => pull(tx, 0, dev, real, realEpoch))).length, 1);
+    await user(A, tx => rpc(tx, 'nexo_sync_delete_dataset', [real]));
+    await denies(() => user(A, tx => pull(tx, 0, dev, real, realEpoch)), '42501');
+    assert.equal((await db.query('select count(*)::int n from nexo_sync_lab_private.requests where dataset_id = $1', [real])).rows[0].n, 0);
+    // After deleting, a new real dataset may be created again.
+    await user(A, tx => rpc(tx, 'nexo_sync_open', [randomUUID(), randomUUID(), randomUUID(), true]));
+  });
   console.log(`SQL LAB: ${passed} tests passed; synthetic local data only.`);
 } finally {
   await db.close();

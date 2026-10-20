@@ -45,11 +45,23 @@ class _Remote implements SyncRemote {
   }
 
   @override
+  Future<void> openDataset(String datasetId, String epoch,
+      {required bool real}) {
+    _online();
+    return inner.openDataset(datasetId, epoch, real: real);
+  }
+
+  @override
+  Future<void> deleteDataset(String datasetId) =>
+      inner.deleteDataset(datasetId);
+
+  @override
   Future<void> setDatasetLabel(String datasetId, String label) =>
       inner.setDatasetLabel(datasetId, label);
 
   @override
-  Future<List<RemoteDataset>> listDatasets() => inner.listDatasets();
+  Future<List<RemoteDataset>> listDatasets({bool real = false}) =>
+      inner.listDatasets(real: real);
 
   @override
   Future<void> revokeDevice(String datasetId, String device) =>
@@ -213,14 +225,14 @@ Future<bool> _run() async {
         final dataset = const Uuid().v4(), epoch = const Uuid().v4();
         ids['dataset'] = dataset;
         ids['A'] = const Uuid().v4();
-        await remote(ids['A']!).createSyntheticDataset(dataset, epoch);
+        await remote(ids['A']!).openDataset(dataset, epoch, real: false);
         await LedgerSync.createDataset(await DBHelper.database,
             datasetId: dataset, epoch: epoch, deviceId: ids['A']!);
         final a = await open('A');
         _check(a.summary == 'Sincronizado', 'A: ${a.summary}');
         await use('B');
         ids['B'] = const Uuid().v4();
-        await remote(ids['B']!).createSyntheticDataset(dataset, epoch);
+        await remote(ids['B']!).openDataset(dataset, epoch, real: false);
         await LedgerSync.joinDataset(await DBHelper.database,
             datasetId: dataset, epoch: epoch, deviceId: ids['B']!);
         final b = await open('B');

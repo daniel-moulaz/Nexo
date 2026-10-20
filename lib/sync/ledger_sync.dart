@@ -69,6 +69,9 @@ class LedgerSync {
 
   static const _pageSize = 100;
   static const _checkpointEdits = 500;
+  // The server refuses payloads above 1 MiB; real rows (notes, metadata)
+  // vary in size, so a checkpoint operation is also bounded by bytes.
+  static const checkpointBytes = 200 * 1024;
 
   static Future<void> _schema(DatabaseExecutor txn) async {
     await txn.execute('''CREATE TABLE IF NOT EXISTS sync_binding (
@@ -118,6 +121,7 @@ class LedgerSync {
       };
       var edits = <LedgerEdit>[];
       var effects = <LedgerBalanceDelta>[];
+      var bytes = 0;
       Future<void> flush() async {
         if (edits.isEmpty) return;
         final op = LedgerOperation(
@@ -139,6 +143,7 @@ class LedgerSync {
         });
         edits = [];
         effects = [];
+        bytes = 0;
       }
 
       // Accounts first: every later operation may depend on them.
@@ -147,8 +152,13 @@ class LedgerSync {
           .where(byTable.containsKey)) {
         for (final row in byTable[table]!) {
           final key = row['row_key'] as String;
-          edits.add(LedgerEdit(table, key, 0,
-              jsonDecode(row['value_json'] as String) as Map<String, Object?>));
+          final json = row['value_json'] as String;
+          if (edits.isNotEmpty && bytes + json.length > checkpointBytes) {
+            await flush();
+          }
+          bytes += json.length + key.length;
+          edits.add(LedgerEdit(
+              table, key, 0, jsonDecode(json) as Map<String, Object?>));
           final micros = table == 'accounts' ? balances[key] ?? 0 : 0;
           if (micros != 0) effects.add(LedgerBalanceDelta(key, micros, 1));
           if (edits.length >= _checkpointEdits) await flush();

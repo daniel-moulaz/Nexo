@@ -1678,11 +1678,18 @@ class AppProvider extends ChangeNotifier {
       .fold(0.0, (s, l) => s + convertToMain(loanRemaining(l), l.currency));
 
   // ── Export ────────────────────────────────────────────────────────────
-  Future<String?> createBackup() async {
+  /// The backup file content, validated as restorable before anyone relies
+  /// on it.
+  Future<Uint8List> backupBytes() async {
     final data = await DBHelper.exportAll();
     data['settings'] = settings.toJson();
     final json = const JsonEncoder.withIndent('  ').convert(data);
-    final uint8 = Uint8List.fromList(utf8.encode(json));
+    DBHelper.validateBackup(jsonDecode(json) as Map<String, dynamic>);
+    return Uint8List.fromList(utf8.encode(json));
+  }
+
+  Future<String?> createBackup() async {
+    final uint8 = await backupBytes();
     final ts = DateTime.now().millisecondsSinceEpoch;
 
     final savePath = await FileOutput.save(
