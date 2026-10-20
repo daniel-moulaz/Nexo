@@ -5,7 +5,38 @@ import 'package:cryptography/cryptography.dart';
 /// Experimental protocol. No app startup, network client or live DB uses it.
 /// Values are opaque domain aggregates; a production adapter must validate
 /// accounting invariants before staging or applying them.
-const syncProtocolVersion = 1;
+///
+/// Version 1 carries entity edits only. Version 2 adds commutative balance
+/// effects and read requirements, used by the ledger journal. An operation
+/// without v2 fields still encodes as v1, so v1 servers keep accepting it.
+const syncProtocolVersion = 2;
+const _maxDelta = 9000000000000000; // stays exact as JSON number and bigint
+
+/// Exact change of one account balance, in millionths of its currency.
+/// Effects commute: two devices spending from one account never conflict.
+class SyncEffect {
+  SyncEffect(this.account, this.deltaMicros) {
+    _identifier(account);
+    requireSync(
+        deltaMicros != 0 && deltaMicros.abs() <= _maxDelta, 'invalid_effect');
+  }
+  final String account;
+  final int deltaMicros;
+  Map<String, dynamic> toJson() =>
+      {'account': account, 'delta_micros': deltaMicros};
+}
+
+/// An entity the operation relied on without changing it. The server
+/// rejects the operation if that entity moved to another revision.
+class SyncRequirement {
+  SyncRequirement(this.key, this.revision) {
+    key.validate();
+    requireSync(revision >= 0, 'invalid_revision');
+  }
+  final SyncKey key;
+  final int revision;
+  Map<String, dynamic> toJson() => {...key.toJson(), 'revision': revision};
+}
 
 class SyncProtocolException implements Exception {
   const SyncProtocolException(this.code);
@@ -89,14 +120,30 @@ class SyncOperation {
     required this.deviceId,
     required DateTime createdAt,
     required List<SyncEdit> edits,
+    List<SyncEffect> effects = const [],
+    List<SyncRequirement> requires = const [],
+    this.label,
   })  : createdAt = createdAt.toUtc(),
-        edits = List.unmodifiable(edits) {
+        edits = List.unmodifiable(edits),
+        effects = List.unmodifiable(effects),
+        requires = List.unmodifiable(requires) {
     for (final identifier in [id, datasetId, epoch, deviceId]) {
       _identifier(identifier);
     }
-    requireSync(edits.isNotEmpty && edits.length <= 10000, 'invalid_batch');
-    requireSync(edits.map((e) => e.key).toSet().length == edits.length,
-        'duplicate_entity_in_operation');
+    requireSync(
+        (edits.isNotEmpty || effects.isNotEmpty) &&
+            edits.length <= 10000 &&
+            effects.length <= 10000 &&
+            requires.length <= 10000,
+        'invalid_batch');
+    final keys = [...edits.map((e) => e.key), ...requires.map((r) => r.key)];
+    requireSync(
+        keys.toSet().length == keys.length, 'duplicate_entity_in_operation');
+    requireSync(effects.map((e) => e.account).toSet().length == effects.length,
+        'duplicate_effect');
+    if (label != null) {
+      requireSync(label!.isNotEmpty && label!.length <= 64, 'invalid_label');
+    }
     requireSync(
         utf8.encode(encode()).length <= 1024 * 1024, 'operation_too_big');
   }
@@ -107,14 +154,32 @@ class SyncOperation {
   final String deviceId;
   final DateTime createdAt;
   final List<SyncEdit> edits;
+  final List<SyncEffect> effects;
+  final List<SyncRequirement> requires;
+
+  /// Domain operation name (for instance `transaction.add`), for audit only.
+  final String? label;
+
+  int get protocol =>
+      effects.isEmpty && requires.isEmpty && label == null ? 1 : 2;
+
+  /// Every entity whose current state decides acceptance.
+  Iterable<SyncKey> get checkedKeys =>
+      [...edits.map((e) => e.key), ...requires.map((r) => r.key)];
+
   Map<String, dynamic> toJson() => {
-        'protocol': syncProtocolVersion,
+        'protocol': protocol,
         'id': id,
         'dataset_id': datasetId,
         'epoch': epoch,
         'device_id': deviceId,
         'created_at': createdAt.toIso8601String(),
         'edits': edits.map((e) => e.toJson()).toList(),
+        if (protocol == 2) ...{
+          'effects': effects.map((e) => e.toJson()).toList(),
+          'requires': requires.map((r) => r.toJson()).toList(),
+          if (label != null) 'label': label,
+        },
       };
   String encode() => canonicalSyncJson(toJson());
   Future<String> digest() async => (await Sha256().hash(utf8.encode(encode())))
@@ -125,10 +190,23 @@ class SyncOperation {
   factory SyncOperation.decode(String encoded) {
     requireSync(
         utf8.encode(encoded).length <= 1024 * 1024, 'operation_too_big');
+    try {
+      return _decode(encoded);
+    } on SyncProtocolException {
+      rethrow;
+    } catch (_) {
+      throw const SyncProtocolException('invalid_operation');
+    }
+  }
+
+  static SyncOperation _decode(String encoded) {
     final json = jsonDecode(encoded) as Map<String, dynamic>;
-    requireSync(
-        json['protocol'] == syncProtocolVersion, 'unsupported_protocol');
-    return SyncOperation(
+    final protocol = json['protocol'];
+    requireSync(protocol == 1 || protocol == 2, 'unsupported_protocol');
+    List<Map<String, dynamic>> list(String name) => protocol == 2
+        ? [for (final e in json[name] as List) (e as Map).cast()]
+        : const [];
+    final operation = SyncOperation(
       id: json['id'] as String,
       datasetId: json['dataset_id'] as String,
       epoch: json['epoch'] as String,
@@ -137,7 +215,20 @@ class SyncOperation {
       edits: (json['edits'] as List)
           .map((e) => SyncEdit.fromJson((e as Map).cast<String, dynamic>()))
           .toList(),
+      effects: [
+        for (final e in list('effects'))
+          SyncEffect(e['account'] as String, e['delta_micros'] as int)
+      ],
+      requires: [
+        for (final r in list('requires'))
+          SyncRequirement(SyncKey(r['kind'] as String, r['id'] as String),
+              r['revision'] as int)
+      ],
+      label: protocol == 2 ? json['label'] as String? : null,
     );
+    // Re-encoding must reproduce the exact bytes that were hashed.
+    requireSync(operation.protocol == protocol, 'unsupported_protocol');
+    return operation;
   }
 }
 

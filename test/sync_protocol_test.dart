@@ -172,10 +172,13 @@ void main() {
         canonicalSyncJson({'a': 2, 'z': 1}));
     expect(() => SyncEdit(bank, 0, {'amount': double.nan}),
         throwsA(isA<SyncProtocolException>()));
-    expect(
-        () => SyncOperation.decode(
-            op.encode().replaceFirst('"protocol":1', '"protocol":2')),
-        throwsA(isA<SyncProtocolException>()));
+    for (final broken in ['"protocol":3', '"protocol":2']) {
+      // Unknown version, or v2 without its effect/requirement lists.
+      expect(
+          () => SyncOperation.decode(
+              op.encode().replaceFirst('"protocol":1', broken)),
+          throwsA(isA<SyncProtocolException>()));
+    }
   });
 
   test('local projection and outbox roll back together after a disk error',

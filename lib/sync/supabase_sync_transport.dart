@@ -37,6 +37,11 @@ const _serverCodes = {
   'invalid_page',
   'epoch_or_cursor_mismatch',
   'dataset_unavailable',
+  'invalid_effects',
+  'invalid_effect',
+  'invalid_requires',
+  'invalid_requirement',
+  'duplicate_effect',
 };
 
 /// Authenticated transport for the isolated synthetic Supabase lab.
@@ -231,11 +236,11 @@ class SupabaseSyncTransport implements SyncTransport {
                 ))
             .toList();
         requireSync(
-            remote.length == operation.edits.length &&
+            remote.length == operation.checkedKeys.length &&
                 remote
                     .map((r) => r.key)
                     .toSet()
-                    .containsAll(operation.edits.map((e) => e.key)),
+                    .containsAll(operation.checkedKeys),
             'incomplete_remote_alternative');
         return SyncRejected(remote);
       } on SyncProtocolException {

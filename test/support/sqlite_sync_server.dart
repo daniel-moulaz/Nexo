@@ -25,7 +25,19 @@ class SqliteSyncServer implements SyncTransport {
       id TEXT PRIMARY KEY, hash TEXT NOT NULL, receipt TEXT, rejected TEXT)''');
     await db.execute('''CREATE TABLE server_log (
       revision INTEGER PRIMARY KEY, payload TEXT NOT NULL, hash TEXT NOT NULL)''');
+    await db.execute('''CREATE TABLE server_balances (
+      account TEXT PRIMARY KEY, micros INTEGER NOT NULL)''');
   }
+
+  /// Read projection of protocol-2 effects, as a server API would expose it.
+  Future<int> balanceMicros(String account) async =>
+      ((await db.query('server_balances',
+              where: 'account = ?', whereArgs: [account]))
+          .firstOrNull?['micros'] as int?) ??
+      0;
+
+  Future<int> get revision async =>
+      (await db.query('server_clock')).single['revision'] as int;
 
   void _binding(String dataset, String candidateEpoch) => requireSync(
       dataset == datasetId && candidateEpoch == epoch,
@@ -62,15 +74,19 @@ class SqliteSyncServer implements SyncTransport {
       }
       final remote = <SyncRemoteState>[];
       var mismatch = false;
-      for (final edit in operation.edits) {
+      final expected = {
+        for (final edit in operation.edits) edit.key: edit.baseRevision,
+        for (final need in operation.requires) need.key: need.revision,
+      };
+      for (final entry in expected.entries) {
         final rows = await tx.query('server_entities',
             where: 'kind = ? AND id = ?',
-            whereArgs: [edit.key.kind, edit.key.id]);
+            whereArgs: [entry.key.kind, entry.key.id]);
         final revision = rows.isEmpty ? 0 : rows.single['revision'] as int;
         final json = rows.isEmpty ? null : rows.single['value_json'] as String?;
         remote.add(SyncRemoteState(
-            edit.key, revision, json == null ? null : jsonDecode(json)));
-        if (revision != edit.baseRevision) mismatch = true;
+            entry.key, revision, json == null ? null : jsonDecode(json)));
+        if (revision != entry.value) mismatch = true;
       }
       if (mismatch) {
         await tx.insert('server_requests', {
@@ -90,6 +106,12 @@ class SqliteSyncServer implements SyncTransport {
               'value_json': edit.deleted ? null : canonicalSyncJson(edit.value),
             },
             conflictAlgorithm: ConflictAlgorithm.replace);
+      }
+      for (final effect in operation.effects) {
+        await tx.rawInsert(
+            'INSERT INTO server_balances(account, micros) VALUES (?, ?) '
+            'ON CONFLICT(account) DO UPDATE SET micros = micros + excluded.micros',
+            [effect.account, effect.deltaMicros]);
       }
       // Clock and operation commit together; no allocated but uncommitted gap.
       await tx.rawUpdate('UPDATE server_clock SET revision = revision + 1');

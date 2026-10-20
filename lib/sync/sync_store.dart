@@ -291,11 +291,11 @@ class SyncStore {
         }
         if (result is SyncRejected) {
           requireSync(
-              result.remote.length == operation.edits.length &&
+              result.remote.length == operation.checkedKeys.length &&
                   result.remote
                       .map((r) => r.key)
                       .toSet()
-                      .containsAll(operation.edits.map((e) => e.key)),
+                      .containsAll(operation.checkedKeys),
               'incomplete_remote_alternative');
           final remote = result.remote.map((e) => e.toJson()).toList();
           await db.transaction(
