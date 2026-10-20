@@ -100,3 +100,32 @@ Compilar não prova o comportamento no aparelho: a validação é a suíte acima
 5. Dois perfis sintéticos via servidor de referência: offline simultâneo, resposta perdida, reinício no meio, restore+sync.
 
 Depende do usuário depois disso: aplicar a migration v2 no projeto `nexo-sync`, configurar login (e-mail/OTP), testar com dois usuários sintéticos por HTTP e, só então, decidir conscientemente o primeiro envio do acervo real.
+
+## Atualização: lote S2 executado no mesmo dia (`a8b6a1a`)
+
+Os cinco itens acima foram implementados e testados **localmente, com dados sintéticos**. O app continua sem sincronizar: nada chama o motor fora dos testes e a migration v2 não foi aplicada em nenhum projeto remoto.
+
+| Peça | O que existe |
+|---|---|
+| Protocolo 2 (`sync_protocol.dart`) | `effects` (delta inteiro em milionésimos), `requires` (revisão de entidade lida e não alterada), `label` (nome da operação). Sem esses campos a operação continua v1. Payload malformado falha com `SyncProtocolException` |
+| SQL `202610200001_sync_protocol_v2.sql` | `nexo_sync_lab_push` aceita v1 e v2, valida efeitos/requisitos, rejeita atomicamente com alternativas completas e mantém a projeção `balances` (RLS por dono) |
+| Motor `lib/sync/ledger_sync.dart` | `createDataset` (checkpoint do primeiro aparelho em operações de revisão 0), `joinDataset` (só aparelho vazio, defaults intocados substituídos), envio em ordem com backoff, recebimento paginado com **rebase** (reverte operações locais não confirmadas, aplica a remota, reaplica as locais) em um commit por página, conflitos com descartar/reaplicar |
+| Conflitos | A operação local que não cabe mais é revertida localmente (o aparelho mostra o mesmo dado dos outros) e guardada. Reaplicar automático só para entidades sem efeito financeiro (categorias, orçamentos, desejos, bens, pessoas, regras); o resto deve ser refeito pelas telas, para recalcular saldos |
+| Exclusão de conta | Passa a registrar a saída do saldo, para que reverter a exclusão devolva o dinheiro |
+
+Evidências: `test/ledger_sync_test.dart` (9 cenários com dois SQLite reais e o servidor de referência: download do acervo, gastos simultâneos offline convergindo ao saldo exato e à projeção do servidor, resposta perdida com reenvio do mesmo ID, conflito de lançamento sem duplicar dinheiro, reaplicação de categoria, gasto em conta excluída no outro aparelho, falha no meio do recebimento sem mover cursor nem dados, paradas por escrita não atribuída/restore/revogação/sessão, recusa de aparelho com dados próprios). PGlite **29/29**: os 22 testes v1 agora rodam contra a função v2, mais 7 da v2.
+
+Ainda falta, nesta ordem:
+
+1. **Precisa do usuário:** aplicar a migration v2 no projeto `nexo-sync` (SQL Editor) e configurar login (e-mail com código); testar HTTP com dois usuários sintéticos.
+2. Armazenar sessão com segurança, renovar token, tela "Sincronizar dispositivos" com status, pendências e conflitos.
+3. Homologação Android ↔ Windows com perfis de teste; só então consentimento e primeiro envio do acervo real.
+4. Limitação conhecida: o checkpoint inicial vai como várias operações de até 500 entidades; acervos muito grandes precisam de medição de tempo/tamanho antes da ativação.
+
+## Distribuição 1.6.7+28 (20/10/2026)
+
+Conteúdo novo para o usuário em relação à 1.6.6+27: **Notificações → Fechamento semanal** (domingo 22h, desligado por padrão, horário ajustável; o toque abre a Revisão financeira de 7 dias). Sync segue inativo.
+
+- Android: `build/distribution/Nexo-1.6.7+28-android.apk`, SHA-256 `f6a9c89a0137bcc58cffde2cd2a298740c430886e82b3a1ace945b46058d78af`, certificado `54d668e0…2096`.
+- Windows: `build/windows/x64/runner/Release/` (pasta inteira).
+- A 1.6.6+27 foi instalada no Android por atualização em 20/10 (dados preservados, `firstInstallTime` 26/09).

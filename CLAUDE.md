@@ -6,15 +6,16 @@ Leia também `docs/NEXO_HANDOFF_WORKTREE_2026_10_20.md`: há mudanças locais le
 
 Atualização de 20/10/2026 (Claude, lote S1 de sync): leia também **`docs/NEXO_SYNC_DOMAIN_2026_10_20.md`** (fronteira de domínio, captura atômica, correções de dinheiro, evidências) e `docs/NEXO_INTEGRATIONS_PLAN_2026_10.md` (MCP/Pluggy/ChatGPT: plano, não funcionalidade). Toda gravação de dados do usuário deve usar `ledgerTransaction`/`DBHelper.operation`; `test/ledger_capture_test.dart` falha se um caminho escapar.
 
-Estado de referência em 20/10/2026:
+Estado de referência em 20/10/2026 (fim do dia):
 
 - Pasta: `C:\Users\danie\projetos\Expensy`. Nome público: **Nexo**.
-- Branch: `codex/nexo-investments`. Commits do lote S1: `7be004c`, `6695d91`, `f09258b`, `d56fd91` (+ documentação).
-- Versão do código: **1.6.6+27** (não instalada até o usuário autorizar). Instalada Android: **1.6.5+26**. Schema SQLite: **25**.
+- Branch: `codex/nexo-investments`. Commitados: sync S1 (domínio) e S2 (motor + protocolo 2), fechamento semanal e as mudanças locais antigas, publicadas em lotes revisados.
+- **A pasta não tem mais mudanças locais de conteúdo.** Arquivos marcados como modificados diferem só por final de linha (inclui `lib/l10n/*` regenerado pelo build). `.vscode/` é configuração do usuário: não versionar.
+- Versão do código: **1.6.7+28**. Instalada Android: 1.6.6+27 em 20/10 (verificar com `adb` antes de atualizar). Schema SQLite: **25**.
 - Identidade Android **`com.ma.expensy`**, banco **`expensy.db`**, pacote Dart **`expensy`** e certificado existente são invariantes.
 - Remoto de publicação: **`nexo` → `daniel-moulaz/Nexo`**. `origin` ainda é Expensy; não trocar remotos nem fazer push no destino errado.
-- **Não há sincronização de produção.** Há laboratório local, transporte experimental e laboratório Supabase sintético. Não habilitar upload real por inferência.
-- Última validação: workspace **309 testes**, worktree limpa **298**, análise limpa, SQL do laboratório 22/22. Isso não significa homologação manual completa de Windows ou sync.
+- **Não há sincronização de produção.** Motor `LedgerSync` e protocolo 2 existem e só rodam em testes sintéticos; a migration v2 não foi aplicada no projeto remoto. Não habilitar upload real por inferência.
+- Última validação: worktree limpa **324 testes**, análise limpa, SQL do laboratório 29/29. Testes Kotlin/instrumentados não foram reexecutados nesta rodada. Isso não significa homologação manual completa de Windows ou sync.
 
 Regras permanentes:
 
