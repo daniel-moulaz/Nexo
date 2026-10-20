@@ -5,6 +5,7 @@ import 'dart:typed_data';
 
 import 'package:http/http.dart' as http;
 
+import 'sync_lab_check.dart';
 import 'sync_protocol.dart';
 
 class SyncAuthenticationRequired implements Exception {
@@ -48,7 +49,7 @@ const _serverCodes = {
 /// No app startup integration, login flow, token persistence or real-data opt-in.
 /// The session supplier must return a current user access token, never an admin
 /// key. Each request owns its client so timeout can close outstanding sockets.
-class SupabaseSyncTransport implements SyncTransport {
+class SupabaseSyncTransport implements SyncLabTransport {
   SupabaseSyncTransport({
     required this.projectUrl,
     required this.publishableKey,
@@ -151,9 +152,11 @@ class SupabaseSyncTransport implements SyncTransport {
       bytes.add(chunk);
     }
     if (!ok) throw _failure(status, _errorCode(bytes.takeBytes()));
-    if (status == 204) return null;
+    final body = bytes.takeBytes();
+    // Functions returning void answer 204 or an empty 200 body.
+    if (status == 204 || body.isEmpty) return null;
     try {
-      return jsonDecode(utf8.decode(bytes.takeBytes()));
+      return jsonDecode(utf8.decode(body));
     } catch (_) {
       throw const SyncProtocolException('invalid_server_response');
     }
@@ -197,6 +200,12 @@ class SupabaseSyncTransport implements SyncTransport {
             result['epoch'] == epoch &&
             result['synthetic_only'] == true,
         'invalid_dataset_response');
+  }
+
+  /// Synthetic lab only: revokes [device] in a dataset owned by the user.
+  Future<void> revokeDevice(String datasetId, String device) async {
+    await _rpc(
+        'revoke_device', {'p_dataset_id': datasetId, 'p_device_id': device});
   }
 
   Future<SyncReceipt> _receipt(Object? data) async {

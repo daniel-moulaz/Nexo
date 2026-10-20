@@ -16,6 +16,7 @@ import 'lended_screen.dart';
 import 'loans_screen.dart';
 import 'settings_screen.dart';
 import 'statement_import_screen.dart';
+import 'sync_settings_screen.dart';
 
 import 'wishlist_screen.dart';
 
@@ -155,6 +156,13 @@ class MoreScreen extends StatelessWidget {
         screen: BackupScreen(),
       ),
       const _Item(
+        icon: Icons.devices_outlined,
+        label: 'Sincronizar dispositivos',
+        sub: 'Conta e teste do servidor; sincronização ainda inativa',
+        color: Color(0xFF00695C),
+        screen: SyncSettingsScreen(),
+      ),
+      const _Item(
         icon: Icons.settings_outlined,
         label: 'Configurações',
         sub: 'Tema, privacidade, moeda, alertas e preferências',
@@ -196,6 +204,7 @@ class MoreScreen extends StatelessWidget {
                 'Exportar relatório',
                 'Categorias',
                 'Backup e restauração',
+                'Sincronizar dispositivos',
                 'Configurações'
               ],
               'Outros controles': [
