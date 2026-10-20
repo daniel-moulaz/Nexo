@@ -70,6 +70,10 @@ class SupabaseAuth {
         _clientFactory = clientFactory ?? http.Client.new,
         _now = now ?? DateTime.now;
 
+  /// The app-wide instance, shared by the sign-in screen and automatic
+  /// sync so both see the same session.
+  static SupabaseAuth? app;
+
   final SyncConfig config;
   final FlutterSecureStorage _storage;
   final http.Client Function() _clientFactory;
@@ -80,7 +84,7 @@ class SupabaseAuth {
   Future<SyncSession?>? _refreshing;
 
   static String get storageKey => DesktopProfile.isTest
-      ? 'nexo_windows_qa_sync_session_v1'
+      ? 'nexo_windows_qa${DesktopProfile.qaSuffix}_sync_session_v1'
       : 'nexo_sync_session_v1';
 
   static final _email = RegExp(r'^[^@\s]{1,64}@[^@\s]{1,190}\.[^@\s]{2,}$');

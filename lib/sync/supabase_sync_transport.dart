@@ -5,7 +5,7 @@ import 'dart:typed_data';
 
 import 'package:http/http.dart' as http;
 
-import 'sync_lab_check.dart';
+import 'sync_controller.dart' show RemoteDataset, SyncRemote;
 import 'sync_protocol.dart';
 
 class SyncAuthenticationRequired implements Exception {
@@ -49,7 +49,7 @@ const _serverCodes = {
 /// No app startup integration, login flow, token persistence or real-data opt-in.
 /// The session supplier must return a current user access token, never an admin
 /// key. Each request owns its client so timeout can close outstanding sockets.
-class SupabaseSyncTransport implements SyncLabTransport {
+class SupabaseSyncTransport implements SyncRemote {
   SupabaseSyncTransport({
     required this.projectUrl,
     required this.publishableKey,
@@ -200,6 +200,30 @@ class SupabaseSyncTransport implements SyncLabTransport {
             result['epoch'] == epoch &&
             result['synthetic_only'] == true,
         'invalid_dataset_response');
+  }
+
+  @override
+  Future<void> setDatasetLabel(String datasetId, String label) async {
+    await _rpc('set_label', {'p_dataset_id': datasetId, 'p_label': label});
+  }
+
+  /// Named datasets of the signed-in person (newest first).
+  @override
+  Future<List<RemoteDataset>> listDatasets() async {
+    final result = await _rpc('list_datasets', const {});
+    try {
+      return [
+        for (final d in result as List)
+          RemoteDataset(
+            (d as Map)['id'] as String,
+            d['epoch'] as String,
+            d['label'] as String,
+            (d['devices'] as num).toInt(),
+          )
+      ];
+    } catch (_) {
+      throw const SyncProtocolException('invalid_server_response');
+    }
   }
 
   /// Synthetic lab only: revokes [device] in a dataset owned by the user.

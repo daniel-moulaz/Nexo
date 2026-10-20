@@ -64,6 +64,7 @@ try {
   // Every protocol-1 test below runs against the protocol-2 function.
   await db.exec(await readFile(new URL('../supabase/migrations/202610200001_sync_protocol_v2.sql', import.meta.url), 'utf8'));
   await db.exec(await readFile(new URL('../supabase/migrations/202610200002_mcp_connectors.sql', import.meta.url), 'utf8'));
+  await db.exec(await readFile(new URL('../supabase/migrations/202610200003_sync_lab_datasets.sql', import.meta.url), 'utf8'));
   await test('remote smoke script passes and rolls back all synthetic rows', async () => {
     const results = await db.exec(await readFile(new URL('../supabase/tests/sync_lab_smoke.sql', import.meta.url), 'utf8'));
     const row = results.at(-1).rows[0];
@@ -346,6 +347,21 @@ try {
     assert.equal(rows.length, 2);
     assert(rows.every(r => r.relrowsecurity));
     await denies(() => user(A, tx => tx.query('select * from nexo_mcp_private.connectors')), '42501');
+  });
+  // ── Dataset discovery for a second device ────────────────────────────
+  await test('named datasets are listed to their owner only', async () => {
+    assert.deepEqual(await user(A, tx => rpc(tx, 'nexo_sync_lab_list_datasets', [])), [],
+      'unnamed self-test datasets stay hidden');
+    await user(A, tx => rpc(tx, 'nexo_sync_lab_set_label', [ds2, '  Teste celular e PC ']));
+    const listed = await user(A, tx => rpc(tx, 'nexo_sync_lab_list_datasets', []));
+    assert.equal(listed.length, 1);
+    assert.equal(listed[0].id, ds2);
+    assert.equal(listed[0].label, 'Teste celular e PC');
+    assert.equal(listed[0].epoch, ep2);
+    assert.deepEqual(await user(B, tx => rpc(tx, 'nexo_sync_lab_list_datasets', [])), []);
+    await denies(() => user(B, tx => rpc(tx, 'nexo_sync_lab_set_label', [ds2, 'x'])), '42501');
+    await denies(() => user(A, tx => rpc(tx, 'nexo_sync_lab_set_label', [ds2, ''])), '22023');
+    await denies(() => user(null, tx => rpc(tx, 'nexo_sync_lab_list_datasets', []), 'anon'), '42501');
   });
   console.log(`SQL LAB: ${passed} tests passed; synthetic local data only.`);
 } finally {

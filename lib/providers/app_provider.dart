@@ -25,6 +25,7 @@ import 'package:home_widget/home_widget.dart';
 import '../services/credit_reminder_service.dart';
 import '../services/loan_reminder_service.dart';
 import '../services/loan_ledger.dart';
+import '../investments/investment_repository.dart';
 import '../services/lended_ledger.dart';
 import '../sync/ledger_capture.dart';
 import '../theme/app_theme.dart';
@@ -275,6 +276,33 @@ class AppProvider extends ChangeNotifier {
     _loadRates();
     await _recordNetWorthSnapshot();
     await updateHomeWidgets();
+  }
+
+  /// Reloads what another device changed through synchronization. No
+  /// reminders are rescheduled from scratch and no network is touched.
+  Future<void> reloadFromStorage() async {
+    accounts = await DBHelper.getAccounts();
+    categories = await DBHelper.getCategories();
+    transactions = await DBHelper.getTransactions();
+    transactionMetadata = await TransactionMetadataService.instance
+        .getForMany(transactions.map((t) => t.id));
+    recurring = await DBHelper.getRecurring();
+    wishlist = await DBHelper.getWishlist();
+    lendedPeople = await DBHelper.getLendedPeople();
+    lended = await DBHelper.getLended();
+    assets = await DBHelper.getAssets();
+    budgets = await DBHelper.getBudgets();
+    savingsGoals = await DBHelper.getSavingsGoals();
+    savingsContributions = await DBHelper.getAllSavingsContributions();
+    loans = await DBHelper.getLoans();
+    loanPayments = await DBHelper.getAllLoanPayments();
+    recurringHistoryCount = await DBHelper.getRecurringHistoryCount();
+    _historyCache.clear();
+    TransactionMetadataService.instance.revision.value++;
+    InvestmentRepository.revision.value++;
+    notifyListeners();
+    await updateHomeWidgets();
+    FinancialReminders.instance.requestRefresh(this);
   }
 
   Future<void> updateHomeWidgets() async {
