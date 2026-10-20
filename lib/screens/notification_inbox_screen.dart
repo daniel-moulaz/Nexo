@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
@@ -24,16 +25,27 @@ class _NotificationInboxScreenState extends State<NotificationInboxScreen>
     with WidgetsBindingObserver {
   List<Map<String, dynamic>>? rows;
   String? error;
+  StreamSubscription<dynamic>? _events;
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    if (PlatformCapabilities.bankNotifications) {
+      _events = NotificationInbox.events
+          .receiveBroadcastStream()
+          .listen((_) => reload(), onError: (_) {
+        if (mounted)
+          setState(() => error =
+              'Atualização automática indisponível. Toque em Atualizar.');
+      });
+    }
     reload();
   }
 
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    _events?.cancel();
     super.dispose();
   }
 
@@ -45,12 +57,18 @@ class _NotificationInboxScreenState extends State<NotificationInboxScreen>
   Future<void> reload() async {
     if (!PlatformCapabilities.bankNotifications) return;
     try {
-      await NotificationInbox.sync();
+      String? syncError;
+      try {
+        await NotificationInbox.sync();
+      } catch (_) {
+        syncError =
+            'Não foi possível buscar novas sugestões. As já salvas continuam disponíveis. Tente atualizar.';
+      }
       final result = await NotificationInbox.pending();
       if (mounted)
         setState(() {
           rows = result;
-          error = null;
+          error = syncError;
         });
     } catch (_) {
       if (mounted)
@@ -72,10 +90,13 @@ class _NotificationInboxScreenState extends State<NotificationInboxScreen>
           IconButton(
               tooltip: 'Configurar detecção',
               icon: const Icon(Icons.settings_outlined),
-              onPressed: () => Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                      builder: (_) => const AutomationSettingsScreen()))),
+              onPressed: () async {
+                await Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                        builder: (_) => const AutomationSettingsScreen()));
+                await reload();
+              }),
           IconButton(
               onPressed: reload,
               icon: const Icon(Icons.refresh),
@@ -89,7 +110,8 @@ class _NotificationInboxScreenState extends State<NotificationInboxScreen>
           if (rows?.isEmpty == true)
             const Padding(
                 padding: EdgeInsets.all(24),
-                child: Text('Nenhuma sugestão para revisar.')),
+                child: Text(
+                    'Nenhuma sugestão para revisar. Confira em Configurar detecção se o acesso está autorizado e seu banco está selecionado. Apenas notificações reconhecidas dos últimos 7 dias aparecem aqui.')),
           for (final row in rows ?? <Map<String, dynamic>>[])
             Card(
                 child: Padding(
@@ -239,6 +261,10 @@ class _SuggestionReviewScreenState extends State<SuggestionReviewScreen> {
           'Confira valor, descrição, conta e ${type == 'transfer' ? 'conta de destino' : 'categoria'}.');
       return;
     }
+    setState(() {
+      busy = true;
+      error = null;
+    });
     final candidates = ImportRulesService.candidates(app.transactions,
         accountId: account!,
         date: date,
@@ -259,7 +285,11 @@ class _SuggestionReviewScreenState extends State<SuggestionReviewScreen> {
                         onPressed: () => Navigator.pop(c, true),
                         child: const Text('Registrar separado'))
                   ]));
-      if (proceed != true || !mounted) return;
+      if (!mounted) return;
+      if (proceed != true) {
+        setState(() => busy = false);
+        return;
+      }
     }
     setState(() {
       busy = true;

@@ -11,6 +11,8 @@ object FinancialNotificationParser {
     data class ParserResult(val suggestion: Suggestion?, val reason: String)
     data class NotificationPattern(val id: String, val kind: String, val regex: Regex, val confidence: String = "high")
     private val patterns = listOf(
+        NotificationPattern("purchase_confirmed", "expense", Regex("\\b(voce (fez|realizou) uma compra|compra (efetuada|confirmada))\\b")),
+        NotificationPattern("pix_confirmed", "expense", Regex("\\b(pix efetuado|voce (fez|realizou) um pix)\\b")),
         NotificationPattern("refund", "refund", Regex("\\b(estorno|reembolso) (recebido|realizado|aprovado|de)\\b")),
         NotificationPattern("pix_in", "income", Regex("\\b(pix recebid[oa]|recebeu (um )?pix|recebimento de pix)\\b")),
         NotificationPattern("pix_out", "expense", Regex("\\b(pix (enviado|realizado)|voce enviou (um )?pix)\\b")),
@@ -34,7 +36,7 @@ object FinancialNotificationParser {
     fun analyze(raw: String): ParserResult {
         fun reject(reason: String) = ParserResult(null, reason)
         if (raw.length > 3000) return reject("unrecognized")
-        val text = normalize(raw)
+        val text = normalize(raw.replace('\u00a0', ' ').replace('\u202f', ' '))
         if (Regex("\\b(usd|eur|gbp|dolar|dolares|euros)\\b|us\\$|€|£|[-−]\\s*(r\\$\\s*)?\\d[\\d.,]*,\\d{2}").containsMatchIn(text)) return reject("unrecognized")
         if (Regex("\\b(codigo|senha|token|otp|autenticacao|verificacao)\\b").containsMatchIn(text)) return reject("sensitive")
         if (Regex("\\b(nao|recusad[ao]|negad[ao]|tentativa|agendad[ao]|agendamento|oferta|promocao|solicitacao|pendente|cancelad[ao]|confirme|reconhece|reconhecer|suspeita)\\b").containsMatchIn(text)) return reject("not_financial")

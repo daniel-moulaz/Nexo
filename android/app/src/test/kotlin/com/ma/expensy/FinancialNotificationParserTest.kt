@@ -4,6 +4,17 @@ import org.junit.Assert.*
 import org.junit.Test
 
 class FinancialNotificationParserTest {
+    @Test fun confirmedVariantsAndUnicodeSpaces() {
+        for (text in listOf("Você fez uma compra de R$ 32,90 em MERCADO",
+            "Compra confirmada no crédito: R$\u00a032,90 em MERCADO",
+            "Compra efetuada de R$\u202f32,90 em MERCADO")) {
+            assertEquals(text, 3290L, FinancialNotificationParser.parse(text)!!.cents)
+        }
+        assertEquals("expense", FinancialNotificationParser.parse("Você realizou um Pix de R$ 25,00")!!.kind)
+        assertNull(FinancialNotificationParser.parse("Compra confirmada R$ 32,90? Confirme se reconhece"))
+        assertNull(FinancialNotificationParser.parse("Você fez uma compra de R$ 32,90 e R$ 45,00"))
+        assertNull(FinancialNotificationParser.parse("Pix efetuado R$ 25,00 agendado"))
+    }
     @Test fun diagnosticsAndConfidenceAreConservative() {
         assertEquals("multiple_amounts", FinancialNotificationParser.analyze("Compra aprovada R$ 20,00 e R$ 20,00").reason)
         assertEquals("sensitive", FinancialNotificationParser.analyze("Compra aprovada R$ 20,00 codigo 123456").reason)
