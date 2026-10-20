@@ -22,6 +22,7 @@ class _Lab {
   final servers = <String, SqliteSyncServer>{};
   final labels = <String, String>{};
   final epochs = <String, String>{};
+  final real = <String>{};
   bool offline = false;
 }
 
@@ -46,15 +47,40 @@ class _Remote implements SyncRemote {
   }
 
   @override
+  Future<void> openDataset(String datasetId, String epoch,
+      {required bool real}) async {
+    _online();
+    if (lab.servers.containsKey(datasetId)) {
+      if (lab.real.contains(datasetId) != real) {
+        throw const SyncProtocolException('dataset_kind_mismatch');
+      }
+      return;
+    }
+    if (real && lab.real.isNotEmpty) {
+      throw const SyncProtocolException('real_dataset_exists');
+    }
+    await createSyntheticDataset(datasetId, epoch);
+    if (real) lab.real.add(datasetId);
+  }
+
+  @override
+  Future<void> deleteDataset(String datasetId) async {
+    lab.servers.remove(datasetId);
+    lab.labels.remove(datasetId);
+    lab.real.remove(datasetId);
+  }
+
+  @override
   Future<void> setDatasetLabel(String datasetId, String label) async =>
       lab.labels[datasetId] = label;
 
   @override
-  Future<List<RemoteDataset>> listDatasets() async {
+  Future<List<RemoteDataset>> listDatasets({bool real = false}) async {
     _online();
     return [
       for (final e in lab.labels.entries)
-        RemoteDataset(e.key, lab.epochs[e.key]!, e.value, 1)
+        if (lab.real.contains(e.key) == real)
+          RemoteDataset(e.key, lab.epochs[e.key]!, e.value, 1)
     ];
   }
 

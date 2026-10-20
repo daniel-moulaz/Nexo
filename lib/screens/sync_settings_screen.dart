@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
+import '../providers/app_provider.dart';
+import '../services/file_output.dart';
 import '../sync/supabase_auth.dart';
 import '../sync/supabase_sync_transport.dart';
 import '../sync/sync_config.dart';
@@ -9,8 +12,9 @@ import '../sync/sync_controller.dart';
 import '../services/desktop_profile.dart';
 import 'package:intl/intl.dart';
 
-/// Account and remote laboratory. Real synchronization of the ledger is not
-/// activated here; the lab check only sends a fictitious dataset.
+/// Account, synchronization and remote laboratory. Real activation always
+/// goes through consent, a saved backup, a local rehearsal and a final
+/// comparison with the server.
 class SyncSettingsScreen extends StatefulWidget {
   const SyncSettingsScreen({super.key, this.config, this.auth});
 
@@ -32,7 +36,7 @@ class _SyncSettingsScreenState extends State<SyncSettingsScreen> {
   final _password = TextEditingController();
   SyncSession? _session;
   bool _loading = true, _busy = false, _codeSent = false, _withPassword = false;
-  String? _message;
+  String? _message, _step;
   List<SyncLabStep>? _lab;
 
   @override
@@ -68,6 +72,8 @@ class _SyncSettingsScreenState extends State<SyncSettingsScreen> {
       await action();
     } on SyncAuthException catch (e) {
       _message = e.message;
+    } on SyncActivationFailed catch (e) {
+      _message = e.message;
     } on SyncUnavailable {
       _message = 'Sem conexão com o servidor. Seus dados locais não mudam.';
     } catch (e) {
@@ -75,7 +81,12 @@ class _SyncSettingsScreenState extends State<SyncSettingsScreen> {
       _message =
           'Não foi possível concluir agora (${e.runtimeType}). Tente novamente.';
     }
-    if (mounted) setState(() => _busy = false);
+    if (mounted) {
+      setState(() {
+        _busy = false;
+        _step = null;
+      });
+    }
   }
 
   Future<void> _requestCode() => _run(() async {
@@ -123,13 +134,126 @@ class _SyncSettingsScreenState extends State<SyncSettingsScreen> {
     await _run(() => SyncController.instance!.createDataset(label));
   }
 
+  Future<void> _activate() async {
+    final app = context.read<AppProvider>();
+    final counts = <String, int>{
+      'contas': app.accounts.length,
+      'lançamentos': app.transactions.length,
+      'recorrentes': app.recurring.length,
+      'orçamentos': app.budgets.length,
+      'objetivos': app.savingsGoals.length,
+      'empréstimos': app.loans.length,
+      'dinheiro emprestado': app.lended.length,
+      'categorias': app.categories.length,
+    };
+    var understood = false;
+    final go = await showDialog<bool>(
+        context: context,
+        builder: (dialog) => StatefulBuilder(
+            builder: (dialog, setDialog) => AlertDialog(
+                  title: const Text('Ativar a sincronização'),
+                  content: SingleChildScrollView(
+                    child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                              'Este aparelho vira a origem. Uma cópia de tudo vai para o seu projeto Supabase e os outros aparelhos passam a receber as mudanças sozinhos:'),
+                          const SizedBox(height: 8),
+                          Text([
+                            for (final e in counts.entries)
+                              if (e.value > 0) '• ${e.value} ${e.key}',
+                            '• investimentos, faturas, bens, desejos e regras de importação',
+                          ].join('\n')),
+                          const SizedBox(height: 8),
+                          const Text(
+                              'Proteção: só a sua conta acessa e a conexão é criptografada. Não há criptografia de ponta a ponta: o servidor guarda os dados legíveis, como um backup na nuvem. As notificações de banco deste aparelho não são enviadas.'),
+                          const SizedBox(height: 8),
+                          const Text(
+                              'Antes de enviar: você salva um backup, o Nexo guarda uma cópia interna e faz um ensaio completo sem internet. Depois do envio ele confere se o servidor ficou idêntico. O app continua funcionando sem internet.'),
+                          CheckboxListTile(
+                            contentPadding: EdgeInsets.zero,
+                            value: understood,
+                            onChanged: (v) =>
+                                setDialog(() => understood = v ?? false),
+                            title: const Text(
+                                'Entendi e quero enviar meus dados para o meu servidor'),
+                          ),
+                        ]),
+                  ),
+                  actions: [
+                    TextButton(
+                        onPressed: () => Navigator.pop(dialog, false),
+                        child: const Text('Cancelar')),
+                    FilledButton(
+                        onPressed: understood
+                            ? () => Navigator.pop(dialog, true)
+                            : null,
+                        child: const Text('Salvar backup e ativar')),
+                  ],
+                )));
+    if (go != true || !mounted) return;
+    await _run(() async {
+      setState(() => _step = 'Preparando o backup…');
+      final saved = await FileOutput.save(
+          title: 'Salvar backup antes da sincronização',
+          name:
+              'nexo_backup_antes_da_sincronizacao_${DateTime.now().millisecondsSinceEpoch}.json',
+          extension: 'json',
+          bytes: await app.backupBytes());
+      if (saved == null) {
+        throw const SyncActivationFailed(
+            'Ativação cancelada: o backup não foi salvo. Nada foi enviado.');
+      }
+      await SyncController.instance!.activate('Nexo', onStep: (step) {
+        if (mounted) setState(() => _step = step);
+      });
+      _message =
+          'Sincronização ativada. O servidor tem exatamente os dados deste aparelho. Backup salvo em: $saved';
+    });
+  }
+
+  Future<void> _verifyServer() => _run(() async {
+        final difference = await SyncController.instance!.verify();
+        _message = difference == null
+            ? 'Conferido: este aparelho está idêntico ao servidor.'
+            : 'Diferença encontrada em: $difference. Não apague nada e me avise.';
+      });
+
   Future<void> _join() async {
+    final real = !DesktopProfile.isTest;
     List<RemoteDataset> options = const [];
     await _run(() async => options = await SyncController.instance!.datasets());
     if (!mounted || _message != null) return;
     if (options.isEmpty) {
-      setState(() => _message =
-          'Nenhum acervo encontrado. Crie um no outro perfil de teste primeiro.');
+      setState(() => _message = real
+          ? 'Nenhum acervo encontrado. Ative primeiro no celular.'
+          : 'Nenhum acervo encontrado. Crie um no outro perfil de teste primeiro.');
+      return;
+    }
+    if (real) {
+      final ok = await showDialog<bool>(
+          context: context,
+          builder: (dialog) => AlertDialog(
+                title: const Text('Receber os dados do acervo?'),
+                content: const Text(
+                    'Este aparelho passa a mostrar os mesmos dados do celular e a sincronizar sozinho. Só é possível se ele não tiver lançamentos próprios; contas zeradas e categorias padrão são substituídas pelas do acervo.'),
+                actions: [
+                  TextButton(
+                      onPressed: () => Navigator.pop(dialog, false),
+                      child: const Text('Cancelar')),
+                  FilledButton(
+                      onPressed: () => Navigator.pop(dialog, true),
+                      child: const Text('Receber')),
+                ],
+              ));
+      if (ok != true || !mounted) return;
+      await _run(() async {
+        setState(() => _step = 'Recebendo e conferindo…');
+        await SyncController.instance!.join(options.first);
+        _message =
+            'Pronto: este aparelho está idêntico ao servidor e sincroniza sozinho.';
+      });
       return;
     }
     final chosen = await showDialog<RemoteDataset>(
@@ -189,7 +313,7 @@ class _SyncSettingsScreenState extends State<SyncSettingsScreen> {
           child: const Padding(
             padding: EdgeInsets.all(16),
             child: Text(
-                'A sincronização dos seus dados ainda não está ativa. Nesta etapa você só entra na sua conta e pode testar o servidor com dados fictícios. Nada do seu Nexo é enviado.'),
+                'Seus dados ficam neste aparelho e funcionam sem internet. Com a sincronização ativa, uma cópia fica no seu projeto Supabase, protegida pelo seu login, e os outros aparelhos recebem as mudanças sozinhos.'),
           ),
         ),
         const SizedBox(height: 16),
@@ -203,6 +327,8 @@ class _SyncSettingsScreenState extends State<SyncSettingsScreen> {
         else
           ..._signedIn(theme),
         if (_busy) const LinearProgressIndicator(),
+        if (_step != null)
+          Padding(padding: const EdgeInsets.only(top: 8), child: Text(_step!)),
         if (_message != null)
           Padding(
               padding: const EdgeInsets.only(top: 12), child: Text(_message!)),
@@ -289,11 +415,28 @@ class _SyncSettingsScreenState extends State<SyncSettingsScreen> {
   Widget _syncCard(SyncController sync, ThemeData theme) {
     if (!sync.bound) {
       if (!DesktopProfile.isTest) {
-        return const Padding(
-          padding: EdgeInsets.symmetric(vertical: 8),
-          child: Text(
-              'A sincronização com os seus dados reais será liberada na próxima etapa, com backup antes e confirmação sua. Por enquanto ela pode ser testada no Nexo do Windows em perfil de teste.'),
-        );
+        final hasData = context.watch<AppProvider>().transactions.isNotEmpty;
+        return Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text('Sincronização', style: theme.textTheme.titleMedium),
+              const SizedBox(height: 8),
+              Text(hasData
+                  ? 'Ative neste aparelho para ele virar a origem dos seus dados. Depois, os outros aparelhos entram e recebem tudo.'
+                  : 'Este aparelho ainda não tem lançamentos: entre no acervo criado pelo celular.'),
+              const SizedBox(height: 12),
+              if (hasData) ...[
+                FilledButton.icon(
+                    onPressed: _busy ? null : _activate,
+                    icon: const Icon(Icons.cloud_upload_outlined),
+                    label: const Text('Ativar com este aparelho como origem')),
+                const SizedBox(height: 8),
+              ],
+              OutlinedButton.icon(
+                  onPressed: _busy ? null : _join,
+                  icon: const Icon(Icons.cloud_download_outlined),
+                  label: const Text('Entrar no acervo do celular')),
+            ]);
       }
       return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
         Text('Sincronização de teste', style: theme.textTheme.titleMedium),
@@ -329,12 +472,21 @@ class _SyncSettingsScreenState extends State<SyncSettingsScreen> {
           'Automática: ao salvar, ao abrir o app e a cada minuto',
           if (last != null)
             'Última sincronização: ${DateFormat('dd/MM HH:mm').format(last)}',
+          if (sync.lastVerified case final verified?)
+            'Conferido com o servidor: ${DateFormat('dd/MM HH:mm').format(verified)}',
         ].join('\n')),
       ),
       OutlinedButton.icon(
           onPressed: sync.running ? null : sync.syncNow,
           icon: const Icon(Icons.sync),
           label: const Text('Sincronizar agora')),
+      if (sync.real) ...[
+        const SizedBox(height: 8),
+        OutlinedButton.icon(
+            onPressed: _busy || sync.running ? null : _verifyServer,
+            icon: const Icon(Icons.fact_check_outlined),
+            label: const Text('Conferir com o servidor')),
+      ],
       for (final conflict in sync.conflicts) ...[
         const SizedBox(height: 12),
         Card(
