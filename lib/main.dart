@@ -24,6 +24,7 @@ import 'services/nexo_security.dart';
 import 'services/financial_reminders.dart';
 import 'widgets/security_gate.dart';
 import 'services/desktop_profile.dart';
+import 'screens/financial_checkup_screen.dart';
 
 final GlobalKey<NavigatorState> rootNavigatorKey = GlobalKey<NavigatorState>();
 
@@ -88,6 +89,7 @@ class ExpensyApp extends StatefulWidget {
 
 class _ExpensyAppState extends State<ExpensyApp> {
   StreamSubscription<String?>? _quickAddSub;
+  StreamSubscription<String>? _reminderSub;
 
   @override
   void initState() {
@@ -99,6 +101,16 @@ class _ExpensyAppState extends State<ExpensyApp> {
         _pushQuickAdd();
       } else if (initialRoute == 'notification_inbox') {
         _pushInbox();
+      }
+    });
+
+    _reminderSub = FinancialReminders.instance.routes.listen((route) {
+      if (route == weeklyReviewRoute) _pushWeeklyReview();
+    });
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      if (await FinancialReminders.instance.listenToTaps() ==
+          weeklyReviewRoute) {
+        _pushWeeklyReview();
       }
     });
 
@@ -120,6 +132,14 @@ class _ExpensyAppState extends State<ExpensyApp> {
     );
   }
 
+  /// The review is generated on screen from local data; the notification
+  /// itself never carries amounts. The security gate still applies.
+  void _pushWeeklyReview() {
+    if (!mounted || !context.read<AppProvider>().settings.onboarded) return;
+    rootNavigatorKey.currentState?.push(
+        MaterialPageRoute(builder: (_) => const FinancialCheckupScreen()));
+  }
+
   void _pushInbox() {
     if (!mounted || !context.read<AppProvider>().settings.onboarded) return;
     rootNavigatorKey.currentState?.push(
@@ -129,6 +149,7 @@ class _ExpensyAppState extends State<ExpensyApp> {
   @override
   void dispose() {
     _quickAddSub?.cancel();
+    _reminderSub?.cancel();
     super.dispose();
   }
 

@@ -86,6 +86,39 @@ class _ReminderSettingsScreenState extends State<ReminderSettingsScreen> {
                         }),
             SwitchListTile(
                 contentPadding: EdgeInsets.zero,
+                title: const Text('Fechamento semanal'),
+                subtitle: Text(
+                    'Domingo às ${prefs!['weeklyTime'] ?? '22:00'}. Abre a revisão dos últimos 7 dias, calculada no aparelho.'),
+                value: prefs!['weekly'] == true,
+                onChanged: busy
+                    ? null
+                    : (v) {
+                        prefs!['weekly'] = v;
+                        save();
+                      }),
+            if (prefs!['weekly'] == true)
+              Align(
+                  alignment: Alignment.centerLeft,
+                  child: TextButton.icon(
+                      icon: const Icon(Icons.schedule_outlined),
+                      label: const Text('Alterar horário'),
+                      onPressed: busy
+                          ? null
+                          : () async {
+                              final parts = '${prefs!['weeklyTime'] ?? '22:00'}'
+                                  .split(':');
+                              final picked = await showTimePicker(
+                                  context: context,
+                                  initialTime: TimeOfDay(
+                                      hour: int.tryParse(parts.first) ?? 22,
+                                      minute: int.tryParse(parts.last) ?? 0));
+                              if (picked == null) return;
+                              prefs!['weeklyTime'] =
+                                  '${picked.hour.toString().padLeft(2, '0')}:${picked.minute.toString().padLeft(2, '0')}';
+                              await save();
+                            })),
+            SwitchListTile(
+                contentPadding: EdgeInsets.zero,
                 title: const Text('Orçamento'),
                 value: app.settings.budgetAlertsEnabled,
                 onChanged: busy
