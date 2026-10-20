@@ -260,6 +260,32 @@ class SupabaseAuth {
     return {'type': type, 'token_hash': token};
   }
 
+  /// Password sign-in for accounts created with a password in the Supabase
+  /// dashboard. Sends no e-mail, so it does not depend on mail limits. The
+  /// password is used for this request only and never stored.
+  Future<SyncSession> signInWithPassword(String email, String password) async {
+    final address = _normalize(email);
+    if (password.length < 8 || password.length > 256) {
+      throw const SyncAuthException('A senha tem pelo menos 8 caracteres.');
+    }
+    final Map<String, dynamic> json;
+    try {
+      json = await _post('/auth/v1/token', {
+        'email': address,
+        'password': password,
+      }, query: const {
+        'grant_type': 'password'
+      });
+    } on _HttpStatus catch (e) {
+      throw SyncAuthException(e.code == 400
+          ? 'E-mail ou senha incorretos, ou a conta ainda não foi confirmada.'
+          : 'Não foi possível entrar (HTTP ${e.code}).');
+    }
+    final session = _parse(json, address);
+    await _save(session);
+    return session;
+  }
+
   /// A valid access token, renewed shortly before expiry. Null means the
   /// person must sign in again; local work is never blocked by this.
   Future<String?> accessToken() async {

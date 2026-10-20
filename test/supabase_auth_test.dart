@@ -183,6 +183,28 @@ void main() {
     expect(requests, isEmpty);
   });
 
+  test('password sign-in sends no e-mail and keeps no password', () async {
+    reply = (_) => http.Response(jsonEncode(sessionJson('access-pw')), 200);
+    final a = auth();
+    await a.signInWithPassword('Pessoa@Exemplo.com', 'senha-ficticia-123');
+    final request = requests.single;
+    expect(request.url.path, '/auth/v1/token');
+    expect(request.url.queryParameters['grant_type'], 'password');
+    expect(jsonDecode(request.body),
+        {'email': 'pessoa@exemplo.com', 'password': 'senha-ficticia-123'});
+    expect(await a.accessToken(), 'access-pw');
+    final stored =
+        await const FlutterSecureStorage().read(key: SupabaseAuth.storageKey);
+    expect(stored, isNot(contains('senha-ficticia')));
+    reply = (_) => http.Response('{"error":"invalid_grant"}', 400);
+    await expectLater(
+        auth().signInWithPassword('pessoa@exemplo.com', 'errada-123'),
+        throwsA(isA<SyncAuthException>()
+            .having((e) => e.message, 'message', contains('incorretos'))));
+    await expectLater(auth().signInWithPassword('pessoa@exemplo.com', '123'),
+        throwsA(isA<SyncAuthException>()));
+  });
+
   test('build without coordinates has no sync configuration', () {
     expect(SyncConfig.current, isNull);
   });

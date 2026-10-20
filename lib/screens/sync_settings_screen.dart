@@ -25,8 +25,9 @@ class _SyncSettingsScreenState extends State<SyncSettingsScreen> {
       widget.auth ?? (_config == null ? null : SupabaseAuth(_config));
   final _email = TextEditingController();
   final _code = TextEditingController();
+  final _password = TextEditingController();
   SyncSession? _session;
-  bool _loading = true, _busy = false, _codeSent = false;
+  bool _loading = true, _busy = false, _codeSent = false, _withPassword = false;
   String? _message;
   List<SyncLabStep>? _lab;
 
@@ -40,6 +41,7 @@ class _SyncSettingsScreenState extends State<SyncSettingsScreen> {
   void dispose() {
     _email.dispose();
     _code.dispose();
+    _password.dispose();
     super.dispose();
   }
 
@@ -83,6 +85,15 @@ class _SyncSettingsScreenState extends State<SyncSettingsScreen> {
         _session = await _auth!.verifyCode(_email.text, _code.text);
         _code.clear();
         _codeSent = false;
+      });
+
+  Future<void> _passwordSignIn() => _run(() async {
+        try {
+          _session =
+              await _auth!.signInWithPassword(_email.text, _password.text);
+        } finally {
+          _password.clear();
+        }
       });
 
   Future<void> _signOut() => _run(() async {
@@ -134,11 +145,27 @@ class _SyncSettingsScreenState extends State<SyncSettingsScreen> {
   }
 
   List<Widget> _signIn() => [
-        Text('Entrar com e-mail',
-            style: Theme.of(context).textTheme.titleMedium),
-        const SizedBox(height: 8),
+        SegmentedButton<bool>(
+          segments: const [
+            ButtonSegment(value: false, label: Text('Código por e-mail')),
+            ButtonSegment(value: true, label: Text('Senha')),
+          ],
+          selected: {_withPassword},
+          onSelectionChanged: _busy || _codeSent
+              ? null
+              : (v) => setState(() {
+                    _withPassword = v.single;
+                    _message = null;
+                  }),
+        ),
+        const SizedBox(height: 12),
+        Text(
+            _withPassword
+                ? 'Use a senha definida para esta conta no Supabase. Não envia e-mail.'
+                : 'Você recebe um código de uso único por e-mail.',
+            style: Theme.of(context).textTheme.bodyMedium),
         const Text(
-            'Você recebe um código de uso único. O PIN do Nexo continua só neste aparelho e não é a senha da conta.'),
+            'O PIN do Nexo continua só neste aparelho e não é a senha da conta.'),
         const SizedBox(height: 12),
         TextField(
           controller: _email,
@@ -148,7 +175,20 @@ class _SyncSettingsScreenState extends State<SyncSettingsScreen> {
           decoration: const InputDecoration(labelText: 'E-mail'),
         ),
         const SizedBox(height: 12),
-        if (!_codeSent)
+        if (_withPassword) ...[
+          TextField(
+            controller: _password,
+            enabled: !_busy,
+            obscureText: true,
+            autofillHints: const [AutofillHints.password],
+            decoration: const InputDecoration(labelText: 'Senha'),
+            onSubmitted: (_) => _passwordSignIn(),
+          ),
+          const SizedBox(height: 12),
+          FilledButton(
+              onPressed: _busy ? null : _passwordSignIn,
+              child: const Text('Entrar')),
+        ] else if (!_codeSent)
           FilledButton(
               onPressed: _busy ? null : _requestCode,
               child: const Text('Enviar código'))
