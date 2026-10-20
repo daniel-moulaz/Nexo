@@ -49,23 +49,21 @@ class TransactionMetadataService {
     return result;
   }
 
+  /// Classification only. Status or balance flags that change money must go
+  /// through AppProvider, which adjusts the account in the same commit.
   Future<void> save(TransactionMetadata metadata) async {
-    final db = await _database;
-    await db.insert(
-      'transaction_metadata',
-      metadata.toMap(),
-      conflictAlgorithm: ConflictAlgorithm.replace,
-    );
+    await DBHelper.operation(
+        'metadata.save',
+        (txn) => txn.insert('transaction_metadata', metadata.toMap(),
+            conflictAlgorithm: ConflictAlgorithm.replace));
     revision.value++;
   }
 
   Future<void> delete(String transactionId) async {
-    final db = await _database;
-    await db.delete(
-      'transaction_metadata',
-      where: 'transaction_id = ?',
-      whereArgs: [transactionId],
-    );
+    await DBHelper.operation(
+        'metadata.delete',
+        (txn) => txn.delete('transaction_metadata',
+            where: 'transaction_id = ?', whereArgs: [transactionId]));
     revision.value++;
   }
 }

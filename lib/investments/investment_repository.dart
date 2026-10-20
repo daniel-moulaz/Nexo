@@ -4,6 +4,7 @@ import '../database/db_helper.dart';
 import 'investment_models.dart';
 import '../models/models.dart';
 import '../services/transaction_metadata_service.dart';
+import '../sync/ledger_capture.dart';
 
 class InvestmentRepository {
   static final revision = ValueNotifier<int>(0);
@@ -57,7 +58,7 @@ class InvestmentRepository {
       throw const FormatException('Comece com uma posição inicial ou compra.');
     }
     final db = await database();
-    await db.transaction((tx) async {
+    await ledgerTransaction(db, 'investment.create', (tx) async {
       await tx.insert('investments', item.toMap());
       await tx.insert('investment_operations', opening.toMap());
       await _cash(tx, opening, item.name);
@@ -70,7 +71,7 @@ class InvestmentRepository {
     if (op.kind == 'opening')
       throw const FormatException('Posição inicial já cadastrada.');
     final db = await database();
-    await db.transaction((tx) async {
+    await ledgerTransaction(db, 'investment.record', (tx) async {
       final rows = await tx
           .query('investments', where: 'id=?', whereArgs: [op.investmentId]);
       if (rows.isEmpty)
@@ -98,7 +99,7 @@ class InvestmentRepository {
 
   Future<void> removeOperation(String id) async {
     final db = await database();
-    await db.transaction((tx) async {
+    await ledgerTransaction(db, 'investment.remove_operation', (tx) async {
       final rows = await tx
           .query('investment_operations', where: 'id=?', whereArgs: [id]);
       if (rows.isEmpty) return;
@@ -236,7 +237,7 @@ class InvestmentRepository {
   /// the user confirms that this cash effect has not already been recorded.
   Future<void> linkCash(String operationId, String accountId) async {
     final db = await database();
-    await db.transaction((tx) async {
+    await ledgerTransaction(db, 'investment.link_cash', (tx) async {
       final rows = await tx.query('investment_operations',
           where: 'id=?', whereArgs: [operationId]);
       if (rows.length != 1)
@@ -260,7 +261,7 @@ class InvestmentRepository {
 
   Future<void> archive(String id, {bool archived = true}) async {
     final db = await database();
-    await db.transaction((tx) async {
+    await ledgerTransaction(db, 'investment.archive', (tx) async {
       final rows =
           await tx.query('investments', where: 'id=?', whereArgs: [id]);
       if (rows.isEmpty)
@@ -286,7 +287,9 @@ class InvestmentRepository {
       throw const FormatException('Cotação inválida.');
     }
     final db = await database();
-    await db.transaction((tx) async {
+    // A market quote is fetched by each device; only a price typed by the
+    // person is a decision worth sending to another device.
+    await ledgerTransaction(db, 'investment.price', (tx) async {
       final rows =
           await tx.query('investments', where: 'id=?', whereArgs: [id]);
       if (rows.isEmpty) return;
@@ -301,7 +304,7 @@ class InvestmentRepository {
           },
           where: 'id=?',
           whereArgs: [id]);
-    });
+    }, scope: source == 'brapi' ? LedgerScope.derived : LedgerScope.user);
     revision.value++;
   }
 }

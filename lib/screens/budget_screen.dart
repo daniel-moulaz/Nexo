@@ -239,9 +239,15 @@ class _GoalCard extends StatelessWidget {
         },
         onLongPress: () async {
           if (await showDeleteConfirm(context, goal.name) && context.mounted) {
-            final undo = await context
-                .read<AppProvider>()
-                .deleteSavingsGoalWithUndo(goal.id);
+            final VoidCallback undo;
+            try {
+              undo = await context
+                  .read<AppProvider>()
+                  .deleteSavingsGoalWithUndo(goal.id);
+            } on FormatException catch (e) {
+              if (context.mounted) showAppSnackbar(context, e.message);
+              return;
+            }
             if (context.mounted) {
               showAppSnackbar(
                 context,
