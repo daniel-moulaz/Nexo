@@ -31,7 +31,7 @@ Cada etapa só começa quando a anterior passou no seu critério de saída. "Cla
 | # | Situação |
 |---|---|
 | 1 Login | Código pronto e testado (8 + 2 testes); tela Mais → Sincronizar dispositivos; teste do servidor com dados fictícios. **Bloqueado no envio de e-mail**: o Supabase gratuito só permite editar o e-mail com SMTP próprio e limita a ~2 envios/hora. Contorno implementado: colar o link do e-mail sem abrir. Próximo passo do usuário: configurar SMTP (Resend recomendado) ou aguardar o limite e testar no Windows `--test-profile` |
-| 2–3 Sync | Etapa 2 **validada no Windows com dois perfis de teste**: sincronização automática (conta e despesa foram de um perfil ao outro sozinhas, saldos idênticos). Tela de status/conflitos pronta. Falta: conflito/offline pela interface, celular, e a etapa 3 (dados reais, decisão do usuário) |
+| 2–3 Sync | Etapa 2 **validada no Windows com dois perfis de teste**: sincronização automática (conta e despesa foram de um perfil ao outro sozinhas, saldos idênticos). Tela de status/conflitos pronta. Roteiro automático `tool/sync_e2e.dart` contra o Supabase real: 11/11 (conflitos, offline simulado, resposta perdida, transferência, convergência). Falta: celular, e a etapa 3 (dados reais, decisão do usuário) |
 | 4 Claude consulta | Servidor MCP pronto e testado (paridade exata com o app), não publicado; depende das etapas 1–3 |
 | 6 Pluggy Sandbox | Cliente e normalizador prontos e testados; faltam credenciais do usuário, tabela de sugestões, webhook e integração na caixa de revisão |
 | Extra | Exclusão de conta nunca apaga histórico em cascata; fixture de paridade determinístico |
