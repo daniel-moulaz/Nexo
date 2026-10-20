@@ -16,7 +16,11 @@ void main() {
   });
 
   setUp(() async {
-    await DBHelper.importAll({'version': DBHelper.schemaVersion});
+    final empty = await DBHelper.exportAll();
+    for (final key in empty.keys.toList()) {
+      if (empty[key] is List) empty[key] = <Map<String, dynamic>>[];
+    }
+    await DBHelper.importAll(empty);
   });
 
   Map<String, dynamic> suggestion(String id, DateTime occurredAt) => {

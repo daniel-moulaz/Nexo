@@ -258,7 +258,11 @@ void main() {
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
         .setMockMethodCallHandler(
             const MethodChannel('home_widget'), (call) async => true);
-    await DBHelper.importAll({'version': DBHelper.schemaVersion});
+    final empty = await DBHelper.exportAll();
+    for (final key in empty.keys.toList()) {
+      if (empty[key] is List) empty[key] = <Map<String, dynamic>>[];
+    }
+    await DBHelper.importAll(empty);
     app = AppProvider();
     app.settings.budgetAlertsEnabled = false;
     for (final a in [
