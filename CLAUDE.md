@@ -14,8 +14,9 @@ Estado de referência em 20/10/2026 (fim do dia):
 - Versão do código: **1.6.7+28**. Instalada Android: 1.6.6+27 em 20/10 (verificar com `adb` antes de atualizar). Schema SQLite: **25**.
 - Identidade Android **`com.ma.expensy`**, banco **`expensy.db`**, pacote Dart **`expensy`** e certificado existente são invariantes.
 - Remoto de publicação: **`nexo` → `daniel-moulaz/Nexo`**. `origin` ainda é Expensy; não trocar remotos nem fazer push no destino errado.
+- Plano e andamento: `docs/NEXO_PLANO_SEQUENCIA_2026_10.md` (login por e-mail pronto, bloqueado no SMTP do Supabase; MCP e Pluggy implementados e testados, não publicados).
 - **Não há sincronização de produção.** Motor `LedgerSync` e protocolo 2 existem e só rodam em testes sintéticos; a migration v2 não foi aplicada no projeto remoto. Não habilitar upload real por inferência.
-- Última validação: worktree limpa **324 testes**, análise limpa, SQL do laboratório 29/29. Testes Kotlin/instrumentados não foram reexecutados nesta rodada. Isso não significa homologação manual completa de Windows ou sync.
+- Última validação: **341 testes** Flutter, SQL do laboratório 36/36, MCP 18/18, Pluggy 13/13, análise limpa. Testes Kotlin/instrumentados não foram reexecutados nesta rodada. Isso não significa homologação manual completa de Windows ou sync.
 
 Regras permanentes:
 
