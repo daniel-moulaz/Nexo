@@ -91,3 +91,8 @@ Matriz ainda **não executada**, pois não existe motor de sync:
 | Criptografia e recuperação | Vetores da biblioteca, rotação, perda de chave e revogação |
 
 Próximo lote pode implementar um servidor de teste local e dois SQLite sintéticos antes de qualquer credencial externa. Para backend real será necessário: autorização de serviço/plano/região, projeto sob controle do usuário, configuração de Auth e e-mail, política de recuperação/criptografia e consentimento separado para subir o acervo. Nenhuma senha bancária será necessária.
+
+
+## Lote Windows nativo — 30/09/2026
+
+A versão 1.5.1+17 usa `DatabasePlatform` para configurar SQLite FFI em `%LOCALAPPDATA%/Nexo/expensy.db`. Schema permanece 23, com repositório e regras contábeis compartilhados. Nenhum backend, upload, cópia compartilhada de banco ou motor de sync foi habilitado. O perfil de QA separa banco, preferências e chave de proteção. Homologação Windows local precede qualquer implementação remota; ver [validação Windows](NEXO_WINDOWS_VALIDATION.md).

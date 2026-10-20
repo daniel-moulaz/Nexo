@@ -98,3 +98,8 @@ Builds finais concluídos em 30/09/2026:
 - `6566fdb` — painel analítico, Análises, automação diagnosticável, responsividade e testes.
 - `5131618` — correção da revisão em celular compacto e teste completo de confirmação.
 - Documentação desta rodada em commit separado. Sem push, merge ou alteração direta da main; arquivos locais gerados preexistentes permanecem fora dos commits.
+
+
+## Continuação: Windows nativo 1.5.1+17
+
+Branch `feat/nexo-windows-native`, baseada na aprovação Android 1.5.0+16. Runner x64, SQLite FFI local, adaptadores de plataforma, tabela e atalhos desktop, Home com evolução semestral e salvamento nativo implementados. Schema 23 preservado. A homologação encontrou e corrigiu restore destrutivo de backup incompleto e ausência de foco inicial para atalhos na edição. Ensaio Release com SQLite e secure storage reais validou contabilidade, backup/restore, exportação e PIN entre processos. A interação manual permanece parcial; não declarar o Windows integralmente homologado. Resultados, builds e pendências em [NEXO_DESKTOP.md](NEXO_DESKTOP.md) e [NEXO_WINDOWS_VALIDATION.md](NEXO_WINDOWS_VALIDATION.md).
