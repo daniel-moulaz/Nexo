@@ -6,7 +6,9 @@ import '../database/db_helper.dart';
 
 class NotificationInbox {
   static const channel = MethodChannel('com.ma.expensy/automation');
-  static bool _syncing = false;
+  static Future<void>? _syncing;
+  static bool _syncAgain = false;
+  static const events = EventChannel('com.ma.expensy/automation_events');
   static const knownApps = {
     'com.nu.production': 'Nubank',
     'com.mercadopago.wallet': 'Mercado Pago',
@@ -22,13 +24,17 @@ class NotificationInbox {
         reference.subtract(const Duration(days: 90)).millisecondsSinceEpoch;
     await db.transaction((txn) async {
       for (final raw in rows) {
-        final row = Map<String, dynamic>.from(raw as Map);
+        if (raw is! Map || raw.keys.any((key) => key is! String)) continue;
+        final row = Map<String, dynamic>.from(raw);
         if (row['id'] is! String ||
             row['app_id'] is! String ||
             row['description'] is! String ||
             row['occurred_at'] is! int ||
             row['amount_cents'] is! int) continue;
-        if ((row['amount_cents'] as int) <= 0 ||
+        if ((row['id'] as String).trim().isEmpty ||
+            (row['app_id'] as String).trim().isEmpty ||
+            (row['description'] as String).trim().isEmpty ||
+            (row['amount_cents'] as int) <= 0 ||
             (row['amount_cents'] as int) > 100000000000 ||
             (row['occurred_at'] as int) < cutoff ||
             (row['occurred_at'] as int) >
@@ -69,17 +75,37 @@ class NotificationInbox {
     });
   }
 
-  static Future<void> sync() async {
-    if (!PlatformCapabilities.bankNotifications || _syncing) return;
-    _syncing = true;
+  static Future<void> sync() {
+    if (!PlatformCapabilities.bankNotifications) return Future.value();
+    if (_syncing != null) {
+      _syncAgain = true;
+      return _syncing!;
+    }
+    return _syncing = _drain().whenComplete(() => _syncing = null);
+  }
+
+  static Future<void> _drain() async {
+    do {
+      _syncAgain = false;
+      await _sync();
+    } while (_syncAgain);
+  }
+
+  static Future<void> _sync() async {
     try {
       final text = await channel.invokeMethod<String>('queue');
       final rows = text == null ? <dynamic>[] : jsonDecode(text) as List;
       await ingest(rows);
-      await channel
-          .invokeMethod('ack', {'ids': rows.map((r) => r['id']).toList()});
-    } finally {
-      _syncing = false;
+      await channel.invokeMethod('ack', {
+        'ids': rows
+            .whereType<Map>()
+            .map((r) => r['id'])
+            .whereType<String>()
+            .toList()
+      });
+    } on PlatformException {
+      // Leave the native queue intact; the next sync can safely replay it.
+      rethrow;
     }
   }
 

@@ -34,6 +34,7 @@ class _AutomationSettingsScreenState extends State<AutomationSettingsScreen>
     'group_summary': 'Resumo agrupado ignorado',
     'old': 'Notificação antiga ou horário inválido',
     'queue_error': 'Não foi possível guardar a sugestão com segurança',
+    'listener_unavailable': 'Listener indisponível; tente reconectar',
   };
 
   Future<void> notifyReview(bool enabled) async {
@@ -171,6 +172,26 @@ class _AutomationSettingsScreenState extends State<AutomationSettingsScreen>
                       title: const Text('Automação'),
                       subtitle: Text(
                           status['enabled'] == true ? 'Ativa' : 'Desativada')),
+                  ListTile(
+                      title: const Text('Conexão com o Android'),
+                      subtitle: Text(status['connected'] == true
+                          ? 'Listener conectado'
+                          : 'Listener desconectado')),
+                  TextButton(
+                      onPressed: busy || status['access'] != true
+                          ? null
+                          : () async {
+                              try {
+                                await NotificationInbox.channel
+                                    .invokeMethod('recover');
+                                await load();
+                              } catch (_) {
+                                if (mounted)
+                                  setState(() => error =
+                                      'Não foi possível reconectar. Confira o acesso no Android.');
+                              }
+                            },
+                      child: const Text('Reconectar e verificar notificações')),
                   ListTile(
                       title: const Text('Apps permitidos'),
                       subtitle: Text(selected.isEmpty

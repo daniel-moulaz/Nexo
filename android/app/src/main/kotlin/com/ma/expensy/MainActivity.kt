@@ -43,12 +43,22 @@ class MainActivity : FlutterFragmentActivity() {
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
+        EventChannel(flutterEngine.dartExecutor.binaryMessenger, "com.ma.expensy/automation_events")
+            .setStreamHandler(object : EventChannel.StreamHandler {
+                override fun onListen(arguments: Any?, events: EventChannel.EventSink?) {
+                    FinancialNotificationListener.onSuggestion = { events?.success(null) }
+                }
+                override fun onCancel(arguments: Any?) {
+                    FinancialNotificationListener.onSuggestion = null
+                }
+            })
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "com.ma.expensy/automation")
             .setMethodCallHandler { call, result ->
                 val p = getSharedPreferences("nexo_automation", 0)
                 try {
                     when (call.method) {
                         "status" -> result.success(mapOf("enabled" to p.getBoolean("enabled", false),
+                            "connected" to FinancialNotificationListener.connected,
                             "apps" to p.getStringSet("apps", emptySet())!!.toList(),
                             "access" to if (Build.VERSION.SDK_INT >= 27) (getSystemService(NOTIFICATION_SERVICE) as NotificationManager)
                                 .isNotificationListenerAccessGranted(ComponentName(this, FinancialNotificationListener::class.java))
@@ -62,10 +72,12 @@ class MainActivity : FlutterFragmentActivity() {
                             "notificationsAllowed" to (Build.VERSION.SDK_INT < 24 || (getSystemService(NOTIFICATION_SERVICE) as NotificationManager).areNotificationsEnabled()),
                             "recentsSupported" to (Build.VERSION.SDK_INT >= 33)))
                         "configure" -> {
-                            p.edit().putBoolean("enabled", call.argument<Boolean>("enabled") == true)
-                                .putStringSet("apps", call.argument<List<String>>("apps")!!.toSet()).commit()
+                            check(p.edit().putBoolean("enabled", call.argument<Boolean>("enabled") == true)
+                                .putStringSet("apps", call.argument<List<String>>("apps")!!.toSet()).commit())
+                            if (call.argument<Boolean>("enabled") == true) FinancialNotificationListener.recover(this)
                             result.success(null)
                         }
+                        "recover" -> { FinancialNotificationListener.recover(this); result.success(null) }
                         "settings" -> { startActivity(Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS)); result.success(null) }
                         "notifyReview" -> { p.edit().putBoolean("notify_review", call.argument<Boolean>("enabled") == true).commit(); result.success(null) }
                         "queue" -> result.success(FinancialInboxQueue.read(this).toString())
