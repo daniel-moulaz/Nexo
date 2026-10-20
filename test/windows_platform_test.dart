@@ -6,6 +6,7 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:excel/excel.dart';
+import 'package:file_picker/file_picker.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:expensy/database/database_platform.dart';
 import 'package:expensy/database/db_helper.dart';
@@ -213,6 +214,27 @@ void main() {
             .balance,
         closeTo(967.1, .00001));
   });
+  test('Exports never label income or neutral movements as consumption',
+      () async {
+    await app.addTransaction(tx('salary', type: 'income', amount: 1500));
+    await app.addTransaction(tx('market', amount: 100));
+    await app.addTransaction(tx('pending', amount: 80),
+        metadata: const TransactionMetadata(
+            transactionId: 'pending', status: 'pending'));
+    await app.addTransfer(fromId: 'bank', toId: 'cash', fromAmount: 200);
+    final book = await FinanceExportService.buildWorkbook(app,
+        from: DateTime(2000), to: DateTime(2100));
+    final rows = Excel.decodeBytes(book.encode()!)['Transações'].rows.skip(1);
+    for (final row in rows) {
+      final type = row[2]!.value.toString();
+      expect(row[11]!.value.toString(), type == 'Despesa' ? 'Sim' : 'Não');
+    }
+    final csv = await FinanceExportService.buildCsv(app,
+        from: DateTime(2000), to: DateTime(2100));
+    expect(csv.split('\n').singleWhere((row) => row.contains('"salary"')),
+        contains('"Normal","Não"'));
+    expect(app.accountById('bank')!.balance, 2200);
+  });
   test('Replacing export is complete, and missing/locked files fail safely',
       () async {
     final file = File('${directory.path}/report.csv');
@@ -234,6 +256,47 @@ void main() {
       await handle.close();
     }
     expect(await file.readAsString(), 'AB');
+  });
+  test('Malformed backup cannot replace the Windows ledger', () async {
+    await app.addTransaction(tx('must-survive'));
+    final before = await DBHelper.exportAll();
+    for (final payload in [
+      {'version': 23},
+      {
+        'settings': {'currency': 'BRL'}
+      },
+      {...before, 'version': 999},
+      {
+        ...before,
+        'settings': {'currency': 123}
+      },
+      {
+        ...before,
+        'transactions': [...before['transactions'], ...before['transactions']]
+      },
+    ]) {
+      FilePicker.platform = _BackupPicker(jsonEncode(payload));
+      await expectLater(app.restoreBackup(), throwsA(isA<FormatException>()));
+      expect(await DBHelper.exportAll(), before);
+      expect(app.accountById('bank')!.balance, 967.1);
+    }
+  });
+  test('Version 22 backup still restores without the newer suggestions table',
+      () async {
+    await app.addTransaction(tx('legacy-kept'));
+    final legacy = await DBHelper.exportAll();
+    legacy['version'] = 22;
+    legacy.remove('notification_suggestions');
+    await app.addTransaction(tx('after-backup'));
+    await DBHelper.importAll(legacy);
+    await DBHelper.close();
+    expect((await DBHelper.getTransactions()).single.id, 'legacy-kept');
+    expect(
+        (await DBHelper.getAccounts())
+            .firstWhere((a) => a.id == 'bank')
+            .balance,
+        967.1);
+    expect(await (await DBHelper.database).getVersion(), DBHelper.schemaVersion);
   });
   test('Android integrations are safe no-ops on Windows without native mocks',
       () async {
@@ -285,4 +348,28 @@ void main() {
     expect(ptDate(DateTime(2026, 9, 30, 15, 20)), '30/09/2026');
     expect(DateTime.parse(DateTime.now().toIso8601String()).isUtc, false);
   });
+}
+
+class _BackupPicker extends FilePicker {
+  final String text;
+  _BackupPicker(this.text);
+  @override
+  Future<FilePickerResult?> pickFiles({
+    String? dialogTitle,
+    String? initialDirectory,
+    FileType type = FileType.any,
+    List<String>? allowedExtensions,
+    Function(FilePickerStatus)? onFileLoading,
+    bool allowCompression = true,
+    int compressionQuality = 30,
+    bool allowMultiple = false,
+    bool withData = false,
+    bool withReadStream = false,
+    bool lockParentWindow = false,
+    bool readSequential = false,
+  }) async {
+    final bytes = Uint8List.fromList(utf8.encode(text));
+    return FilePickerResult(
+        [PlatformFile(name: 'test.json', size: bytes.length, bytes: bytes)]);
+  }
 }
