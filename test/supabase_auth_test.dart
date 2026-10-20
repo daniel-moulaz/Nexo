@@ -147,6 +147,27 @@ void main() {
     expect(await a.accessToken(), 'access-link');
   });
 
+  test('Gmail and Outlook redirect wrappers are unwrapped, then checked',
+      () async {
+    reply =
+        (_) => http.Response(jsonEncode(sessionJson('access-wrapped')), 200);
+    final inner = Uri.encodeComponent(
+        'https://synthetic.supabase.co/auth/v1/verify?token=hash9&type=magiclink&redirect_to=http://localhost:3000');
+    await auth().verifyCode('pessoa@exemplo.com',
+        'https://www.google.com/url?q=$inner&source=gmail&ust=1&usg=x');
+    expect(jsonDecode(requests.last.body)['token_hash'], 'hash9');
+    await auth().verifyCode('pessoa@exemplo.com',
+        'https://nam12.safelinks.protection.outlook.com/?url=$inner&data=x');
+    expect(jsonDecode(requests.last.body)['token_hash'], 'hash9');
+    final evil = Uri.encodeComponent(
+        'https://attacker.example/auth/v1/verify?token=x&type=magiclink');
+    await expectLater(
+        auth().verifyCode(
+            'pessoa@exemplo.com', 'https://www.google.com/url?q=$evil'),
+        throwsA(isA<SyncAuthException>()));
+    expect(requests, hasLength(2));
+  });
+
   test('links from other hosts, paths or types are refused locally', () async {
     final a = auth();
     for (final link in [
