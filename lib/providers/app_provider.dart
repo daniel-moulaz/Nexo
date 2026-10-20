@@ -24,6 +24,7 @@ import '../l10n/app_localizations.dart';
 import 'package:home_widget/home_widget.dart';
 import '../services/credit_reminder_service.dart';
 import '../services/loan_reminder_service.dart';
+import '../services/loan_ledger.dart';
 import '../theme/app_theme.dart';
 
 class AppSettings {
@@ -1502,10 +1503,7 @@ class AppProvider extends ChangeNotifier {
 
   // ── Loans ────────────────────────────────────────────────────────────
   Future<void> addLoan(Loan l) async {
-    await DBHelper.insertLoan(l);
-    if (l.transferAccountId != null) {
-      await _updateAccountBalance(l.transferAccountId!, l.principal);
-    }
+    await LoanLedger(await DBHelper.database).create(l);
     loans = await DBHelper.getLoans();
     accounts = await DBHelper.getAccounts();
     notifyListeners();
@@ -1513,19 +1511,8 @@ class AppProvider extends ChangeNotifier {
   }
 
   Future<void> updateLoan(Loan l) async {
+    await LoanLedger(await DBHelper.database).update(l);
     await _loanNotif.cancelReminder(l.id);
-    final oldL = loans.firstWhere((x) => x.id == l.id);
-
-    // Reverse old principal transfer if any
-    if (oldL.transferAccountId != null) {
-      await _updateAccountBalance(oldL.transferAccountId!, -oldL.principal);
-    }
-    // Apply new principal transfer if any
-    if (l.transferAccountId != null) {
-      await _updateAccountBalance(l.transferAccountId!, l.principal);
-    }
-
-    await DBHelper.updateLoan(l);
     loans = await DBHelper.getLoans();
     accounts = await DBHelper.getAccounts();
     notifyListeners();
@@ -1533,20 +1520,8 @@ class AppProvider extends ChangeNotifier {
   }
 
   Future<void> deleteLoan(String id) async {
+    await LoanLedger(await DBHelper.database).remove(id);
     await _loanNotif.cancelReminder(id);
-    final l = loans.firstWhere((x) => x.id == id);
-
-    // Reverse principal transfer if any
-    if (l.transferAccountId != null) {
-      await _updateAccountBalance(l.transferAccountId!, -l.principal);
-    }
-
-    for (final p in loanPaymentsFor(id)) {
-      if (p.accountId != null) {
-        await _updateAccountBalance(p.accountId!, p.amount); // reverse debit
-      }
-    }
-    await DBHelper.deleteLoan(id);
     loans = await DBHelper.getLoans();
     loanPayments = await DBHelper.getAllLoanPayments();
     accounts = await DBHelper.getAccounts();
@@ -1554,20 +1529,16 @@ class AppProvider extends ChangeNotifier {
   }
 
   Future<VoidCallback> deleteLoanWithUndo(String id) async {
-    final l = loans.firstWhere((x) => x.id == id);
-    final payments = loanPaymentsFor(id);
-    await deleteLoan(id);
+    final removed = await LoanLedger(await DBHelper.database).remove(id);
+    final l = removed.loan;
+    await _loanNotif.cancelReminder(id);
+    loans = await DBHelper.getLoans();
+    loanPayments = await DBHelper.getAllLoanPayments();
+    accounts = await DBHelper.getAccounts();
+    notifyListeners();
     return () async {
-      await DBHelper.insertLoan(l);
-      if (l.transferAccountId != null) {
-        await _updateAccountBalance(l.transferAccountId!, l.principal);
-      }
-      for (final p in payments) {
-        await DBHelper.insertLoanPayment(p);
-        if (p.accountId != null) {
-          await _updateAccountBalance(p.accountId!, -p.amount);
-        }
-      }
+      await LoanLedger(await DBHelper.database)
+          .create(l, payments: removed.payments);
       loans = await DBHelper.getLoans();
       loanPayments = await DBHelper.getAllLoanPayments();
       accounts = await DBHelper.getAccounts();
@@ -1590,19 +1561,14 @@ class AppProvider extends ChangeNotifier {
       accountId: useAccount,
       notes: notes,
     );
-    await DBHelper.insertLoanPayment(payment);
-    if (useAccount != null) {
-      await _updateAccountBalance(useAccount, -payAmount); // expense-like debit
+    if (!payAmount.isFinite || payAmount <= 0) {
+      throw const FormatException('Informe um valor de pagamento positivo.');
     }
+    await LoanLedger(await DBHelper.database).pay(payment);
     loanPayments = await DBHelper.getAllLoanPayments();
     accounts = await DBHelper.getAccounts();
-
-    // Auto-settle when the loan is fully paid off
-    final totalPaid = loanTotalPaid(l) + payAmount;
-    if (totalPaid >= l.totalPayable && !l.isSettled) {
-      final settled = l.copyWith(isSettled: true);
-      await DBHelper.updateLoan(settled);
-      loans = await DBHelper.getLoans();
+    loans = await DBHelper.getLoans();
+    if (loans.firstWhere((item) => item.id == l.id).isSettled) {
       await _loanNotif.cancelReminder(l.id);
     }
     notifyListeners();
@@ -1618,17 +1584,14 @@ class AppProvider extends ChangeNotifier {
       accountId: null,
       notes: notes,
     );
-    await DBHelper.insertLoanPayment(payment);
+    await LoanLedger(await DBHelper.database).pay(payment);
     loanPayments = await DBHelper.getAllLoanPayments();
     notifyListeners();
   }
 
   Future<void> deleteLoanPayment(String id) async {
-    final p = loanPayments.firstWhere((x) => x.id == id);
-    if (p.accountId != null) {
-      await _updateAccountBalance(p.accountId!, p.amount); // reverse the debit
-    }
-    await DBHelper.deleteLoanPayment(id);
+    await LoanLedger(await DBHelper.database).removePayment(id);
+    loans = await DBHelper.getLoans();
     loanPayments = await DBHelper.getAllLoanPayments();
     accounts = await DBHelper.getAccounts();
     notifyListeners();
@@ -1638,10 +1601,8 @@ class AppProvider extends ChangeNotifier {
     final p = loanPayments.firstWhere((x) => x.id == id);
     await deleteLoanPayment(id);
     return () async {
-      await DBHelper.insertLoanPayment(p);
-      if (p.accountId != null) {
-        await _updateAccountBalance(p.accountId!, -p.amount);
-      }
+      await LoanLedger(await DBHelper.database).pay(p);
+      loans = await DBHelper.getLoans();
       loanPayments = await DBHelper.getAllLoanPayments();
       accounts = await DBHelper.getAccounts();
       notifyListeners();
