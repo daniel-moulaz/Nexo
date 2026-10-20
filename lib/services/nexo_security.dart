@@ -38,7 +38,7 @@ class NexoSecurity extends ChangeNotifier {
   static final instance = NexoSecurity();
   static const channel = MethodChannel('com.ma.expensy/automation');
   static String get storageKey => DesktopProfile.isTest
-      ? 'nexo_windows_qa_security_v1'
+      ? 'nexo_windows_qa${DesktopProfile.qaSuffix}_security_v1'
       : 'nexo_security_v1';
   final FlutterSecureStorage storage;
   final LocalAuthentication auth;
