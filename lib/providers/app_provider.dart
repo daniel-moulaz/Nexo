@@ -628,6 +628,7 @@ class AppProvider extends ChangeNotifier {
     await db.transaction((txn) async {
       final previous =
           await txn.query('accounts', where: 'id = ?', whereArgs: [a.id]);
+      await DBHelper.validateInvestmentCashAccount(txn, a);
       final oldBalance = previous.isEmpty
           ? 0.0
           : (previous.first['balance'] as num).toDouble();
@@ -728,6 +729,16 @@ class AppProvider extends ChangeNotifier {
 
   Map<String, TransactionMetadata> transactionMetadata = {};
 
+  Future<void> refreshInvestmentCash() async {
+    accounts = await DBHelper.getAccounts();
+    transactions = await DBHelper.getTransactions();
+    transactionMetadata = await TransactionMetadataService.instance
+        .getForMany(transactions.map((t) => t.id));
+    TransactionMetadataService.instance.revision.value++;
+    notifyListeners();
+    await updateHomeWidgets();
+  }
+
   Future<void> _reloadLedger() async {
     transactions = await DBHelper.getTransactions();
     accounts = await DBHelper.getAccounts();
@@ -807,6 +818,11 @@ class AppProvider extends ChangeNotifier {
       AppTransaction updated, AppTransaction original,
       {TransactionMetadata? metadata}) async {
     final old = await TransactionMetadataService.instance.getFor(original.id);
+    if (original.id.startsWith('investment:') ||
+        old.source.startsWith('investment:')) {
+      throw const FormatException(
+          'Revise esta movimentação na aba Investir para manter conta e carteira consistentes.');
+    }
     if (old.source.startsWith('transfer:'))
       throw StateError(
           'Para alterar uma transferência, exclua o par e registre novamente.');
@@ -847,6 +863,10 @@ class AppProvider extends ChangeNotifier {
   }
 
   Future<void> deleteTransaction(String id) async {
+    if (id.startsWith('investment:')) {
+      throw const FormatException(
+          'Exclua a operação na aba Investir. O valor da conta será estornado junto.');
+    }
     final meta = await TransactionMetadataService.instance.getFor(id);
     final db = await DBHelper.database;
     final ids = meta.source.startsWith('transfer:')

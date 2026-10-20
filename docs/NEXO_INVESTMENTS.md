@@ -1,5 +1,7 @@
 # Carteira de investimentos — 1.6.0+21
 
+> Atualização 1.6.5+26: a carteira agora permite movimentar explicitamente uma conta em aportes, resgates e proventos, além de retirar posições encerradas da lista. Consulte [Investimentos e saldo disponível](NEXO_INVESTMENT_CASH_2026_10.md). As limitações abaixo descrevem a implementação original.
+
 Implementação em 19/10/2026, branch `codex/nexo-investments`.
 
 ## Produto e limites contábeis

@@ -1,4 +1,4 @@
-/// Portfolio tracking is separate from the cash ledger. All persisted money is
+/// Operations may explicitly link to cash. All persisted portfolio money is
 /// integer cents; quantities and unit prices use six decimal places.
 const investmentScale = 1000000;
 const investmentClasses = [
@@ -30,6 +30,7 @@ class Investment {
   final String id, name, assetClass, ticker, institution, priceSource;
   final int priceMicros;
   final DateTime priceAt;
+  final bool archived;
   const Investment(
       {required this.id,
       required this.name,
@@ -38,7 +39,8 @@ class Investment {
       this.institution = '',
       required this.priceMicros,
       required this.priceAt,
-      this.priceSource = 'manual'});
+      this.priceSource = 'manual',
+      this.archived = false});
   bool get canQuote =>
       ['Ações', 'FIIs', 'ETFs'].contains(assetClass) && ticker.isNotEmpty;
   Map<String, Object?> toMap() => {
@@ -49,7 +51,8 @@ class Investment {
         'institution': institution,
         'price_micros': priceMicros,
         'price_at': priceAt.toUtc().toIso8601String(),
-        'price_source': priceSource
+        'price_source': priceSource,
+        'archived': archived ? 1 : 0
       };
   factory Investment.fromMap(Map<String, dynamic> m) {
     final item = Investment(
@@ -60,7 +63,8 @@ class Investment {
         institution: m['institution'] as String,
         priceMicros: m['price_micros'] as int,
         priceAt: DateTime.parse(m['price_at'] as String),
-        priceSource: m['price_source'] as String);
+        priceSource: m['price_source'] as String,
+        archived: (m['archived'] as int? ?? 0) == 1);
     item.validate();
     return item;
   }
@@ -83,6 +87,7 @@ class InvestmentOperation {
   final String id, investmentId, kind;
   final int quantity, cents;
   final DateTime date, createdAt;
+  final String? cashAccountId;
   const InvestmentOperation(
       {required this.id,
       required this.investmentId,
@@ -90,7 +95,8 @@ class InvestmentOperation {
       required this.quantity,
       required this.cents,
       required this.date,
-      required this.createdAt});
+      required this.createdAt,
+      this.cashAccountId});
   String get label => switch (kind) {
         'buy' => 'Compra / aporte',
         'sell' => 'Venda / resgate',
@@ -104,7 +110,8 @@ class InvestmentOperation {
         'quantity': quantity,
         'cents': cents,
         'date': date.toUtc().toIso8601String(),
-        'created_at': createdAt.toUtc().toIso8601String()
+        'created_at': createdAt.toUtc().toIso8601String(),
+        'cash_account_id': cashAccountId
       };
   factory InvestmentOperation.fromMap(Map<String, dynamic> m) {
     final op = InvestmentOperation(
@@ -114,7 +121,8 @@ class InvestmentOperation {
         quantity: m['quantity'] as int,
         cents: m['cents'] as int,
         date: DateTime.parse(m['date'] as String),
-        createdAt: DateTime.parse(m['created_at'] as String));
+        createdAt: DateTime.parse(m['created_at'] as String),
+        cashAccountId: m['cash_account_id'] as String?);
     op.validate();
     return op;
   }
@@ -126,6 +134,7 @@ class InvestmentOperation {
         cents > 100000000000000 ||
         quantity < 0 ||
         quantity > 1000000000000 ||
+        (cashAccountId != null && (cashAccountId!.isEmpty || cents == 0)) ||
         (kind == 'income' ? quantity != 0 || cents == 0 : quantity == 0)) {
       throw const FormatException('Operação de investimento inválida.');
     }

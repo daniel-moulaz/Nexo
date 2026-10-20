@@ -2,6 +2,8 @@ import 'package:flutter/foundation.dart';
 import 'package:sqflite/sqflite.dart';
 import '../database/db_helper.dart';
 import 'investment_models.dart';
+import '../models/models.dart';
+import '../services/transaction_metadata_service.dart';
 
 class InvestmentRepository {
   static final revision = ValueNotifier<int>(0);
@@ -14,13 +16,14 @@ class InvestmentRepository {
       id TEXT PRIMARY KEY, name TEXT NOT NULL, asset_class TEXT NOT NULL,
       ticker TEXT NOT NULL, institution TEXT NOT NULL,
       price_micros INTEGER NOT NULL CHECK(price_micros >= 0),
-      price_at TEXT NOT NULL, price_source TEXT NOT NULL)''');
+      price_at TEXT NOT NULL, price_source TEXT NOT NULL,
+      archived INTEGER NOT NULL DEFAULT 0)''');
     await db.execute('''CREATE TABLE IF NOT EXISTS investment_operations (
       id TEXT PRIMARY KEY, investment_id TEXT NOT NULL,
       kind TEXT NOT NULL CHECK(kind IN ('buy','sell','opening','income')),
       quantity INTEGER NOT NULL CHECK(quantity >= 0),
       cents INTEGER NOT NULL CHECK(cents >= 0),
-      date TEXT NOT NULL, created_at TEXT NOT NULL)''');
+      date TEXT NOT NULL, created_at TEXT NOT NULL, cash_account_id TEXT)''');
     await db.execute(
         'CREATE INDEX IF NOT EXISTS investment_ops_asset ON investment_operations(investment_id)');
   }
@@ -57,6 +60,7 @@ class InvestmentRepository {
     await db.transaction((tx) async {
       await tx.insert('investments', item.toMap());
       await tx.insert('investment_operations', opening.toMap());
+      await _cash(tx, opening, item.name);
     });
     revision.value++;
   }
@@ -85,6 +89,9 @@ class InvestmentRepository {
       InvestmentPosition(Investment.fromMap(rows.single),
           [...entries.map(InvestmentOperation.fromMap), op]);
       await tx.insert('investment_operations', op.toMap());
+      await _cash(tx, op, rows.single['name'] as String);
+      await tx.update('investments', {'archived': 0},
+          where: 'id=?', whereArgs: [op.investmentId]);
     });
     revision.value++;
   }
@@ -102,7 +109,172 @@ class InvestmentRepository {
           where: 'investment_id=? AND id<>?', whereArgs: [assetId, id]);
       InvestmentPosition(Investment.fromMap(assets.single),
           entries.map(InvestmentOperation.fromMap));
+      final op = InvestmentOperation.fromMap(rows.single);
+      if (op.cashAccountId != null) {
+        final linked = await tx
+            .query('transactions', where: 'id=?', whereArgs: [cashId(op.id)]);
+        if (linked.length != 1 ||
+            linked.single['account_id'] != op.cashAccountId ||
+            ((linked.single['amount'] as num) * 100).round() != op.cents) {
+          throw const FormatException(
+              'Movimentação vinculada inconsistente. Nenhum valor foi alterado.');
+        }
+        final changed = await tx.rawUpdate(
+            'UPDATE accounts SET balance=balance+? WHERE id=?', [
+          cashDebit(op) ? op.cents / 100 : -op.cents / 100,
+          op.cashAccountId
+        ]);
+        if (changed != 1)
+          throw const FormatException('Conta vinculada não encontrada.');
+        await tx.delete('transaction_metadata',
+            where: 'transaction_id=?', whereArgs: [cashId(op.id)]);
+        await tx
+            .delete('transactions', where: 'id=?', whereArgs: [cashId(op.id)]);
+      }
       await tx.delete('investment_operations', where: 'id=?', whereArgs: [id]);
+      await tx.update('investments', {'archived': 0},
+          where: 'id=?', whereArgs: [assetId]);
+    });
+    revision.value++;
+  }
+
+  static String cashId(String operationId) => 'investment:$operationId';
+  static bool cashDebit(InvestmentOperation op) =>
+      op.kind == 'buy' || op.kind == 'opening';
+
+  static void validateCashBackup(Map<String, dynamic> data) {
+    final operations = ((data['investment_operations'] as List?) ?? [])
+        .map((r) =>
+            InvestmentOperation.fromMap(Map<String, dynamic>.from(r as Map)))
+        .toList();
+    final transactions = {
+      for (final r in (data['transactions'] as List? ?? [])) (r as Map)['id']: r
+    };
+    final metadata = {
+      for (final r in (data['transaction_metadata'] as List? ?? []))
+        (r as Map)['transaction_id']: r
+    };
+    final accounts = {
+      for (final r in (data['accounts'] as List? ?? [])) (r as Map)['id']: r
+    };
+    final linked = <String>{};
+    for (final op in operations.where((o) => o.cashAccountId != null)) {
+      final id = cashId(op.id);
+      final tx = transactions[id],
+          meta = metadata[id],
+          account = accounts[op.cashAccountId];
+      if (account == null ||
+          account['currency'] != 'BRL' ||
+          ['credit', 'gold'].contains(account['type']) ||
+          tx == null ||
+          tx['account_id'] != op.cashAccountId ||
+          tx['currency'] != 'BRL' ||
+          tx['amount'] is! num ||
+          !(tx['amount'] as num).isFinite ||
+          ((tx['amount'] as num) * 100).round() != op.cents ||
+          tx['type'] != (cashDebit(op) ? 'expense' : 'income') ||
+          meta == null ||
+          meta['source'] != id ||
+          meta['status'] != 'paid' ||
+          meta['affects_balance'] != 1 ||
+          meta['exclude_from_spending'] != (op.kind == 'income' ? 0 : 1)) {
+        throw const FormatException(
+            'Backup contém uma movimentação de investimento inconsistente. Nenhum dado foi alterado.');
+      }
+      linked.add(id);
+    }
+    if (transactions.keys.any((id) =>
+        id is String && id.startsWith('investment:') && !linked.contains(id))) {
+      throw const FormatException(
+          'Backup contém movimentação sem operação de investimento.');
+    }
+  }
+
+  Future<void> _cash(
+      DatabaseExecutor tx, InvestmentOperation op, String name) async {
+    if (op.cashAccountId == null) return;
+    op.validate();
+    final accounts = await tx
+        .query('accounts', where: 'id=?', whereArgs: [op.cashAccountId]);
+    if (accounts.length != 1 ||
+        accounts.single['currency'] != 'BRL' ||
+        ['credit', 'gold'].contains(accounts.single['type'])) {
+      throw const FormatException(
+          'Selecione uma conta de saldo em reais, sem ser cartão ou ouro.');
+    }
+    final type = cashDebit(op) ? 'expense' : 'income';
+    final categories = await tx.query('categories',
+        where: 'type=?', whereArgs: [type], limit: 1);
+    final id = cashId(op.id);
+    await tx.insert(
+        'transactions',
+        AppTransaction(
+          id: id,
+          type: type,
+          amount: op.cents / 100,
+          description:
+              '${cashDebit(op) ? 'Aporte' : op.kind == 'sell' ? 'Resgate' : 'Provento'} · $name',
+          accountId: op.cashAccountId!,
+          categoryId:
+              categories.isEmpty ? '' : categories.single['id'] as String,
+          date: op.date,
+          currency: 'BRL',
+          note: 'Vinculado a Investir. Revise a operação na carteira.',
+        ).toMap());
+    await tx.insert(
+        'transaction_metadata',
+        TransactionMetadata(
+          transactionId: id,
+          source: id,
+          excludeFromSpending: op.kind != 'income',
+        ).toMap());
+    await tx.rawUpdate('UPDATE accounts SET balance=balance+? WHERE id=?',
+        [cashDebit(op) ? -op.cents / 100 : op.cents / 100, op.cashAccountId]);
+  }
+
+  /// Explicit reconciliation only. Existing operations remain unlinked until
+  /// the user confirms that this cash effect has not already been recorded.
+  Future<void> linkCash(String operationId, String accountId) async {
+    final db = await database();
+    await db.transaction((tx) async {
+      final rows = await tx.query('investment_operations',
+          where: 'id=?', whereArgs: [operationId]);
+      if (rows.length != 1)
+        throw const FormatException('Operação não encontrada.');
+      final old = InvestmentOperation.fromMap(rows.single);
+      if (old.cashAccountId != null) {
+        if (old.cashAccountId == accountId) return;
+        throw const FormatException('Esta operação já movimenta uma conta.');
+      }
+      final op = InvestmentOperation.fromMap(
+          {...rows.single, 'cash_account_id': accountId});
+      final asset = (await tx.query('investments',
+              where: 'id=?', whereArgs: [op.investmentId]))
+          .single;
+      await _cash(tx, op, asset['name'] as String);
+      await tx.update('investment_operations', {'cash_account_id': accountId},
+          where: 'id=?', whereArgs: [operationId]);
+    });
+    revision.value++;
+  }
+
+  Future<void> archive(String id, {bool archived = true}) async {
+    final db = await database();
+    await db.transaction((tx) async {
+      final rows =
+          await tx.query('investments', where: 'id=?', whereArgs: [id]);
+      if (rows.isEmpty)
+        throw const FormatException('Investimento não encontrado.');
+      final entries = await tx.query('investment_operations',
+          where: 'investment_id=?', whereArgs: [id]);
+      final position = InvestmentPosition(Investment.fromMap(rows.single),
+          entries.map(InvestmentOperation.fromMap));
+      if (archived && position.quantity != 0) {
+        throw const FormatException(
+            'Encerre a posição antes de retirá-la da carteira.');
+      }
+      await tx.update('investments', {'archived': archived ? 1 : 0},
+          where: 'id=?', whereArgs: [id]);
     });
     revision.value++;
   }

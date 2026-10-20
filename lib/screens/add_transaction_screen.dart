@@ -346,6 +346,31 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
 
   @override
   Widget build(BuildContext context) {
+    if (widget.existing?.id.startsWith('investment:') == true) {
+      return Scaffold(
+        appBar: AppBar(title: const Text('Movimentação de investimento')),
+        body: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(widget.existing!.description,
+                    style: Theme.of(context).textTheme.titleLarge),
+                const SizedBox(height: 16),
+                const Text(
+                    'Esta movimentação está vinculada à carteira. Revise ou exclua a operação em Investir para atualizar posição e saldo juntos.'),
+                const SizedBox(height: 16),
+                FilledButton.icon(
+                    icon: const Icon(Icons.trending_up),
+                    label: const Text('Abrir Investir'),
+                    onPressed: () {
+                      context.read<AppProvider>().tabIndexNotifier.value = 11;
+                      Navigator.pop(context);
+                    }),
+              ],
+            )),
+      );
+    }
     final app = context.watch<AppProvider>();
     final theme = Theme.of(context);
     final cs = theme.colorScheme;
