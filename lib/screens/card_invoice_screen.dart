@@ -23,7 +23,10 @@ class CardInvoiceScreen extends StatefulWidget {
 }
 
 class _CardInvoiceScreenState extends State<CardInvoiceScreen> {
-  Future<Map<String, TransactionMetadata>>? _metadata;
+  Future<List<dynamic>>? _invoiceData;
+  String? _invoiceKey;
+  List<AppTransaction>? _lastTransactions;
+  int _metadataRevision = -1;
   int _monthOffset = 0;
   bool _paying = false;
 
@@ -214,7 +217,7 @@ class _CardInvoiceScreenState extends State<CardInvoiceScreen> {
     if (!mounted) return;
     _snack('Pagamento registrado sem duplicar seus gastos.');
     setState(() {
-      _metadata = null;
+      _invoiceData = null;
     });
   }
 
@@ -237,15 +240,40 @@ class _CardInvoiceScreenState extends State<CardInvoiceScreen> {
         t.accountId == card.id &&
         !t.date.isBefore(cycle.start) &&
         t.date.isBefore(cycle.end.add(const Duration(days: 1))));
-    _metadata ??= TransactionMetadataService.instance
-        .getForMany(allCycleTx.map((e) => e.id));
+    final invoiceKey = '${card.id}|${cycle.start}|${cycle.end}';
+    final revision = TransactionMetadataService.instance.revision.value;
+    if (_invoiceKey != invoiceKey ||
+        !identical(_lastTransactions, app.transactions) ||
+        _metadataRevision != revision) {
+      _invoiceData = null;
+      _invoiceKey = invoiceKey;
+      _lastTransactions = app.transactions;
+      _metadataRevision = revision;
+    }
+    _invoiceData ??= Future.wait<dynamic>([
+      TransactionMetadataService.instance
+          .getForMany(allCycleTx.map((e) => e.id)),
+      CardInvoiceService.instance.paidForCycle(card.id, cycle.end),
+    ]);
 
     return FutureBuilder<List<dynamic>>(
-      future: Future.wait<dynamic>([
-        _metadata!,
-        CardInvoiceService.instance.paidForCycle(card.id, cycle.end),
-      ]),
+      key: ObjectKey(_invoiceData),
+      future: _invoiceData,
       builder: (context, snapshot) {
+        if (snapshot.hasError) {
+          return Scaffold(
+              appBar: AppBar(title: Text(card.name)),
+              body: Center(
+                  child: TextButton(
+                      onPressed: () => setState(() => _invoiceData = null),
+                      child: const Text(
+                          'Não foi possível carregar a fatura. Tentar novamente'))));
+        }
+        if (!snapshot.hasData) {
+          return Scaffold(
+              appBar: AppBar(title: Text(card.name)),
+              body: const Center(child: CircularProgressIndicator()));
+        }
         final values = snapshot.data;
         final meta = values == null
             ? const <String, TransactionMetadata>{}
@@ -278,14 +306,14 @@ class _CardInvoiceScreenState extends State<CardInvoiceScreen> {
                   icon: const Icon(Icons.chevron_left),
                   onPressed: () => setState(() {
                         _monthOffset--;
-                        _metadata = null;
+                        _invoiceData = null;
                       })),
               IconButton(
                   tooltip: 'Próxima fatura',
                   icon: const Icon(Icons.chevron_right),
                   onPressed: () => setState(() {
                         _monthOffset++;
-                        _metadata = null;
+                        _invoiceData = null;
                       })),
               IconButton(
                 tooltip: 'Configurar fatura',
@@ -306,10 +334,14 @@ class _CardInvoiceScreenState extends State<CardInvoiceScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text('Fatura atual'),
+                    Text(_monthOffset == 0 && widget.initialCycleEnd == null
+                        ? 'Fatura atual'
+                        : 'Fatura do período'),
                     const SizedBox(height: 4),
                     Text(
-                      formatAmount(total, card.currency),
+                      app.settings.hideBalance
+                          ? '••••'
+                          : formatAmount(total, card.currency),
                       style:
                           Theme.of(context).textTheme.headlineLarge?.copyWith(
                                 fontWeight: FontWeight.w900,
@@ -322,16 +354,18 @@ class _CardInvoiceScreenState extends State<CardInvoiceScreen> {
                     if (cycle.due != null)
                       Text(
                           'Vencimento ${DateFormat('dd/MM/yyyy').format(cycle.due!)}'),
-                    if (alreadyPaid > 0)
+                    if (alreadyPaid > 0 && !app.settings.hideBalance)
                       Text(
                           'Já pago ${formatAmount(alreadyPaid, card.currency)}'),
                     Text(
-                      remaining <= 0
-                          ? 'Situação: paga'
-                          : 'Em aberto ${formatAmount(remaining, card.currency)}',
+                      app.settings.hideBalance
+                          ? 'Valores ocultos'
+                          : remaining <= 0
+                              ? 'Situação: paga'
+                              : 'Em aberto ${formatAmount(remaining, card.currency)}',
                       style: const TextStyle(fontWeight: FontWeight.w800),
                     ),
-                    if (freeLimit != null)
+                    if (freeLimit != null && !app.settings.hideBalance)
                       Text(
                           'Limite disponível ${formatAmount(freeLimit, card.currency)}'),
                   ],
@@ -388,9 +422,11 @@ class _CardInvoiceScreenState extends State<CardInvoiceScreen> {
                         child: Icon(Icons.shopping_bag_outlined),
                       ),
                       title: Text(
-                        tx.description.trim().isEmpty
-                            ? (category?.name ?? 'Compra')
-                            : tx.description,
+                        app.settings.hideBalance
+                            ? 'Movimentação no cartão'
+                            : tx.description.trim().isEmpty
+                                ? (category?.name ?? 'Compra')
+                                : tx.description,
                       ),
                       subtitle: Text([
                         DateFormat('dd/MM/yyyy').format(tx.date),
@@ -400,7 +436,9 @@ class _CardInvoiceScreenState extends State<CardInvoiceScreen> {
                           'Parcela ${txMeta!.installmentLabel}',
                       ].join(' • ')),
                       trailing: Text(
-                        '${tx.type == 'income' ? '− ' : ''}${formatAmount(tx.amount, card.currency)}',
+                        app.settings.hideBalance
+                            ? '••••'
+                            : '${tx.type == 'income' ? '− ' : ''}${formatAmount(tx.amount, card.currency)}',
                         style: const TextStyle(fontWeight: FontWeight.w900),
                       ),
                     ),

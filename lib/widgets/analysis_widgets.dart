@@ -41,7 +41,13 @@ class AnalysisMetrics extends StatelessWidget {
   const AnalysisMetrics({super.key, required this.values});
   @override
   Widget build(BuildContext context) => LayoutBuilder(builder: (context, c) {
-        final columns = c.maxWidth >= 700 ? values.length : 2;
+        final readableWidth =
+            c.maxWidth / MediaQuery.textScalerOf(context).scale(1);
+        final columns = readableWidth < 250
+            ? 1
+            : c.maxWidth >= 700
+                ? values.length
+                : 2;
         return Wrap(spacing: 12, runSpacing: 16, children: [
           for (final v in values)
             SizedBox(

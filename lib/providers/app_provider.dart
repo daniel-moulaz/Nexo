@@ -1720,11 +1720,22 @@ class AppProvider extends ChangeNotifier {
           'Invalid backup file: no recognisable Expensy data found.');
     }
 
+    // Parse preferences before replacing SQLite: malformed settings must not
+    // leave a replaced ledger behind when parsing fails afterwards.
+    AppSettings? restoredSettings;
+    if (data.containsKey('settings')) {
+      try {
+        restoredSettings = AppSettings.fromJson(
+            Map<String, dynamic>.from(data['settings'] as Map));
+      } catch (_) {
+        throw const FormatException(
+            'Configurações inválidas no backup. Nenhum dado foi alterado.');
+      }
+    }
     await DBHelper.importAll(data);
 
-    if (data['settings'] is Map) {
-      settings = AppSettings.fromJson(
-          Map<String, dynamic>.from(data['settings'] as Map));
+    if (restoredSettings != null) {
+      settings = restoredSettings;
       await _saveSettings();
     }
 
