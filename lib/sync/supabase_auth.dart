@@ -187,9 +187,9 @@ class SupabaseAuth {
     final address = _normalize(email);
     try {
       await _post('/auth/v1/otp', {'email': address, 'create_user': true});
-    } on _HttpStatus {
-      throw const SyncAuthException(
-          'Não foi possível enviar o código para este e-mail. Confira o endereço.');
+    } on _HttpStatus catch (e) {
+      throw SyncAuthException(
+          'Não foi possível enviar o e-mail de acesso (HTTP ${e.code}). Confira o endereço.');
     }
   }
 
@@ -213,17 +213,36 @@ class SupabaseAuth {
     final Map<String, dynamic> json;
     try {
       json = await _post('/auth/v1/verify', body);
-    } on _HttpStatus {
-      throw const SyncAuthException(
-          'Código ou link inválido, expirado ou já usado. Peça um novo e-mail.');
+    } on _HttpStatus catch (e) {
+      throw SyncAuthException(
+          'Código ou link inválido, expirado ou já usado (HTTP ${e.code}). Peça um novo e-mail.');
     }
     final session = _parse(json, address);
     await _save(session);
     return session;
   }
 
+  /// Mail apps often copy a redirect wrapper instead of the real link
+  /// (Gmail `google.com/url?q=`, Outlook Safe Links `?url=`). Only the
+  /// wrapped address is used, and it still has to be this project's link.
+  static Uri? _unwrap(String link) {
+    var uri = Uri.tryParse(link.trim());
+    for (var depth = 0; uri != null && depth < 3; depth++) {
+      final host = uri.host.toLowerCase();
+      final inner = (host == 'www.google.com' || host == 'google.com') &&
+              uri.path == '/url'
+          ? uri.queryParameters['q'] ?? uri.queryParameters['url']
+          : host.endsWith('safelinks.protection.outlook.com')
+              ? uri.queryParameters['url']
+              : null;
+      if (inner == null) return uri;
+      uri = Uri.tryParse(inner);
+    }
+    return uri;
+  }
+
   Map<String, Object?> _linkBody(String link) {
-    final uri = Uri.tryParse(link);
+    final uri = _unwrap(link);
     final token =
         uri?.queryParameters['token'] ?? uri?.queryParameters['token_hash'];
     final type = uri?.queryParameters['type'] ?? 'magiclink';

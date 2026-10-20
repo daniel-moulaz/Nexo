@@ -64,8 +64,10 @@ class _SyncSettingsScreenState extends State<SyncSettingsScreen> {
       _message = e.message;
     } on SyncUnavailable {
       _message = 'Sem conexão com o servidor. Seus dados locais não mudam.';
-    } catch (_) {
-      _message = 'Não foi possível concluir agora. Tente novamente.';
+    } catch (e) {
+      // Type only: never the message, which could carry server text.
+      _message =
+          'Não foi possível concluir agora (${e.runtimeType}). Tente novamente.';
     }
     if (mounted) setState(() => _busy = false);
   }
