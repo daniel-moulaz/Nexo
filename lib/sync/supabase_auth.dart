@@ -193,23 +193,52 @@ class SupabaseAuth {
     }
   }
 
+  /// Accepts the numeric code or, when the project still sends the default
+  /// e-mail with a link, that link copied without opening it. The link is
+  /// only accepted for this project's own host.
   Future<SyncSession> verifyCode(String email, String code) async {
     final address = _normalize(email);
-    final token = code.replaceAll(RegExp(r'\s'), '');
-    if (!_code.hasMatch(token)) {
-      throw const SyncAuthException('Digite o código numérico do e-mail.');
+    final input = code.trim();
+    final Map<String, Object?> body;
+    if (input.contains('://')) {
+      body = _linkBody(input);
+    } else {
+      final token = input.replaceAll(RegExp(r'\s'), '');
+      if (!_code.hasMatch(token)) {
+        throw const SyncAuthException(
+            'Digite o código numérico ou cole o link do e-mail.');
+      }
+      body = {'type': 'email', 'email': address, 'token': token};
     }
     final Map<String, dynamic> json;
     try {
-      json = await _post('/auth/v1/verify',
-          {'type': 'email', 'email': address, 'token': token});
+      json = await _post('/auth/v1/verify', body);
     } on _HttpStatus {
       throw const SyncAuthException(
-          'Código inválido ou expirado. Peça um novo código.');
+          'Código ou link inválido, expirado ou já usado. Peça um novo e-mail.');
     }
     final session = _parse(json, address);
     await _save(session);
     return session;
+  }
+
+  Map<String, Object?> _linkBody(String link) {
+    final uri = Uri.tryParse(link);
+    final token =
+        uri?.queryParameters['token'] ?? uri?.queryParameters['token_hash'];
+    final type = uri?.queryParameters['type'] ?? 'magiclink';
+    if (uri == null ||
+        uri.scheme != 'https' ||
+        uri.host != config.projectUrl.host ||
+        uri.path != '/auth/v1/verify' ||
+        token == null ||
+        token.isEmpty ||
+        token.length > 512 ||
+        !const {'magiclink', 'signup', 'email'}.contains(type)) {
+      throw const SyncAuthException(
+          'Este link não é do seu projeto Nexo. Copie o link do e-mail de acesso.');
+    }
+    return {'type': type, 'token_hash': token};
   }
 
   /// A valid access token, renewed shortly before expiry. Null means the

@@ -80,7 +80,7 @@ void main() {
       await a.verifyCode('pessoa@exemplo.com', '123456');
       fail('expected failure');
     } on SyncAuthException catch (e) {
-      expect(e.message, contains('Código inválido'));
+      expect(e.message, contains('inválido'));
       expect(e.message, isNot(contains('Token')));
     }
     reply = (_) => http.Response('{}', 429);
@@ -135,6 +135,31 @@ void main() {
     final logout = requests.last;
     expect(logout.url.path, '/auth/v1/logout');
     expect(logout.headers['Authorization'], 'Bearer access-1');
+  });
+
+  test('a copied e-mail link signs in with its token hash', () async {
+    reply = (_) => http.Response(jsonEncode(sessionJson('access-link')), 200);
+    final a = auth();
+    await a.verifyCode('pessoa@exemplo.com',
+        ' https://synthetic.supabase.co/auth/v1/verify?token=abc123&type=magiclink&redirect_to=http://localhost:3000 ');
+    expect(jsonDecode(requests.single.body),
+        {'type': 'magiclink', 'token_hash': 'abc123'});
+    expect(await a.accessToken(), 'access-link');
+  });
+
+  test('links from other hosts, paths or types are refused locally', () async {
+    final a = auth();
+    for (final link in [
+      'https://attacker.example/auth/v1/verify?token=abc&type=magiclink',
+      'http://synthetic.supabase.co/auth/v1/verify?token=abc&type=magiclink',
+      'https://synthetic.supabase.co/other?token=abc&type=magiclink',
+      'https://synthetic.supabase.co/auth/v1/verify?type=magiclink',
+      'https://synthetic.supabase.co/auth/v1/verify?token=abc&type=recovery',
+    ]) {
+      await expectLater(a.verifyCode('pessoa@exemplo.com', link),
+          throwsA(isA<SyncAuthException>()));
+    }
+    expect(requests, isEmpty);
   });
 
   test('build without coordinates has no sync configuration', () {
