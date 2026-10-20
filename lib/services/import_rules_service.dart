@@ -35,17 +35,20 @@ class ImportRulesService {
         !['expense', 'income'].contains(rule.type)) {
       throw ArgumentError('Informe o texto da descrição e o tipo.');
     }
-    final db = await DBHelper.database;
-    final cats = await db.query('categories',
-        where: 'id = ? AND type = ?', whereArgs: [rule.categoryId, rule.type]);
-    if (cats.isEmpty)
-      throw ArgumentError('Selecione uma categoria válida para o tipo.');
-    await db.insert('import_rules', rule.toMap(),
-        conflictAlgorithm: ConflictAlgorithm.replace);
+    await DBHelper.operation('import_rule.save', (txn) async {
+      final cats = await txn.query('categories',
+          where: 'id = ? AND type = ?',
+          whereArgs: [rule.categoryId, rule.type]);
+      if (cats.isEmpty)
+        throw ArgumentError('Selecione uma categoria válida para o tipo.');
+      await txn.insert('import_rules', rule.toMap(),
+          conflictAlgorithm: ConflictAlgorithm.replace);
+    });
   }
 
-  static Future<void> delete(String id) async => (await DBHelper.database)
-      .delete('import_rules', where: 'id = ?', whereArgs: [id]);
+  static Future<void> delete(String id) => DBHelper.operation(
+      'import_rule.delete',
+      (txn) => txn.delete('import_rules', where: 'id = ?', whereArgs: [id]));
   static ImportRule? match(List<ImportRule> rules, String description,
       String type, List<AppCategory> categories) {
     final candidates = rules

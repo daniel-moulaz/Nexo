@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:sqflite/sqflite.dart';
 import '../models/models.dart';
+import '../sync/ledger_capture.dart';
 
 /// One SQLite commit for each loan and all of its cash effects. This is the
 /// domain boundary a sync journal can observe; no network work happens here.
@@ -37,7 +38,8 @@ class LoanLedger {
   }
 
   Future<void> create(Loan loan, {List<LoanPayment> payments = const []}) =>
-      db.transaction((tx) async {
+      ledgerTransaction(db, payments.isEmpty ? 'loan.create' : 'loan.restore',
+          (tx) async {
         _validate(loan);
         await tx.insert('loans', loan.toMap());
         await _move(tx, loan.transferAccountId, loan.principal, loan.currency);
@@ -48,7 +50,8 @@ class LoanLedger {
         }
       });
 
-  Future<void> update(Loan loan) => db.transaction((tx) async {
+  Future<void> update(Loan loan) =>
+      ledgerTransaction(db, 'loan.update', (tx) async {
         _validate(loan);
         final old = await _loan(tx, loan.id);
         final payments = await tx
@@ -64,7 +67,7 @@ class LoanLedger {
       });
 
   Future<({Loan loan, List<LoanPayment> payments})> remove(String id) =>
-      db.transaction((tx) async {
+      ledgerTransaction(db, 'loan.delete', (tx) async {
         final loan = await _loan(tx, id);
         final payments = (await tx
                 .query('loan_payments', where: 'loan_id=?', whereArgs: [id]))
@@ -106,12 +109,14 @@ class LoanLedger {
     }
   }
 
-  Future<void> pay(LoanPayment payment) => db.transaction((tx) async {
+  Future<void> pay(LoanPayment payment) =>
+      ledgerTransaction(db, 'loan.pay', (tx) async {
         final loan = await _loan(tx, payment.loanId);
         await _payment(tx, loan, payment);
       });
 
-  Future<LoanPayment?> removePayment(String id) => db.transaction((tx) async {
+  Future<LoanPayment?> removePayment(String id) =>
+      ledgerTransaction(db, 'loan.remove_payment', (tx) async {
         final rows =
             await tx.query('loan_payments', where: 'id=?', whereArgs: [id]);
         if (rows.isEmpty) return null;

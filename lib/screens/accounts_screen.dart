@@ -628,6 +628,7 @@ class _AccountEditorState extends State<_AccountEditor> {
           clearLinkedAccount: isCard && _linkedAccountId == null,
           clearCredit: !isCredit,
         ),
+        original: existing,
       );
     }
 
