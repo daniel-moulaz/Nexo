@@ -60,6 +60,8 @@ try {
     grant usage on schema auth to anon, authenticated;
     grant execute on function auth.uid() to anon, authenticated;`);
   await db.exec(await readFile(new URL('../supabase/migrations/202610160001_sync_lab.sql', import.meta.url), 'utf8'));
+  // Every protocol-1 test below runs against the protocol-2 function.
+  await db.exec(await readFile(new URL('../supabase/migrations/202610200001_sync_protocol_v2.sql', import.meta.url), 'utf8'));
   await test('remote smoke script passes and rolls back all synthetic rows', async () => {
     const results = await db.exec(await readFile(new URL('../supabase/tests/sync_lab_smoke.sql', import.meta.url), 'utf8'));
     const row = results.at(-1).rows[0];
@@ -74,7 +76,7 @@ try {
     const rows = (await db.query(`select relname, relrowsecurity from pg_class c
       join pg_namespace n on n.oid = c.relnamespace
       where n.nspname = 'nexo_sync_lab_private' and relkind = 'r'`)).rows;
-    assert.equal(rows.length, 4);
+    assert.equal(rows.length, 5);
     assert(rows.every(r => r.relrowsecurity));
     await denies(() => user(A, tx => tx.query('select * from nexo_sync_lab_private.datasets')), '42501');
   });
@@ -211,6 +213,78 @@ try {
       }
     }
     await db.exec('revoke all on schema nexo_sync_lab_private from authenticated; revoke all on all tables in schema nexo_sync_lab_private from authenticated;');
+  });
+  // ── Protocol 2: effects, requirements and the balance projection ──────
+  const ds2 = randomUUID(), ep2 = randomUUID(), d1 = randomUUID(), d2 = randomUUID();
+  const op2 = (edits, effects = [], requires = [], device = d1, extra = {}) => ({
+    protocol: 2, id: randomUUID(), dataset_id: ds2, epoch: ep2, device_id: device,
+    created_at: '2026-10-20T12:00:00.000Z', edits, effects, requires,
+    label: 'transaction.add', ...extra });
+  const balance = async account => (await db.query(
+    'select micros from nexo_sync_lab_private.balances where dataset_id = $1 and account_id = $2',
+    [ds2, account])).rows[0]?.micros;
+  const accountV = { name: 'Banco fictício', currency: 'BRL' };
+  await test('v2 dataset bootstrap carries the opening balance as an effect', async () => {
+    await user(A, tx => create(tx, d1, ds2, ep2));
+    await user(A, tx => create(tx, d2, ds2, ep2));
+    const opening = op2([edit('bank', 0, accountV, 'accounts')], [{ account: 'bank', delta_micros: 1000000000 }]);
+    assert.equal((await user(A, tx => push(tx, opening))).status, 'accepted');
+    assert.equal(BigInt(await balance('bank')), 1000000000n);
+  });
+  const spend = (id, micros, device) => op2(
+    [edit(id, 0, { amount: micros / 1e6 }, 'transactions')],
+    [{ account: 'bank', delta_micros: -micros }],
+    [{ kind: 'accounts', id: 'bank', revision: 1 }], device);
+  await test('independent spending from two devices on one account both commit', async () => {
+    assert.equal((await user(A, tx => push(tx, spend('t1', 7500000, d1)))).status, 'accepted');
+    assert.equal((await user(A, tx => push(tx, spend('t2', 300000, d2)))).status, 'accepted');
+    assert.equal(BigInt(await balance('bank')), 992200000n);
+  });
+  await test('changed requirement rejects atomically with complete alternatives', async () => {
+    const rename = op2([edit('bank', 1, { ...accountV, name: 'Outro' }, 'accounts')]);
+    assert.equal((await user(A, tx => push(tx, rename))).status, 'accepted');
+    const stale = spend('t3', 1000000, d2);
+    const result = await user(A, tx => push(tx, stale));
+    assert.equal(result.status, 'conflict');
+    assert.equal(result.remote.length, 2);
+    assert.equal(result.remote.find(r => r.id === 'bank').revision, 2);
+    assert.equal(BigInt(await balance('bank')), 992200000n);
+    assert.equal((await db.query("select count(*)::int as n from nexo_sync_lab_private.entities where id = 't3'")).rows[0].n, 0);
+  });
+  await test('effect-only operation is accepted; empty v2 operation is not', async () => {
+    const adjust = op2([], [{ account: 'bank', delta_micros: 1 }], [{ kind: 'accounts', id: 'bank', revision: 2 }]);
+    assert.equal((await user(A, tx => push(tx, adjust))).status, 'accepted');
+    await denies(() => user(A, tx => push(tx, op2([]))), '22023');
+  });
+  await test('malformed effects, requirements and mixed versions fail closed', async () => {
+    const bad = [
+      op2([], [{ account: 'bank', delta_micros: 0 }]),
+      op2([], [{ account: 'bank', delta_micros: 1.5 }]),
+      op2([], [{ account: 'bank', delta_micros: 9000000000000001 }]),
+      op2([], [{ account: 'bank', delta_micros: 1 }, { account: 'bank', delta_micros: 2 }]),
+      op2([], [{ account: '', delta_micros: 1 }]),
+      op2([edit('x', 0, {})], [], [{ kind: 'accounts', id: 'bank', revision: -1 }]),
+      op2([edit('bank', 2, {}, 'accounts')], [], [{ kind: 'accounts', id: 'bank', revision: 2 }]),
+      op2([edit('x', 0, {})], [], [], d1, { label: '' }),
+      { ...op([edit('y', 0, {})]), dataset_id: ds2, epoch: ep2, device_id: d1, effects: [] },
+      { ...op2([edit('z', 0, {})]), effects: undefined },
+      { ...op2([edit('z', 0, {})]), protocol: undefined },
+    ];
+    for (const item of bad) await denies(() => user(A, tx => push(tx, item)), '22023');
+    assert.equal(BigInt(await balance('bank')), 992200001n);
+  });
+  await test('pull returns v2 payloads byte for byte in revision order', async () => {
+    const page = await user(A, tx => pull(tx, 0, d2, ds2, ep2));
+    assert.deepEqual(page.map(r => r.revision), [1, 2, 3, 4, 5]);
+    assert(page.every(r => r.hash === hash(r.payload)));
+    assert.equal(JSON.parse(page[1].payload).effects[0].delta_micros, -7500000);
+  });
+  await test('balance projection is private to its owner', async () => {
+    await db.exec('grant usage on schema nexo_sync_lab_private to authenticated; grant select on nexo_sync_lab_private.balances to authenticated;');
+    assert.equal((await user(B, tx => tx.query('select * from nexo_sync_lab_private.balances'))).rows.length, 0);
+    assert((await user(A, tx => tx.query('select * from nexo_sync_lab_private.balances'))).rows.length > 0);
+    await db.exec('revoke all on nexo_sync_lab_private.balances from authenticated; revoke all on schema nexo_sync_lab_private from authenticated;');
+    await denies(() => user(A, tx => tx.query('select * from nexo_sync_lab_private.balances')), '42501');
   });
   console.log(`SQL LAB: ${passed} tests passed; synthetic local data only.`);
 } finally {

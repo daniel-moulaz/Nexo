@@ -111,14 +111,18 @@ abstract final class LedgerCapture {
         account_id TEXT PRIMARY KEY, balance REAL NOT NULL)''');
       await txn.execute('''CREATE TABLE IF NOT EXISTS sync_entity_state (
         table_name TEXT NOT NULL, row_key TEXT NOT NULL,
-        revision INTEGER NOT NULL, value_hash TEXT, deleted INTEGER NOT NULL,
-        PRIMARY KEY(table_name, row_key))''');
+        revision INTEGER NOT NULL, value_hash TEXT, value_json TEXT,
+        deleted INTEGER NOT NULL, PRIMARY KEY(table_name, row_key))''');
       await txn.execute('''CREATE TABLE IF NOT EXISTS sync_applied (
         operation_id TEXT PRIMARY KEY)''');
       await txn.execute('''CREATE TABLE IF NOT EXISTS sync_journal (
         position INTEGER PRIMARY KEY AUTOINCREMENT,
         operation_id TEXT UNIQUE NOT NULL, kind TEXT NOT NULL,
         payload TEXT NOT NULL, hash TEXT NOT NULL, created_at TEXT NOT NULL,
+        base_payload TEXT NOT NULL DEFAULT '[]', server_revision INTEGER,
+        attempts INTEGER NOT NULL DEFAULT 0,
+        next_retry_at INTEGER NOT NULL DEFAULT 0,
+        rejected INTEGER NOT NULL DEFAULT 0,
         state TEXT NOT NULL DEFAULT 'pending')''');
       if ((await txn.query('sync_capture_state')).isEmpty) {
         await txn.insert('sync_capture_state',
@@ -159,8 +163,13 @@ abstract final class LedgerCapture {
           AFTER INSERT ON accounts BEGIN $record END''');
       await txn.execute('''CREATE TRIGGER IF NOT EXISTS sync_capture_balance_upd
           AFTER UPDATE OF balance ON accounts BEGIN $record END''');
+      // Deleting an account removes its money too; recording that lets the
+      // operation be reverted (rebase, conflict) without losing the balance.
       await txn.execute('''CREATE TRIGGER IF NOT EXISTS sync_capture_balance_del
           AFTER DELETE ON accounts BEGIN
+            INSERT INTO sync_capture_balance(operation_id, account_id, delta)
+            SELECT $context, OLD.id, -balance FROM sync_balance_shadow
+              WHERE account_id = OLD.id AND balance != 0;
             DELETE FROM sync_balance_shadow WHERE account_id = OLD.id;
           END''');
       // Existing rows form the checkpoint: revision 1, never re-journaled.
@@ -168,16 +177,9 @@ abstract final class LedgerCapture {
           'INSERT OR IGNORE INTO sync_balance_shadow SELECT id, balance FROM accounts');
       for (final entry in ledgerTables.entries) {
         for (final row in await txn.query(entry.key)) {
-          await txn.insert(
-              'sync_entity_state',
-              {
-                'table_name': entry.key,
-                'row_key': '${row[entry.value]}',
-                'revision': 1,
-                'value_hash': await _hash(_value(entry.key, row)),
-                'deleted': 0,
-              },
-              conflictAlgorithm: ConflictAlgorithm.ignore);
+          final key = '${row[entry.value]}';
+          if ((await _entity(txn, entry.key, key)) != null) continue;
+          await _setEntity(txn, entry.key, key, 1, value(entry.key, row));
         }
       }
     });
@@ -204,7 +206,7 @@ abstract final class LedgerCapture {
           .map((r) => LedgerOperation.decode(r['payload'] as String))
           .toList();
 
-  static Map<String, Object?> _value(String table, Map<String, Object?> row) {
+  static Map<String, Object?> value(String table, Map<String, Object?> row) {
     final value = Map<String, Object?>.from(row);
     // Balance travels as deltas; copying totals would erase concurrent work.
     if (table == 'accounts') value.remove('balance');
@@ -227,18 +229,31 @@ abstract final class LedgerCapture {
     return rows.isEmpty ? null : rows.single;
   }
 
+  static Future<int> revision(
+          DatabaseExecutor txn, String table, String key) async =>
+      ((await _entity(txn, table, key))?['revision'] as int?) ?? 0;
+
+  /// Revision 0 means "absent": the state row is removed, as before creation.
   static Future<void> _setEntity(DatabaseExecutor txn, String table, String key,
-          int revision, String? hash) =>
-      txn.insert(
-          'sync_entity_state',
-          {
-            'table_name': table,
-            'row_key': key,
-            'revision': revision,
-            'value_hash': hash,
-            'deleted': hash == null ? 1 : 0,
-          },
-          conflictAlgorithm: ConflictAlgorithm.replace);
+      int revision, Map<String, Object?>? value) async {
+    if (revision == 0) {
+      await txn.delete('sync_entity_state',
+          where: 'table_name = ? AND row_key = ?', whereArgs: [table, key]);
+      return;
+    }
+    final json = value == null ? null : canonicalSyncJson(value);
+    await txn.insert(
+        'sync_entity_state',
+        {
+          'table_name': table,
+          'row_key': key,
+          'revision': revision,
+          'value_hash': json == null ? null : await _digest(json),
+          'value_json': json,
+          'deleted': value == null ? 1 : 0,
+        },
+        conflictAlgorithm: ConflictAlgorithm.replace);
+  }
 
   static Future<void> _finalize(
       Transaction txn, String id, String kind, LedgerScope scope) async {
@@ -267,10 +282,12 @@ abstract final class LedgerCapture {
       touched.add((log['table_name'] as String, log['row_key'] as String));
     }
     final edits = <LedgerEdit>[];
+    final base = <LedgerEdit>[];
     for (final (table, key) in touched) {
       final rows = await txn
           .query(table, where: '${ledgerTables[table]} = ?', whereArgs: [key]);
-      final value = rows.isEmpty ? null : _value(table, rows.single);
+      final value =
+          rows.isEmpty ? null : LedgerCapture.value(table, rows.single);
       final state = await _entity(txn, table, key);
       final known = state != null && state['deleted'] == 0;
       final hash = value == null ? null : await _hash(value);
@@ -278,9 +295,12 @@ abstract final class LedgerCapture {
       // instance an account whose only change was its balance).
       if (value == null && !known) continue;
       if (value != null && known && state['value_hash'] == hash) continue;
-      final base = (state?['revision'] as int?) ?? 0;
-      edits.add(LedgerEdit(table, key, base, value));
-      await _setEntity(txn, table, key, base + 1, hash);
+      final revision = (state?['revision'] as int?) ?? 0;
+      edits.add(LedgerEdit(table, key, revision, value));
+      final before = state?['value_json'] as String?;
+      base.add(LedgerEdit(table, key, revision,
+          before == null ? null : jsonDecode(before) as Map<String, Object?>));
+      await _setEntity(txn, table, key, revision + 1, value);
     }
     final balances = <LedgerBalanceDelta>[];
     for (final row in sums) {
@@ -305,8 +325,86 @@ abstract final class LedgerCapture {
       'payload': payload,
       'hash': await _digest(payload),
       'created_at': operation.createdAt.toIso8601String(),
+      'base_payload': canonicalSyncJson(base.map((e) => e.toJson()).toList()),
     });
   }
+
+  static Future<void> _write(DatabaseExecutor txn, String table, String key,
+      Map<String, Object?>? value) async {
+    final column = ledgerTables[table];
+    if (column == null) throw const LedgerConflict('unknown_table');
+    if (value == null) {
+      await txn.delete(table, where: '$column = ?', whereArgs: [key]);
+      return;
+    }
+    final exists = (await txn.query(table,
+            columns: [column], where: '$column = ?', whereArgs: [key]))
+        .isNotEmpty;
+    if (exists) {
+      await txn.update(table, value, where: '$column = ?', whereArgs: [key]);
+    } else {
+      // Account balances only ever arrive as effects.
+      await txn.insert(
+          table, table == 'accounts' ? {...value, 'balance': 0.0} : value);
+    }
+  }
+
+  static Future<void> _move(DatabaseExecutor txn, String account, int micros) =>
+      txn.rawUpdate('UPDATE accounts SET balance = balance + ? WHERE id = ?',
+          [micros / 1e6, account]);
+
+  /// Applies [op] inside an existing transaction whose scope is `remote`.
+  /// Throws [LedgerConflict] before writing anything if a revision differs.
+  static Future<void> applyIn(DatabaseExecutor txn, LedgerOperation op) async {
+    for (final edit in op.edits) {
+      if (await revision(txn, edit.table, edit.key) != edit.baseRevision) {
+        throw const LedgerConflict('concurrent_edit');
+      }
+    }
+    for (final delta in op.balances) {
+      if (op.edits
+          .any((e) => e.table == 'accounts' && e.key == delta.account)) {
+        continue;
+      }
+      final state = await _entity(txn, 'accounts', delta.account);
+      if (state == null ||
+          state['deleted'] == 1 ||
+          state['revision'] != delta.accountRevision) {
+        throw const LedgerConflict('account_changed');
+      }
+    }
+    for (final edit in op.edits) {
+      await _write(txn, edit.table, edit.key, edit.value);
+      await _setEntity(
+          txn, edit.table, edit.key, edit.baseRevision + 1, edit.value);
+    }
+    for (final delta in op.balances) {
+      await _move(txn, delta.account, delta.micros);
+    }
+  }
+
+  /// Undoes the most recent unconfirmed local [op] (reverse order only), so
+  /// operations accepted earlier by the server can be applied beneath it.
+  static Future<void> revertIn(
+      DatabaseExecutor txn, LedgerOperation op, List<LedgerEdit> base) async {
+    final before = {for (final b in base) (b.table, b.key): b};
+    for (final edit in op.edits.reversed) {
+      final previous = before[(edit.table, edit.key)];
+      if (previous == null) throw const LedgerConflict('missing_base');
+      await _write(txn, edit.table, edit.key, previous.value);
+      await _setEntity(
+          txn, edit.table, edit.key, previous.baseRevision, previous.value);
+    }
+    for (final delta in op.balances) {
+      await _move(txn, delta.account, -delta.micros);
+    }
+  }
+
+  static List<LedgerEdit> decodeBase(String encoded) => [
+        for (final e in jsonDecode(encoded) as List)
+          LedgerEdit(e['table'] as String, e['key'] as String,
+              e['base_revision'] as int, (e['value'] as Map?)?.cast())
+      ];
 
   /// Applies another device's operation. Every entity it writes, and every
   /// account whose balance it moves, must be at the revision that operation
@@ -322,53 +420,7 @@ abstract final class LedgerCapture {
             'UNION SELECT 1 FROM sync_journal WHERE operation_id = ?',
             [op.id, op.id]);
         if (seen.isNotEmpty) return;
-        for (final edit in op.edits) {
-          final state = await _entity(txn, edit.table, edit.key);
-          if (((state?['revision'] as int?) ?? 0) != edit.baseRevision) {
-            throw const LedgerConflict('concurrent_edit');
-          }
-        }
-        for (final delta in op.balances) {
-          final state = await _entity(txn, 'accounts', delta.account);
-          final edited = op.edits
-              .any((e) => e.table == 'accounts' && e.key == delta.account);
-          if (!edited &&
-              (state == null ||
-                  state['deleted'] == 1 ||
-                  state['revision'] != delta.accountRevision)) {
-            throw const LedgerConflict('account_changed');
-          }
-        }
-        for (final edit in op.edits) {
-          final key = ledgerTables[edit.table];
-          if (key == null) throw const LedgerConflict('unknown_table');
-          final value = edit.value;
-          if (value == null) {
-            await txn
-                .delete(edit.table, where: '$key = ?', whereArgs: [edit.key]);
-          } else {
-            final exists = (await txn.query(edit.table,
-                    columns: [key], where: '$key = ?', whereArgs: [edit.key]))
-                .isNotEmpty;
-            if (exists) {
-              await txn.update(edit.table, value,
-                  where: '$key = ?', whereArgs: [edit.key]);
-            } else {
-              await txn.insert(
-                  edit.table,
-                  edit.table == 'accounts'
-                      ? {...value, 'balance': 0.0}
-                      : value);
-            }
-          }
-          await _setEntity(txn, edit.table, edit.key, edit.baseRevision + 1,
-              value == null ? null : await _hash(value));
-        }
-        for (final delta in op.balances) {
-          await txn.rawUpdate(
-              'UPDATE accounts SET balance = balance + ? WHERE id = ?',
-              [delta.micros / 1e6, delta.account]);
-        }
+        await applyIn(txn, op);
         await txn.insert('sync_applied', {'operation_id': op.id});
       }, scope: LedgerScope.remote);
 }
