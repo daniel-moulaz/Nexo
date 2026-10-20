@@ -37,3 +37,10 @@ Validação concluída em 20/10/2026:
 - APK: `build/distribution/Nexo-1.6.5+26-android.apk`, SHA-256 `58958EF263A9E826E86ACF6BDC1A08F09A9A8FD1E16B32ECA8A712A62EA69C35`.
 - Windows: `build/distribution/Nexo-1.6.5+26-windows-x64.zip`, SHA-256 `49E898A31F72416383D21FDA9BD7482CD9CA1B54F8AF8C10D3FB6B0F13C8C950`. Distribuir/extrair a pasta completa, incluindo DLLs e assets. Não houve nova homologação manual do executável Windows neste lote.
 - Teste da interface cobre cadastro, venda e cotação; SQLite FFI exige aguardar as consultas encadeadas fora do relógio simulado do teste. Ajustado o helper de espera, sem remover as verificações de persistência.
+
+Conferência após desbloqueio pelo usuário, em 20/10/2026:
+
+- Home e aba Investir abertas no Android real; carteira, gráficos e consulta de cotações renderizados.
+- Formulário de compra aberto: seleção “De qual conta saiu?” e orientação sobre saldo disponíveis; cancelado vazio, sem salvar.
+- Detalhes de posição encerrada abertos: quantidade zero e botão “Retirar da carteira” visíveis. Botão não acionado nesta inspeção para preservar a lista do usuário.
+- Nenhuma operação, vínculo ou alteração de saldo real realizada. As escritas financeiras e o arquivamento continuam validados pelos testes sintéticos descritos acima; capturas privadas não são versionadas.
