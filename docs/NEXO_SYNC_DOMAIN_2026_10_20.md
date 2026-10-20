@@ -135,3 +135,22 @@ Conteúdo novo para o usuário em relação à 1.6.6+27: **Notificações → Fe
 O usuário executou `202610200001_sync_protocol_v2.sql` no SQL Editor. Verificação informada: `tabela_ok = true`, `rls_ok = true`, `usuario_executa = true`, `anonimo_executa = false`. Nenhum dado real envolvido.
 
 Teste remoto sintético com rollback: `supabase/tests/sync_protocol_v2_smoke.sql` (validado localmente no PGlite; laboratório 30/30). Resultado esperado no SQL Editor: `synthetic_v2_smoke_passed | 0 | 0 | true`. Ainda não prova login HTTP real — isso exige Auth configurado.
+
+## Etapa 1 validada pela internet (20/10/2026)
+
+No Windows `--test-profile` (banco separado, sem dados pessoais), com build configurado por `tool/nexo_sync.local.json`, o usuário entrou na própria conta do projeto `nexo-sync` e executou **Testar servidor com dados fictícios**. Resultado informado: **"Servidor aprovado em todos os passos"** (7/7):
+
+1. login aceito e acervo fictício criado (`synthetic_only`);
+2. saldo inicial fictício gravado como efeito;
+3. reenvio da mesma operação devolve o mesmo recibo, sem nova revisão;
+4. dois aparelhos gastando da mesma conta aceitos sem conflito;
+5. gasto baseado em revisão antiga da conta rejeitado com alternativas completas;
+6. outro aparelho recebe as 4 revisões em ordem, com hash válido, através de várias páginas;
+7. aparelho revogado perde acesso (`SyncDeviceRevoked`).
+
+Isso valida, com JWT real e HTTPS: autenticação, RLS por dono, protocolo 2, idempotência, CAS por requisito, paginação e revogação. Não valida ainda: sincronização do acervo real, dois aparelhos físicos, conflitos com interface, isolamento entre **duas contas reais** (testado só com identidades simuladas no SQL).
+
+Observações de operação:
+
+- O SMTP padrão do Supabase limita os e-mails de login a poucos por hora e o modelo não pode ser editado sem SMTP próprio. O login por **senha** (conta criada no painel com "Auto Confirm User") contorna isso; o código por e-mail funciona com SMTP próprio (Resend recomendado).
+- O laboratório guarda o acervo fictício criado pelo teste (pequeno, marcado como sintético).
