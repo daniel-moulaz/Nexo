@@ -9,10 +9,16 @@ import '../providers/app_provider.dart';
 import '../database/db_helper.dart';
 import 'cash_forecast.dart';
 
+/// Opened when the person taps the weekly closing notification.
+const weeklyReviewRoute = 'weekly_review';
+
 class ReminderPlan {
   final String key, body;
   final DateTime at;
-  const ReminderPlan(this.key, this.body, this.at);
+
+  /// Screen to open on tap; null keeps the app on its current screen.
+  final String? route;
+  const ReminderPlan(this.key, this.body, this.at, {this.route});
   int get id {
     var hash = 2166136261;
     for (final c in key.codeUnits) {
@@ -75,6 +81,33 @@ class ReminderPlanner {
           'Seu saldo previsto pode ficar negativo. Revise os próximos compromissos.',
           now.add(const Duration(days: 1)),
           0);
+    if (prefs['weekly'] == true) plans.addAll(weekly(prefs, now));
+    return plans;
+  }
+
+  /// Weekly closing: the next Sundays at the chosen time (22:00 default).
+  /// The text carries no amount; the review is computed on tap, locally.
+  static List<ReminderPlan> weekly(Map<String, dynamic> prefs, DateTime now) {
+    final time = '${prefs['weeklyTime'] ?? '22:00'}'.split(':');
+    final hour = (int.tryParse(time.first) ?? 22).clamp(0, 23);
+    final minute =
+        (time.length > 1 ? int.tryParse(time[1]) ?? 0 : 0).clamp(0, 59);
+    final weekday =
+        ((prefs['weeklyDay'] as int?) ?? DateTime.sunday).clamp(1, 7);
+    var day =
+        DateTime(now.year, now.month, now.day + (weekday - now.weekday) % 7);
+    final plans = <ReminderPlan>[];
+    while (plans.length < 4) {
+      final at = DateTime(day.year, day.month, day.day, hour, minute);
+      if (at.isAfter(now)) {
+        plans.add(ReminderPlan(
+            'weekly:${at.toIso8601String()}',
+            'Fechamento da semana: toque para gerar a revisão dos últimos 7 dias.',
+            at,
+            route: weeklyReviewRoute));
+      }
+      day = DateTime(day.year, day.month, day.day + 7);
+    }
     return plans;
   }
 }
@@ -93,8 +126,40 @@ class FinancialReminders {
     'closing': false,
     'invoice': false,
     'forecast': false,
+    'weekly': false,
+    'weeklyTime': '22:00',
     'days': [3, 1, 0]
   };
+
+  final _routes = StreamController<String>.broadcast();
+
+  /// Screens requested by tapping a financial reminder.
+  Stream<String> get routes => _routes.stream;
+
+  /// Registers the tap handler once, after every other notification service
+  /// initialized the shared plugin. Returns the route that launched the app.
+  Future<String?> listenToTaps() async {
+    if (!PlatformCapabilities.scheduledNotifications) return null;
+    try {
+      await plugin.initialize(
+          const InitializationSettings(
+              android: AndroidInitializationSettings('ic_notification')),
+          onDidReceiveNotificationResponse: (response) {
+        if (response.payload == weeklyReviewRoute) {
+          _routes.add(weeklyReviewRoute);
+        }
+      });
+      final launch = await plugin.getNotificationAppLaunchDetails();
+      final payload = launch?.notificationResponse?.payload;
+      return launch?.didNotificationLaunchApp == true &&
+              payload == weeklyReviewRoute
+          ? payload
+          : null;
+    } catch (_) {
+      return null;
+    }
+  }
+
   Future<Map<String, dynamic>> preferences() async {
     final p = await SharedPreferences.getInstance();
     final raw = p.getString('nexo_reminders');
@@ -217,9 +282,10 @@ class FinancialReminders {
                 android: AndroidNotificationDetails(
                     'nexo_financial_reminders', 'Lembretes financeiros',
                     channelDescription:
-                        'Contas, receitas, recorrentes e cartões',
+                        'Contas, receitas, recorrentes, cartões e fechamento semanal',
                     visibility: NotificationVisibility.private,
                     importance: Importance.defaultImportance)),
+            payload: plan.route,
             androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
             uiLocalNotificationDateInterpretation:
                 UILocalNotificationDateInterpretation.absoluteTime);
