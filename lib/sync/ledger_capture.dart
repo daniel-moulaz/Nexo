@@ -2,6 +2,7 @@ import 'dart:collection';
 import 'dart:convert';
 
 import 'package:cryptography/cryptography.dart';
+import 'package:flutter/foundation.dart';
 import 'package:sqflite/sqflite.dart';
 import 'package:uuid/uuid.dart';
 
@@ -69,7 +70,7 @@ Future<T> ledgerTransaction<T>(
   LedgerScope scope = LedgerScope.user,
 }) async {
   if (!await LedgerCapture.isInstalled(db)) return db.transaction(body);
-  return db.transaction((txn) async {
+  final result = await db.transaction((txn) async {
     final id = const Uuid().v4();
     // A second context row fails the CHECK: nested operations are a bug.
     await txn.insert('sync_capture_context',
@@ -79,12 +80,18 @@ Future<T> ledgerTransaction<T>(
     await txn.delete('sync_capture_context');
     return result;
   });
+  // After the commit: a decision of the person may need to be sent.
+  if (scope == LedgerScope.user) LedgerCapture.changes.value++;
+  return result;
 }
 
 /// Trigger-based change capture. Installed explicitly (synthetic tests now;
 /// sync activation later). Cascades, REPLACE inserts and raw SQL are seen
 /// because SQLite itself reports the row changes, not each call site.
 abstract final class LedgerCapture {
+  /// Increments after every committed user operation (sync debounces it).
+  static final changes = ValueNotifier<int>(0);
+
   static Future<bool> isInstalled(Database db) async {
     final cached = _installed[db];
     if (cached != null) return cached;

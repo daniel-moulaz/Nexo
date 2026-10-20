@@ -25,6 +25,9 @@ import 'services/financial_reminders.dart';
 import 'widgets/security_gate.dart';
 import 'services/desktop_profile.dart';
 import 'screens/financial_checkup_screen.dart';
+import 'sync/supabase_auth.dart';
+import 'sync/sync_config.dart';
+import 'sync/sync_controller.dart';
 
 final GlobalKey<NavigatorState> rootNavigatorKey = GlobalKey<NavigatorState>();
 
@@ -67,6 +70,12 @@ Future<void> startNexo() async {
   await NexoSecurity.instance.load();
   await provider.load();
   await FinanceBootstrapService.apply(provider);
+  final syncConfig = SyncConfig.current;
+  SupabaseAuth.app = syncConfig == null ? null : SupabaseAuth(syncConfig);
+  SyncController.instance = SyncController.forApp(
+      syncConfig, SupabaseAuth.app, provider.reloadFromStorage);
+  // Never blocks opening the app: offline or signed out just waits.
+  unawaited(SyncController.instance?.start());
   NexoSecurity.instance.addListener(provider.updateHomeWidgets);
   provider
       .addListener(() => FinancialReminders.instance.requestRefresh(provider));
@@ -190,7 +199,9 @@ class _ExpensyAppState extends State<ExpensyApp> {
             debugShowCheckedModeBanner: false,
             builder: (context, child) => DesktopProfile.isTest
                 ? Banner(
-                    message: 'TESTE LOCAL',
+                    message: DesktopProfile.testName.isEmpty
+                        ? 'TESTE LOCAL'
+                        : 'TESTE ${DesktopProfile.testName.toUpperCase()}',
                     location: BannerLocation.topEnd,
                     child: SecurityGate(child: child!))
                 : SecurityGate(child: child!),
