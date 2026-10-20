@@ -686,17 +686,10 @@ class AppProvider extends ChangeNotifier {
       await CreditReminderService().scheduleReminder(a);
   }
 
-  Future<VoidCallback> deleteAccountWithUndo(String id) async {
-    final a = accounts.firstWhere((acc) => acc.id == id);
-    await deleteAccount(id);
-    return () async {
-      await addAccount(a);
-    };
-  }
-
+  /// Refused (FormatException) while anything still depends on the account.
   Future<void> deleteAccount(String id) async {
-    await CreditReminderService().cancelReminder(id);
     await DBHelper.deleteAccount(id);
+    await CreditReminderService().cancelReminder(id);
     accounts = await DBHelper.getAccounts();
     transactions = await DBHelper.getTransactions();
     notifyListeners();

@@ -399,7 +399,7 @@ Future<void> _confirmDelete(BuildContext context, Account account) async {
     builder: (dialogContext) => AlertDialog(
       title: const Text('Excluir conta?'),
       content: Text(
-          'Excluir “${account.name}” também pode remover lançamentos vinculados a ela.'),
+          '“${account.name}” será excluída. Lançamentos e outros registros nunca são apagados junto: contas com vínculos não podem ser excluídas.'),
       actions: [
         TextButton(
           onPressed: () => Navigator.pop(dialogContext, false),
@@ -413,7 +413,14 @@ Future<void> _confirmDelete(BuildContext context, Account account) async {
     ),
   );
   if (confirmed != true || !context.mounted) return;
-  await context.read<AppProvider>().deleteAccount(account.id);
+  try {
+    await context.read<AppProvider>().deleteAccount(account.id);
+  } on FormatException catch (e) {
+    if (context.mounted) {
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(e.message)));
+    }
+  }
 }
 
 IconData _accountIcon(String type) => switch (type) {

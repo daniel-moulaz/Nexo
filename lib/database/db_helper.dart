@@ -818,7 +818,21 @@ class DBHelper {
         throw const FormatException(
             'Esta conta possui operações de investimento vinculadas. Revise-as em Investir antes de excluir.');
       }
-      await txn.delete('transactions', where: 'account_id=?', whereArgs: [id]);
+      // Never delete history or money in cascade: whoever calls this (screen,
+      // sync, assistant) must first move or remove what depends on the account.
+      Future<bool> uses(String table, String where) async =>
+          (await txn.query(table, where: where, whereArgs: [id], limit: 1))
+              .isNotEmpty;
+      if (await uses('transactions', 'account_id=?') ||
+          await uses('recurring_payments', 'account_id=?') ||
+          await uses('accounts', 'linked_account_id=?') ||
+          await uses('savings_contributions', 'account_id=?') ||
+          await uses('loans', 'account_id=?1 OR transfer_account_id=?1') ||
+          await uses('loan_payments', 'account_id=?') ||
+          await uses('lended_money', 'account_id=? AND is_settled=0')) {
+        throw const FormatException(
+            'Esta conta possui vínculos. Realoque os lançamentos, recorrentes, cartões, empréstimos e objetivos antes de excluir. Você também pode ocultá-la do saldo total na edição.');
+      }
       await txn.delete('accounts', where: 'id=?', whereArgs: [id]);
     });
   }
