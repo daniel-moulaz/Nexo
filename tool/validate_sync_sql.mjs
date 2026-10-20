@@ -54,6 +54,7 @@ async function test(name, action) {
 
 try {
   await db.exec(`create role anon nologin; create role authenticated nologin;
+    create role service_role nologin bypassrls;
     create schema auth;
     create function auth.uid() returns uuid language sql stable as
       $$ select nullif(current_setting('request.jwt.claim.sub', true), '')::uuid $$;
@@ -62,6 +63,7 @@ try {
   await db.exec(await readFile(new URL('../supabase/migrations/202610160001_sync_lab.sql', import.meta.url), 'utf8'));
   // Every protocol-1 test below runs against the protocol-2 function.
   await db.exec(await readFile(new URL('../supabase/migrations/202610200001_sync_protocol_v2.sql', import.meta.url), 'utf8'));
+  await db.exec(await readFile(new URL('../supabase/migrations/202610200002_mcp_connectors.sql', import.meta.url), 'utf8'));
   await test('remote smoke script passes and rolls back all synthetic rows', async () => {
     const results = await db.exec(await readFile(new URL('../supabase/tests/sync_lab_smoke.sql', import.meta.url), 'utf8'));
     const row = results.at(-1).rows[0];
@@ -84,7 +86,7 @@ try {
     const rows = (await db.query(`select relname, relrowsecurity from pg_class c
       join pg_namespace n on n.oid = c.relnamespace
       where n.nspname = 'nexo_sync_lab_private' and relkind = 'r'`)).rows;
-    assert.equal(rows.length, 5);
+    assert.equal(rows.length, 5); // sync lab tables; MCP tables checked below
     assert(rows.every(r => r.relrowsecurity));
     await denies(() => user(A, tx => tx.query('select * from nexo_sync_lab_private.datasets')), '42501');
   });
@@ -293,6 +295,57 @@ try {
     assert((await user(A, tx => tx.query('select * from nexo_sync_lab_private.balances'))).rows.length > 0);
     await db.exec('revoke all on nexo_sync_lab_private.balances from authenticated; revoke all on schema nexo_sync_lab_private from authenticated;');
     await denies(() => user(A, tx => tx.query('select * from nexo_sync_lab_private.balances')), '42501');
+  });
+  // ── MCP connectors ───────────────────────────────────────────────────
+  const tokenHash = token => createHash('sha256').update(token).digest('hex');
+  let connector;
+  await test('owner creates a read connector; token shown once, only hash stored', async () => {
+    connector = await user(A, tx => rpc(tx, 'nexo_mcp_create_connector', [ds2, ' Claude ']));
+    assert.match(connector.token, /^nexo_mcp_[0-9a-f]{64}$/);
+    assert.equal(connector.label, 'Claude');
+    const listed = await user(A, tx => rpc(tx, 'nexo_mcp_list_connectors', []));
+    assert.equal(listed.length, 1);
+    assert.equal(JSON.stringify(listed).includes(connector.token), false);
+    const stored = (await db.query('select token_hash from nexo_mcp_private.connectors')).rows[0];
+    assert.equal(stored.token_hash, tokenHash(connector.token));
+  });
+  await test('connector cannot target another user dataset', async () => {
+    await denies(() => user(B, tx => rpc(tx, 'nexo_mcp_create_connector', [ds2, 'x'])), '42501');
+    await denies(() => user(null, tx => rpc(tx, 'nexo_mcp_create_connector', [ds2, 'x']), 'anon'), '42501');
+  });
+  await test('server functions are service-role only', async () => {
+    const hash = tokenHash(connector.token);
+    for (const role of ['anon', 'authenticated']) {
+      await denies(() => user(A, tx => rpc(tx, 'nexo_mcp_authenticate', [hash]), role), '42501');
+      await denies(() => user(A, tx => rpc(tx, 'nexo_mcp_ledger', [connector.id]), role), '42501');
+    }
+  });
+  await test('token authenticates and ledger is scoped to its dataset', async () => {
+    const found = await user(null, tx => rpc(tx, 'nexo_mcp_authenticate', [tokenHash(connector.token)]), 'service_role');
+    assert.equal(found.id, connector.id);
+    assert.equal(found.dataset_id, ds2);
+    assert.equal(await user(null, tx => rpc(tx, 'nexo_mcp_authenticate', [tokenHash(connector.token + 'x')]), 'service_role'), null);
+    const ledger = await user(null, tx => rpc(tx, 'nexo_mcp_ledger', [connector.id]), 'service_role');
+    assert(ledger.entities.some(e => e.kind === 'transactions'));
+    assert(ledger.entities.every(e => !['private-b'].includes(e.value?.id)));
+    assert.equal(BigInt(ledger.balances.find(b => b.account_id === 'bank').micros), 992200001n);
+    await user(null, tx => rpc(tx, 'nexo_mcp_audit', [connector.id, 'get_accounts', true]), 'service_role');
+    assert.equal((await db.query('select count(*)::int as n from nexo_mcp_private.audit')).rows[0].n, 1);
+  });
+  await test('revoked connector stops authenticating; limit of five active', async () => {
+    await denies(() => user(B, tx => rpc(tx, 'nexo_mcp_revoke_connector', [connector.id])), '42501');
+    await user(A, tx => rpc(tx, 'nexo_mcp_revoke_connector', [connector.id]));
+    assert.equal(await user(null, tx => rpc(tx, 'nexo_mcp_authenticate', [tokenHash(connector.token)]), 'service_role'), null);
+    await denies(() => user(null, tx => rpc(tx, 'nexo_mcp_ledger', [connector.id]), 'service_role'), '42501');
+    for (let i = 0; i < 5; i++) await user(A, tx => rpc(tx, 'nexo_mcp_create_connector', [ds2, `c${i}`]));
+    await denies(() => user(A, tx => rpc(tx, 'nexo_mcp_create_connector', [ds2, 'sexto'])), '22023');
+  });
+  await test('MCP tables have RLS and no direct client grants', async () => {
+    const rows = (await db.query(`select relrowsecurity from pg_class c join pg_namespace n on n.oid = c.relnamespace
+      where n.nspname = 'nexo_mcp_private' and relkind = 'r'`)).rows;
+    assert.equal(rows.length, 2);
+    assert(rows.every(r => r.relrowsecurity));
+    await denies(() => user(A, tx => tx.query('select * from nexo_mcp_private.connectors')), '42501');
   });
   console.log(`SQL LAB: ${passed} tests passed; synthetic local data only.`);
 } finally {
