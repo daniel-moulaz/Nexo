@@ -166,4 +166,22 @@ Dois perfis Windows no mesmo PC (`--test-profile` e `--test-profile=pc2`, bancos
 
 Conferência somente leitura dos dois bancos: mesmo `dataset_id`, `cursor` 3 nos dois, conta com saldo **950,00** e a mesma transação (mesmo id) nos dois; diário `account.create` + `bootstrap.checkpoint` confirmados no perfil 1 e `transaction.add` confirmado no pc2; nenhuma tentativa repetida, rejeição ou conflito.
 
-Não validado ainda: conflito real pela interface, offline real, celular Android, dados reais (etapa 3, depende de decisão do usuário).
+## Roteiro automático contra o Supabase real (20/10/2026)
+
+`tool/sync_e2e.dart` roda como app Windows (`flutter run -d windows -t tool/sync_e2e.dart --dart-define-from-file=tool/nexo_sync.local.json`), reaproveita o login do perfil `--test-profile` (feche as janelas de teste antes, para não disputarem a renovação da sessão) e usa dois aparelhos sintéticos em bancos temporários, com o `SyncController` e o transporte HTTP reais. Sem internet e resposta perdida são simulados num invólucro do transporte. Resultado em `%TEMP%/nexo_sync_e2e.txt`; **11/11 em duas execuções seguidas**:
+
+1. pareamento (criar acervo / entrar);
+2. conta criada num lado chega sozinha no outro;
+3. despesa chega sozinha no outro (950);
+4. gastos simultâneos na mesma conta somam nos dois, sem conflito (900);
+5. mesma categoria renomeada nos dois → conflito; "Usar a minha versão" vale nos dois;
+6. mesmo lançamento editado nos dois → conflito sem reaplicar; "Manter a do outro" deixa o saldo coerente (890);
+7. apagado num lado enquanto o outro editava → continua apagado (920);
+8. sem internet → `retryLater`, 1 pendente, saldo local já atualizado; com rede volta → enviado (910);
+9. resposta do servidor perdida → a mesma rodada recupera a confirmação pelo pull; o outro aparelho recebe exatamente 1 revisão (905);
+10. transferência entre contas preserva o total;
+11. os 19 conjuntos sincronizados ficam idênticos nos dois bancos.
+
+Cada execução deixa um acervo sintético sem nome no laboratório (não aparece em "Entrar num acervo existente") e revoga os dois aparelhos ao final.
+
+Não validado ainda: celular Android, offline real de rede (só simulado no transporte), dados reais (etapa 3, depende de decisão do usuário).
