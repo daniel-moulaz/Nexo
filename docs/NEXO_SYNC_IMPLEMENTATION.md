@@ -1,5 +1,7 @@
 # Sincronização — início da implementação
 
+> **Estado em 20/10/2026:** este documento descreve a etapa de 16/10. Depois dela o usuário criou o projeto Supabase `nexo-sync`, o transporte HTTP e o SQL do laboratório foram versionados com testes, e toda gravação financeira passou a ser uma operação de domínio atômica com captura opcional. Ver [NEXO_SYNC_DOMAIN_2026_10_20.md](NEXO_SYNC_DOMAIN_2026_10_20.md). A tabela de "pontos concretos" abaixo foi resolvida nesse lote, exceto conflitos com interface, bootstrap e restore integrado ao motor.
+
 Data: 16/10/2026. Branch: `codex/nexo-sync-foundation`.
 
 ## Situação real

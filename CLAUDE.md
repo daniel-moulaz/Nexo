@@ -4,15 +4,17 @@ Leia **`docs/NEXO_HANDOFF_CLAUDE_2026_10_20.md` integralmente antes de alterar c
 
 Leia também `docs/NEXO_HANDOFF_WORKTREE_2026_10_20.md`: há mudanças locais legítimas e arquivos não rastreados. A versão instalada foi compilada com esse workspace integrado. Um checkout limpo do GitHub não é necessariamente igual ao que está no celular.
 
+Atualização de 20/10/2026 (Claude, lote S1 de sync): leia também **`docs/NEXO_SYNC_DOMAIN_2026_10_20.md`** (fronteira de domínio, captura atômica, correções de dinheiro, evidências) e `docs/NEXO_INTEGRATIONS_PLAN_2026_10.md` (MCP/Pluggy/ChatGPT: plano, não funcionalidade). Toda gravação de dados do usuário deve usar `ledgerTransaction`/`DBHelper.operation`; `test/ledger_capture_test.dart` falha se um caminho escapar.
+
 Estado de referência em 20/10/2026:
 
 - Pasta: `C:\Users\danie\projetos\Expensy`. Nome público: **Nexo**.
-- Branch: `codex/nexo-investments`. Último commit funcional: `46a5720`; documentação da conferência Android: `c3a34b7`.
-- Versão instalada Android: **1.6.5+26**. Schema SQLite: **25**.
+- Branch: `codex/nexo-investments`. Commits do lote S1: `7be004c`, `6695d91`, `f09258b`, `d56fd91` (+ documentação).
+- Versão do código: **1.6.6+27** (não instalada até o usuário autorizar). Instalada Android: **1.6.5+26**. Schema SQLite: **25**.
 - Identidade Android **`com.ma.expensy`**, banco **`expensy.db`**, pacote Dart **`expensy`** e certificado existente são invariantes.
 - Remoto de publicação: **`nexo` → `daniel-moulaz/Nexo`**. `origin` ainda é Expensy; não trocar remotos nem fazer push no destino errado.
 - **Não há sincronização de produção.** Há laboratório local, transporte experimental e laboratório Supabase sintético. Não habilitar upload real por inferência.
-- Última validação do workspace: **279 testes**, análise limpa, builds Release Android e Windows. Isso não significa homologação manual completa de Windows ou sync.
+- Última validação: workspace **309 testes**, worktree limpa **298**, análise limpa, SQL do laboratório 22/22. Isso não significa homologação manual completa de Windows ou sync.
 
 Regras permanentes:
 
