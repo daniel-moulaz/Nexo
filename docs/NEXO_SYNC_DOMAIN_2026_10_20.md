@@ -154,3 +154,16 @@ Observações de operação:
 
 - O SMTP padrão do Supabase limita os e-mails de login a poucos por hora e o modelo não pode ser editado sem SMTP próprio. O login por **senha** (conta criada no painel com "Auto Confirm User") contorna isso; o código por e-mail funciona com SMTP próprio (Resend recomendado).
 - O laboratório guarda o acervo fictício criado pelo teste (pequeno, marcado como sintético).
+
+## Sincronização automática entre dois aparelhos (20/10/2026)
+
+Dois perfis Windows no mesmo PC (`--test-profile` e `--test-profile=pc2`, bancos separados em `%TEMP%/NexoWindowsQA*`, dados fictícios), build com `tool/nexo_sync.local.json`, migration `202610200003_sync_lab_datasets.sql` aplicada pelo usuário ("Success"). Roteiro feito pelo usuário:
+
+1. perfil 1 criou o acervo "Teste do Nexo" (checkpoint confirmado);
+2. pc2 entrou com senha e escolheu o acervo pelo nome (baixou as categorias);
+3. perfil 1 criou a conta "banco teste" com R$ 1.000 → chegou sozinha no pc2;
+4. pc2 lançou uma despesa de R$ 50 → chegou sozinha no perfil 1.
+
+Conferência somente leitura dos dois bancos: mesmo `dataset_id`, `cursor` 3 nos dois, conta com saldo **950,00** e a mesma transação (mesmo id) nos dois; diário `account.create` + `bootstrap.checkpoint` confirmados no perfil 1 e `transaction.add` confirmado no pc2; nenhuma tentativa repetida, rejeição ou conflito.
+
+Não validado ainda: conflito real pela interface, offline real, celular Android, dados reais (etapa 3, depende de decisão do usuário).
