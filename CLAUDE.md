@@ -15,8 +15,8 @@ Estado de referência em 20/10/2026 (fim do dia):
 - Identidade Android **`com.ma.expensy`**, banco **`expensy.db`**, pacote Dart **`expensy`** e certificado existente são invariantes.
 - Remoto de publicação: **`nexo` → `daniel-moulaz/Nexo`**. `origin` ainda é Expensy; não trocar remotos nem fazer push no destino errado.
 - Plano e andamento: `docs/NEXO_PLANO_SEQUENCIA_2026_10.md` (login por e-mail pronto, bloqueado no SMTP do Supabase; MCP e Pluggy implementados e testados, não publicados).
-- **Não há sincronização de produção.** Motor `LedgerSync` e protocolo 2 existem e só rodam em testes sintéticos. No projeto `nexo-sync` o usuário aplicou a migration v2 (verificação de permissões OK); `202610200002_mcp_connectors.sql` ainda não foi aplicada. Não habilitar upload real por inferência.
-- Última validação: **341 testes** Flutter, SQL do laboratório 36/36, MCP 18/18, Pluggy 13/13, análise limpa. Testes Kotlin/instrumentados não foram reexecutados nesta rodada. Isso não significa homologação manual completa de Windows ou sync.
+- **Não há sincronização de produção.** A sincronização automática funciona entre perfis Windows de teste com dados fictícios (validada pelo usuário em 20/10, ver `NEXO_SYNC_DOMAIN`); dados reais e celular continuam desligados. No projeto `nexo-sync` o usuário aplicou as migrations v2 e `202610200003_sync_lab_datasets.sql`; `202610200002_mcp_connectors.sql` ainda não foi aplicada. Não habilitar upload real por inferência.
+- Última validação: **347 testes** Flutter, SQL do laboratório 37/37, MCP 18/18, Pluggy 13/13, análise limpa. Testes Kotlin/instrumentados não foram reexecutados nesta rodada. Isso não significa homologação manual completa de Windows ou sync.
 
 Regras permanentes:
 
