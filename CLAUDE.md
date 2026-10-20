@@ -11,11 +11,11 @@ Estado de referência em 20/10/2026 (fim do dia):
 - Pasta: `C:\Users\danie\projetos\Expensy`. Nome público: **Nexo**.
 - Branch: `codex/nexo-investments`. Commitados: sync S1 (domínio) e S2 (motor + protocolo 2), fechamento semanal e as mudanças locais antigas, publicadas em lotes revisados.
 - **A pasta não tem mais mudanças locais de conteúdo.** Arquivos marcados como modificados diferem só por final de linha (inclui `lib/l10n/*` regenerado pelo build). `.vscode/` é configuração do usuário: não versionar.
-- Versão do código: **1.6.7+28**. Instalada Android: 1.6.6+27 em 20/10 (verificar com `adb` antes de atualizar). Schema SQLite: **25**.
+- Versão do código: **1.6.7+28**. Instalada Android: **1.6.7+28** em 20/10 (verificar com `adb` antes de atualizar). Schema SQLite: **25**.
 - Identidade Android **`com.ma.expensy`**, banco **`expensy.db`**, pacote Dart **`expensy`** e certificado existente são invariantes.
 - Remoto de publicação: **`nexo` → `daniel-moulaz/Nexo`**. `origin` ainda é Expensy; não trocar remotos nem fazer push no destino errado.
 - Plano e andamento: `docs/NEXO_PLANO_SEQUENCIA_2026_10.md` (login por e-mail pronto, bloqueado no SMTP do Supabase; MCP e Pluggy implementados e testados, não publicados).
-- **Não há sincronização de produção.** Motor `LedgerSync` e protocolo 2 existem e só rodam em testes sintéticos; a migration v2 não foi aplicada no projeto remoto. Não habilitar upload real por inferência.
+- **Não há sincronização de produção.** Motor `LedgerSync` e protocolo 2 existem e só rodam em testes sintéticos. No projeto `nexo-sync` o usuário aplicou a migration v2 (verificação de permissões OK); `202610200002_mcp_connectors.sql` ainda não foi aplicada. Não habilitar upload real por inferência.
 - Última validação: **341 testes** Flutter, SQL do laboratório 36/36, MCP 18/18, Pluggy 13/13, análise limpa. Testes Kotlin/instrumentados não foram reexecutados nesta rodada. Isso não significa homologação manual completa de Windows ou sync.
 
 Regras permanentes:
