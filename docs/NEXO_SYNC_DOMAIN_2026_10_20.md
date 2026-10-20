@@ -129,3 +129,9 @@ Conteúdo novo para o usuário em relação à 1.6.6+27: **Notificações → Fe
 - Android: `build/distribution/Nexo-1.6.7+28-android.apk`, SHA-256 `f6a9c89a0137bcc58cffde2cd2a298740c430886e82b3a1ace945b46058d78af`, certificado `54d668e0…2096`.
 - Windows: `build/windows/x64/runner/Release/` (pasta inteira).
 - A 1.6.6+27 foi instalada no Android por atualização em 20/10 (dados preservados, `firstInstallTime` 26/09).
+
+## Migration v2 aplicada no projeto `nexo-sync` (20/10/2026)
+
+O usuário executou `202610200001_sync_protocol_v2.sql` no SQL Editor. Verificação informada: `tabela_ok = true`, `rls_ok = true`, `usuario_executa = true`, `anonimo_executa = false`. Nenhum dado real envolvido.
+
+Teste remoto sintético com rollback: `supabase/tests/sync_protocol_v2_smoke.sql` (validado localmente no PGlite; laboratório 30/30). Resultado esperado no SQL Editor: `synthetic_v2_smoke_passed | 0 | 0 | true`. Ainda não prova login HTTP real — isso exige Auth configurado.
