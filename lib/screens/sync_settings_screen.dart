@@ -74,7 +74,7 @@ class _SyncSettingsScreenState extends State<SyncSettingsScreen> {
         await _auth!.requestCode(_email.text);
         _codeSent = true;
         _message =
-            'Enviamos um código para o seu e-mail. Ele vale por alguns minutos.';
+            'E-mail enviado. Digite o código ou, se vier só um link, copie o link sem abrir e cole abaixo.';
       });
 
   Future<void> _verify() => _run(() async {
@@ -154,9 +154,13 @@ class _SyncSettingsScreenState extends State<SyncSettingsScreen> {
           TextField(
             controller: _code,
             enabled: !_busy,
-            keyboardType: TextInputType.number,
+            keyboardType: TextInputType.text,
             autofillHints: const [AutofillHints.oneTimeCode],
-            decoration: const InputDecoration(labelText: 'Código recebido'),
+            decoration: const InputDecoration(
+                labelText: 'Código ou link do e-mail',
+                helperMaxLines: 3,
+                helperText:
+                    'Não abra o link: toque e segure (ou clique com o botão direito) e copie o endereço.'),
             onSubmitted: (_) => _verify(),
           ),
           const SizedBox(height: 12),
