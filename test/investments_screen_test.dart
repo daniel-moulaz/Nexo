@@ -49,12 +49,13 @@ void main() {
   });
   tearDownAll(() async => DBHelper.close());
   Future<void> settle(WidgetTester tester) async {
-    await tester.pump();
-    await tester.runAsync(
-        () => Future<void>.delayed(const Duration(milliseconds: 200)));
-    await tester.pump();
-    await tester.runAsync(
-        () => Future<void>.delayed(const Duration(milliseconds: 200)));
+    // SQLite FFI uses real async work; each chained query needs a frame to
+    // resume before the next one can complete outside the fake test clock.
+    for (var i = 0; i < 12; i++) {
+      await tester.pump();
+      await tester.runAsync(
+          () => Future<void>.delayed(const Duration(milliseconds: 50)));
+    }
     await tester.pumpAndSettle();
   }
 
@@ -231,21 +232,37 @@ void main() {
     await tester.enterText(fields.at(0), 'Carteira sintética');
     await tester.enterText(fields.at(3), '10');
     await tester.enterText(fields.at(4), '100,00');
+    await tester
+        .ensureVisible(find.byKey(const ValueKey('investment-cash-account')));
+    await tester.tap(find.byKey(const ValueKey('investment-cash-account')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Não movimentar conta (já registrado)').last);
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Salvar'));
     await settle(tester);
     final created = await tester.runAsync(() => repo.load());
     expect(created!.single.cost, 10000);
-    await tester.ensureVisible(find.text('Carteira sintética').last);
-    await tester.tap(find.text('Carteira sintética').last);
+    await tester.pumpAndSettle();
+    final positionCard = find
+        .byKey(ValueKey('investment-position-${created.single.investment.id}'));
+    await tester.ensureVisible(positionCard);
+    await tester.pumpAndSettle();
+    await tester.tap(positionCard);
     await settle(tester);
     await tester.tap(find.text('Registrar operação'));
     await tester.pumpAndSettle();
-    await tester.tap(find.byType(DropdownButtonFormField<String>));
+    await tester.tap(find.byType(DropdownButtonFormField<String>).first);
     await tester.pumpAndSettle();
     await tester.tap(find.text('Venda / resgate').last);
     await tester.pumpAndSettle();
     await tester.enterText(find.byType(TextField).at(0), '2');
     await tester.enterText(find.byType(TextField).at(1), '30,00');
+    await tester
+        .ensureVisible(find.byKey(const ValueKey('investment-cash-account')));
+    await tester.tap(find.byKey(const ValueKey('investment-cash-account')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Não movimentar conta (já registrado)').last);
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Salvar'));
     await settle(tester);
     await tester.tap(find.text('Informar preço'));

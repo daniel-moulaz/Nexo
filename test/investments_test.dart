@@ -122,7 +122,8 @@ void main() {
     await db.execute('DROP TABLE investments');
     await db.setVersion(23);
     await DBHelper.close();
-    expect(await (await DBHelper.database).getVersion(), 24);
+    expect(
+        await (await DBHelper.database).getVersion(), DBHelper.schemaVersion);
     expect((await DBHelper.getAssets()).single.value, 123.45);
     final legacy = await DBHelper.exportAll();
     legacy['version'] = 23;

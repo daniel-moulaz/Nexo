@@ -8,7 +8,7 @@ import '../investments/investment_repository.dart';
 
 class DBHelper {
   static Database? _db;
-  static const int _version = 24;
+  static const int _version = 25;
 
   /// Public accessor for the current DB/backup schema version, so UI code
   /// (e.g. the Backup screen) never has to hardcode a copy that can drift
@@ -477,6 +477,12 @@ class DBHelper {
     if (oldV < 22) await _createImportRules(db);
     if (oldV < 23) await _createSuggestions(db);
     if (oldV < 24) await InvestmentRepository.createSchema(db);
+    if (oldV >= 24 && oldV < 25) {
+      await db.execute(
+          'ALTER TABLE investments ADD COLUMN archived INTEGER NOT NULL DEFAULT 0');
+      await db.execute(
+          'ALTER TABLE investment_operations ADD COLUMN cash_account_id TEXT');
+    }
     if (oldV < 20) {
       try {
         await db
@@ -777,11 +783,34 @@ class DBHelper {
   static Future<void> insertAccount(Account a) async =>
       (await database).insert('accounts', a.toMap(),
           conflictAlgorithm: ConflictAlgorithm.replace);
-  static Future<void> updateAccount(Account a) async => (await database)
-      .update('accounts', a.toMap(), where: 'id=?', whereArgs: [a.id]);
+  static Future<void> validateInvestmentCashAccount(
+      DatabaseExecutor db, Account a) async {
+    if (a.currency == 'BRL' && !['credit', 'gold'].contains(a.type)) return;
+    if ((await db.query('investment_operations',
+            where: 'cash_account_id=?', whereArgs: [a.id], limit: 1))
+        .isNotEmpty) {
+      throw const FormatException(
+          'Esta conta está vinculada a investimentos e precisa continuar como conta de saldo em reais.');
+    }
+  }
+
+  static Future<void> updateAccount(Account a) async {
+    final db = await database;
+    await db.transaction((txn) async {
+      await validateInvestmentCashAccount(txn, a);
+      await txn.update('accounts', a.toMap(), where: 'id=?', whereArgs: [a.id]);
+    });
+  }
+
   static Future<void> deleteAccount(String id) async {
     final db = await database;
     await db.transaction((txn) async {
+      if ((await txn.query('investment_operations',
+              where: 'cash_account_id=?', whereArgs: [id], limit: 1))
+          .isNotEmpty) {
+        throw const FormatException(
+            'Esta conta possui operações de investimento vinculadas. Revise-as em Investir antes de excluir.');
+      }
       await txn.delete('transactions', where: 'account_id=?', whereArgs: [id]);
       await txn.delete('accounts', where: 'id=?', whereArgs: [id]);
     });
@@ -1182,6 +1211,7 @@ class DBHelper {
 
   static Future<void> importAll(Map<String, dynamic> data) async {
     validateBackup(data);
+    InvestmentRepository.validateCashBackup(data);
     try {
       InvestmentRepository.decode(
           ((data['investments'] as List?) ?? [])

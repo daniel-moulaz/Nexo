@@ -21,7 +21,7 @@ String _money(BuildContext context, int cents) =>
 String _quantity(int units) =>
     NumberFormat('0.######', 'pt_BR').format(units / investmentScale);
 const _trackingNotice =
-    'Carteira de acompanhamento em reais. Compras, vendas e proventos aqui não alteram suas contas, receitas ou despesas. Não some esta carteira a saldos que já incluem esses investimentos.';
+    'Aportes e resgates vinculados movimentam o saldo da conta, sem contar como consumo. Proventos vinculados entram como receita. Posições antigas continuam sem movimentar contas até sua revisão.';
 
 class InvestmentsScreen extends StatefulWidget {
   final bool active;
@@ -35,6 +35,7 @@ class _InvestmentsScreenState extends State<InvestmentsScreen> {
   late Future<List<InvestmentPosition>> _data;
   bool _refreshing = false;
   String _search = '', _class = 'Todas';
+  bool _showArchived = false;
   String? _quoteStatus;
   @override
   void initState() {
@@ -188,6 +189,7 @@ class _InvestmentsScreenState extends State<InvestmentsScreen> {
             final all = snapshot.data!;
             final shown = all
                 .where((p) =>
+                    (_showArchived || !p.investment.archived) &&
                     (_class == 'Todas' || p.investment.assetClass == _class) &&
                     '${p.investment.name} ${p.investment.ticker} ${p.investment.institution}'
                         .toLowerCase()
@@ -297,6 +299,17 @@ class _InvestmentsScreenState extends State<InvestmentsScreen> {
                                             setState(() => _class = c))
                                 ]),
                                 const SizedBox(height: 12),
+                                if (all.any((p) => p.investment.archived))
+                                  SwitchListTile.adaptive(
+                                    contentPadding: EdgeInsets.zero,
+                                    title: const Text(
+                                        'Mostrar posições retiradas'),
+                                    subtitle: const Text(
+                                        'O histórico e os resultados continuam preservados.'),
+                                    value: _showArchived,
+                                    onChanged: (v) =>
+                                        setState(() => _showArchived = v),
+                                  ),
                                 if (shown.isEmpty)
                                   const Text(
                                       'Nenhum investimento neste filtro.'),
@@ -702,6 +715,34 @@ class _InvestmentDetailState extends State<_InvestmentDetail> {
                                       label: const Text('Informar preço')),
                                 ]),
                                 const SizedBox(height: 20),
+                                if (p.quantity == 0)
+                                  OutlinedButton.icon(
+                                    icon: Icon(p.investment.archived
+                                        ? Icons.unarchive_outlined
+                                        : Icons.archive_outlined),
+                                    label: Text(p.investment.archived
+                                        ? 'Mostrar na carteira'
+                                        : 'Retirar da carteira'),
+                                    onPressed: () async {
+                                      try {
+                                        await repository.archive(
+                                            p.investment.id,
+                                            archived: !p.investment.archived);
+                                        if (context.mounted) {
+                                          Navigator.pop(context);
+                                          _message(context,
+                                              'Lista atualizada. Histórico e saldos preservados.');
+                                        }
+                                      } on FormatException catch (e) {
+                                        if (context.mounted)
+                                          _message(context, e.message);
+                                      } catch (_) {
+                                        if (context.mounted)
+                                          _message(context,
+                                              'Não foi possível atualizar a lista. Tente novamente.');
+                                      }
+                                    },
+                                  ),
                                 const Text(_trackingNotice),
                                 const SizedBox(height: 24),
                                 Text('Histórico',
@@ -715,7 +756,15 @@ class _InvestmentDetailState extends State<_InvestmentDetail> {
                                       child: ListTile(
                                           title: Text(op.label),
                                           subtitle: Text(
-                                              '${ptDate(op.date.toLocal())} · ${_money(context, op.cents)}${op.kind == 'income' ? '' : ' · ${private ? '••••' : _quantity(op.quantity)} un.'}'),
+                                              '${ptDate(op.date.toLocal())} · ${_money(context, op.cents)}${op.kind == 'income' ? '' : ' · ${private ? '••••' : _quantity(op.quantity)} un.'}\n${op.cashAccountId == null ? 'Sem movimentação em conta' : 'Conta: ${context.read<AppProvider>().accountById(op.cashAccountId!)?.name ?? 'Vinculada'}'}'),
+                                          onTap: op.cashAccountId == null &&
+                                                  op.cents > 0
+                                              ? () => showDialog<void>(
+                                                  context: context,
+                                                  builder: (_) =>
+                                                      _LinkCashDialog(
+                                                          operation: op))
+                                              : null,
                                           trailing: IconButton(
                                               tooltip: 'Excluir operação',
                                               icon: const Icon(
@@ -728,8 +777,8 @@ class _InvestmentDetailState extends State<_InvestmentDetail> {
                                                         AlertDialog(
                                                             title: const Text(
                                                                 'Excluir esta operação?'),
-                                                            content: const Text(
-                                                                'A posição será recalculada. Suas contas bancárias não serão alteradas. A exclusão será bloqueada se deixar alguma venda sem quantidade.'),
+                                                            content: Text(
+                                                                'A posição será recalculada. ${op.cashAccountId == null ? 'Não há conta vinculada.' : 'A movimentação será estornada na conta vinculada.'} A exclusão será bloqueada se deixar alguma venda sem quantidade.'),
                                                             actions: [
                                                               TextButton(
                                                                   onPressed: () =>
@@ -750,6 +799,10 @@ class _InvestmentDetailState extends State<_InvestmentDetail> {
                                                 try {
                                                   await repository
                                                       .removeOperation(op.id);
+                                                  if (context.mounted)
+                                                    await context
+                                                        .read<AppProvider>()
+                                                        .refreshInvestmentCash();
                                                   if (context.mounted)
                                                     _message(context,
                                                         'Operação excluída; posição recalculada.');
@@ -786,7 +839,8 @@ class _OperationDialogState extends State<_OperationDialog> {
       quantity = TextEditingController(),
       amount = TextEditingController();
   final id = const Uuid().v4(), assetId = const Uuid().v4();
-  String assetClass = 'Ações', kind = 'opening';
+  String assetClass = 'Ações', kind = 'buy';
+  String? cashAccount;
   DateTime date = DateTime.now();
   String? error;
   bool busy = false;
@@ -806,6 +860,11 @@ class _OperationDialogState extends State<_OperationDialog> {
 
   Future<void> save() async {
     if (busy) return;
+    if (kind != 'opening' && cashAccount == null) {
+      setState(() => error =
+          'Escolha a conta movimentada ou informe que o valor já foi registrado.');
+      return;
+    }
     final units = kind == 'income' ? 0 : parseInvestmentQuantity(quantity.text);
     final value = parseMoney(amount.text);
     if (units == null ||
@@ -828,7 +887,10 @@ class _OperationDialogState extends State<_OperationDialog> {
           quantity: units,
           cents: (value * 100).round(),
           date: date,
-          createdAt: DateTime.now());
+          createdAt: DateTime.now(),
+          cashAccountId: kind == 'opening' || (cashAccount ?? '').isEmpty
+              ? null
+              : cashAccount);
       final repository = InvestmentRepository();
       if (widget.position == null) {
         await repository.create(
@@ -845,10 +907,14 @@ class _OperationDialogState extends State<_OperationDialog> {
       } else {
         await repository.record(op);
       }
+      if (mounted) await context.read<AppProvider>().refreshInvestmentCash();
       if (mounted) {
         Navigator.pop(context);
         _message(
-            context, 'Operação registrada na carteira. Contas preservadas.');
+            context,
+            op.cashAccountId == null
+                ? 'Operação registrada sem movimentar conta.'
+                : 'Carteira e saldo da conta atualizados.');
       }
     } on FormatException catch (e) {
       if (mounted) setState(() => error = e.message);
@@ -925,7 +991,10 @@ class _OperationDialogState extends State<_OperationDialog> {
                                 child: Text('Provento recebido'))
                           ]
                         ],
-                        onChanged: (v) => setState(() => kind = v!)),
+                        onChanged: (v) => setState(() {
+                              kind = v!;
+                              if (kind == 'opening') cashAccount = null;
+                            })),
                     if (kind != 'income')
                       TextField(
                           controller: quantity,
@@ -962,8 +1031,46 @@ class _OperationDialogState extends State<_OperationDialog> {
                       const Text(
                           'Você pode representar um título como 1 unidade e atualizar seu valor manualmente pelo extrato. Não estimamos juros futuros.'),
                     const SizedBox(height: 8),
-                    const Text(
-                        'Registro de acompanhamento. Não movimenta contas bancárias.'),
+                    if (kind != 'opening') ...[
+                      DropdownButtonFormField<String>(
+                        key: const ValueKey('investment-cash-account'),
+                        initialValue: cashAccount,
+                        isExpanded: true,
+                        decoration: InputDecoration(
+                            labelText: kind == 'buy'
+                                ? 'De qual conta saiu?'
+                                : 'Em qual conta entrou?'),
+                        items: [
+                          const DropdownMenuItem(
+                              value: '',
+                              child:
+                                  Text('Não movimentar conta (já registrado)')),
+                          for (final a in context
+                              .read<AppProvider>()
+                              .cashAccounts
+                              .where((a) => a.currency == 'BRL'))
+                            DropdownMenuItem(
+                                value: a.id,
+                                child: Text(a.name,
+                                    overflow: TextOverflow.ellipsis)),
+                        ],
+                        onChanged: busy
+                            ? null
+                            : (v) => setState(() => cashAccount = v ?? ''),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(cashAccount == null
+                          ? 'Escolha uma conta para atualizar seu saldo disponível junto com o investimento.'
+                          : cashAccount!.isEmpty
+                              ? 'Nenhum saldo será alterado. Se este dinheiro ainda está no saldo do Nexo, escolha a conta acima.'
+                              : kind == 'buy'
+                                  ? 'O total será descontado do saldo disponível. Aporte não entra nos gastos de consumo.'
+                                  : kind == 'sell'
+                                      ? 'O total será acrescentado ao saldo disponível. Resgate não entra como nova receita de trabalho.'
+                                      : 'O valor será acrescentado ao saldo e registrado como receita de provento.'),
+                    ] else
+                      const Text(
+                          'Posição antiga: informa apenas o que você já possui, sem descontar dinheiro novamente.'),
                     if (error != null)
                       Text(error!,
                           style: TextStyle(
@@ -977,6 +1084,99 @@ class _OperationDialogState extends State<_OperationDialog> {
                 onPressed: busy ? null : save,
                 child: Text(busy ? 'Salvando…' : 'Salvar'))
           ]);
+}
+
+class _LinkCashDialog extends StatefulWidget {
+  final InvestmentOperation operation;
+  const _LinkCashDialog({required this.operation});
+  @override
+  State<_LinkCashDialog> createState() => _LinkCashDialogState();
+}
+
+class _LinkCashDialogState extends State<_LinkCashDialog> {
+  String? account;
+  bool confirmed = false, busy = false;
+  String? error;
+  @override
+  Widget build(BuildContext context) {
+    final op = widget.operation;
+    final debit = InvestmentRepository.cashDebit(op);
+    return AlertDialog(
+      title: const Text('Vincular movimentação à conta'),
+      content: SizedBox(
+          width: 440,
+          child: SingleChildScrollView(
+              child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                Text(
+                    '${debit ? 'Saída' : 'Entrada'} de ${_money(context, op.cents)} na data ${ptDate(op.date.toLocal())}.'),
+                const SizedBox(height: 12),
+                const Text(
+                    'Isso muda o saldo atual do Nexo. Se você já registrou a saída ou entrada, ou ajustou o saldo da conta depois, cancele para não contar duas vezes.'),
+                const SizedBox(height: 12),
+                DropdownButtonFormField<String>(
+                  initialValue: account,
+                  isExpanded: true,
+                  decoration:
+                      const InputDecoration(labelText: 'Conta movimentada'),
+                  items: [
+                    for (final a in context
+                        .read<AppProvider>()
+                        .cashAccounts
+                        .where((a) => a.currency == 'BRL'))
+                      DropdownMenuItem(value: a.id, child: Text(a.name))
+                  ],
+                  onChanged: busy ? null : (v) => setState(() => account = v),
+                ),
+                CheckboxListTile(
+                    contentPadding: EdgeInsets.zero,
+                    title: const Text(
+                        'Esta movimentação ainda não está refletida no saldo do Nexo.'),
+                    value: confirmed,
+                    onChanged: busy
+                        ? null
+                        : (v) => setState(() => confirmed = v ?? false)),
+                if (error != null)
+                  Text(error!,
+                      style: TextStyle(
+                          color: Theme.of(context).colorScheme.error)),
+              ]))),
+      actions: [
+        TextButton(
+            onPressed: busy ? null : () => Navigator.pop(context),
+            child: const Text('Cancelar')),
+        FilledButton(
+            onPressed: busy || !confirmed || account == null
+                ? null
+                : () async {
+                    setState(() => busy = true);
+                    try {
+                      await InvestmentRepository().linkCash(op.id, account!);
+                      if (context.mounted)
+                        await context
+                            .read<AppProvider>()
+                            .refreshInvestmentCash();
+                      if (context.mounted) {
+                        Navigator.pop(context);
+                        _message(context,
+                            'Movimentação vinculada. Saldo atualizado.');
+                      }
+                    } on FormatException catch (e) {
+                      if (mounted) setState(() => error = e.message);
+                    } catch (_) {
+                      if (mounted)
+                        setState(() => error =
+                            'Não foi possível vincular. Nenhum saldo foi alterado.');
+                    } finally {
+                      if (mounted) setState(() => busy = false);
+                    }
+                  },
+            child: Text(busy ? 'Salvando…' : 'Confirmar movimentação')),
+      ],
+    );
+  }
 }
 
 class _PriceDialog extends StatefulWidget {
