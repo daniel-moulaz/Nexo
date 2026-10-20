@@ -77,7 +77,7 @@ class MarketSnapshot {
 
 /// Rebuildable public cache, separate from financial backups and SQLite schema.
 class MarketCache {
-  static String get _prefix => DesktopProfile.isTest ? 'market_qa_' : 'market_';
+  static String get _prefix => DesktopProfile.isTest ? 'market_qa${DesktopProfile.qaSuffix}_' : 'market_';
   static Future<MarketSnapshot?> read(String ticker) async {
     try {
       final raw =
@@ -181,7 +181,7 @@ class InvestmentQuotes {
 
 class InvestmentQuoteSettings {
   static String get _key =>
-      DesktopProfile.isTest ? 'nexo_quotes_qa' : 'nexo_quotes';
+      DesktopProfile.isTest ? 'nexo_quotes_qa${DesktopProfile.qaSuffix}' : 'nexo_quotes';
   static const storage = FlutterSecureStorage();
   static Future<bool> enabled() async =>
       (await SharedPreferences.getInstance()).getBool('${_key}_enabled') ??

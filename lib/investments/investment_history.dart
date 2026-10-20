@@ -62,7 +62,7 @@ class InvestmentHistory {
       this.timeout = const Duration(seconds: 15)})
       : clientFactory = clientFactory ?? http.Client.new;
   static String get _prefix =>
-      DesktopProfile.isTest ? 'history_qa_' : 'history_';
+      DesktopProfile.isTest ? 'history_qa${DesktopProfile.qaSuffix}_' : 'history_';
   static Future<PriceHistory?> cached(String ticker) async {
     try {
       final text =
