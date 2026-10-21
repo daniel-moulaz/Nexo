@@ -170,7 +170,7 @@ void main() {
         expect(tester.takeException(), isNull);
       }
       if (entry.key == 'budgets') {
-        await tester.tap(find.text('Adicionar orçamento'));
+        await tester.tap(find.byType(FloatingActionButton));
         await tester.pumpAndSettle();
         await tester.enterText(find.byType(TextField).first, '1.234,56');
         await tester.pump();
