@@ -35,6 +35,12 @@ export const tools: ToolDefinition[] = [
     inputSchema: { type: "object", properties: {}, additionalProperties: false },
   },
   {
+    name: "get_categories",
+    title: "Categorias",
+    description: "Lista as categorias de despesa e receita com seus ids, para lançar ou corrigir.",
+    inputSchema: { type: "object", properties: {}, additionalProperties: false },
+  },
+  {
     name: "list_transactions",
     title: "Lançamentos",
     description:
@@ -215,6 +221,16 @@ export function callTool(name: string, rawArgs: unknown, l: Ledger, today: strin
           currency: text(a.currency),
           balance: money(balanceCents(l, text(a.id))),
           excluded_from_total: a.exclude_from_total === 1,
+        })),
+      };
+    }
+    case "get_categories": {
+      only(args, []);
+      return {
+        categories: l.categories.map((c) => ({
+          id: text(c.id),
+          name: text(c.name),
+          type: text(c.type) === "income" ? "income" : "expense",
         })),
       };
     }

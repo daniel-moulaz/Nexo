@@ -1,7 +1,9 @@
 // Minimal MCP server over Streamable HTTP (JSON responses, stateless).
-// Read-only tools; authentication and data loading are injected so the whole
+// Read tools answer from the synced ledger; change tools only queue requests
+// that the app applies. Authentication and data are injected so the whole
 // request path is testable without a network or a database.
 import type { Ledger } from "./finance.ts";
+import { type ActionDeps, actions, callAction } from "./actions.ts";
 import { callTool, ToolInputError, tools } from "./tools.ts";
 
 export const serverInfo = { name: "nexo", title: "Nexo", version: "0.1.0" };
@@ -19,7 +21,11 @@ export interface Deps {
   load(connector: Connector): Promise<Ledger>;
   audit(connector: Connector, tool: string, ok: boolean): Promise<void>;
   today(): string; // YYYY-MM-DD in the person's time zone
+  /// Request queue and suggestions for this connector (absent: read-only).
+  actions?(connector: Connector): ActionDeps;
 }
+
+const readOnlyActions = new Set(["list_suggestions", "get_request_status"]);
 
 type Json = Record<string, unknown>;
 const rpcError = (id: unknown, code: number, message: string) => ({
@@ -42,9 +48,12 @@ async function dispatch(message: Json, connector: Connector, deps: Deps): Promis
           capabilities: { tools: { listChanged: false } },
           serverInfo,
           instructions:
-            "Dados financeiros pessoais do Nexo, somente leitura. Valores vêm da última sincronização do app. " +
+            "Dados financeiros pessoais do Nexo. Valores vêm da última sincronização do app. " +
             "Transferências, reservas e pagamentos de fatura não contam como consumo. Não invente valores: " +
-            "se uma ferramenta não trouxer o dado, diga que ele não está disponível.",
+            "se uma ferramenta não trouxer o dado, diga que ele não está disponível. " +
+            "Lançar, corrigir e apagar viram pedidos que o app grava com as próprias regras: só diga que foi " +
+            "feito depois que get_request_status disser 'gravado no Nexo'. Antes de lançar, confira se já não " +
+            "existe o mesmo lançamento.",
         },
       };
     }
@@ -54,17 +63,30 @@ async function dispatch(message: Json, connector: Connector, deps: Deps): Promis
       return {
         jsonrpc: "2.0", id,
         result: {
-          tools: tools.map((t) => ({ ...t, annotations: { readOnlyHint: true, openWorldHint: false } })),
+          tools: [
+            ...tools.map((t) => ({ ...t, annotations: { readOnlyHint: true, openWorldHint: false } })),
+            ...(deps.actions ? actions : []).map(({ destructive, ...t }) => ({
+              ...t,
+              annotations: {
+                readOnlyHint: readOnlyActions.has(t.name),
+                destructiveHint: destructive === true,
+                openWorldHint: false,
+              },
+            })),
+          ],
         },
       };
     case "tools/call": {
       const name = params.name;
-      if (typeof name !== "string" || !tools.some((t) => t.name === name)) {
+      const isAction = deps.actions !== undefined && actions.some((t) => t.name === name);
+      if (typeof name !== "string" || (!isAction && !tools.some((t) => t.name === name))) {
         return rpcError(id, -32602, "Unknown tool");
       }
       try {
         const ledger = await deps.load(connector);
-        const data = callTool(name, params.arguments, ledger, deps.today());
+        const data = isAction
+          ? await callAction(name, params.arguments, ledger, deps.today(), deps.actions!(connector))
+          : callTool(name, params.arguments, ledger, deps.today());
         await deps.audit(connector, name, true);
         return {
           jsonrpc: "2.0", id,

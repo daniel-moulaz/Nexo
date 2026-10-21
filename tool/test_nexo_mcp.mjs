@@ -193,4 +193,103 @@ await test('malformed, oversized and batched requests are handled', async () => 
   assert.deepEqual(batch.map(r => r.id), [1, 2]);
 });
 
+// ── Change tools: requests only ────────────────────────────────────────
+const { callAction } = await import('../supabase/functions/nexo-mcp/actions.ts');
+function queue() {
+  const q = { items: [], ignored: [], deps: null };
+  q.deps = {
+    enqueue: async (kind, args) => { const id = `00000000-0000-4000-8000-${String(q.items.length).padStart(12, '0')}`; q.items.push({ id, kind, args, status: 'pending' }); return { id, status: 'pending' }; },
+    request: async (id) => q.items.find(r => r.id === id) ?? null,
+    suggestions: async (limit) => [{ id: 'pluggy:a', bank: 'Banco', amount_cents: 3290, kind: 'expense', medium: 'credit', description: 'Mercado', occurred_at: Date.parse('2026-10-19T12:00:00Z'), settled: true, installment: null }].slice(0, limit),
+    ignoreSuggestions: async (ids, before) => { q.ignored.push([ids, before]); return ids ? ids.length : 7; },
+  };
+  return q;
+}
+const withIncome = { ...ledger, categories: [...ledger.categories, { id: 'pay', name: 'Salário', type: 'income' }] };
+const act = (q, name, args, l = withIncome) => callAction(name, args, l, today, q.deps);
+
+await test('lançar queues a request with validated ids and exact cents', async () => {
+  const q = queue();
+  const r = await act(q, 'add_transaction', { type: 'expense', amount: 32.9, description: 'iFood', account_id: 'card', category_id: 'food_exp' });
+  assert.equal(r.status, 'pendente');
+  assert.deepEqual(q.items[0].args, { type: 'expense', amount_cents: 3290, description: 'iFood', account_id: 'card', category_id: 'food_exp', date: today, note: '' });
+  await act(q, 'add_transaction', { type: 'income', amount: 5000, description: 'Salário', account_id: 'bank', category_id: 'pay', date: '2026-10-05' });
+  assert.equal(q.items[1].args.date, '2026-10-05');
+});
+
+await test('lançar refuses what the app would refuse, before queueing', async () => {
+  const q = queue();
+  const bad = [
+    { type: 'expense', amount: 0, description: 'x', account_id: 'bank', category_id: 'food_exp' },
+    { type: 'expense', amount: 1.234, description: 'x', account_id: 'bank', category_id: 'food_exp' },
+    { type: 'expense', amount: 10, description: 'x', account_id: 'nope', category_id: 'food_exp' },
+    { type: 'expense', amount: 10, description: 'x', account_id: 'bank', category_id: 'pay' },
+    { type: 'pix', amount: 10, description: 'x', account_id: 'bank', category_id: 'food_exp' },
+    { type: 'expense', amount: 10, description: 'x', account_id: 'bank', category_id: 'food_exp', date: '20/10/2026' },
+    { type: 'expense', amount: 10, description: 'x', account_id: 'bank', category_id: 'food_exp', sneaky: 1 },
+  ];
+  for (const args of bad) await assert.rejects(act(q, 'add_transaction', args), ToolInputError);
+  await assert.rejects(act(q, 'add_transfer', { from_account_id: 'bank', to_account_id: 'bank', amount: 10 }), ToolInputError);
+  assert.equal(q.items.length, 0, 'nothing reached the queue');
+});
+
+await test('transfer, correction and deletion become requests', async () => {
+  const q = queue();
+  await act(q, 'add_transfer', { from_account_id: 'bank', to_account_id: 'card', amount: 500, note: 'fatura' });
+  assert.equal(q.items[0].kind, 'transfer.add');
+  assert.equal(q.items[0].args.amount_cents, 50000);
+  await act(q, 'update_transaction', { id: 't-food', amount: 40, category_id: 'shopping' });
+  assert.deepEqual(q.items[1].args, { id: 't-food', amount_cents: 4000, category_id: 'shopping' });
+  await assert.rejects(act(q, 'update_transaction', { id: 't-food' }), ToolInputError, 'nothing to change');
+  await assert.rejects(act(q, 'update_transaction', { id: 't-salary', category_id: 'food_exp' }, withIncome), ToolInputError);
+  await act(q, 'delete_transaction', { id: 't-market' });
+  assert.equal(q.items[2].kind, 'transaction.delete');
+  await assert.rejects(act(q, 'delete_transaction', { id: 'missing' }), ToolInputError);
+  const invest = { ...ledger, transactions: [...ledger.transactions, { id: 'investment:op1', type: 'expense', amount: 10, account_id: 'bank' }] };
+  await assert.rejects(act(q, 'delete_transaction', { id: 'investment:op1' }, invest), ToolInputError);
+});
+
+await test('suggestions: listed in reais, confirmed as request, ignored directly', async () => {
+  const q = queue();
+  const list = await act(q, 'list_suggestions', { limit: 5 });
+  assert.equal(list.suggestions[0].amount, 32.9);
+  assert.equal(list.suggestions[0].medium, 'cartão');
+  await act(q, 'confirm_suggestion', { id: 'pluggy:a', account_id: 'card', category_id: 'food_exp' });
+  assert.deepEqual(q.items[0], { id: q.items[0].id, kind: 'suggestion.confirm', status: 'pending',
+    args: { id: 'pluggy:a', account_id: 'card', category_id: 'food_exp', type: 'expense', description: undefined } });
+  await assert.rejects(act(q, 'confirm_suggestion', { id: 'notification:x', account_id: 'card', category_id: 'food_exp' }), ToolInputError);
+  assert.equal((await act(q, 'ignore_suggestions', { before: '2026-10-01' })).ignored, 7);
+  assert.equal(q.ignored[0][1], Date.parse('2026-10-01T00:00:00-03:00'));
+  await assert.rejects(act(q, 'ignore_suggestions', {}), ToolInputError);
+});
+
+await test('request status reads back the outcome', async () => {
+  const q = queue();
+  const { request_id } = await act(q, 'delete_transaction', { id: 't-market' });
+  assert.match((await act(q, 'get_request_status', { id: request_id })).status, /pendente/);
+  q.items[0].status = 'rejected';
+  q.items[0].result = { reason: 'não encontrado' };
+  const r = await act(q, 'get_request_status', { id: request_id });
+  assert.equal(r.status, 'recusado pelo Nexo');
+  assert.equal(r.result.reason, 'não encontrado');
+});
+
+await test('change tools are listed with honest hints only when the queue exists', async () => {
+  const withActions = createHandler({
+    authenticate: async t => (t === token ? { id: 'c1', ownerId: 'u1', datasetId: 'd1' } : null),
+    load: async () => ledger, audit: async () => {}, today: () => today, actions: () => queue().deps,
+  });
+  const list = async (h) => (await (await h(new Request('https://x.supabase.co/functions/v1/nexo-mcp', {
+    method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+    body: JSON.stringify(rpcCall('tools/list', {})),
+  }))).json()).result.tools;
+  const all = await list(withActions);
+  const hint = (n) => all.find(t => t.name === n).annotations;
+  assert.equal(hint('add_transaction').readOnlyHint, false);
+  assert.equal(hint('delete_transaction').destructiveHint, true);
+  assert.equal(hint('list_suggestions').readOnlyHint, true);
+  assert(all.some(t => t.name === 'get_categories'));
+  assert(!(await list(handler)).some(t => t.name === 'add_transaction'), 'read-only deployment has no change tools');
+});
+
 console.log(`NEXO MCP: ${passed} tests passed; synthetic fixture only.`);

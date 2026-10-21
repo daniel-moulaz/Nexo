@@ -151,7 +151,7 @@ class _SyncSettingsScreenState extends State<SyncSettingsScreen> {
         Text('Claude (IA)', style: theme.textTheme.titleMedium),
         const SizedBox(height: 8),
         const Text(
-            'Deixa o Claude consultar seus dados para responder perguntas como "quanto gastei com delivery este mês?". Só leitura: ele não cria, altera nem apaga nada. Você pode desconectar quando quiser.'),
+            'Deixa o Claude consultar seus dados e fazer pedidos como "lança R\$ 32,90 de iFood no Nubank". Cada pedido é gravado pelo app aberto (celular ou PC) com as regras normais; o Claude pede sua permissão antes. Ele não movimenta dinheiro de verdade, só o seu registro. Você pode desconectar quando quiser.'),
         for (final c
             in (_mcp ?? const <McpConnector>[]).where((c) => !c.revoked))
           ListTile(

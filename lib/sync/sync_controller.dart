@@ -10,6 +10,7 @@ import '../database/db_helper.dart';
 import 'ledger_capture.dart';
 import 'ledger_sync.dart';
 import 'supabase_auth.dart';
+import '../services/platform_capabilities.dart';
 import 'sync_activation.dart';
 import 'supabase_sync_transport.dart';
 import 'sync_config.dart';
@@ -74,6 +75,10 @@ class SyncController extends ChangeNotifier with WidgetsBindingObserver {
     return SyncController(
       reload: reload,
       real: real,
+      // On the PC the assistant's requests are applied within seconds.
+      interval: PlatformCapabilities.windows
+          ? const Duration(seconds: 20)
+          : const Duration(minutes: 1),
       remote: (device) => SupabaseSyncTransport(
           projectUrl: config.projectUrl,
           publishableKey: config.publishableKey,
@@ -87,7 +92,11 @@ class SyncController extends ChangeNotifier with WidgetsBindingObserver {
   DateTime? lastSuccess;
   int pending = 0;
   List<LedgerSyncConflict> conflicts = const [];
-  String? datasetLabel, datasetId;
+  String? datasetLabel, datasetId, deviceId;
+
+  /// Runs after each successful pass, e.g. to apply the assistant's
+  /// requests on data that is up to date.
+  Future<void> Function()? afterSync;
 
   /// When this device last matched the server exactly (this session).
   DateTime? lastVerified;
@@ -110,6 +119,7 @@ class SyncController extends ChangeNotifier with WidgetsBindingObserver {
     bound = binding != null;
     datasetLabel = binding?['label'] as String?;
     datasetId = binding?['dataset_id'] as String?;
+    deviceId = binding?['device_id'] as String?;
     if (bound && !_started) {
       _started = true;
       LedgerCapture.changes.addListener(_changed);
@@ -183,6 +193,14 @@ class SyncController extends ChangeNotifier with WidgetsBindingObserver {
           status == LedgerSyncStatus.progressed ||
           status == LedgerSyncStatus.conflict) {
         lastSuccess = _now();
+      }
+      if (status == LedgerSyncStatus.idle ||
+          status == LedgerSyncStatus.progressed) {
+        try {
+          await afterSync?.call();
+        } catch (_) {
+          // Requests stay queued on the server; the next pass retries.
+        }
       }
     } catch (_) {
       // A rejected page leaves cursor and data untouched; try again later.
