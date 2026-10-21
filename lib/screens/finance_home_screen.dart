@@ -13,6 +13,7 @@ import '../services/financial_analysis.dart';
 import '../services/finance_rules.dart';
 import '../services/platform_capabilities.dart';
 import '../services/transaction_metadata_service.dart';
+import '../services/week_summary.dart';
 import '../utils/finance_input.dart';
 import '../widgets/analysis_widgets.dart';
 import '../widgets/cash_timeline_chart.dart';
@@ -828,6 +829,26 @@ class _FinanceHomeScreenState extends State<FinanceHomeScreen>
                         style: Theme.of(context).textTheme.bodySmall),
                 ]));
 
+            final week = WeekSummary.build(
+                transactions: app.transactions,
+                metadata: app.transactionMetadata,
+                amount: (t) => app.convertToMain(
+                    t.amount,
+                    t.currency.isEmpty
+                        ? app.accountById(t.accountId)?.currency ??
+                            app.settings.currency
+                        : t.currency),
+                now: today,
+                weekStart: app.settings.weekStart);
+            final weekCard = _Panel(
+                child: _WeekBody(
+                    week: week,
+                    hidden: hidden,
+                    money: money,
+                    categoryName: (id) =>
+                        app.categoryById(id)?.name ?? 'Categoria',
+                    onReview: () => _open(const FinancialCheckupScreen())));
+
             final recent = app.transactions
                 .where((t) => !t.date.isAfter(now))
                 .toList()
@@ -1005,6 +1026,8 @@ class _FinanceHomeScreenState extends State<FinanceHomeScreen>
                                             crossAxisAlignment:
                                                 CrossAxisAlignment.stretch,
                                             children: [
+                                              weekCard,
+                                              gap,
                                               netWorthCard,
                                               gap,
                                               budgetCard
@@ -1019,6 +1042,8 @@ class _FinanceHomeScreenState extends State<FinanceHomeScreen>
                                     const SizedBox(height: 12),
                                     if (attention != null) ...[attention, gap],
                                     monthCard,
+                                    gap,
+                                    weekCard,
                                     gap,
                                     categories,
                                     gap,
@@ -1052,6 +1077,126 @@ class _FinanceHomeScreenState extends State<FinanceHomeScreen>
           context,
           data.realized.where((t) => t.type == 'expense' && t.categoryId == id),
           app.categoryById(id)?.name ?? 'Categoria');
+}
+
+/// This week so far: total, comparison, a bar per day and what stood out.
+class _WeekBody extends StatelessWidget {
+  const _WeekBody(
+      {required this.week,
+      required this.hidden,
+      required this.money,
+      required this.categoryName,
+      required this.onReview});
+  final WeekSummary week;
+  final bool hidden;
+  final String Function(double) money;
+  final String Function(String id) categoryName;
+  final VoidCallback onReview;
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final change = week.change;
+    final up = (change ?? 0) > 0;
+    final days = week.days;
+    final peak = days.fold(0.0, math.max);
+    final letters = week.start.weekday == DateTime.monday
+        ? const ['S', 'T', 'Q', 'Q', 'S', 'S', 'D']
+        : const ['D', 'S', 'T', 'Q', 'Q', 'S', 'S'];
+    final biggest = week.biggest;
+    final top = week.topCategory;
+    final small = Theme.of(context).textTheme.bodySmall;
+    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      _Heading('Sua semana', action: 'Revisar', onTap: onReview),
+      Text('${ptShortDate(week.start)} até hoje', style: small),
+      const SizedBox(height: 10),
+      Row(crossAxisAlignment: CrossAxisAlignment.end, children: [
+        Expanded(
+            child:
+                Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          _Amount(money(week.spent), size: 26),
+          const SizedBox(height: 2),
+          Text(
+              hidden
+                  ? 'Gasto na semana'
+                  : change == null
+                      ? 'Sem gastos no mesmo período da semana passada'
+                      : change.abs() < 1
+                          ? 'Igual ao mesmo período da semana passada'
+                          : '${up ? '▲' : '▼'} ${change.abs().toStringAsFixed(0)}% vs. ${money(week.previousSpent)} na semana passada',
+              style: TextStyle(
+                  fontSize: 12.5,
+                  fontWeight: FontWeight.w600,
+                  color: hidden || change == null || change.abs() < 1
+                      ? cs.onSurfaceVariant
+                      : up
+                          ? NexoTones.expense(context)
+                          : NexoTones.income(context))),
+        ])),
+        if (!hidden)
+          SizedBox(
+              width: 132,
+              height: 72,
+              child: Row(crossAxisAlignment: CrossAxisAlignment.end, children: [
+                for (var i = 0; i < 7; i++)
+                  Expanded(
+                      child: Column(
+                          mainAxisAlignment: MainAxisAlignment.end,
+                          children: [
+                        Container(
+                            height: peak <= 0
+                                ? 3
+                                : math.max(3, 40 * days[i] / peak),
+                            margin: const EdgeInsets.symmetric(horizontal: 3),
+                            decoration: BoxDecoration(
+                                color: i == week.daysElapsed - 1
+                                    ? cs.primary
+                                    : i < week.daysElapsed
+                                        ? cs.primary.withValues(alpha: .45)
+                                        : cs.surfaceContainerHighest,
+                                borderRadius: BorderRadius.circular(3))),
+                        const SizedBox(height: 4),
+                        Text(letters[i],
+                            style: TextStyle(
+                                fontSize: 10,
+                                fontWeight: i == week.daysElapsed - 1
+                                    ? FontWeight.w800
+                                    : FontWeight.w500,
+                                color: cs.onSurfaceVariant)),
+                      ])),
+              ])),
+      ]),
+      const SizedBox(height: 12),
+      Wrap(spacing: 16, runSpacing: 8, children: [
+        _WeekFact(Icons.spa_outlined,
+            '${week.quietDays} de ${week.daysElapsed} dia(s) sem gastos'),
+        if (top != null && !hidden)
+          _WeekFact(Icons.donut_small_outlined,
+              '${categoryName(top.key)}: ${money(top.value)}'),
+        if (biggest != null && !hidden)
+          _WeekFact(Icons.north_east,
+              'Maior: ${biggest.description} · ${money(week.amountOf(biggest))}'),
+      ]),
+    ]);
+  }
+}
+
+class _WeekFact extends StatelessWidget {
+  const _WeekFact(this.icon, this.text);
+  final IconData icon;
+  final String text;
+  @override
+  Widget build(BuildContext context) => ConstrainedBox(
+      constraints: const BoxConstraints(maxWidth: 320),
+      child: Row(mainAxisSize: MainAxisSize.min, children: [
+        Icon(icon, size: 16, color: Theme.of(context).colorScheme.primary),
+        const SizedBox(width: 6),
+        Flexible(
+            child: Text(text,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(fontSize: 12.5))),
+      ]));
 }
 
 class _Panel extends StatelessWidget {
