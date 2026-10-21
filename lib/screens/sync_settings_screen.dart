@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
 import '../providers/app_provider.dart';
 import '../services/file_output.dart';
 import '../services/pluggy_inbox.dart';
+import '../sync/mcp_connectors.dart';
 import '../sync/supabase_auth.dart';
 import '../sync/supabase_sync_transport.dart';
 import '../sync/sync_config.dart';
@@ -40,6 +42,7 @@ class _SyncSettingsScreenState extends State<SyncSettingsScreen> {
   String? _message, _step;
   List<SyncLabStep>? _lab;
   List<PluggyItem>? _pluggy;
+  List<McpConnector>? _mcp;
 
   @override
   void initState() {
@@ -63,8 +66,112 @@ class _SyncSettingsScreenState extends State<SyncSettingsScreen> {
         _loading = false;
       });
     }
-    if (session != null) await _loadPluggy();
+    if (session != null) {
+      await _loadPluggy();
+      await _loadMcp();
+    }
   }
+
+  Future<void> _loadMcp() async {
+    final mcp = McpConnectors.instance;
+    if (mcp == null) return;
+    try {
+      final list = await mcp.list();
+      if (mounted) setState(() => _mcp = list);
+    } catch (_) {
+      // Optional section; the server part may not be active yet.
+    }
+  }
+
+  Future<void> _connectClaude(SyncController sync) async {
+    final dataset = sync.datasetId;
+    if (dataset == null) return;
+    String? address;
+    await _run(() async {
+      try {
+        address = await McpConnectors.instance!.create(dataset, 'Claude');
+      } on McpUnavailable catch (e) {
+        _message = e.message;
+      }
+    });
+    await _loadMcp();
+    if (address == null || !mounted) return;
+    await showDialog<void>(
+        context: context,
+        barrierDismissible: false,
+        builder: (dialog) => AlertDialog(
+              title: const Text('Endereço para o Claude'),
+              content: SingleChildScrollView(
+                child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                          'Este endereço é a chave de acesso e aparece só agora. Não envie para ninguém.'),
+                      const SizedBox(height: 8),
+                      SelectableText(address!,
+                          style: const TextStyle(fontFamily: 'monospace')),
+                      const SizedBox(height: 12),
+                      const Text(
+                          'No Claude: Configurações → Conectores → Adicionar conector personalizado. Nome: Nexo. URL: cole este endereço. Depois, numa conversa, ative o conector Nexo.'),
+                    ]),
+              ),
+              actions: [
+                TextButton(
+                    onPressed: () async {
+                      await Clipboard.setData(ClipboardData(text: address!));
+                      if (dialog.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('Endereço copiado.')));
+                      }
+                    },
+                    child: const Text('Copiar')),
+                FilledButton(
+                    onPressed: () => Navigator.pop(dialog),
+                    child: const Text('Pronto')),
+              ],
+            ));
+  }
+
+  Future<void> _revokeMcp(McpConnector c) async {
+    await _run(() async {
+      try {
+        await McpConnectors.instance!.revoke(c.id);
+        _message =
+            '${c.label} desconectado. O endereço antigo deixou de funcionar.';
+      } on McpUnavailable catch (e) {
+        _message = e.message;
+      }
+    });
+    await _loadMcp();
+  }
+
+  List<Widget> _mcpSection(SyncController sync, ThemeData theme) => [
+        const Divider(),
+        Text('Claude (IA)', style: theme.textTheme.titleMedium),
+        const SizedBox(height: 8),
+        const Text(
+            'Deixa o Claude consultar seus dados para responder perguntas como "quanto gastei com delivery este mês?". Só leitura: ele não cria, altera nem apaga nada. Você pode desconectar quando quiser.'),
+        for (final c
+            in (_mcp ?? const <McpConnector>[]).where((c) => !c.revoked))
+          ListTile(
+            contentPadding: EdgeInsets.zero,
+            leading: const Icon(Icons.smart_toy_outlined),
+            title: Text(c.label),
+            subtitle: Text(c.lastUsed == null
+                ? 'Ainda não usado'
+                : 'Último uso: ${DateFormat('dd/MM HH:mm').format(c.lastUsed!)}'),
+            trailing: IconButton(
+                tooltip: 'Desconectar',
+                onPressed: _busy ? null : () => _revokeMcp(c),
+                icon: const Icon(Icons.link_off)),
+          ),
+        const SizedBox(height: 8),
+        OutlinedButton.icon(
+            onPressed: _busy ? null : () => _connectClaude(sync),
+            icon: const Icon(Icons.add_link),
+            label: const Text('Conectar ao Claude')),
+      ];
 
   Future<void> _loadPluggy() async {
     final pluggy = PluggyInbox.instance;
@@ -695,6 +802,15 @@ class _SyncSettingsScreenState extends State<SyncSettingsScreen> {
               listenable: sync,
               builder: (context, _) => _syncCard(sync, theme)),
         if (PluggyInbox.instance != null) ..._pluggySection(theme),
+        if (McpConnectors.instance != null)
+          if (SyncController.instance case final sync?)
+            ListenableBuilder(
+                listenable: sync,
+                builder: (context, _) => sync.bound && sync.real
+                    ? Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: _mcpSection(sync, theme))
+                    : const SizedBox.shrink()),
         const Divider(),
         Text('Teste do servidor', style: theme.textTheme.titleMedium),
         const SizedBox(height: 8),

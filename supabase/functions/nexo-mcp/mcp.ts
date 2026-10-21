@@ -94,8 +94,11 @@ export function createHandler(deps: Deps) {
       return new Response(null, { status: 405, headers: { Allow: "POST" } });
     }
     if (request.method !== "POST") return new Response(null, { status: 405, headers: { Allow: "POST" } });
+    // Claude.ai custom connectors take only a URL, so the token may also be
+    // the last path segment (…/nexo-mcp/<token>). The header wins if present.
     const header = request.headers.get("Authorization") ?? "";
-    const token = header.startsWith("Bearer ") ? header.slice(7).trim() : "";
+    const fromPath = new URL(request.url).pathname.split("/").pop() ?? "";
+    const token = header.startsWith("Bearer ") ? header.slice(7).trim() : fromPath;
     const connector = /^nexo_mcp_[A-Za-z0-9]{40,128}$/.test(token) ? await deps.authenticate(token) : null;
     if (!connector) {
       return json(rpcError(null, -32001, "Unauthorized"), 401, { "WWW-Authenticate": 'Bearer realm="nexo"' });

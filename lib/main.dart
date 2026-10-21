@@ -29,6 +29,7 @@ import 'sync/supabase_auth.dart';
 import 'sync/sync_config.dart';
 import 'sync/sync_controller.dart';
 import 'services/pluggy_inbox.dart';
+import 'sync/mcp_connectors.dart';
 
 final GlobalKey<NavigatorState> rootNavigatorKey = GlobalKey<NavigatorState>();
 
@@ -80,6 +81,7 @@ Future<void> startNexo() async {
   if (syncConfig != null && !DesktopProfile.isTest) {
     PluggyInbox.instance =
         PluggyInbox(SupabasePluggyRemote(syncConfig, SupabaseAuth.app!));
+    McpConnectors.instance = McpConnectors(syncConfig, SupabaseAuth.app!);
   }
   // Never blocks opening the app: offline or signed out just waits.
   unawaited(SyncController.instance?.start());

@@ -87,7 +87,7 @@ class SyncController extends ChangeNotifier with WidgetsBindingObserver {
   DateTime? lastSuccess;
   int pending = 0;
   List<LedgerSyncConflict> conflicts = const [];
-  String? datasetLabel;
+  String? datasetLabel, datasetId;
 
   /// When this device last matched the server exactly (this session).
   DateTime? lastVerified;
@@ -109,6 +109,7 @@ class SyncController extends ChangeNotifier with WidgetsBindingObserver {
     final binding = await _binding(await DBHelper.database);
     bound = binding != null;
     datasetLabel = binding?['label'] as String?;
+    datasetId = binding?['dataset_id'] as String?;
     if (bound && !_started) {
       _started = true;
       LedgerCapture.changes.addListener(_changed);

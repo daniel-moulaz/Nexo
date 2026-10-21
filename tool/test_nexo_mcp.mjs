@@ -130,6 +130,15 @@ await test('requests without a valid connector token are refused', async () => {
   }
 });
 
+await test('Claude.ai URL form: token as the last path segment', async () => {
+  const at = (path) => handler(new Request(`https://x.supabase.co/functions/v1/nexo-mcp/${path}`, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(rpcCall('tools/list', {})),
+  }));
+  assert.equal((await at(token)).status, 200);
+  assert.equal((await at('nexo_mcp_' + 'b'.repeat(64))).status, 401);
+  assert.equal((await at('')).status, 401, 'the bare function URL needs a token');
+});
+
 await test('initialize negotiates a supported protocol version', async () => {
   const known = await (await post(rpcCall('initialize', { protocolVersion: '2025-06-18', capabilities: {}, clientInfo: { name: 'test', version: '1' } }))).json();
   assert.equal(known.result.protocolVersion, '2025-06-18');
