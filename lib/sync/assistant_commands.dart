@@ -305,12 +305,11 @@ class AssistantCommands {
         _category(a['category_id']);
         final period = a['period'] as String? ?? 'monthly';
         final amount = _reais(a['amount_cents']);
-        final existing = app.budgets
-            .where(
-                (b) => b.categoryId == a['category_id'] && b.period == period)
-            .firstOrNull;
+        // One budget per category, as in the Orçamentos screen.
+        final existing = app.budgetForCategory(a['category_id'] as String);
         if (existing != null) {
-          await app.updateBudget(existing.copyWith(amount: amount));
+          await app
+              .updateBudget(existing.copyWith(amount: amount, period: period));
           return {'budget_id': existing.id, 'message': 'Orçamento alterado.'};
         }
         final id = 'assistant-budget:${c.id}';
