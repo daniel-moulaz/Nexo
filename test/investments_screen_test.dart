@@ -59,6 +59,18 @@ void main() {
     await tester.pumpAndSettle();
   }
 
+  /// Under a loaded machine a fixed number of frames is not enough for the
+  /// chained SQLite work; wait for the persisted outcome (bounded).
+  Future<T> settleUntil<T>(WidgetTester tester, Future<T> Function() read,
+      bool Function(T value) done) async {
+    var value = (await tester.runAsync(read)) as T;
+    for (var i = 0; i < 40 && !done(value); i++) {
+      await settle(tester);
+      value = (await tester.runAsync(read)) as T;
+    }
+    return value;
+  }
+
   Future<void> seed() async {
     for (var i = 0; i < 3; i++) {
       final item = Investment(
@@ -240,8 +252,9 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.text('Salvar'));
     await settle(tester);
-    final created = await tester.runAsync(() => repo.load());
-    expect(created!.single.cost, 10000);
+    final created =
+        await settleUntil(tester, () => repo.load(), (l) => l.length == 1);
+    expect(created.single.cost, 10000);
     await tester.pumpAndSettle();
     final positionCard = find
         .byKey(ValueKey('investment-position-${created.single.investment.id}'));
@@ -265,13 +278,17 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.text('Salvar'));
     await settle(tester);
+    await settleUntil(tester, () => repo.load(),
+        (l) => l.single.quantity == 8 * investmentScale);
+    await settle(tester);
     await tester.tap(find.text('Informar preço'));
     await tester.pumpAndSettle();
     await tester.enterText(find.byType(TextField), '12,00');
     await tester.tap(find.text('Salvar preço'));
     await settle(tester);
-    final after = await tester.runAsync(() => repo.load());
-    expect(after!.single.quantity, 8 * investmentScale);
+    final after = await settleUntil(
+        tester, () => repo.load(), (l) => l.single.value == 9600);
+    expect(after.single.quantity, 8 * investmentScale);
     expect(after.single.cost, 8000);
     expect(after.single.realized, 1000);
     expect(after.single.value, 9600);

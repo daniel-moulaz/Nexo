@@ -458,6 +458,70 @@ try {
     await user(A, tx => rpc(tx, 'nexo_pluggy_remove_item', [item]));
     assert.deepEqual(await user(A, tx => rpc(tx, 'nexo_pluggy_suggestions', [0])), []);
   });
+  // ── Assistant requests ───────────────────────────────────────────────
+  await db.exec(await readFile(new URL('../supabase/migrations/202610210003_mcp_actions.sql', import.meta.url), 'utf8'));
+  await test('assistant: only write connectors queue; devices claim once and finish', async () => {
+    const readOnly = (await db.query(`select id from nexo_mcp_private.connectors where scope = 'read' limit 1`)).rows[0];
+    // The earlier test filled A's five slots with read-only connectors.
+    await db.query(`update nexo_mcp_private.connectors set revoked_at = now() where owner_id = $1`, [A]);
+    const writer = await user(A, tx => rpc(tx, 'nexo_mcp_create_connector', [ds2, 'Claude']));
+    const conn = (await db.query(`select id, scope from nexo_mcp_private.connectors
+      where token_hash = encode(sha256(convert_to($1, 'UTF8')), 'hex')`, [writer.token])).rows[0];
+    assert.equal(conn.scope, 'write');
+    await denies(() => service('nexo_mcp_enqueue', [readOnly.id, 'transaction.add', '{}']), '42501');
+    await denies(() => service('nexo_mcp_enqueue', [conn.id, 'money.send', '{}']), '23514');
+    await denies(() => user(A, tx => rpc(tx, 'nexo_mcp_enqueue', [conn.id, 'transaction.add', '{}'])), '42501');
+    const first = await service('nexo_mcp_enqueue', [conn.id, 'transaction.add', JSON.stringify({ amount_cents: 3290 })]);
+    const second = await service('nexo_mcp_enqueue', [conn.id, 'transaction.delete', JSON.stringify({ id: 'x' })]);
+    assert.equal(first.status, 'pending');
+    // Another person never sees or claims these.
+    const dev = randomUUID();
+    assert.equal(await user(B, tx => rpc(tx, 'nexo_mcp_claim', [ds2, dev])), null);
+    const claimed = await user(A, tx => rpc(tx, 'nexo_mcp_claim', [ds2, dev]));
+    assert.equal(claimed.id, first.id, 'oldest first');
+    assert.equal(claimed.args.amount_cents, 3290);
+    const next = await user(A, tx => rpc(tx, 'nexo_mcp_claim', [ds2, randomUUID()]));
+    assert.equal(next.id, second.id, 'a claimed request is not offered twice');
+    assert.equal(await user(A, tx => rpc(tx, 'nexo_mcp_claim', [ds2, dev])), null);
+    await user(A, tx => rpc(tx, 'nexo_mcp_finish', [first.id, 'done', JSON.stringify({ transaction_id: 'assistant:1' })]));
+    await user(B, tx => rpc(tx, 'nexo_mcp_finish', [second.id, 'done', '{}']));
+    const status = await service('nexo_mcp_command', [conn.id, first.id]);
+    assert.equal(status.status, 'done');
+    assert.equal(status.result.transaction_id, 'assistant:1');
+    assert.equal((await service('nexo_mcp_command', [conn.id, second.id])).status, 'applying', 'B changed nothing');
+    // A device that stopped mid-way: offered again after five minutes.
+    await db.query(`update nexo_mcp_private.commands set claimed_at = now() - interval '6 minutes' where id = $1`, [second.id]);
+    assert.equal((await user(A, tx => rpc(tx, 'nexo_mcp_claim', [ds2, dev]))).id, second.id);
+    await user(A, tx => rpc(tx, 'nexo_mcp_finish', [second.id, 'rejected', JSON.stringify({ reason: 'não existe' })]));
+    await user(A, tx => rpc(tx, 'nexo_mcp_finish', [second.id, 'done', '{}']));
+    assert.equal((await service('nexo_mcp_command', [conn.id, second.id])).status, 'rejected', 'final once finished');
+    await denies(() => user(A, tx => rpc(tx, 'nexo_mcp_finish', [second.id, 'pending', '{}'])), '22023');
+    await user(A, tx => rpc(tx, 'nexo_mcp_revoke_connector', [conn.id]));
+    assert.equal(await service('nexo_mcp_command', [conn.id, first.id]), null, 'revoked connector reads nothing');
+    await denies(() => service('nexo_mcp_enqueue', [conn.id, 'transaction.add', '{}']), '42501');
+  });
+  await test('assistant: suggestions listed and ignored only for the owner', async () => {
+    const item2 = 'item-ficticio-0099';
+    await user(A, tx => rpc(tx, 'nexo_pluggy_add_item', [item2, 'Banco fictício']));
+    await service('nexo_pluggy_store', [A, item2, null, JSON.stringify([
+      sugg('s1', { occurred_at: 1760000000000 }), sugg('s2', { occurred_at: 1760900000000 }), sugg('s3', { occurred_at: 1760950000000 })])]);
+    const writer = await user(A, tx => rpc(tx, 'nexo_mcp_create_connector', [ds2, 'Claude 2']));
+    const conn = (await db.query(`select id from nexo_mcp_private.connectors
+      where token_hash = encode(sha256(convert_to($1, 'UTF8')), 'hex')`, [writer.token])).rows[0];
+    const listed = await service('nexo_mcp_suggestions', [conn.id, 10]);
+    assert.deepEqual(listed.map(s => s.id), ['pluggy:s3', 'pluggy:s2', 'pluggy:s1']);
+    assert.equal(listed[0].bank, 'Banco fictício');
+    assert.equal(await service('nexo_mcp_ignore_suggestions', [conn.id, null, 1760500000000]), 1, 'before a date');
+    assert.equal(await service('nexo_mcp_ignore_suggestions', [conn.id, ['pluggy:s3'], null]), 1, 'by id');
+    assert.deepEqual((await service('nexo_mcp_suggestions', [conn.id, 10])).map(s => s.id), ['pluggy:s2']);
+    await denies(() => service('nexo_mcp_ignore_suggestions', [conn.id, null, null]), '22023');
+    const other = await user(B, tx => rpc(tx, 'nexo_sync_lab_create', [randomUUID(), randomUUID(), randomUUID(), true]));
+    const bConn = await user(B, tx => rpc(tx, 'nexo_mcp_create_connector', [other.dataset_id, 'B']));
+    const bId = (await db.query(`select id from nexo_mcp_private.connectors
+      where token_hash = encode(sha256(convert_to($1, 'UTF8')), 'hex')`, [bConn.token])).rows[0].id;
+    assert.deepEqual(await service('nexo_mcp_suggestions', [bId, 10]), []);
+    assert.equal(await service('nexo_mcp_ignore_suggestions', [bId, ['pluggy:s2'], null]), 0);
+  });
   console.log(`SQL LAB: ${passed} tests passed; synthetic local data only.`);
 } finally {
   await db.close();

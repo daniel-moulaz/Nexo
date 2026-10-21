@@ -11,7 +11,9 @@ declare const Deno: {
 };
 
 const url = Deno.env.get("SUPABASE_URL")!;
-const key = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+// Legacy service-role JWT or a new `sb_secret_` key, whichever exists.
+const key = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ||
+  Object.values(JSON.parse(Deno.env.get("SUPABASE_SECRET_KEYS") ?? "{}") as Record<string, string>)[0];
 const timeZone = Deno.env.get("NEXO_TIME_ZONE") ?? "America/Sao_Paulo";
 
 async function sha256(text: string): Promise<string> {
@@ -25,7 +27,7 @@ async function rpc(name: string, args: Record<string, unknown>): Promise<unknown
     redirect: "error",
     headers: {
       apikey: key,
-      Authorization: `Bearer ${key}`,
+      ...(key.startsWith("eyJ") ? { Authorization: `Bearer ${key}` } : {}),
       "Content-Type": "application/json",
     },
     body: JSON.stringify(args),
@@ -68,6 +70,17 @@ const handler = createHandler({
   },
   today() {
     return new Intl.DateTimeFormat("en-CA", { timeZone }).format(new Date());
+  },
+  actions(c: Connector) {
+    return {
+      enqueue: async (kind, args) =>
+        await rpc("nexo_mcp_enqueue", { p_connector_id: c.id, p_kind: kind, p_args: args }) as { id: string; status: string },
+      request: async (id) => await rpc("nexo_mcp_command", { p_connector_id: c.id, p_id: id }) as never,
+      suggestions: async (limit) =>
+        await rpc("nexo_mcp_suggestions", { p_connector_id: c.id, p_limit: limit }) as Record<string, unknown>[],
+      ignoreSuggestions: async (ids, beforeMs) =>
+        await rpc("nexo_mcp_ignore_suggestions", { p_connector_id: c.id, p_ids: ids, p_before_ms: beforeMs }) as number,
+    };
   },
 });
 
