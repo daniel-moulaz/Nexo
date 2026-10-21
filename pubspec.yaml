@@ -1,7 +1,7 @@
 name: expensy
 description: Nexo — controle financeiro pessoal brasileiro com dados locais.
 publish_to: 'none'
-version: 1.6.8+29
+version: 1.6.9+30
 
 environment:
   sdk: '>=3.3.0 <4.0.0'
