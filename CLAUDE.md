@@ -11,7 +11,7 @@ Estado de referência em 20/10/2026 (fim do dia):
 - Pasta: `C:\Users\danie\projetos\Expensy`. Nome público: **Nexo**.
 - Branch: `codex/nexo-investments`. Commitados: sync S1 (domínio) e S2 (motor + protocolo 2), fechamento semanal e as mudanças locais antigas, publicadas em lotes revisados.
 - **A pasta não tem mais mudanças locais de conteúdo.** Arquivos marcados como modificados diferem só por final de linha (inclui `lib/l10n/*` regenerado pelo build). `.vscode/` é configuração do usuário: não versionar.
-- Versão do código: **1.6.8+29**. Instalada Android: **1.6.8+29** em 20/10 (dados preservados, `firstInstallTime` 26/09; verificar com `adb` antes de atualizar). Schema SQLite: **25**.
+- Versão do código: **1.8.0+33** (tela inicial redesenhada). Instalada Android: **1.8.0+33** em 21/10 e Windows 1.8.0 (dados preservados, `firstInstallTime` 26/09; verificar com `adb` antes de atualizar). Schema SQLite: **25**.
 - Identidade Android **`com.ma.expensy`**, banco **`expensy.db`**, pacote Dart **`expensy`** e certificado existente são invariantes.
 - Remoto de publicação: **`nexo` → `daniel-moulaz/Nexo`**. `origin` ainda é Expensy; não trocar remotos nem fazer push no destino errado.
 - Plano e andamento: `docs/NEXO_PLANO_SEQUENCIA_2026_10.md` (login por senha funcionando; Pluggy e MCP implementados e testados, ainda não publicados no Supabase).
