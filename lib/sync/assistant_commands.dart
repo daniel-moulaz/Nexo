@@ -9,6 +9,8 @@ import '../models/models.dart';
 import '../models/transaction_metadata.dart';
 import '../providers/app_provider.dart';
 import '../services/pluggy_inbox.dart';
+import '../services/billing_cycle.dart';
+import '../services/finance_rules.dart';
 import 'supabase_auth.dart';
 import 'sync_config.dart';
 
@@ -236,9 +238,247 @@ class AssistantCommands {
         return {'transaction_id': id, 'message': 'Apagado.'};
       case 'suggestion.confirm':
         return _confirmSuggestion(a);
+      case 'transaction.settle':
+        final tx = await _transaction(a['id'] as String) ??
+            (throw StateError('O lançamento não existe mais.'));
+        final meta = app.transactionMetadata[tx.id] ??
+            TransactionMetadata(transactionId: tx.id);
+        if (!meta.isPending) {
+          return {'transaction_id': tx.id, 'message': 'Já estava pago.'};
+        }
+        await app.updateTransaction(tx, tx,
+            metadata: TransactionMetadata.fromMap(
+                {...meta.toMap(), 'status': 'paid'}));
+        return {'transaction_id': tx.id, 'message': 'Marcado como pago.'};
+      case 'recurring.pay':
+      case 'recurring.skip':
+        return _completeRecurring(c, a);
+      case 'recurring.add':
+        final id = 'assistant-rec:${c.id}';
+        if (app.recurring.any((r) => r.id == id)) {
+          return {'recurring_id': id, 'message': 'Já estava cadastrada.'};
+        }
+        final account = _account(a['account_id']);
+        _category(a['category_id']);
+        final first = _day(a['first_date'] as String?);
+        await app.addRecurring(RecurringPayment(
+            id: id,
+            name: a['name'] as String,
+            accountId: account.id,
+            categoryId: a['category_id'] as String,
+            amount: _reais(a['amount_cents']),
+            paymentType: a['type'] as String,
+            freqVal: (a['freq_val'] as num).toInt(),
+            freqUnit: a['freq_unit'] as String,
+            startDate: first,
+            nextDate: first,
+            endDate:
+                a['end_date'] == null ? null : _day(a['end_date'] as String?),
+            recurringType: a['kind'] as String? ?? 'subscription'));
+        return {'recurring_id': id, 'message': 'Recorrente cadastrada.'};
+      case 'recurring.update':
+        final r = _recurring(a['id']);
+        final next = RecurringPayment.fromMap(r.toMap(),
+            skippedOccurrences: r.skippedOccurrences);
+        if (a['name'] != null) next.name = a['name'] as String;
+        if (a['amount_cents'] != null) next.amount = _reais(a['amount_cents']);
+        if (a['account_id'] != null)
+          next.accountId = _account(a['account_id']).id;
+        if (a['category_id'] != null) {
+          _category(a['category_id']);
+          next.categoryId = a['category_id'] as String;
+        }
+        if (a['next_date'] != null)
+          next.nextDate = _day(a['next_date'] as String?);
+        if (a['end_date'] != null)
+          next.endDate = _day(a['end_date'] as String?);
+        await app.updateRecurring(next);
+        return {'recurring_id': r.id, 'message': 'Recorrente alterada.'};
+      case 'recurring.delete':
+        final id = a['id'] as String;
+        if (!app.recurring.any((r) => r.id == id)) {
+          return {'recurring_id': id, 'message': 'Já não existia.'};
+        }
+        await app.deleteRecurring(id);
+        return {'recurring_id': id, 'message': 'Recorrente excluída.'};
+      case 'budget.set':
+        _category(a['category_id']);
+        final period = a['period'] as String? ?? 'monthly';
+        final amount = _reais(a['amount_cents']);
+        final existing = app.budgets
+            .where(
+                (b) => b.categoryId == a['category_id'] && b.period == period)
+            .firstOrNull;
+        if (existing != null) {
+          await app.updateBudget(existing.copyWith(amount: amount));
+          return {'budget_id': existing.id, 'message': 'Orçamento alterado.'};
+        }
+        final id = 'assistant-budget:${c.id}';
+        await app.addBudget(Budget(
+            id: id,
+            categoryId: a['category_id'] as String,
+            amount: amount,
+            period: period,
+            createdAt: DateTime.now()));
+        return {'budget_id': id, 'message': 'Orçamento criado.'};
+      case 'budget.delete':
+        final id = a['id'] as String;
+        if (!app.budgets.any((b) => b.id == id)) {
+          return {'budget_id': id, 'message': 'Já não existia.'};
+        }
+        await app.deleteBudget(id);
+        return {'budget_id': id, 'message': 'Orçamento removido.'};
+      case 'category.add':
+        final name = (a['name'] as String).trim();
+        final type = a['type'] as String;
+        final same = app.categories
+            .where((x) =>
+                x.type == type && x.name.toLowerCase() == name.toLowerCase())
+            .firstOrNull;
+        if (same != null) {
+          return {'category_id': same.id, 'message': 'Já existia.'};
+        }
+        final id = 'assistant-cat:${c.id}';
+        await app.addCategory(AppCategory(
+            id: id,
+            name: name,
+            type: type,
+            colorValue: _palette[app.categories.length % _palette.length]));
+        return {'category_id': id, 'message': 'Categoria criada.'};
+      case 'category.update':
+        final cat = app.categories.where((x) => x.id == a['id']).firstOrNull ??
+            (throw StateError('A categoria não existe mais.'));
+        await app
+            .updateCategory(cat.copyWith(name: (a['name'] as String).trim()));
+        return {'category_id': cat.id, 'message': 'Categoria renomeada.'};
+      case 'goal.move':
+        final account = _account(a['account_id']);
+        if (!app.savingsGoals.any((g) => g.id == a['goal_id'])) {
+          throw StateError('O objetivo não existe mais.');
+        }
+        final deposit = a['direction'] == 'deposit';
+        if (deposit) {
+          await app.contributeToGoal(
+              goalId: a['goal_id'] as String,
+              fromAccountId: account.id,
+              amount: _reais(a['amount_cents']),
+              note: a['note'] as String? ?? '');
+        } else {
+          await app.withdrawFromGoal(
+              goalId: a['goal_id'] as String,
+              toAccountId: account.id,
+              amount: _reais(a['amount_cents']),
+              note: a['note'] as String? ?? '');
+        }
+        return {
+          'message': deposit ? 'Guardado no objetivo.' : 'Retirado do objetivo.'
+        };
+      case 'invoice.pay':
+        return _payInvoice(a);
       default:
         throw StateError('Pedido desconhecido.');
     }
+  }
+
+  static const _palette = [
+    0xFF6366F1,
+    0xFF14B8A6,
+    0xFFF59E0B,
+    0xFFEC4899,
+    0xFF22C55E,
+    0xFF3B82F6,
+    0xFFEF4444,
+    0xFF8B5CF6,
+    0xFF06B6D4,
+    0xFFF97316,
+  ];
+
+  RecurringPayment _recurring(Object? id) =>
+      app.recurring.where((r) => r.id == id).firstOrNull ??
+      (throw StateError('A recorrente não existe mais.'));
+
+  /// Same as the Efetivar/Pular buttons; an amount different from the
+  /// forecast corrects the created entry, so nothing stays open twice.
+  Future<Map<String, Object?>> _completeRecurring(
+      AssistantCommand c, Map<String, dynamic> a) async {
+    final r = _recurring(a['id']);
+    final expected = a['expected_date'] as String?;
+    final next = r.nextActionDate;
+    if (expected != null &&
+        DateTime(next.year, next.month, next.day) !=
+            _day(expected).copyWith(hour: 0)) {
+      throw StateError(
+          'A próxima ocorrência mudou (agora ${next.day}/${next.month}). Consulte de novo.');
+    }
+    if (c.kind == 'recurring.skip') {
+      await app.skipNextRecurring(r);
+      return {'recurring_id': r.id, 'message': 'Ocorrência pulada.'};
+    }
+    final before = app.transactions.map((t) => t.id).toSet();
+    await app.markRecurringPaid(r);
+    final created = (await DBHelper.getTransactions())
+        .where((t) => !before.contains(t.id))
+        .firstOrNull;
+    if (created == null) {
+      throw StateError('Nada foi efetivado: a ocorrência já estava resolvida.');
+    }
+    final cents = a['amount_cents'];
+    if (cents != null && (_reais(cents) - created.amount).abs() >= .005) {
+      await app.updateTransaction(
+          created.copyWith(amount: _reais(cents)), created);
+    }
+    return {
+      'transaction_id': created.id,
+      'message': 'Efetivada${cents == null ? '' : ' com o valor real'}.'
+    };
+  }
+
+  /// The invoice of the card, like the "Pagar fatura" button: a transfer
+  /// tied to the cycle, never a new expense.
+  Future<Map<String, Object?>> _payInvoice(Map<String, dynamic> a) async {
+    final card = _account(a['card_id']);
+    final from = _account(a['from_account_id']);
+    if (card.type != 'credit') throw StateError('Não é um cartão de crédito.');
+    final now = DateTime.now();
+    var cycle = BillingCycle.forDate(now, card.statementDay, card.dueDay);
+    if (a['invoice'] != 'current') {
+      cycle = BillingCycle.forDate(
+          cycle.start.subtract(const Duration(days: 1)),
+          card.statementDay,
+          card.dueDay);
+    }
+    final key = cycle.end.toIso8601String().substring(0, 10);
+    var owed = 0.0;
+    for (final tx in app.transactions) {
+      if (tx.accountId != card.id ||
+          tx.date.isBefore(cycle.start) ||
+          !tx.date.isBefore(cycle.end.add(const Duration(days: 1)))) continue;
+      final m = app.transactionMetadata[tx.id];
+      if (FinanceRules.isNeutral(tx, m) && m?.source != 'opening_balance') {
+        continue;
+      }
+      owed += tx.type == 'income' ? -tx.amount : tx.amount;
+    }
+    for (final p in await (await DBHelper.database).query(
+        'card_invoice_payments',
+        where: 'card_id = ? AND cycle_end = ?',
+        whereArgs: [card.id, key])) {
+      owed -= (p['amount'] as num).toDouble();
+    }
+    final amount = a['amount_cents'] == null ? owed : _reais(a['amount_cents']);
+    if (amount <= 0) {
+      return {'message': 'Esta fatura não tem valor em aberto.'};
+    }
+    if (from.currency != card.currency) {
+      throw StateError('Conta e cartão em moedas diferentes: pague pelo app.');
+    }
+    await app.addTransfer(
+        fromId: from.id,
+        toId: card.id,
+        fromAmount: amount,
+        invoiceCycleEnd: cycle.end,
+        note: 'Pagamento da fatura ${card.name}');
+    return {'message': 'Fatura paga: R\$ ${amount.toStringAsFixed(2)}.'};
   }
 
   Future<Map<String, Object?>> _confirmSuggestion(

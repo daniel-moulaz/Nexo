@@ -5,6 +5,7 @@ import 'package:expensy/database/db_helper.dart';
 import 'package:expensy/models/models.dart';
 import 'package:expensy/providers/app_provider.dart';
 import 'package:expensy/sync/assistant_commands.dart';
+import 'package:expensy/models/transaction_metadata.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -178,5 +179,143 @@ void main() {
             whereArgs: ['pluggy:s1']))
         .single;
     expect(row['status'], 'confirmed');
+  });
+
+  test('a recurring bill is settled with its real amount, once', () async {
+    final due = DateTime.now();
+    final day = DateTime(due.year, due.month, due.day);
+    await app.addRecurring(RecurringPayment(
+        id: 'luz',
+        name: 'Água, luz e internet',
+        accountId: 'bank',
+        categoryId: 'bills',
+        amount: 190,
+        freqVal: 1,
+        freqUnit: 'months',
+        startDate: day,
+        nextDate: day));
+    final iso = day.toIso8601String().substring(0, 10);
+    queue.add('p', 'recurring.pay',
+        {'id': 'luz', 'expected_date': iso, 'amount_cents': 19815});
+    // Asked twice (e.g. Claude retried): the forecast moved on, so the
+    // second request is refused instead of paying next month.
+    queue.add('p2', 'recurring.pay',
+        {'id': 'luz', 'expected_date': iso, 'amount_cents': 19815});
+    await run();
+    expect(queue.finished['p']!.$1, 'done');
+    expect(queue.finished['p2']!.$1, 'rejected');
+    final paid = (await DBHelper.getTransactions()).single;
+    expect(paid.amount, 198.15);
+    expect(paid.id, startsWith('recurring:luz:'));
+    expect(await balance('bank'), closeTo(801.85, 1e-9));
+    expect(app.recurring.single.nextDate.month, (day.month % 12) + 1);
+  });
+
+  test('skip, budgets, categories and settling a pending entry', () async {
+    final day = DateTime.now();
+    await app.addRecurring(RecurringPayment(
+        id: 'gym',
+        name: 'Academia',
+        accountId: 'bank',
+        categoryId: 'health',
+        amount: 99,
+        freqVal: 1,
+        freqUnit: 'months',
+        startDate: day,
+        nextDate: DateTime(day.year, day.month, day.day)));
+    queue.add('s', 'recurring.skip', {'id': 'gym'});
+    queue.add('b', 'budget.set', {
+      'category_id': 'food_exp',
+      'amount_cents': 50000,
+      'period': 'monthly'
+    });
+    queue.add('b2', 'budget.set', {
+      'category_id': 'food_exp',
+      'amount_cents': 60000,
+      'period': 'monthly'
+    });
+    queue.add('c', 'category.add', {'name': 'Pets', 'type': 'expense'});
+    queue.add('c2', 'category.add', {'name': 'pets', 'type': 'expense'});
+    await run();
+    expect(queue.finished['s']!.$1, 'done');
+    expect(await DBHelper.getTransactions(), isEmpty,
+        reason: 'skip records nothing');
+    expect(app.budgets.single.amount, 600,
+        reason: 'set updates, not duplicates');
+    expect(app.categories.where((c) => c.name.toLowerCase() == 'pets'),
+        hasLength(1));
+
+    await app.addTransaction(
+        AppTransaction(
+            id: 'boleto',
+            type: 'expense',
+            amount: 80,
+            description: 'Boleto',
+            accountId: 'bank',
+            categoryId: 'bills',
+            date: DateTime.now()),
+        metadata: const TransactionMetadata(
+            transactionId: 'boleto', status: 'pending'));
+    expect(await balance('bank'), 1000, reason: 'pending does not debit');
+    queue.add('t', 'transaction.settle', {'id': 'boleto'});
+    await run();
+    expect(queue.finished['t']!.$1, 'done');
+    expect(await balance('bank'), 920);
+  });
+
+  test('goals move money between account and reserve; invoices are transfers',
+      () async {
+    await app.addSavingsGoal(SavingsGoal(
+        id: 'g',
+        name: 'Reserva',
+        targetAmount: 5000,
+        currency: 'BRL',
+        colorValue: 0));
+    queue.add('d', 'goal.move', {
+      'goal_id': 'g',
+      'account_id': 'bank',
+      'amount_cents': 20000,
+      'direction': 'deposit',
+      'note': ''
+    });
+    await run();
+    expect(queue.finished['d']!.$1, 'done');
+    expect(await balance('bank'), 800);
+
+    await app.addAccount(Account(
+        id: 'cc',
+        name: 'Cartão fictício',
+        type: 'credit',
+        balance: 0,
+        currency: 'BRL',
+        colorValue: 0,
+        statementDay: 10,
+        dueDay: 20));
+    app.accounts = await DBHelper.getAccounts();
+    await app.addTransaction(AppTransaction(
+        id: 'compra',
+        type: 'expense',
+        amount: 150,
+        description: 'Compra',
+        accountId: 'cc',
+        categoryId: 'shopping',
+        date: DateTime.now()));
+    final spentBefore = (await DBHelper.getTransactions())
+        .where((t) => t.type == 'expense')
+        .length;
+    queue.add('f', 'invoice.pay', {
+      'card_id': 'cc',
+      'from_account_id': 'bank',
+      'invoice': 'current',
+    });
+    await run();
+    expect(queue.finished['f']!.$1, 'done', reason: '${queue.finished['f']}');
+    expect(await balance('bank'), 650);
+    expect(await balance('cc'), closeTo(0, 1e-9));
+    final card = (await DBHelper.getTransactions())
+        .where((t) => t.type == 'expense' && t.accountId == 'cc')
+        .length;
+    expect(card, 1, reason: 'paying the invoice is not a new expense');
+    expect(spentBefore, greaterThan(0));
   });
 }

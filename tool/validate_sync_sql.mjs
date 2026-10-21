@@ -522,6 +522,20 @@ try {
     assert.deepEqual(await service('nexo_mcp_suggestions', [bId, 10]), []);
     assert.equal(await service('nexo_mcp_ignore_suggestions', [bId, ['pluggy:s2'], null]), 0);
   });
+  await test('assistant: wider request kinds; ledger includes budgets and goals', async () => {
+    await db.exec(await readFile(new URL('../supabase/migrations/202610210004_mcp_more_actions.sql', import.meta.url), 'utf8'));
+    await db.query(`update nexo_mcp_private.connectors set revoked_at = now() where owner_id = $1`, [A]);
+    const writer = await user(A, tx => rpc(tx, 'nexo_mcp_create_connector', [ds2, 'Claude 3']));
+    const conn = (await db.query(`select id from nexo_mcp_private.connectors
+      where token_hash = encode(sha256(convert_to($1, 'UTF8')), 'hex')`, [writer.token])).rows[0];
+    for (const kind of ['recurring.pay', 'recurring.skip', 'recurring.add', 'recurring.update', 'recurring.delete',
+      'transaction.settle', 'budget.set', 'budget.delete', 'category.add', 'category.update', 'goal.move', 'invoice.pay']) {
+      assert.equal((await service('nexo_mcp_enqueue', [conn.id, kind, '{}'])).status, 'pending', kind);
+    }
+    await denies(() => service('nexo_mcp_enqueue', [conn.id, 'pix.send', '{}']), '23514');
+    const ledger = await service('nexo_mcp_ledger', [conn.id]);
+    assert(Array.isArray(ledger.entities));
+  });
   console.log(`SQL LAB: ${passed} tests passed; synthetic local data only.`);
 } finally {
   await db.close();

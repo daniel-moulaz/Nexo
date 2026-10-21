@@ -59,6 +59,10 @@ const handler = createHandler({
       recurring: of("recurring_payments"),
       investments: of("investments"),
       investmentOperations: of("investment_operations"),
+      budgets: of("budgets"),
+      goals: of("savings_goals"),
+      contributions: of("savings_contributions"),
+      recurringHistory: of("recurring_history"),
     };
   },
   async audit(c, tool, ok) {
