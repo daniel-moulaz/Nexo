@@ -28,6 +28,7 @@ import 'screens/financial_checkup_screen.dart';
 import 'sync/supabase_auth.dart';
 import 'sync/sync_config.dart';
 import 'sync/sync_controller.dart';
+import 'services/pluggy_inbox.dart';
 
 final GlobalKey<NavigatorState> rootNavigatorKey = GlobalKey<NavigatorState>();
 
@@ -75,6 +76,11 @@ Future<void> startNexo() async {
   SyncController.instance = SyncController.forApp(
       syncConfig, SupabaseAuth.app, provider.reloadFromStorage,
       real: !DesktopProfile.isTest);
+  // Open Finance reads real bank data: never in a Windows test profile.
+  if (syncConfig != null && !DesktopProfile.isTest) {
+    PluggyInbox.instance =
+        PluggyInbox(SupabasePluggyRemote(syncConfig, SupabaseAuth.app!));
+  }
   // Never blocks opening the app: offline or signed out just waits.
   unawaited(SyncController.instance?.start());
   NexoSecurity.instance.addListener(provider.updateHomeWidgets);

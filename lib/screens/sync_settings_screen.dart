@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 
 import '../providers/app_provider.dart';
 import '../services/file_output.dart';
+import '../services/pluggy_inbox.dart';
 import '../sync/supabase_auth.dart';
 import '../sync/supabase_sync_transport.dart';
 import '../sync/sync_config.dart';
@@ -38,6 +39,7 @@ class _SyncSettingsScreenState extends State<SyncSettingsScreen> {
   bool _loading = true, _busy = false, _codeSent = false, _withPassword = false;
   String? _message, _step;
   List<SyncLabStep>? _lab;
+  List<PluggyItem>? _pluggy;
 
   @override
   void initState() {
@@ -61,7 +63,144 @@ class _SyncSettingsScreenState extends State<SyncSettingsScreen> {
         _loading = false;
       });
     }
+    if (session != null) await _loadPluggy();
   }
+
+  Future<void> _loadPluggy() async {
+    final pluggy = PluggyInbox.instance;
+    if (pluggy == null) return;
+    try {
+      final items = await pluggy.remote.items();
+      if (mounted) setState(() => _pluggy = items);
+    } on PluggyUnavailable catch (e) {
+      if (mounted) setState(() => _message = e.message);
+    } catch (_) {
+      // The connections list is optional; the rest of the screen works.
+    }
+  }
+
+  Future<void> _addPluggyItem() async {
+    final id = TextEditingController(), name = TextEditingController();
+    final ok = await showDialog<bool>(
+        context: context,
+        builder: (dialog) => AlertDialog(
+              title: const Text('Adicionar conexão do Meu Pluggy'),
+              content: Column(mainAxisSize: MainAxisSize.min, children: [
+                const Text(
+                    'No painel do Pluggy: Aplicações → seu aplicativo → Demo → Itens Conectados. Abra o item do MeuPluggy e copie o id.'),
+                TextField(
+                    controller: id,
+                    decoration: const InputDecoration(
+                        labelText: 'Id do item (itemId)')),
+                TextField(
+                    controller: name,
+                    maxLength: 60,
+                    decoration: const InputDecoration(
+                        labelText: 'Nome para você reconhecer',
+                        hintText: 'Ex.: Nubank')),
+              ]),
+              actions: [
+                TextButton(
+                    onPressed: () => Navigator.pop(dialog, false),
+                    child: const Text('Cancelar')),
+                FilledButton(
+                    onPressed: () => Navigator.pop(dialog, true),
+                    child: const Text('Adicionar')),
+              ],
+            ));
+    final itemId = id.text.trim(), label = name.text.trim();
+    id.dispose();
+    name.dispose();
+    if (ok != true || itemId.isEmpty) return;
+    await _run(() async {
+      try {
+        await PluggyInbox.instance!.remote
+            .addItem(itemId, label.isEmpty ? 'Banco' : label);
+        final problem = await PluggyInbox.instance!.sync(force: true);
+        _message = problem ??
+            'Conexão adicionada. As movimentações dos últimos 35 dias aparecem em Sugestões para você revisar.';
+      } on PluggyUnavailable catch (e) {
+        _message = e.message;
+      }
+    });
+    await _loadPluggy();
+  }
+
+  Future<void> _removePluggyItem(PluggyItem item) async {
+    final ok = await showDialog<bool>(
+        context: context,
+        builder: (dialog) => AlertDialog(
+              title: Text('Remover ${item.label}?'),
+              content: const Text(
+                  'As sugestões ainda não revisadas desta conexão somem. Lançamentos já registrados no Nexo não mudam. A autorização no Meu Pluggy continua; revogue por lá se quiser.'),
+              actions: [
+                TextButton(
+                    onPressed: () => Navigator.pop(dialog, false),
+                    child: const Text('Cancelar')),
+                FilledButton(
+                    onPressed: () => Navigator.pop(dialog, true),
+                    child: const Text('Remover')),
+              ],
+            ));
+    if (ok != true) return;
+    await _run(() async {
+      try {
+        await PluggyInbox.instance!.remote.removeItem(item.itemId);
+      } on PluggyUnavailable catch (e) {
+        _message = e.message;
+      }
+    });
+    await _loadPluggy();
+  }
+
+  Future<void> _refreshPluggy() async {
+    await _run(() async {
+      final problem = await PluggyInbox.instance!.sync(force: true);
+      _message = problem ??
+          'Busca concluída. Novas movimentações aparecem em Sugestões. O Meu Pluggy atualiza os bancos uma vez por dia.';
+    });
+    await _loadPluggy();
+  }
+
+  List<Widget> _pluggySection(ThemeData theme) => [
+        const Divider(),
+        Text('Bancos pelo Open Finance', style: theme.textTheme.titleMedium),
+        const SizedBox(height: 8),
+        const Text(
+            'Movimentações dos bancos conectados no Meu Pluggy entram em Sugestões para você revisar. Nada vira lançamento sozinho. Só leitura: o Nexo não faz pagamentos nem transferências.'),
+        for (final item in _pluggy ?? const <PluggyItem>[])
+          ListTile(
+            contentPadding: EdgeInsets.zero,
+            leading: Icon(
+                switch (item.state) {
+                  'ok' => Icons.account_balance_outlined,
+                  'updating' => Icons.sync,
+                  'unknown' => Icons.hourglass_empty,
+                  _ => Icons.warning_amber_outlined,
+                },
+                color: item.state == 'reconnect' || item.state == 'error'
+                    ? theme.colorScheme.error
+                    : null),
+            title: Text(item.label),
+            subtitle: Text(item.message),
+            trailing: IconButton(
+                tooltip: 'Remover conexão',
+                onPressed: _busy ? null : () => _removePluggyItem(item),
+                icon: const Icon(Icons.link_off)),
+          ),
+        const SizedBox(height: 8),
+        Wrap(spacing: 8, runSpacing: 8, children: [
+          OutlinedButton.icon(
+              onPressed: _busy ? null : _addPluggyItem,
+              icon: const Icon(Icons.add_link),
+              label: const Text('Adicionar conexão')),
+          if (_pluggy?.isNotEmpty == true)
+            OutlinedButton.icon(
+                onPressed: _busy ? null : _refreshPluggy,
+                icon: const Icon(Icons.refresh),
+                label: const Text('Buscar no banco agora')),
+        ]),
+      ];
 
   Future<void> _run(Future<void> Function() action) async {
     setState(() {
@@ -101,6 +240,7 @@ class _SyncSettingsScreenState extends State<SyncSettingsScreen> {
         _code.clear();
         _codeSent = false;
         SyncController.instance?.syncNow();
+        _loadPluggy();
       });
 
   Future<void> _create() async {
@@ -284,6 +424,7 @@ class _SyncSettingsScreenState extends State<SyncSettingsScreen> {
         }
         // Resume automatic sync that was waiting for a session.
         SyncController.instance?.syncNow();
+        _loadPluggy();
       });
 
   Future<void> _signOut() => _run(() async {
@@ -553,6 +694,7 @@ class _SyncSettingsScreenState extends State<SyncSettingsScreen> {
           ListenableBuilder(
               listenable: sync,
               builder: (context, _) => _syncCard(sync, theme)),
+        if (PluggyInbox.instance != null) ..._pluggySection(theme),
         const Divider(),
         Text('Teste do servidor', style: theme.textTheme.titleMedium),
         const SizedBox(height: 8),

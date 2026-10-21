@@ -6,6 +6,7 @@ import '../models/models.dart';
 import 'database_platform.dart';
 import '../investments/investment_repository.dart';
 import '../sync/ledger_capture.dart';
+import '../services/notification_inbox.dart' show NotificationInbox;
 
 class DBHelper {
   static Database? _db;
@@ -576,7 +577,7 @@ class DBHelper {
           id,
           'pending',
           DateTime.now()
-              .subtract(const Duration(days: 7))
+              .subtract(NotificationInbox.windowFor(id))
               .millisecondsSinceEpoch
         ]);
     if (changed != 1) throw StateError('Sugestão já resolvida ou expirada.');

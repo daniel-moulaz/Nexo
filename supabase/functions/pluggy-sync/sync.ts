@@ -1,0 +1,92 @@
+// One refresh of a person's Pluggy connections: read accounts and recent
+// transactions, turn them into suggestions and store them with the tested
+// merge rules. Read-only towards Pluggy; never creates money in the ledger.
+import { type ItemHealth, isSkip, itemHealth, merge, type PluggyAccount, type PluggyTransaction, type Suggestion, toSuggestion } from "./normalize.ts";
+import { PluggyError } from "./pluggy.ts";
+
+export interface Source {
+  item(id: string): Promise<Record<string, unknown>>;
+  accounts(itemId: string): Promise<PluggyAccount[]>;
+  transactions(accountId: string, dateFrom: string): Promise<PluggyTransaction[]>;
+}
+
+export interface StoredItem { item_id: string; label: string; last_fetch_at: string | null }
+export type Stored = Suggestion & { review: "pending" | "confirmed" | "ignored" };
+export type Row = Suggestion & { action: "insert" | "update" | "flag_changed" };
+
+export interface Store {
+  items(owner: string): Promise<StoredItem[]>;
+  stored(owner: string, ids: string[]): Promise<Stored[]>;
+  store(owner: string, itemId: string, health: ItemHealth, rows: Row[]): Promise<number>;
+}
+
+export interface ItemResult {
+  item_id: string;
+  label: string;
+  health: ItemHealth | null;
+  fetched: boolean;
+  written: number;
+  skipped: number;
+}
+
+/// Meu Pluggy refreshes once a day; reading more often only costs requests.
+export const minIntervalMs = 60 * 60 * 1000;
+/// Suggestions older than this are not useful to review any more.
+export const windowDays = 35;
+
+export async function syncOwner(owner: string, source: Source, store: Store,
+  options: { now?: Date; force?: boolean } = {}): Promise<ItemResult[]> {
+  const now = options.now ?? new Date();
+  const dateFrom = new Date(now.getTime() - windowDays * 86400000).toISOString().slice(0, 10);
+  const results: ItemResult[] = [];
+  for (const item of await store.items(owner)) {
+    const last = item.last_fetch_at ? Date.parse(item.last_fetch_at) : NaN;
+    // Even a forced refresh waits a few minutes between reads of one item.
+    const wait = options.force ? 5 * 60 * 1000 : minIntervalMs;
+    if (!isNaN(last) && now.getTime() - last < wait) {
+      results.push({ item_id: item.item_id, label: item.label, health: null, fetched: false, written: 0, skipped: 0 });
+      continue;
+    }
+    let health: ItemHealth;
+    const incoming: Suggestion[] = [];
+    let skipped = 0;
+    try {
+      health = itemHealth(await source.item(item.item_id) as Parameters<typeof itemHealth>[0], now);
+      for (const account of await source.accounts(item.item_id)) {
+        for (const tx of await source.transactions(account.id, dateFrom)) {
+          const s = toSuggestion(tx, account);
+          if (isSkip(s)) skipped++;
+          else incoming.push(s);
+        }
+      }
+    } catch (error) {
+      if (!(error instanceof PluggyError)) throw error;
+      health = {
+        state: error.status === 404 ? "reconnect" : "error",
+        message: error.status === 404
+          ? "Conexão não encontrada no Pluggy. Confira o identificador ou reconecte pelo Meu Pluggy."
+          : `Não foi possível ler este banco agora (${error.message}). Os dados já recebidos continuam.`,
+      };
+      await store.store(owner, item.item_id, health, []);
+      results.push({ item_id: item.item_id, label: item.label, health, fetched: false, written: 0, skipped: 0 });
+      continue;
+    }
+    const known = new Map<string, Stored>();
+    for (let i = 0; i < incoming.length; i += 500) {
+      for (const s of await store.stored(owner, incoming.slice(i, i + 500).map((r) => r.external_id))) {
+        known.set(s.external_id, s);
+      }
+    }
+    const rows: Row[] = [];
+    for (const s of incoming) {
+      const { action, row } = merge(known.get(s.external_id), s);
+      if (action !== "keep") rows.push({ ...row, action });
+    }
+    let written = 0;
+    for (let i = 0; i < Math.max(rows.length, 1); i += 500) {
+      written += await store.store(owner, item.item_id, health, rows.slice(i, i + 500));
+    }
+    results.push({ item_id: item.item_id, label: item.label, health, fetched: true, written, skipped });
+  }
+  return results;
+}

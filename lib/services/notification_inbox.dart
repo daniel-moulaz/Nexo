@@ -13,8 +13,16 @@ class NotificationInbox {
     'com.nu.production': 'Nubank',
     'com.mercadopago.wallet': 'Mercado Pago',
     'br.com.intermedium': 'Inter',
-    'com.picpay': 'PicPay'
+    'com.picpay': 'PicPay',
+    'pluggy': 'Banco (Open Finance)',
   };
+
+  /// Notifications are reviewed within 7 days; Open Finance movements
+  /// arrive up to a day late and stay reviewable for 35.
+  static Duration windowFor(String suggestionId) =>
+      suggestionId.startsWith('pluggy:')
+          ? const Duration(days: 35)
+          : const Duration(days: 7);
   static Future<void> ingest(List<dynamic> rows, {DateTime? now}) async {
     final db = await DBHelper.database;
     final reference = now ?? DateTime.now();
@@ -64,8 +72,11 @@ class NotificationInbox {
       // After seven days retain only the fingerprint tombstone, so replay cannot
       // resurrect an ignored/confirmed item without retaining merchant data.
       await txn.rawUpdate(
-          "UPDATE notification_suggestions SET status = CASE WHEN status = 'pending' THEN 'expired' ELSE status END, description = '', amount_cents = 0 WHERE occurred_at < ?",
+          "UPDATE notification_suggestions SET status = CASE WHEN status = 'pending' THEN 'expired' ELSE status END, description = '', amount_cents = 0 WHERE app_id != 'pluggy' AND occurred_at < ?",
           [cutoff]);
+      await txn.rawUpdate(
+          "UPDATE notification_suggestions SET status = CASE WHEN status = 'pending' THEN 'expired' ELSE status END, description = '', amount_cents = 0 WHERE app_id = 'pluggy' AND occurred_at < ?",
+          [reference.subtract(windowFor('pluggy:')).millisecondsSinceEpoch]);
       // Native intake already rejects notifications older than seven days. A
       // 90-day tombstone window is therefore enough to bound DB growth while
       // retaining a generous replay-protection horizon.
@@ -127,8 +138,6 @@ class NotificationInbox {
           whereArgs: [
             id,
             'ignored',
-            DateTime.now()
-                .subtract(const Duration(days: 7))
-                .millisecondsSinceEpoch
+            DateTime.now().subtract(windowFor(id)).millisecondsSinceEpoch
           ]);
 }
