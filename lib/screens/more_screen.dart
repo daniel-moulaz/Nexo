@@ -8,7 +8,6 @@ import 'recurring_screen.dart';
 import 'budget_screen.dart';
 import 'backup_screen.dart';
 import 'categories_screen.dart';
-import 'currency_converter_screen.dart';
 import 'finance_export_screen.dart';
 import 'financial_planning_screen.dart';
 import 'analysis_screen.dart';
@@ -102,13 +101,6 @@ class MoreScreen extends StatelessWidget {
           sub: 'Categorias, comparações e fechamento mensal',
           color: Color(0xFF1565C0),
           screen: AnalysisScreen()),
-      const _Item(
-        icon: Icons.currency_exchange_rounded,
-        label: 'Conversor de moeda',
-        sub: 'Converta valores entre moedas',
-        color: Color(0xFF6750A4),
-        screen: CurrencyConverterScreen(),
-      ),
       _Item(
         icon: Icons.star_outline_rounded,
         label: 'Lista de desejos',
@@ -213,7 +205,6 @@ class MoreScreen extends StatelessWidget {
                 'Bens e patrimônio',
                 'Lista de desejos',
                 'Previsão detalhada',
-                'Conversor de moeda',
               ],
             }.entries)
               Card(
