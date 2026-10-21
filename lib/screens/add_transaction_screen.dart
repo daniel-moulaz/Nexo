@@ -7,7 +7,8 @@ import '../providers/app_provider.dart';
 import '../services/transaction_metadata_service.dart';
 import '../theme/app_theme.dart';
 import '../utils/finance_input.dart';
-import '../widgets/shared_widgets.dart' show showCurrencyPicker;
+import '../widgets/shared_widgets.dart' show CategoryDot, showCurrencyPicker;
+import '../services/entry_suggestions.dart';
 import 'transfer_screen.dart';
 import '../services/entry_defaults.dart';
 
@@ -170,6 +171,25 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
       'gift': ['Presente', 'Doação recebida'],
     };
     return values[categoryId] ?? const [];
+  }
+
+  void _usePast(AppProvider app, AppTransaction past) {
+    final account = app.accountById(past.accountId);
+    final sub = app.transactionMetadata[past.id]?.subcategory ?? '';
+    setState(() {
+      _descriptionCtrl.text = past.description;
+      _descriptionCtrl.selection =
+          TextSelection.collapsed(offset: past.description.length);
+      if (app.categories
+          .any((c) => c.id == past.categoryId && c.type == _type)) {
+        _categoryId = past.categoryId;
+        _subcategory = _subcategories(past.categoryId).contains(sub) ? sub : '';
+      }
+      if (account != null && !account.isGold) {
+        _accountId = account.id;
+        _currency = account.currency;
+      }
+    });
   }
 
   void _setType(String type) {
@@ -443,21 +463,28 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
               body: ListView(
                 padding: EdgeInsets.fromLTRB(horizontal, 8, horizontal, 32),
                 children: [
-                  Wrap(spacing: 8, runSpacing: 8, children: [
-                    for (final type in [
-                      'expense',
-                      'income',
-                      if (!isEdit) 'transfer'
-                    ])
-                      ChoiceChip(
-                          label: Text(const {
-                            'expense': 'Despesa',
-                            'income': 'Receita',
-                            'transfer': 'Transferência'
-                          }[type]!),
-                          selected: _type == type,
-                          onSelected: (_) => _setType(type)),
-                  ]),
+                  LayoutBuilder(
+                      builder: (context, c) => SegmentedButton<String>(
+                            showSelectedIcon: false,
+                            segments: [
+                              for (final (type, label, icon) in [
+                                ('expense', 'Despesa', Icons.north_east),
+                                ('income', 'Receita', Icons.south_west),
+                                if (!isEdit)
+                                  ('transfer', 'Transferir', Icons.swap_horiz),
+                              ])
+                                ButtonSegment(
+                                    value: type,
+                                    label: Text(label,
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis),
+                                    // Icons only where the labels still fit.
+                                    icon:
+                                        c.maxWidth >= 400 ? Icon(icon) : null),
+                            ],
+                            selected: {_type},
+                            onSelectionChanged: (v) => _setType(v.first),
+                          )),
                   const SizedBox(height: 16),
                   Container(
                     padding: const EdgeInsets.all(18),
@@ -537,6 +564,41 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
                           : 'Ex.: mercado, almoço, internet...',
                       prefixIcon: const Icon(Icons.edit_note_rounded),
                     ),
+                    onChanged: (_) => setState(() {}),
+                  ),
+                  if (!isEdit)
+                    for (final past in [
+                      similarEntries(app.transactions, app.transactionMetadata,
+                          _descriptionCtrl.text, _type)
+                    ])
+                      if (past.isNotEmpty)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 8),
+                          child: Wrap(spacing: 8, runSpacing: 8, children: [
+                            for (final t in past)
+                              ActionChip(
+                                avatar: CategoryDot(
+                                    category: app.categoryById(t.categoryId),
+                                    size: 22),
+                                label: Text(
+                                    '${t.description} · ${app.categoryById(t.categoryId)?.name ?? 'Sem categoria'}',
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis),
+                                tooltip:
+                                    'Usar categoria e conta deste lançamento',
+                                onPressed: () => _usePast(app, t),
+                              ),
+                          ]),
+                        ),
+                  const SizedBox(height: 12),
+                  _DateChips(
+                    date: _date,
+                    onChanged: (d) => setState(() {
+                      _date = d;
+                      if (_status == 'pending' && _dueDate == null) {
+                        _dueDate = d;
+                      }
+                    }),
                   ),
                   const SizedBox(height: 20),
                   _SectionTitle(
@@ -611,10 +673,7 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
                         return ChoiceChip(
                           selected: _categoryId == category.id,
                           label: Text(_categoryLabel(category)),
-                          avatar: CircleAvatar(
-                            radius: 4,
-                            backgroundColor: Color(category.colorValue),
-                          ),
+                          avatar: CategoryDot(category: category, size: 22),
                           onSelected: (_) {
                             setState(() {
                               _categoryId = category.id;
@@ -788,35 +847,6 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
                         ),
                     ],
                   ],
-                  const SizedBox(height: 20),
-                  const _SectionTitle(
-                    icon: Icons.calendar_month_outlined,
-                    title: 'Data do lançamento',
-                    subtitle: 'Quando a movimentação aconteceu',
-                  ),
-                  const SizedBox(height: 8),
-                  _DateTile(
-                    title: 'Data',
-                    date: _date,
-                    icon: Icons.event_available_outlined,
-                    onTap: () async {
-                      final picked = await showDatePicker(
-                        context: context,
-                        initialDate: _date,
-                        firstDate: DateTime(2000),
-                        lastDate: DateTime(2100),
-                        cancelText: 'Cancelar',
-                        confirmText: 'Selecionar',
-                      );
-                      if (picked != null) {
-                        setState(() {
-                          _date = picked;
-                          if (_status == 'pending' && _dueDate == null)
-                            _dueDate = picked;
-                        });
-                      }
-                    },
-                  ),
                   const SizedBox(height: 16),
                   TextField(
                     controller: _noteCtrl,
@@ -873,6 +903,47 @@ class _SectionTitle extends StatelessWidget {
         ),
       ],
     );
+  }
+}
+
+/// Today, yesterday or another day: most entries are one of the first two.
+class _DateChips extends StatelessWidget {
+  const _DateChips({required this.date, required this.onChanged});
+  final DateTime date;
+  final ValueChanged<DateTime> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final day = DateTime(date.year, date.month, date.day);
+    final yesterday = today.subtract(const Duration(days: 1));
+    final other = day != today && day != yesterday;
+    return Wrap(spacing: 8, runSpacing: 8, children: [
+      ChoiceChip(
+          label: const Text('Hoje'),
+          selected: day == today,
+          onSelected: (_) => onChanged(now)),
+      ChoiceChip(
+          label: const Text('Ontem'),
+          selected: day == yesterday,
+          onSelected: (_) => onChanged(now.subtract(const Duration(days: 1)))),
+      ChoiceChip(
+          avatar: const Icon(Icons.event_outlined, size: 18),
+          label: Text(other ? ptDate(date) : 'Outro dia'),
+          selected: other,
+          onSelected: (_) async {
+            final picked = await showDatePicker(
+              context: context,
+              initialDate: date,
+              firstDate: DateTime(2000),
+              lastDate: DateTime(2100),
+              cancelText: 'Cancelar',
+              confirmText: 'Selecionar',
+            );
+            if (picked != null) onChanged(picked);
+          }),
+    ]);
   }
 }
 
