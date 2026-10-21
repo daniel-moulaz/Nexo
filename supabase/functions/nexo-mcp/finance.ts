@@ -15,6 +15,10 @@ export interface Ledger {
   recurring: Row[];
   investments: Row[];
   investmentOperations: Row[];
+  budgets?: Row[];
+  goals?: Row[];
+  contributions?: Row[];
+  recurringHistory?: Row[];
 }
 
 export interface Meta {

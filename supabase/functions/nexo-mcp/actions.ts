@@ -4,6 +4,7 @@
 // app confirms; get_request_status tells the outcome.
 import { type Ledger, meta, metadataIndex, text } from "./finance.ts";
 import { ToolInputError, type ToolDefinition } from "./tools.ts";
+import { callMoreAction, moreActions } from "./more_actions.ts";
 
 export interface Request {
   id: string;
@@ -22,7 +23,7 @@ export interface ActionDeps {
 const dateField = { type: "string", pattern: "^\\d{4}-\\d{2}-\\d{2}$" };
 const amountField = { type: "number", exclusiveMinimum: 0, maximum: 1000000000, description: "Valor em reais, positivo (ex.: 32.90)" };
 
-export const actions: (ToolDefinition & { destructive?: boolean })[] = [
+const baseActions: (ToolDefinition & { destructive?: boolean })[] = [
   {
     name: "add_transaction",
     title: "Lançar despesa ou receita",
@@ -224,6 +225,8 @@ const statusText: Record<string, string> = {
   rejected: "recusado pelo Nexo",
 };
 
+export const actions: (ToolDefinition & { destructive?: boolean })[] = [...baseActions, ...moreActions];
+
 export async function callAction(name: string, rawArgs: unknown, l: Ledger, today: string,
   deps: ActionDeps): Promise<Record<string, unknown>> {
   const args = (rawArgs ?? {}) as Args;
@@ -335,7 +338,10 @@ export async function callAction(name: string, rawArgs: unknown, l: Ledger, toda
       if (!r) throw new ToolInputError("Pedido não encontrado.");
       return { request_id: r.id, kind: r.kind, status: statusText[r.status] ?? r.status, result: r.result ?? undefined };
     }
-    default:
+    default: {
+      const more = await callMoreAction(name, args, l, today, deps.enqueue);
+      if (more) return more;
       throw new ToolInputError("Ferramenta desconhecida.");
+    }
   }
 }

@@ -4,6 +4,7 @@
 // request path is testable without a network or a database.
 import type { Ledger } from "./finance.ts";
 import { type ActionDeps, actions, callAction } from "./actions.ts";
+import { readOnlyMore } from "./more_actions.ts";
 import { callTool, ToolInputError, tools } from "./tools.ts";
 
 export const serverInfo = { name: "nexo", title: "Nexo", version: "0.1.0" };
@@ -25,7 +26,7 @@ export interface Deps {
   actions?(connector: Connector): ActionDeps;
 }
 
-const readOnlyActions = new Set(["list_suggestions", "get_request_status"]);
+const readOnlyActions = new Set(["list_suggestions", "get_request_status", ...readOnlyMore]);
 
 type Json = Record<string, unknown>;
 const rpcError = (id: unknown, code: number, message: string) => ({

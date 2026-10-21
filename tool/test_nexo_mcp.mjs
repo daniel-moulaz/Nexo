@@ -292,4 +292,60 @@ await test('change tools are listed with honest hints only when the queue exists
   assert(!(await list(handler)).some(t => t.name === 'add_transaction'), 'read-only deployment has no change tools');
 });
 
+// ── Recurring, budgets, categories, goals, invoices ────────────────────
+const richer = {
+  ...withIncome,
+  recurring: [...ledger.recurring,
+    { id: 'parc', name: 'Notebook 10x', payment_type: 'expense', recurring_type: 'installment', amount: 300,
+      next_date: '2026-10-25T00:00:00.000', end_date: '2027-05-25T00:00:00.000', account_id: 'card', category_id: 'shopping', freq_val: 1, freq_unit: 'months' }],
+  budgets: [{ id: 'b1', category_id: 'food_exp', amount: 500, period: 'monthly' }],
+  goals: [{ id: 'g1', name: 'Reserva', target_amount: 10000, current_amount: 2500 }],
+};
+await test('recurring: listed with next date; pay keeps the expected occurrence and real amount', async () => {
+  const q = queue();
+  const list = await act(q, 'get_recurring', {}, richer);
+  assert.deepEqual(list.recurring.map(r => [r.id, r.next_date]), [['parc', '2026-10-25'], ['stream', '2026-11-15']]);
+  await act(q, 'pay_recurring', { id: 'stream', amount: 198.15 }, richer);
+  assert.deepEqual(q.items[0].args, { id: 'stream', expected_date: '2026-11-15', amount_cents: 19815 });
+  await assert.rejects(act(q, 'pay_recurring', { id: 'stream', date: '2026-10-15' }, richer), ToolInputError,
+    'a different occurrence than the next one is refused');
+  await assert.rejects(act(q, 'skip_recurring', { id: 'parc' }, richer), ToolInputError, 'installments cannot be skipped');
+  await act(q, 'skip_recurring', { id: 'stream' }, richer);
+  assert.equal(q.items[1].kind, 'recurring.skip');
+});
+await test('recurring: create, update and delete validate before queueing', async () => {
+  const q = queue();
+  await act(q, 'add_recurring', { name: 'Academia', type: 'expense', amount: 99.9, account_id: 'bank', category_id: 'health', first_date: '2026-11-05' }, richer);
+  assert.equal(q.items[0].args.freq_unit, 'months');
+  assert.equal(q.items[0].args.amount_cents, 9990);
+  await assert.rejects(act(q, 'add_recurring', { name: 'X', type: 'expense', amount: 10, account_id: 'bank', category_id: 'health', first_date: '2026-11-05', kind: 'installment' }, richer), ToolInputError);
+  await assert.rejects(act(q, 'add_recurring', { name: 'X', type: 'income', amount: 10, account_id: 'bank', category_id: 'health', first_date: '2026-11-05' }, richer), ToolInputError);
+  await act(q, 'update_recurring', { id: 'stream', amount: 44.9 }, richer);
+  assert.deepEqual(q.items[1].args, { id: 'stream', amount_cents: 4490 });
+  await assert.rejects(act(q, 'update_recurring', { id: 'stream' }, richer), ToolInputError);
+  await act(q, 'delete_recurring', { id: 'parc' }, richer);
+  assert.equal(q.items.length, 3);
+});
+await test('budgets, categories, goals and invoices', async () => {
+  const q = queue();
+  const budgets = await act(q, 'get_budgets', {}, richer);
+  assert.equal(budgets.budgets[0].limit, 500);
+  assert.equal(typeof budgets.budgets[0].spent, 'number');
+  await act(q, 'set_budget', { category_id: 'food_exp', amount: 600 }, richer);
+  assert.deepEqual(q.items[0].args, { category_id: 'food_exp', amount_cents: 60000, period: 'monthly' });
+  await assert.rejects(act(q, 'set_budget', { category_id: 'pay', amount: 1 }, richer), ToolInputError, 'income category');
+  await act(q, 'add_category', { name: 'Pets', type: 'expense' }, richer);
+  await assert.rejects(act(q, 'add_category', { name: 'pets', type: 'expense' }, { ...richer, categories: [...richer.categories, { id: 'p', name: 'Pets', type: 'expense' }] }), ToolInputError);
+  const goals = await act(q, 'get_goals', {}, richer);
+  assert.equal(goals.goals[0].missing, 7500);
+  await act(q, 'move_goal', { goal_id: 'g1', account_id: 'bank', amount: 100, direction: 'deposit' }, richer);
+  await assert.rejects(act(q, 'move_goal', { goal_id: 'g1', account_id: 'card', amount: 100, direction: 'deposit' }, richer), ToolInputError);
+  await act(q, 'pay_card_invoice', { card_id: 'card', from_account_id: 'bank' }, richer);
+  assert.deepEqual(q.items.at(-1).args, { card_id: 'card', from_account_id: 'bank', invoice: 'closed' });
+  await assert.rejects(act(q, 'pay_card_invoice', { card_id: 'bank', from_account_id: 'bank' }, richer), ToolInputError);
+  await assert.rejects(act(q, 'settle_transaction', { id: 't-food' }, richer), ToolInputError, 'already paid');
+  await act(q, 'settle_transaction', { id: 't-pending' }, richer);
+  assert.equal(q.items.at(-1).kind, 'transaction.settle');
+});
+
 console.log(`NEXO MCP: ${passed} tests passed; synthetic fixture only.`);
