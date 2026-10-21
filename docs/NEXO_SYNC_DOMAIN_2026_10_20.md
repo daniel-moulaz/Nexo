@@ -184,4 +184,18 @@ Conferência somente leitura dos dois bancos: mesmo `dataset_id`, `cursor` 3 nos
 
 Cada execução deixa um acervo sintético sem nome no laboratório (não aparece em "Entrar num acervo existente") e revoga os dois aparelhos ao final.
 
-Não validado ainda: celular Android, offline real de rede (só simulado no transporte), dados reais (etapa 3, depende de decisão do usuário).
+Não validado ainda: offline real de rede (só simulado no transporte).
+
+## Ativação real (20/10/2026)
+
+Migration `202610210001_sync_real_datasets.sql`: um acervo real por dono (índice único parcial), `nexo_sync_open` com tipo (real/sintético nunca se misturam; `nexo_sync_lab_create` recusa acervo real), `nexo_sync_list_datasets(p_real)` e `nexo_sync_delete_dataset`. SQL 38/38 no PGlite.
+
+Fluxo no app (`lib/sync/sync_activation.dart`, `SyncController.activate/verify`), só no perfil real:
+
+1. consentimento com contagens e aviso de que não há criptografia de ponta a ponta;
+2. backup JSON validado por `DBHelper.validateBackup` e salvo onde a pessoa escolher (cancelar interrompe);
+3. cópia intacta `backups/antes_da_sincronizacao_<data>.db` ao lado do banco (`VACUUM INTO`);
+4. ensaio sem rede: cópia → `createDataset` → servidor local (`lib/sync/local_sync_server.dart`) → aparelho vazio; qualquer tabela diferente aborta antes de enviar; operações limitadas a ~200 KB (servidor aceita até 1 MiB);
+5. envio e conferência: baixa o acervo do servidor numa cópia descartável (aparelho temporário revogado no fim) e compara com o local.
+
+O PC entra com `join` + a mesma conferência. Botão "Conferir com o servidor" na tela. Testes: `test/sync_activation_test.dart` (8). O usuário ativou no celular em 20/10 (versão 1.6.8+29).

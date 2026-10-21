@@ -11,12 +11,12 @@ Estado de referência em 20/10/2026 (fim do dia):
 - Pasta: `C:\Users\danie\projetos\Expensy`. Nome público: **Nexo**.
 - Branch: `codex/nexo-investments`. Commitados: sync S1 (domínio) e S2 (motor + protocolo 2), fechamento semanal e as mudanças locais antigas, publicadas em lotes revisados.
 - **A pasta não tem mais mudanças locais de conteúdo.** Arquivos marcados como modificados diferem só por final de linha (inclui `lib/l10n/*` regenerado pelo build). `.vscode/` é configuração do usuário: não versionar.
-- Versão do código: **1.6.7+28**. Instalada Android: **1.6.7+28** em 20/10 (verificar com `adb` antes de atualizar). Schema SQLite: **25**.
+- Versão do código: **1.6.8+29**. Instalada Android: **1.6.8+29** em 20/10 (dados preservados, `firstInstallTime` 26/09; verificar com `adb` antes de atualizar). Schema SQLite: **25**.
 - Identidade Android **`com.ma.expensy`**, banco **`expensy.db`**, pacote Dart **`expensy`** e certificado existente são invariantes.
 - Remoto de publicação: **`nexo` → `daniel-moulaz/Nexo`**. `origin` ainda é Expensy; não trocar remotos nem fazer push no destino errado.
-- Plano e andamento: `docs/NEXO_PLANO_SEQUENCIA_2026_10.md` (login por e-mail pronto, bloqueado no SMTP do Supabase; MCP e Pluggy implementados e testados, não publicados).
-- **Não há sincronização de produção.** A sincronização automática funciona entre perfis Windows de teste com dados fictícios (validada pelo usuário em 20/10, ver `NEXO_SYNC_DOMAIN`); dados reais e celular continuam desligados. No projeto `nexo-sync` o usuário aplicou as migrations v2 e `202610200003_sync_lab_datasets.sql`; `202610200002_mcp_connectors.sql` ainda não foi aplicada. Não habilitar upload real por inferência.
-- Última validação: **347 testes** Flutter, SQL do laboratório 37/37, MCP 18/18, Pluggy 13/13, análise limpa. Testes Kotlin/instrumentados não foram reexecutados nesta rodada. Isso não significa homologação manual completa de Windows ou sync.
+- Plano e andamento: `docs/NEXO_PLANO_SEQUENCIA_2026_10.md` (login por senha funcionando; Pluggy e MCP implementados e testados, ainda não publicados no Supabase).
+- **Sincronização real ATIVA desde 20/10/2026**: o usuário ativou no celular (consentimento, backup salvo, cópia interna, ensaio local e conferência com o servidor). Um único acervo real por conta; perfis Windows de teste só veem acervos sintéticos. O PC entra pelo botão "Entrar no acervo do celular" (cópia do banco antigo do PC em `%LOCALAPPDATA%/Nexo/backups`). Migrations aplicadas no `nexo-sync`: lab, v2, `202610200003`, `202610210001`; pendentes: `202610200002_mcp_connectors.sql` e `202610210002_pluggy.sql`. Dados no servidor **não** têm criptografia de ponta a ponta.
+- Última validação: **363 testes** Flutter (duas execuções), SQL 41/41, MCP 18/18, Pluggy 17/17, roteiro `tool/sync_e2e.dart` contra o Supabase real 11/11, análise limpa. Testes Kotlin/instrumentados não foram reexecutados nesta rodada. Isso não significa homologação manual completa de Windows ou sync.
 
 Regras permanentes:
 
