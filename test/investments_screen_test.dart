@@ -4,12 +4,15 @@ import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:http/http.dart' as http;
+import 'package:http/testing.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:expensy/database/db_helper.dart';
+import 'package:expensy/investments/cdi_benchmark.dart';
 import 'package:expensy/investments/investment_models.dart';
 import 'package:expensy/investments/investment_repository.dart';
 import 'package:expensy/screens/investments_screen.dart';
@@ -28,6 +31,11 @@ void main() {
     await databaseFactory.setDatabasesPath(
         (await Directory.systemTemp.createTemp('nexo-investments-ui-')).path);
     await initializeDateFormatting('pt_BR');
+    // No network in tests: a flat fictitious CDI for October 2026.
+    CdiSource.instance = () => CdiSource(
+        clientFactory: () => MockClient((_) async => http.Response(
+            '[{"data":"01/10/2026","valor":"0.05"},{"data":"02/10/2026","valor":"0.05"}]',
+            200)));
     if (const bool.fromEnvironment('CAPTURE_REVIEW')) {
       await (FontLoader('ReviewFont')
             ..addFont(File('C:/Windows/Fonts/arial.ttf')
@@ -169,9 +177,12 @@ void main() {
     expect(find.textContaining('%'), findsNothing);
     expect(find.text('Ganho na posição'), findsNothing);
     expect(find.text('Perda na posição'), findsNothing);
+    expect(find.text('Resultado oculto no modo privado.'), findsOneWidget);
     app.settings.hideBalance = false;
     app.notifyListeners();
     await tester.pumpAndSettle();
+    // R$ 600 invested became R$ 1.200 at the entered prices.
+    expect(find.textContaining('acima do CDI'), findsOneWidget);
     await tester.enterText(find.byType(TextField), 'Empresa');
     await tester.pumpAndSettle();
     expect(

@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import 'package:uuid/uuid.dart';
 import 'package:fl_chart/fl_chart.dart';
+import '../investments/cdi_benchmark.dart';
 import '../investments/investment_models.dart';
 import '../investments/investment_repository.dart';
 import '../investments/investment_quotes.dart';
@@ -12,6 +13,7 @@ import '../utils/finance_input.dart';
 import '../widgets/analysis_widgets.dart';
 import '../widgets/investment_market_info.dart';
 import '../widgets/investment_price_chart.dart';
+import '../widgets/nexo_ui.dart' show NexoTones;
 import '../widgets/portfolio_charts.dart';
 
 String _money(BuildContext context, int cents) =>
@@ -244,6 +246,10 @@ class _InvestmentsScreenState extends State<InvestmentsScreen> {
                                         const Text(
                                             'Variação sobre o custo da posição atual, sem vendas e proventos. Não é o rendimento do dia.'),
                                       ])),
+                              if (all.any((p) => p.operations.isNotEmpty)) ...[
+                                const SizedBox(height: 16),
+                                _CdiCard(positions: all),
+                              ],
                               if (_quoteStatus != null)
                                 Padding(
                                     padding: const EdgeInsets.symmetric(
@@ -357,7 +363,7 @@ class _InvestmentsScreenState extends State<InvestmentsScreen> {
                                             ]),
                                             const SizedBox(height: 12),
                                             const Text(
-                                                'Custo médio nas vendas. Informe valores líquidos de taxas. Sem apuração de impostos, recomendação de compra ou comparação com CDI.'),
+                                                'Custo médio nas vendas. Informe valores líquidos de taxas. Sem apuração de impostos ou recomendação de compra.'),
                                           ]));
                                   if (c.maxWidth < 800)
                                     return Column(children: [
@@ -380,6 +386,89 @@ class _InvestmentsScreenState extends State<InvestmentsScreen> {
                             ]))));
           }),
     );
+  }
+}
+
+/// The portfolio against the same money at 100% of the CDI.
+class _CdiCard extends StatefulWidget {
+  const _CdiCard({required this.positions});
+  final List<InvestmentPosition> positions;
+
+  @override
+  State<_CdiCard> createState() => _CdiCardState();
+}
+
+class _CdiCardState extends State<_CdiCard> {
+  CdiSeries? _series;
+  bool _loading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  DateTime? get _since => widget.positions
+      .expand((p) => p.operations)
+      .map((o) => o.date.toLocal())
+      .fold<DateTime?>(null, (a, d) => a == null || d.isBefore(a) ? d : a);
+
+  Future<void> _load() async {
+    final since = _since;
+    if (since == null) return;
+    final cached = await CdiSource.cached();
+    if (mounted && cached != null) setState(() => _series = cached);
+    final fresh = await CdiSource.instance().load(since);
+    if (mounted) {
+      setState(() {
+        _series = fresh ?? _series;
+        _loading = false;
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final private = context.watch<AppProvider>().settings.hideBalance;
+    final series = _series;
+    final result = series == null
+        ? null
+        : compareWithCdi(widget.positions, series, DateTime.now());
+    final Widget body;
+    if (result == null) {
+      body = Text(_loading
+          ? 'Buscando o CDI no Banco Central…'
+          : 'CDI indisponível agora. A comparação aparece quando houver conexão.');
+    } else {
+      final ahead = result.difference >= 0;
+      final color =
+          ahead ? NexoTones.income(context) : NexoTones.expense(context);
+      body = Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        AnalysisMetrics(values: [
+          ('Sua carteira hoje', _money(context, result.portfolio)),
+          ('Os mesmos aportes no CDI', _money(context, result.cdi)),
+        ]),
+        const SizedBox(height: 12),
+        if (private)
+          const Text('Resultado oculto no modo privado.')
+        else
+          Row(children: [
+            Icon(ahead ? Icons.trending_up : Icons.trending_down, color: color),
+            const SizedBox(width: 8),
+            Expanded(
+                child: Text(
+                    '${_money(context, result.difference.abs())} ${ahead ? 'acima' : 'abaixo'} do CDI',
+                    style: TextStyle(
+                        color: color,
+                        fontWeight: FontWeight.w800,
+                        fontSize: 16))),
+          ]),
+        const SizedBox(height: 8),
+        Text(
+            'Os mesmos aportes, vendas e proventos rendendo o CDI cheio desde ${ptDate(result.since)} (Banco Central, dados até ${ptDate(result.coveredUntil)}). Preço manual desatualizado distorce a comparação.'),
+      ]);
+    }
+    return AnalysisCard(title: 'Comparado ao CDI', child: body);
   }
 }
 
