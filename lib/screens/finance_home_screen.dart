@@ -47,10 +47,21 @@ class _FinanceHomeScreenState extends State<FinanceHomeScreen>
   List<AppTransaction>? _lastTransactions;
   DateTime? _month;
   int _horizon = 30;
+  Set<String> _dismissedSubscriptions = {};
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    _loadDismissed();
+  }
+
+  Future<void> _loadDismissed() async {
+    try {
+      final v = await loadDismissedSubscriptions();
+      if (mounted) setState(() => _dismissedSubscriptions = v);
+    } catch (_) {
+      // Preferences unavailable: suggestions still show, nothing breaks.
+    }
   }
 
   @override
@@ -86,7 +97,10 @@ class _FinanceHomeScreenState extends State<FinanceHomeScreen>
 
   Future<void> _open(Widget screen) async {
     await Navigator.push(context, MaterialPageRoute(builder: (_) => screen));
-    if (mounted) await _refresh();
+    if (mounted) {
+      await _loadDismissed();
+      await _refresh();
+    }
   }
 
   void _event(AppProvider app, ForecastEvent event) {
@@ -556,6 +570,20 @@ class _FinanceHomeScreenState extends State<FinanceHomeScreen>
                     action: 'Ver',
                     onTap: () => _open(AnalysisScreen(initialMonth: month))),
             ];
+            final subscriptions = hidden
+                ? const []
+                : detectSubscriptions(app, _dismissedSubscriptions);
+            if (subscriptions.isNotEmpty) {
+              insights.add(NexoInsight(
+                  icon: Icons.auto_awesome_outlined,
+                  color: cs.tertiary,
+                  title:
+                      '${subscriptions.length} ${subscriptions.length == 1 ? 'possível assinatura' : 'possíveis assinaturas'} sem cadastro',
+                  subtitle:
+                      '~${money(subscriptions.fold<double>(0, (s, c) => s + c.monthlyAmount))} por mês. Cadastre para prever e ser lembrado.',
+                  action: 'Ver',
+                  onTap: () => _open(const RecurringScreen())));
+            }
             final attention =
                 insights.isEmpty ? null : NexoInsightCarousel(items: insights);
 

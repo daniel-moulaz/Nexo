@@ -98,7 +98,13 @@ void main() {
         find.widgetWithIcon(OutlinedButton, Icons.upload_file_rounded));
     await tap(
         tester, find.widgetWithIcon(OutlinedButton, Icons.upload_file_rounded));
-    await settle(tester);
+    // Reading and previewing the file is real I/O: wait for its outcome.
+    await settleUntil(
+        tester,
+        () =>
+            find.text('Importar selecionados').evaluate().isNotEmpty ||
+            find.textContaining('Não encontrei').evaluate().isNotEmpty ||
+            find.textContaining('Não foi possível').evaluate().isNotEmpty);
   }
 
   for (final format in ['csv', 'txt', 'ofx']) {

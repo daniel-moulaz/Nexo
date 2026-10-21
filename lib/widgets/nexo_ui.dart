@@ -694,3 +694,104 @@ class NexoSparkline extends StatelessWidget {
     );
   }
 }
+
+/// Month grid colored by how much was spent each day (Sunday first, as in
+/// Brazilian calendars). Tapping a day opens its entries.
+class NexoSpendingCalendar extends StatelessWidget {
+  const NexoSpendingCalendar(
+      {super.key,
+      required this.month,
+      required this.daily,
+      required this.onDay,
+      required this.compact});
+  final DateTime month;
+  final Map<DateTime, double> daily;
+  final void Function(DateTime day) onDay;
+
+  /// Short amount for a cell ("120", "1,2 mil").
+  final String Function(double) compact;
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final hot = NexoTones.expense(context);
+    final first = DateTime(month.year, month.month);
+    final days = DateTime(month.year, month.month + 1, 0).day;
+    final offset = first.weekday % 7; // Sunday = 0
+    final top = daily.values.fold<double>(0, math.max);
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    const names = ['D', 'S', 'T', 'Q', 'Q', 'S', 'S'];
+    return Column(children: [
+      Row(children: [
+        for (final n in names)
+          Expanded(
+              child: Center(
+                  child: Text(n,
+                      style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w700,
+                          color: cs.onSurfaceVariant)))),
+      ]),
+      const SizedBox(height: 6),
+      for (var week = 0; week * 7 < offset + days; week++)
+        Row(children: [
+          for (var col = 0; col < 7; col++)
+            Expanded(
+              child: Builder(builder: (context) {
+                final n = week * 7 + col - offset + 1;
+                if (n < 1 || n > days) return const SizedBox(height: 46);
+                final day = DateTime(month.year, month.month, n);
+                final value = daily[day] ?? 0;
+                final t = top <= 0 ? 0.0 : math.pow(value / top, .6).toDouble();
+                final future = day.isAfter(today);
+                final bg = value <= 0
+                    ? cs.surfaceContainerHigh.withValues(alpha: future ? .4 : 1)
+                    : Color.lerp(cs.surfaceContainerHigh, hot, .25 + .65 * t)!;
+                return Padding(
+                  padding: const EdgeInsets.all(2),
+                  child: Material(
+                    color: bg,
+                    borderRadius: BorderRadius.circular(10),
+                    child: InkWell(
+                      borderRadius: BorderRadius.circular(10),
+                      onTap: value > 0 ? () => onDay(day) : null,
+                      child: SizedBox(
+                        height: 42,
+                        // Large accessibility text shrinks inside the cell.
+                        child: FittedBox(
+                          fit: BoxFit.scaleDown,
+                          child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Text('$n',
+                                    style: TextStyle(
+                                        fontSize: 12,
+                                        fontWeight: day == today
+                                            ? FontWeight.w900
+                                            : FontWeight.w600)),
+                                if (value > 0)
+                                  FittedBox(
+                                    fit: BoxFit.scaleDown,
+                                    child: Padding(
+                                      padding: const EdgeInsets.symmetric(
+                                          horizontal: 2),
+                                      child: Text(compact(value),
+                                          style: const TextStyle(
+                                              fontSize: 9.5,
+                                              fontFeatures: NexoTones.figures)),
+                                    ),
+                                  ),
+                              ]),
+                        ),
+                      ),
+                    ),
+                  ),
+                );
+              }),
+            ),
+        ]),
+    ]);
+  }
+}

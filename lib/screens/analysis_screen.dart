@@ -7,6 +7,7 @@ import '../providers/app_provider.dart';
 import '../services/financial_analysis.dart';
 import '../services/transaction_metadata_service.dart';
 import '../widgets/analysis_widgets.dart';
+import '../widgets/nexo_ui.dart';
 import 'add_transaction_screen.dart';
 import 'net_worth_screen.dart';
 import 'finance_export_screen.dart';
@@ -220,6 +221,31 @@ class _AnalysisScreenState extends State<AnalysisScreen> {
                   data.realized
                       .where((t) => t.type == 'expense' && t.categoryId == id),
                   app.categoryById(id)?.name ?? 'Sem categoria'))),
+      if (custom == null)
+        AnalysisCard(
+            title: 'Calendário de gastos',
+            child: app.settings.hideBalance
+                ? const Text('Calendário oculto no modo privado.')
+                : Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                        const Text(
+                            'Quanto mais forte a cor, mais você gastou no dia. Toque em um dia para ver os lançamentos.'),
+                        const SizedBox(height: 12),
+                        NexoSpendingCalendar(
+                            month: month,
+                            daily: data.dailyExpense,
+                            compact: (v) =>
+                                NumberFormat.compact(locale: 'pt_BR').format(v),
+                            onDay: (day) => openAnalysisEntries(
+                                context,
+                                data.realized.where((t) =>
+                                    t.type == 'expense' &&
+                                    DateTime(t.date.year, t.date.month,
+                                            t.date.day) ==
+                                        day),
+                                'Gastos de ${DateFormat('d/MM', 'pt_BR').format(day)}')),
+                      ])),
       AnalysisCard(
           title: 'Receitas × despesas • 6 meses',
           child: app.settings.hideBalance
