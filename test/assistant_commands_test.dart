@@ -5,6 +5,8 @@ import 'package:expensy/database/db_helper.dart';
 import 'package:expensy/models/models.dart';
 import 'package:expensy/providers/app_provider.dart';
 import 'package:expensy/sync/assistant_commands.dart';
+import 'package:expensy/sync/assistant_more_commands.dart';
+import 'package:expensy/investments/investment_repository.dart';
 import 'package:expensy/models/transaction_metadata.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
@@ -317,5 +319,177 @@ void main() {
         .length;
     expect(card, 1, reason: 'paying the invoice is not a new expense');
     expect(spentBefore, greaterThan(0));
+  });
+
+  group('everything else the app does', () {
+    late AssistantMoreCommands more;
+    setUp(() => more = AssistantMoreCommands(app));
+
+    test('a balance adjustment is neither spending nor income', () async {
+      queue.add('adj', 'account.adjust',
+          {'id': 'bank', 'expected_cents': 100000, 'balance_cents': 106726});
+      // Asked again after it was applied: the balance already matches.
+      queue.add('adj2', 'account.adjust',
+          {'id': 'bank', 'expected_cents': 100000, 'balance_cents': 106726});
+      // From a balance that is no longer the real one: refused.
+      queue.add('adj3', 'account.adjust',
+          {'id': 'bank', 'expected_cents': 100000, 'balance_cents': 90000});
+      await run();
+      expect(queue.finished['adj']!.$1, 'done');
+      expect(queue.finished['adj2']!.$1, 'done');
+      expect(queue.finished['adj3']!.$1, 'rejected');
+      expect(await balance('bank'), closeTo(1067.26, 1e-9));
+      expect(await DBHelper.getTransactions(), isEmpty);
+    });
+
+    test('accounts and categories: create, change, delete only if unused',
+        () async {
+      await more.handle('c1', 'account.add', {
+        'name': 'Cartão fictício',
+        'type': 'credit',
+        'balance_cents': 0,
+        'statement_day': 3,
+        'due_day': 10,
+        'credit_limit_cents': 500000,
+      });
+      // Applied twice (marker lost): still one account.
+      await more.handle('c1', 'account.add', {
+        'name': 'Cartão fictício',
+        'type': 'credit',
+        'balance_cents': 0,
+      });
+      final card = app.accounts.where((a) => a.name == 'Cartão fictício');
+      expect(card, hasLength(1));
+      expect(card.single.dueDay, 10);
+      await more.handle('u', 'account.update',
+          {'id': card.single.id, 'name': 'Cartão renomeado', 'due_day': 15});
+      expect(app.accountById(card.single.id)!.name, 'Cartão renomeado');
+      expect(app.accountById(card.single.id)!.dueDay, 15);
+      expect(app.accountById(card.single.id)!.statementDay, 3);
+
+      queue.add('t', 'transaction.add', expense());
+      await run();
+      await expectLater(more.handle('d', 'account.delete', {'id': 'bank'}),
+          throwsA(isA<FormatException>()));
+      await more.handle('d2', 'account.delete', {'id': card.single.id});
+      expect(app.accountById(card.single.id), isNull);
+
+      await expectLater(
+          more.handle('cd', 'category.delete', {'id': 'food_exp'}),
+          throwsA(isA<StateError>()));
+      final unused = app.categories.firstWhere(
+          (c) => !app.transactions.any((t) => t.categoryId == c.id));
+      await more.handle('cd2', 'category.delete', {'id': unused.id});
+      expect(app.categories.any((c) => c.id == unused.id), isFalse);
+    });
+
+    test('goals, assets, wishlist and money lent', () async {
+      await more.handle('g', 'goal.add', {
+        'name': 'Viagem',
+        'target_cents': 300000,
+        'target_date': '2027-06-01'
+      });
+      await more.handle('g', 'goal.add', {'name': 'Viagem', 'target_cents': 1});
+      expect(app.savingsGoals, hasLength(1));
+      final goal = app.savingsGoals.single;
+      await more
+          .handle('gu', 'goal.update', {'id': goal.id, 'target_cents': 350000});
+      expect(app.savingsGoals.single.targetAmount, 3500);
+      await app.contributeToGoal(
+          goalId: goal.id, fromAccountId: 'bank', amount: 100);
+      await expectLater(more.handle('gd', 'goal.delete', {'id': goal.id}),
+          throwsA(isA<StateError>()));
+
+      await more.handle('a', 'asset.add',
+          {'name': 'Carro', 'value_cents': 4500000, 'notes': ''});
+      await more.handle('a', 'asset.add', {'name': 'Carro', 'value_cents': 1});
+      expect(app.assets, hasLength(1));
+      await more.handle('au', 'asset.update',
+          {'id': app.assets.single.id, 'value_cents': 4000000});
+      expect(app.assets.single.value, 40000);
+      await more.handle('ad', 'asset.delete', {'id': app.assets.single.id});
+      expect(app.assets, isEmpty);
+
+      await more.handle('w', 'wishlist.add',
+          {'name': 'Fone', 'price_cents': 59990, 'priority': 'high'});
+      await more.handle('wu', 'wishlist.update',
+          {'id': app.wishlist.single.id, 'purchased': true});
+      expect(app.wishlist.single.isPurchased, isTrue);
+      await more
+          .handle('wd', 'wishlist.delete', {'id': app.wishlist.single.id});
+      expect(app.wishlist, isEmpty);
+
+      final before = await balance('bank');
+      await more.handle('l', 'lended.add', {
+        'person': 'Pessoa fictícia',
+        'type': 'lent',
+        'amount_cents': 5000,
+        'account_id': 'bank',
+        'date': '2026-10-20',
+      });
+      await more.handle('l', 'lended.add', {
+        'person': 'Pessoa fictícia',
+        'type': 'lent',
+        'amount_cents': 5000,
+        'account_id': 'bank',
+        'date': '2026-10-20',
+      });
+      expect(app.lendedPeople, hasLength(1));
+      expect(app.lended, hasLength(1));
+      expect(await balance('bank'), closeTo(before - 50, 1e-9));
+      await more.handle('ls', 'lended.settle', {'id': app.lended.single.id});
+      await more.handle('ls', 'lended.settle', {'id': app.lended.single.id});
+      expect(await balance('bank'), closeTo(before, 1e-9));
+    });
+
+    test('investments: buy with cash, a retried sale counts once, price',
+        () async {
+      await more.handle('i', 'investment.add', {
+        'name': 'CDB fictício',
+        'asset_class': 'Renda fixa',
+        'quantity_micros': 1000000,
+        'cents': 20000,
+        'date': '2026-10-01',
+        'cash_account_id': 'bank',
+      });
+      expect(await balance('bank'), closeTo(800, 1e-9));
+      final sale = {
+        'investment_id': 'assistant-inv:i',
+        'kind': 'sell',
+        'quantity_micros': 500000,
+        'cents': 11000,
+        'date': '2026-10-10',
+        'cash_account_id': 'bank',
+        'created_at': '2026-10-21T10:00:00.000Z',
+      };
+      await more.handle('s', 'investment.operation', sale);
+      await more.handle('s', 'investment.operation', sale);
+      expect(await balance('bank'), closeTo(910, 1e-9));
+      await more.handle('p', 'investment.price',
+          {'investment_id': 'assistant-inv:i', 'price_cents': 24000});
+      final position = (await InvestmentRepository().load()).single;
+      expect(position.quantity, 500000);
+      expect(position.value, 12000);
+    });
+
+    test('a loan installment is paid once, or skipped', () async {
+      await app.addLoan(Loan(
+          id: 'loan',
+          name: 'Empréstimo fictício',
+          principal: 1200,
+          currency: 'BRL',
+          startDate: DateTime(2026, 1, 1),
+          endDate: DateTime(2027, 1, 1)));
+      final before = await balance('bank');
+      await more.handle('lp', 'loan.pay',
+          {'id': 'loan', 'amount_cents': 10000, 'account_id': 'bank'});
+      await more.handle('lp', 'loan.pay',
+          {'id': 'loan', 'amount_cents': 10000, 'account_id': 'bank'});
+      expect(app.loanPayments, hasLength(1));
+      expect(await balance('bank'), closeTo(before - 100, 1e-9));
+      await more.handle('sk', 'loan.skip', {'id': 'loan'});
+      expect(app.loanPayments, hasLength(2));
+      expect(await balance('bank'), closeTo(before - 100, 1e-9));
+    });
   });
 }

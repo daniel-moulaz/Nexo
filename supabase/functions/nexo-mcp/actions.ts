@@ -5,6 +5,7 @@
 import { type Ledger, meta, metadataIndex, text } from "./finance.ts";
 import { ToolInputError, type ToolDefinition } from "./tools.ts";
 import { callMoreAction, moreActions } from "./more_actions.ts";
+import { allActions, callAllAction } from "./all_actions.ts";
 
 export interface Request {
   id: string;
@@ -225,7 +226,7 @@ const statusText: Record<string, string> = {
   rejected: "recusado pelo Nexo",
 };
 
-export const actions: (ToolDefinition & { destructive?: boolean })[] = [...baseActions, ...moreActions];
+export const actions: (ToolDefinition & { destructive?: boolean })[] = [...baseActions, ...moreActions, ...allActions];
 
 export async function callAction(name: string, rawArgs: unknown, l: Ledger, today: string,
   deps: ActionDeps): Promise<Record<string, unknown>> {
@@ -339,7 +340,8 @@ export async function callAction(name: string, rawArgs: unknown, l: Ledger, toda
       return { request_id: r.id, kind: r.kind, status: statusText[r.status] ?? r.status, result: r.result ?? undefined };
     }
     default: {
-      const more = await callMoreAction(name, args, l, today, deps.enqueue);
+      const more = await callMoreAction(name, args, l, today, deps.enqueue) ??
+        await callAllAction(name, args, l, today, deps.enqueue);
       if (more) return more;
       throw new ToolInputError("Ferramenta desconhecida.");
     }

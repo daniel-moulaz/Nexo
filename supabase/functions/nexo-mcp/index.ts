@@ -63,6 +63,12 @@ const handler = createHandler({
       goals: of("savings_goals"),
       contributions: of("savings_contributions"),
       recurringHistory: of("recurring_history"),
+      loans: of("loans"),
+      loanPayments: of("loan_payments"),
+      lended: of("lended_money"),
+      lendedPeople: of("lended_people"),
+      assets: of("assets"),
+      wishlist: of("wishlist"),
     };
   },
   async audit(c, tool, ok) {

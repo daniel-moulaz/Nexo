@@ -135,7 +135,7 @@ const categoryName = (l: Ledger, id: string) =>
 const accountName = (l: Ledger, id: string) =>
   text(l.accounts.find((a) => a.id === id)?.name) || "Conta removida";
 
-function balanceCents(l: Ledger, id: string): number {
+export function balanceCents(l: Ledger, id: string): number {
   return Math.round((l.balances[id] ?? 0) / 10000);
 }
 

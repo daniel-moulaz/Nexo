@@ -348,4 +348,103 @@ await test('budgets, categories, goals and invoices', async () => {
   assert.equal(q.items.at(-1).kind, 'transaction.settle');
 });
 
+const everything = {
+  ...richer,
+  investments: [{ id: 'inv1', name: 'CDB fictício', asset_class: 'Renda fixa', ticker: '', price_micros: 1000000, price_at: '2026-10-01T00:00:00.000Z', archived: 0 }],
+  investmentOperations: [{ id: 'op1', investment_id: 'inv1', kind: 'buy', quantity: 2000000, cents: 200 }],
+  loans: [{ id: 'loan1', name: 'Financiamento fictício', principal: 1200, start_date: '2026-01-01', end_date: '2027-01-01', is_settled: 0, account_id: 'bank' }],
+  loanPayments: [{ id: 'lp1', loan_id: 'loan1', amount: 100 }, { id: 'lp2', loan_id: 'loan1', amount: 0 }],
+  lended: [{ id: 'len1', person_id: 'per1', type: 'lent', amount: 50, date: '2026-10-01', is_settled: 0 }],
+  lendedPeople: [{ id: 'per1', name: 'Pessoa fictícia' }],
+  assets: [{ id: 'as1', name: 'Carro', value: 40000, currency: 'BRL' }],
+  wishlist: [{ id: 'w1', name: 'Fone', target_price: 599.9, priority: 'high', is_purchased: 0 }],
+};
+await test('balance adjustment is its own request, from the synced balance', async () => {
+  const q = queue();
+  const accounts = callTool('get_accounts', {}, everything, today).accounts;
+  const bank = accounts.find((a) => a.id === 'bank');
+  const r = await act(q, 'adjust_account_balance', { account_id: 'bank', balance: bank.balance + 67.26 }, everything);
+  assert.equal(q.items[0].kind, 'account.adjust');
+  assert.deepEqual(q.items[0].args, {
+    id: 'bank', expected_cents: Math.round(bank.balance * 100), balance_cents: Math.round(bank.balance * 100) + 6726,
+  });
+  assert.equal(r.to, Math.round(bank.balance * 100 + 6726) / 100);
+  await assert.rejects(act(q, 'adjust_account_balance', { account_id: 'bank', balance: bank.balance }, everything), ToolInputError,
+    'same balance is refused');
+  await assert.rejects(act(q, 'adjust_account_balance', { account_id: 'bank', balance: 1.234 }, everything), ToolInputError);
+});
+await test('accounts, categories and goals: create, change, delete', async () => {
+  const q = queue();
+  await act(q, 'add_account', { name: 'Cartão novo', type: 'credit', balance: -10.5, due_day: 10, credit_limit: 3000 }, everything);
+  assert.deepEqual(q.items[0].args, { name: 'Cartão novo', type: 'credit', balance_cents: -1050, statement_day: undefined, due_day: 10, credit_limit_cents: 300000 });
+  await act(q, 'add_account', { name: 'Carteira', type: 'cash' }, everything);
+  assert.deepEqual(q.items[1].args, { name: 'Carteira', type: 'cash', balance_cents: 0 });
+  await assert.rejects(act(q, 'update_account', { id: 'bank' }, everything), ToolInputError, 'nothing to change');
+  await act(q, 'update_account', { id: 'bank', name: 'Banco renomeado' }, everything);
+  assert.deepEqual(q.items[2].args, { id: 'bank', name: 'Banco renomeado' });
+  await assert.rejects(act(q, 'delete_category', { id: 'food_exp' }, everything), ToolInputError, 'category in use');
+  await act(q, 'add_goal', { name: 'Viagem', target: 3000, target_date: '2027-06-01' }, everything);
+  assert.deepEqual(q.items.at(-1).args, { name: 'Viagem', target_cents: 300000, target_date: '2027-06-01' });
+  await assert.rejects(act(q, 'delete_goal', { id: 'g1' }, everything), ToolInputError, 'goal with money');
+  await act(q, 'update_goal', { id: 'g1', target: 12000 }, everything);
+  assert.equal(q.items.at(-1).args.target_cents, 1200000);
+});
+await test('investments, loans, money lent, assets and wishlist', async () => {
+  const q = queue();
+  const inv = await act(q, 'get_investments', {}, everything);
+  assert.deepEqual(inv.investments.map((i) => [i.id, i.quantity]), [['inv1', 2]]);
+  await act(q, 'record_investment_operation', { investment_id: 'inv1', kind: 'sell', quantity: 0.5, total: 60, date: '2026-10-10', cash_account_id: 'bank' }, everything);
+  assert.equal(q.items[0].args.quantity_micros, 500000);
+  assert.equal(q.items[0].args.cents, 6000);
+  assert.equal(typeof q.items[0].args.created_at, 'string');
+  await assert.rejects(act(q, 'record_investment_operation', { investment_id: 'inv1', kind: 'income', quantity: 1, total: 5, date: '2026-10-10' }, everything), ToolInputError);
+  await assert.rejects(act(q, 'record_investment_operation', { investment_id: 'inv1', kind: 'buy', quantity: 1, total: 5, date: '2026-10-10', cash_account_id: 'card' }, everything), ToolInputError, 'card is not cash');
+  await act(q, 'add_investment', { name: 'Tesouro fictício', asset_class: 'Renda fixa', quantity: 1, total: 100, date: '2026-10-01' }, everything);
+  assert.equal(q.items.at(-1).kind, 'investment.add');
+  await act(q, 'update_investment_price', { investment_id: 'inv1', price: 1.2 }, everything);
+  assert.deepEqual(q.items.at(-1).args, { investment_id: 'inv1', price_cents: 120, date: null });
+
+  const loans = await act(q, 'get_loans', {}, everything);
+  assert.deepEqual([loans.loans[0].paid, loans.loans[0].payments, loans.loans[0].skipped], [100, 1, 1]);
+  await act(q, 'pay_loan_installment', { id: 'loan1', amount: 110 }, everything);
+  assert.deepEqual(q.items.at(-1).args, { id: 'loan1', amount_cents: 11000 });
+  await act(q, 'skip_loan_installment', { id: 'loan1' }, everything);
+  assert.equal(q.items.at(-1).kind, 'loan.skip');
+
+  const lended = await act(q, 'get_lended', {}, everything);
+  assert.equal(lended.lended[0].person, 'Pessoa fictícia');
+  await act(q, 'add_lended', { person: 'Outra pessoa', type: 'borrowed', amount: 20, date: '2026-10-20' }, everything);
+  assert.equal(q.items.at(-1).args.amount_cents, 2000);
+  await act(q, 'settle_lended', { id: 'len1' }, everything);
+  assert.equal(q.items.at(-1).kind, 'lended.settle');
+
+  assert.equal((await act(q, 'get_assets', {}, everything)).assets[0].value, 40000);
+  await act(q, 'update_asset', { id: 'as1', value: 38000 }, everything);
+  assert.deepEqual(q.items.at(-1).args, { id: 'as1', value_cents: 3800000 });
+  await act(q, 'delete_asset', { id: 'as1' }, everything);
+  assert.equal((await act(q, 'get_wishlist', {}, everything)).wishlist[0].price, 599.9);
+  await act(q, 'update_wishlist_item', { id: 'w1', purchased: true }, everything);
+  assert.deepEqual(q.items.at(-1).args, { id: 'w1', purchased: true });
+  await act(q, 'add_wishlist_item', { name: 'Cadeira', price: 900 }, everything);
+  assert.equal(q.items.at(-1).args.priority, 'medium');
+});
+await test('every new change tool is listed and annotated', async () => {
+  const withActions = createHandler({
+    authenticate: async t => (t === token ? { id: 'c1', ownerId: 'u1', datasetId: 'd1' } : null),
+    load: async () => ledger, audit: async () => {}, today: () => today, actions: () => queue().deps,
+  });
+  const listed = (await (await withActions(new Request('https://x.supabase.co/functions/v1/nexo-mcp', {
+    method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+    body: JSON.stringify(rpcCall('tools/list', {})),
+  }))).json()).result.tools;
+  const byName = Object.fromEntries(listed.map((t) => [t.name, t]));
+  for (const name of ['adjust_account_balance', 'add_account', 'delete_category', 'add_goal', 'record_investment_operation',
+    'pay_loan_installment', 'add_lended', 'add_asset', 'add_wishlist_item']) {
+    assert.ok(byName[name], name);
+    assert.equal(byName[name].annotations.readOnlyHint, false, name);
+  }
+  assert.equal(byName.get_loans.annotations.readOnlyHint, true);
+  assert.equal(byName.delete_account.annotations.destructiveHint, true);
+});
+
 console.log(`NEXO MCP: ${passed} tests passed; synthetic fixture only.`);

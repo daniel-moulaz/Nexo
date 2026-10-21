@@ -11,6 +11,7 @@ import '../providers/app_provider.dart';
 import '../services/pluggy_inbox.dart';
 import '../services/billing_cycle.dart';
 import '../services/finance_rules.dart';
+import 'assistant_more_commands.dart';
 import 'supabase_auth.dart';
 import 'sync_config.dart';
 
@@ -375,7 +376,8 @@ class AssistantCommands {
       case 'invoice.pay':
         return _payInvoice(a);
       default:
-        throw StateError('Pedido desconhecido.');
+        return await AssistantMoreCommands(app).handle(c.id, c.kind, a) ??
+            (throw StateError('Pedido desconhecido.'));
     }
   }
 
