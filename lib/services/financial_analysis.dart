@@ -32,6 +32,9 @@ class AnalysisFilter {
 class FinancialAnalysis {
   final List<AppTransaction> realized = [], pending = [];
   final Map<String, double> categories = {}, subcategories = {}, accounts = {};
+
+  /// Counted spending per calendar day (same rule as [expense]).
+  final Map<DateTime, double> dailyExpense = {};
   double income = 0, expense = 0, refunds = 0, pendingExpense = 0;
   double extraordinary = 0, recurring = 0, transfers = 0;
   double get normal => expense - extraordinary;
@@ -74,6 +77,9 @@ class FinancialAnalysis {
       }
       if (t.type != 'expense') continue;
       expense += value;
+      dailyExpense.update(
+          DateTime(t.date.year, t.date.month, t.date.day), (v) => v + value,
+          ifAbsent: () => value);
       categories.update(t.categoryId, (v) => v + value, ifAbsent: () => value);
       subcategories.update(m.subcategory, (v) => v + value,
           ifAbsent: () => value);

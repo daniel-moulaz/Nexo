@@ -715,7 +715,7 @@ class _AccountEditorState extends State<_AccountEditor> {
                                 ),
                                 ('debit', 'Débito', Icons.credit_card_outlined),
                               ]
-                            : const [
+                            : [
                                 (
                                   'bank',
                                   'Banco',
@@ -728,7 +728,9 @@ class _AccountEditorState extends State<_AccountEditor> {
                                   'Carteira',
                                   Icons.account_balance_wallet_outlined
                                 ),
-                                ('gold', 'Ouro/ativo', Icons.diamond_outlined),
+                                // Legacy type: offered only to who already uses it.
+                                if (_type == 'gold')
+                                  ('gold', 'Ouro/ativo', Icons.diamond_outlined),
                               ])
                         .map((option) => ChoiceChip(
                               selected: _type == option.$1,
