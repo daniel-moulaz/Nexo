@@ -12,6 +12,7 @@ import '../theme/app_theme.dart';
 import '../services/notification_preferences.dart';
 import 'automation_settings_screen.dart';
 import '../services/platform_capabilities.dart';
+import '../services/pluggy_inbox.dart';
 import '../widgets/android_feature_notice.dart';
 
 class NotificationInboxScreen extends StatefulWidget {
@@ -54,15 +55,24 @@ class _NotificationInboxScreenState extends State<NotificationInboxScreen>
     if (state == AppLifecycleState.resumed) reload();
   }
 
-  Future<void> reload() async {
-    if (!PlatformCapabilities.bankNotifications) return;
+  static bool get _available =>
+      PlatformCapabilities.bankNotifications || PluggyInbox.instance != null;
+
+  Future<void> reload({bool force = false}) async {
+    if (!_available) return;
     try {
       String? syncError;
-      try {
-        await NotificationInbox.sync();
-      } catch (_) {
-        syncError =
-            'Não foi possível buscar novas sugestões. As já salvas continuam disponíveis. Tente atualizar.';
+      if (PlatformCapabilities.bankNotifications) {
+        try {
+          await NotificationInbox.sync();
+        } catch (_) {
+          syncError =
+              'Não foi possível buscar novas sugestões. As já salvas continuam disponíveis. Tente atualizar.';
+        }
+      }
+      if (PluggyInbox.instance case final pluggy?) {
+        final problem = await pluggy.sync(force: force);
+        if (problem != null) syncError = 'Open Finance: $problem';
       }
       final result = await NotificationInbox.pending();
       if (mounted)
@@ -79,7 +89,7 @@ class _NotificationInboxScreenState extends State<NotificationInboxScreen>
 
   @override
   Widget build(BuildContext context) {
-    if (!PlatformCapabilities.bankNotifications)
+    if (!_available)
       return const AndroidFeatureNotice(
           title: 'Sugestões',
           explanation:
@@ -87,31 +97,32 @@ class _NotificationInboxScreenState extends State<NotificationInboxScreen>
     final app = context.watch<AppProvider>();
     return Scaffold(
         appBar: AppBar(title: const Text('Sugestões de lançamentos'), actions: [
+          if (PlatformCapabilities.bankNotifications)
+            IconButton(
+                tooltip: 'Configurar detecção',
+                icon: const Icon(Icons.settings_outlined),
+                onPressed: () async {
+                  await Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                          builder: (_) => const AutomationSettingsScreen()));
+                  await reload();
+                }),
           IconButton(
-              tooltip: 'Configurar detecção',
-              icon: const Icon(Icons.settings_outlined),
-              onPressed: () async {
-                await Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                        builder: (_) => const AutomationSettingsScreen()));
-                await reload();
-              }),
-          IconButton(
-              onPressed: reload,
+              onPressed: () => reload(force: true),
               icon: const Icon(Icons.refresh),
               tooltip: 'Atualizar')
         ]),
         body: ListView(padding: const EdgeInsets.all(16), children: [
           const Text(
-              'Nada é registrado sem sua confirmação. Revise conta, tipo e possíveis duplicatas. Sugestões expiram em 7 dias.'),
+              'Nada é registrado sem sua confirmação. Revise conta, tipo e possíveis duplicatas. Notificações expiram em 7 dias; movimentações do Open Finance, em 35.'),
           if (error != null) Text(error!),
           if (rows == null && error == null) const LinearProgressIndicator(),
           if (rows?.isEmpty == true)
             const Padding(
                 padding: EdgeInsets.all(24),
                 child: Text(
-                    'Nenhuma sugestão para revisar. Confira em Configurar detecção se o acesso está autorizado e seu banco está selecionado. Apenas notificações reconhecidas dos últimos 7 dias aparecem aqui.')),
+                    'Nenhuma sugestão para revisar. Notificações dos últimos 7 dias e movimentações do Open Finance dos últimos 35 aparecem aqui.')),
           for (final row in rows ?? <Map<String, dynamic>>[])
             Card(
                 child: Padding(
@@ -160,6 +171,13 @@ class _NotificationInboxScreenState extends State<NotificationInboxScreen>
                                                       await NotificationInbox
                                                           .undoIgnore(
                                                               row['id']);
+                                                      if (PluggyInbox.isPluggy(
+                                                          row['id'])) {
+                                                        await PluggyInbox
+                                                            .instance
+                                                            ?.undoIgnore(
+                                                                row['id']);
+                                                      }
                                                       await reload();
                                                     } catch (_) {
                                                       if (mounted)

@@ -146,4 +146,78 @@ await test('rate limit is retryable; malformed cursor is refused', async () => {
   await assert.rejects(evil.transactions('acc-bank', '2026-10-01'), e => e instanceof PluggyError);
 });
 
+// ── syncOwner: one refresh with fake Pluggy and fake store ─────────────
+const { syncOwner } = await import('../supabase/functions/pluggy-sync/sync.ts');
+function fakeStore(items) {
+  const rows = new Map();
+  const healths = [];
+  return {
+    rows, healths,
+    items: async () => items,
+    stored: async (_o, ids) => ids.filter(id => rows.has(id)).map(id => rows.get(id)),
+    store: async (_o, itemId, health, incoming) => {
+      healths.push([itemId, health.state]);
+      let n = 0;
+      for (const r of incoming) {
+        const old = rows.get(r.external_id);
+        if (r.action === 'insert' && !old) { rows.set(r.external_id, { ...r, review: 'pending' }); n++; }
+        if (r.action === 'update' && old?.review === 'pending') { rows.set(r.external_id, { ...r, review: 'pending' }); n++; }
+        if (r.action === 'flag_changed' && old && old.review !== 'pending') { old.changed = true; old.source_updated_at = r.source_updated_at; n++; }
+      }
+      return n;
+    },
+  };
+}
+const source = (txs, item = { status: 'UPDATED' }) => ({
+  item: async () => item,
+  accounts: async () => [bank],
+  transactions: async () => txs,
+});
+const now = new Date('2026-10-20T12:00:00.000Z');
+
+await test('sync: new transactions become pending suggestions, skips counted', async () => {
+  const store = fakeStore([{ item_id: 'item-1', label: 'Banco', last_fetch_at: null }]);
+  const [r] = await syncOwner('owner', source([tx({ id: 'a' }), tx({ id: 'b', amount: 0 })]), store, { now });
+  assert.equal(r.fetched, true);
+  assert.equal(r.written, 1);
+  assert.equal(r.skipped, 1);
+  assert.equal(store.rows.get('pluggy:a').review, 'pending');
+  assert.deepEqual(store.healths, [['item-1', 'ok']]);
+});
+
+await test('sync: refresh updates pending and flags a decided change', async () => {
+  const store = fakeStore([{ item_id: 'item-1', label: 'Banco', last_fetch_at: null }]);
+  await syncOwner('owner', source([tx({ id: 'a' }), tx({ id: 'b' })]), store, { now });
+  store.rows.get('pluggy:a').review = 'confirmed';
+  const later = { updatedAt: '2026-10-20T10:00:00.000Z', amount: -40 };
+  await syncOwner('owner', source([tx({ id: 'a', ...later }), tx({ id: 'b', ...later })]), store,
+    { now: new Date(now.getTime() + 2 * 3600000) });
+  assert.equal(store.rows.get('pluggy:a').amount_cents, 3290, 'decision kept');
+  assert.equal(store.rows.get('pluggy:a').changed, true);
+  assert.equal(store.rows.get('pluggy:b').amount_cents, 4000);
+});
+
+await test('sync: reads at most hourly unless forced, and forced waits 5 minutes', async () => {
+  const recent = new Date(now.getTime() - 10 * 60000).toISOString();
+  const store = fakeStore([{ item_id: 'item-1', label: 'Banco', last_fetch_at: recent }]);
+  let reads = 0;
+  const counting = { ...source([tx()]), item: async () => { reads++; return { status: 'UPDATED' }; } };
+  assert.equal((await syncOwner('owner', counting, store, { now }))[0].fetched, false);
+  assert.equal((await syncOwner('owner', counting, store, { now, force: true }))[0].fetched, true);
+  assert.equal(reads, 1);
+  const veryRecent = fakeStore([{ item_id: 'item-1', label: 'Banco', last_fetch_at: new Date(now.getTime() - 60000).toISOString() }]);
+  assert.equal((await syncOwner('owner', counting, veryRecent, { now, force: true }))[0].fetched, false);
+});
+
+await test('sync: a Pluggy failure marks the item and keeps stored data', async () => {
+  const store = fakeStore([{ item_id: 'item-1', label: 'Banco', last_fetch_at: null }]);
+  const failing = { ...source([]), accounts: async () => { throw new PluggyError(404, false); } };
+  const [r] = await syncOwner('owner', failing, store, { now });
+  assert.equal(r.fetched, false);
+  assert.equal(r.health.state, 'reconnect');
+  assert.deepEqual(store.healths, [['item-1', 'reconnect']]);
+  const expired = source([], { status: 'LOGIN_ERROR', error: { code: 'USER_AUTHORIZATION_EXPIRED' } });
+  assert.equal((await syncOwner('owner', expired, fakeStore([{ item_id: 'i', label: 'B', last_fetch_at: null }]), { now }))[0].health.state, 'reconnect');
+});
+
 console.log(`PLUGGY: ${passed} tests passed; synthetic data only.`);

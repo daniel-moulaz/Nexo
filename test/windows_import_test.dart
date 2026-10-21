@@ -67,6 +67,14 @@ void main() {
     await tester.pump(const Duration(milliseconds: 300));
   }
 
+  /// Real SQLite work finishes on its own schedule; under a loaded machine a
+  /// fixed delay is not enough, so wait for the outcome (bounded).
+  Future<void> settleUntil(WidgetTester tester, bool Function() done) async {
+    for (var i = 0; i < 50 && !done(); i++) {
+      await settle(tester);
+    }
+  }
+
   Future<void> tap(WidgetTester tester, Finder finder) async {
     await tester.runAsync(() async {
       await tester.tap(finder);
@@ -111,13 +119,14 @@ void main() {
       expect(app.accountById('bank')!.balance, 1000);
       await tester.ensureVisible(find.text('Importar selecionados'));
       await tap(tester, find.text('Importar selecionados'));
-      await settle(tester);
+      await settleUntil(tester, () => app.transactions.isNotEmpty);
       expect(app.transactions.single.amount, 32.9);
       expect(app.accountById('bank')!.balance, 1000);
       await choose(tester, 'sintetico.$format', content);
       await tester.ensureVisible(find.text('Importar selecionados'));
       await tap(tester, find.text('Importar selecionados'));
-      await settle(tester);
+      await settleUntil(tester,
+          () => find.text('Pode ser o mesmo lançamento').evaluate().isNotEmpty);
       expect(find.text('Pode ser o mesmo lançamento'), findsOneWidget);
       await tap(tester, find.text('Ignorar esta linha'));
       await settle(tester);

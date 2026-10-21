@@ -402,6 +402,62 @@ try {
     // After deleting, a new real dataset may be created again.
     await user(A, tx => rpc(tx, 'nexo_sync_open', [randomUUID(), randomUUID(), randomUUID(), true]));
   });
+  // ── Pluggy suggestions ───────────────────────────────────────────────
+  await db.exec(await readFile(new URL('../supabase/migrations/202610210002_pluggy.sql', import.meta.url), 'utf8'));
+  const item = 'item-ficticio-0001';
+  const sugg = (id, over = {}) => ({ action: 'insert', external_id: `pluggy:${id}`,
+    account_external_id: 'acc-1', amount_cents: 3290, kind: 'expense', medium: 'bank',
+    description: 'Mercado fictício', occurred_at: 1760900000000, settled: true,
+    installment: null, source_updated_at: '2026-10-19T16:00:00.000Z', ...over });
+  const service = (name, args) => user(null, tx => rpc(tx, name, args), 'service_role');
+  await test('pluggy: connections are per owner and capped at five', async () => {
+    await user(A, tx => rpc(tx, 'nexo_pluggy_add_item', [item, 'Banco fictício']));
+    await user(A, tx => rpc(tx, 'nexo_pluggy_add_item', [item, 'Banco renomeado']));
+    const items = await user(A, tx => rpc(tx, 'nexo_pluggy_items', []));
+    assert.deepEqual(items.map(i => [i.item_id, i.label]), [[item, 'Banco renomeado']]);
+    assert.deepEqual(await user(B, tx => rpc(tx, 'nexo_pluggy_items', [])), []);
+    for (let i = 2; i <= 5; i++) await user(A, tx => rpc(tx, 'nexo_pluggy_add_item', [`item-ficticio-000${i}`, `B${i}`]));
+    await denies(() => user(A, tx => rpc(tx, 'nexo_pluggy_add_item', ['item-ficticio-0006', 'sexto'])), '22023');
+    await denies(() => user(A, tx => rpc(tx, 'nexo_pluggy_add_item', ['bad id!', 'x'])), '22023');
+    await denies(() => user(null, tx => rpc(tx, 'nexo_pluggy_items', []), 'anon'), '42501');
+    await denies(() => user(A, tx => rpc(tx, 'nexo_pluggy_store', [A, item, null, '[]'])), '42501');
+    await denies(() => user(A, tx => tx.query('select * from nexo_pluggy_private.suggestions')), '42501');
+  });
+  await test('pluggy: refresh updates pending, never rewrites a decision', async () => {
+    assert.equal(await service('nexo_pluggy_store', [A, item, { state: 'ok' }, JSON.stringify([sugg('t1'), sugg('t2')])]), 2);
+    assert.equal(await service('nexo_pluggy_store', [A, item, null, JSON.stringify([sugg('t1')])]), 0, 'insert is idempotent');
+    await denies(() => service('nexo_pluggy_store', [B, item, null, '[]']), '42501');
+    // t1 confirmed on the phone, t2 still pending.
+    assert.equal(await user(A, tx => rpc(tx, 'nexo_pluggy_decide', [JSON.stringify([{ id: 'pluggy:t1', review: 'confirmed', transaction_id: 'notification:pluggy:t1' }])])), 1);
+    const corrected = { source_updated_at: '2026-10-20T10:00:00.000Z', amount_cents: 3390 };
+    await service('nexo_pluggy_store', [A, item, null, JSON.stringify([
+      sugg('t1', { ...corrected, action: 'update' }), sugg('t2', { ...corrected, action: 'update' })])]);
+    let rows = await user(A, tx => rpc(tx, 'nexo_pluggy_suggestions', [0]));
+    const t1 = rows.find(r => r.id === 'pluggy:t1'), t2 = rows.find(r => r.id === 'pluggy:t2');
+    assert.equal(t1.amount_cents, 3290, 'the decided amount stays');
+    assert.equal(t1.review, 'confirmed');
+    assert.equal(t2.amount_cents, 3390, 'pending follows the bank');
+    await service('nexo_pluggy_store', [A, item, null, JSON.stringify([sugg('t1', { ...corrected, action: 'flag_changed', source_updated_at: '2026-10-21T10:00:00.000Z' })])]);
+    rows = await user(A, tx => rpc(tx, 'nexo_pluggy_suggestions', [0]));
+    assert.equal(rows.find(r => r.id === 'pluggy:t1').changed, true);
+    // Older data never wins.
+    await service('nexo_pluggy_store', [A, item, null, JSON.stringify([sugg('t2', { action: 'update', amount_cents: 1 })])]);
+    assert.equal((await user(A, tx => rpc(tx, 'nexo_pluggy_suggestions', [0]))).find(r => r.id === 'pluggy:t2').amount_cents, 3390);
+    assert.deepEqual(await user(B, tx => rpc(tx, 'nexo_pluggy_suggestions', [0])), []);
+  });
+  await test('pluggy: decisions are final once confirmed, ignore can be undone', async () => {
+    const decide = (who, d) => user(who, tx => rpc(tx, 'nexo_pluggy_decide', [JSON.stringify(d)]));
+    assert.equal(await decide(A, [{ id: 'pluggy:t1', review: 'ignored' }]), 0, 'confirmed is final');
+    assert.equal(await decide(A, [{ id: 'pluggy:t1', review: 'pending' }]), 0);
+    assert.equal(await decide(A, [{ id: 'pluggy:t2', review: 'ignored' }]), 1);
+    assert.equal(await decide(A, [{ id: 'pluggy:t2', review: 'ignored' }]), 0, 'repeating is harmless');
+    assert.equal(await decide(A, [{ id: 'pluggy:t2', review: 'pending' }]), 1, 'undo ignore');
+    assert.equal(await decide(B, [{ id: 'pluggy:t2', review: 'ignored' }]), 0, 'other people change nothing');
+    await denies(() => decide(A, [{ id: 'pluggy:t2', review: 'deleted' }]), '22023');
+    // Removing the connection drops its suggestions only.
+    await user(A, tx => rpc(tx, 'nexo_pluggy_remove_item', [item]));
+    assert.deepEqual(await user(A, tx => rpc(tx, 'nexo_pluggy_suggestions', [0])), []);
+  });
   console.log(`SQL LAB: ${passed} tests passed; synthetic local data only.`);
 } finally {
   await db.close();

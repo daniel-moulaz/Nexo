@@ -27,3 +27,6 @@ exports/
 
 # Local sync project coordinates (publishable only), injected at build time
 tool/nexo_sync.local.json
+
+# Supabase CLI cache
+supabase/.temp/
