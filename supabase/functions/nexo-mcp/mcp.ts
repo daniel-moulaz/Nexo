@@ -5,6 +5,7 @@
 import type { Ledger } from "./finance.ts";
 import { type ActionDeps, actions, callAction } from "./actions.ts";
 import { readOnlyMore } from "./more_actions.ts";
+import { readOnlyAll } from "./all_actions.ts";
 import { callTool, ToolInputError, tools } from "./tools.ts";
 
 export const serverInfo = { name: "nexo", title: "Nexo", version: "0.1.0" };
@@ -26,7 +27,7 @@ export interface Deps {
   actions?(connector: Connector): ActionDeps;
 }
 
-const readOnlyActions = new Set(["list_suggestions", "get_request_status", ...readOnlyMore]);
+const readOnlyActions = new Set(["list_suggestions", "get_request_status", ...readOnlyMore, ...readOnlyAll]);
 
 type Json = Record<string, unknown>;
 const rpcError = (id: unknown, code: number, message: string) => ({
@@ -54,7 +55,10 @@ async function dispatch(message: Json, connector: Connector, deps: Deps): Promis
             "se uma ferramenta não trouxer o dado, diga que ele não está disponível. " +
             "Lançar, corrigir e apagar viram pedidos que o app grava com as próprias regras: só diga que foi " +
             "feito depois que get_request_status disser 'gravado no Nexo'. Antes de lançar, confira se já não " +
-            "existe o mesmo lançamento.",
+            "existe o mesmo lançamento. Para acertar um saldo com o extrato use adjust_account_balance, nunca " +
+            "uma despesa ou receita de ajuste (isso distorceria gastos e receitas). Você pode fazer no Nexo o " +
+            "mesmo que a pessoa faz no app: contas, categorias, recorrentes, orçamentos, objetivos, investimentos, " +
+            "empréstimos, bens e lista de desejos.",
         },
       };
     }

@@ -19,6 +19,12 @@ export interface Ledger {
   goals?: Row[];
   contributions?: Row[];
   recurringHistory?: Row[];
+  loans?: Row[];
+  loanPayments?: Row[];
+  lended?: Row[];
+  lendedPeople?: Row[];
+  assets?: Row[];
+  wishlist?: Row[];
 }
 
 export interface Meta {

@@ -536,6 +536,19 @@ try {
     const ledger = await service('nexo_mcp_ledger', [conn.id]);
     assert(Array.isArray(ledger.entities));
   });
+  await test('assistant: every app action can be requested; ledger has loans and assets', async () => {
+    await db.exec(await readFile(new URL('../supabase/migrations/202610210005_mcp_all_actions.sql', import.meta.url), 'utf8'));
+    const conn = (await db.query(`select id from nexo_mcp_private.connectors
+      where owner_id = $1 and revoked_at is null`, [A])).rows[0];
+    for (const kind of ['account.adjust', 'account.add', 'category.delete', 'goal.add', 'investment.operation',
+      'investment.price', 'loan.pay', 'lended.add', 'asset.add', 'wishlist.delete', 'recurring.pay', 'transaction.add']) {
+      assert.equal((await service('nexo_mcp_enqueue', [conn.id, kind, '{}'])).status, 'pending', kind);
+    }
+    await denies(() => service('nexo_mcp_enqueue', [conn.id, 'pix.send', '{}']), '23514');
+    await denies(() => service('nexo_mcp_enqueue', [conn.id, 'transfer.external', '{}']), '23514');
+    const ledger = await service('nexo_mcp_ledger', [conn.id]);
+    assert(Array.isArray(ledger.entities));
+  });
   console.log(`SQL LAB: ${passed} tests passed; synthetic local data only.`);
 } finally {
   await db.close();
