@@ -9,6 +9,7 @@ import '../models/models.dart';
 import '../database/db_helper.dart';
 import '../services/transaction_metadata_service.dart';
 import '../services/finance_rules.dart';
+import '../services/budget_insights.dart';
 import '../services/billing_cycle.dart';
 import '../services/exchange_rate_service.dart';
 import '../services/notification_service.dart';
@@ -331,15 +332,16 @@ class AppProvider extends ChangeNotifier {
 
       final budgetData = budgets.map((b) {
         final spent = budgetSpent(b);
+        final limit = budgetLimit(b);
         return {
           'hidden': hidden,
           'category': hidden
               ? 'Valores ocultos'
               : categoryById(b.categoryId)?.name ?? 'Orçamento',
           'spent': hidden ? 0.0 : spent,
-          'amount': hidden ? 0.0 : b.amount,
-          'progress': !hidden && b.amount > 0 ? spent / b.amount : 0.0,
-          'exceeded': !hidden && spent > b.amount,
+          'amount': hidden ? 0.0 : limit,
+          'progress': !hidden && limit > 0 ? spent / limit : 0.0,
+          'exceeded': !hidden && spent > limit,
           'currency': settings.currency,
         };
       }).toList();
@@ -1404,25 +1406,16 @@ class AppProvider extends ChangeNotifier {
   /// Sum of all expenses for [budget]'s category in the current period,
   /// converted to the main currency.
   double budgetSpent(Budget budget) {
-    final now = DateTime.now();
-    final DateTime periodStart;
-    if (budget.period == 'weekly') {
-      final dow = now.weekday; // 1=Mon, 7=Sun
-      final offset = settings.weekStart == 'monday' ? (dow - 1) : (dow % 7);
-      periodStart = DateTime(now.year, now.month, now.day - offset);
-    } else {
-      periodStart = DateTime(now.year, now.month, 1);
-    }
-
+    // From the creation day in the period the budget was created.
+    final window = budgetWindow(budget, DateTime.now(),
+        weekStart: settings.weekStart);
     return transactions
         .where((t) =>
             t.type == 'expense' &&
             t.categoryId == budget.categoryId &&
             !FinanceRules.isNeutral(t, transactionMetadata[t.id]) &&
-            t.date.isBefore(budget.period == 'weekly'
-                ? periodStart.add(const Duration(days: 7))
-                : DateTime(now.year, now.month + 1)) &&
-            !t.date.isBefore(periodStart))
+            t.date.isBefore(window.end) &&
+            !t.date.isBefore(window.countsFrom))
         .fold(0.0, (sum, t) {
       final acct = accountById(t.accountId);
       final txCur = t.currency.isNotEmpty
@@ -1432,15 +1425,26 @@ class AppProvider extends ChangeNotifier {
     });
   }
 
-  double budgetProgress(Budget b) =>
-      (budgetSpent(b) / b.amount).clamp(0.0, 1.0);
+  /// Limit of the current period (proportional when created mid-period).
+  double budgetLimit(Budget b) =>
+      budgetWindow(b, DateTime.now(), weekStart: settings.weekStart).limit;
+
+  /// Spent / limit, not clamped (1.5 = 50% over).
+  double budgetProgressRaw(Budget b) {
+    final limit = budgetLimit(b);
+    return limit <= 0 ? 0 : budgetSpent(b) / limit;
+  }
+
+  double budgetProgress(Budget b) => budgetLimit(b) <= 0
+      ? 0
+      : (budgetSpent(b) / budgetLimit(b)).clamp(0.0, 1.0);
 
   double budgetRemaining(Budget b) {
-    final rem = b.amount - budgetSpent(b);
+    final rem = budgetLimit(b) - budgetSpent(b);
     return rem < 0 ? 0 : rem;
   }
 
-  bool budgetExceeded(Budget b) => budgetSpent(b) > b.amount;
+  bool budgetExceeded(Budget b) => budgetSpent(b) > budgetLimit(b);
 
   // ── Savings Goals ──────────────────────────────────────────────────────────
 

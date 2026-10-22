@@ -35,6 +35,9 @@ class FinancialAnalysis {
 
   /// Counted spending per calendar day (same rule as [expense]).
   final Map<DateTime, double> dailyExpense = {};
+
+  /// Same, without recurring bills: the spending the person steers day by day.
+  final Map<DateTime, double> dailyVariable = {};
   double income = 0, expense = 0, refunds = 0, pendingExpense = 0;
   double extraordinary = 0, recurring = 0, transfers = 0;
 
@@ -93,8 +96,13 @@ class FinancialAnalysis {
           ifAbsent: () => value);
       accounts.update(t.accountId, (v) => v + value, ifAbsent: () => value);
       if (m.expenseClass == 'extraordinary') extraordinary += value;
-      if (m.source == 'recurring' || t.id.startsWith('recurring:'))
+      if (m.source == 'recurring' || t.id.startsWith('recurring:')) {
         recurring += value;
+      } else {
+        dailyVariable.update(
+            DateTime(t.date.year, t.date.month, t.date.day), (v) => v + value,
+            ifAbsent: () => value);
+      }
     }
   }
   double? changeFrom(FinancialAnalysis previous) => previous.expense == 0

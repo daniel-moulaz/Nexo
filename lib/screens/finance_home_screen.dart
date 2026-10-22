@@ -14,6 +14,7 @@ import '../services/finance_rules.dart';
 import '../services/platform_capabilities.dart';
 import '../services/transaction_metadata_service.dart';
 import '../services/week_summary.dart';
+import '../services/spendable.dart';
 import '../utils/finance_input.dart';
 import '../widgets/analysis_widgets.dart';
 import '../widgets/cash_timeline_chart.dart';
@@ -235,9 +236,7 @@ class _FinanceHomeScreenState extends State<FinanceHomeScreen>
                     <ForecastEvent>[];
             final budgets = app.budgets.toList()
               ..sort((a, b) =>
-                  (b.amount <= 0 ? 0.0 : app.budgetSpent(b) / b.amount)
-                      .compareTo(
-                          a.amount <= 0 ? 0.0 : app.budgetSpent(a) / a.amount));
+                  app.budgetProgressRaw(b).compareTo(app.budgetProgressRaw(a)));
 
             final hidden = app.settings.hideBalance;
             final dark = Theme.of(context).brightness == Brightness.dark;
@@ -348,7 +347,7 @@ class _FinanceHomeScreenState extends State<FinanceHomeScreen>
               var sum = 0.0;
               return [
                 for (var d = 1; d <= days; d++)
-                  sum += a.dailyExpense[DateTime(m.year, m.month, d)] ?? 0
+                  sum += a.dailyVariable[DateTime(m.year, m.month, d)] ?? 0
               ];
             }
 
@@ -361,6 +360,32 @@ class _FinanceHomeScreenState extends State<FinanceHomeScreen>
                 : pacePrevious[
                     math.min(paceNow.length, pacePrevious.length) - 1];
 
+            final budgetFree = spendable(
+                transactions: app.transactions,
+                metadata: app.transactionMetadata,
+                recurring: app.recurring,
+                goals: app.savingsGoals,
+                toMain: (t) => app.convertToMain(
+                    t.amount,
+                    t.currency.isEmpty
+                        ? app.accountById(t.accountId)?.currency ??
+                            app.settings.currency
+                        : t.currency),
+                convert: app.convertToMain,
+                currencyOf: (r) =>
+                    app.accountById(r.accountId)?.currency ??
+                    app.settings.currency,
+                now: now);
+            // What fixed income leaves for variable spending this month.
+            final variableAllowance = budgetFree.fixedIncome -
+                budgetFree.fixedBills -
+                budgetFree.pendingBills -
+                budgetFree.goals;
+            final ideal = currentMonth &&
+                    budgetFree.hasBase &&
+                    variableAllowance > 0
+                ? variableAllowance
+                : null;
             final monthCard = _Panel(
                 child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -447,9 +472,14 @@ class _FinanceHomeScreenState extends State<FinanceHomeScreen>
                         runSpacing: 4,
                         crossAxisAlignment: WrapCrossAlignment.center,
                         children: [
-                          Text('Ritmo de gastos',
+                          Text('Ritmo de gastos variáveis',
                               style: Theme.of(context).textTheme.titleSmall),
                           _Legend(color: cs.primary, label: 'Este mês'),
+                          if (ideal != null)
+                            _Legend(
+                                color: cs.tertiary,
+                                label: 'Ritmo ideal',
+                                dashed: true),
                           if (pacePrevious.any((v) => v > 0))
                             _Legend(
                                 color: cs.outline,
@@ -458,7 +488,29 @@ class _FinanceHomeScreenState extends State<FinanceHomeScreen>
                         ]),
                     const SizedBox(height: 8),
                     NexoSpendingPace(
-                        current: paceNow, previous: pacePrevious, money: money),
+                        current: paceNow,
+                        previous: pacePrevious,
+                        money: money,
+                        ideal: ideal,
+                        monthDays: daysInMonth),
+                    if (ideal != null && paceNow.isNotEmpty)
+                      Builder(builder: (context) {
+                        final expected = ideal * paceNow.length / daysInMonth;
+                        final gap = paceNow.last - expected;
+                        return Padding(
+                            padding: const EdgeInsets.only(top: 6),
+                            child: Text(
+                                gap.abs() < 1
+                                    ? 'No ritmo ideal para fechar o mês dentro da renda fixa.'
+                                    : gap > 0
+                                        ? '${money(gap)} acima do ritmo ideal para o dia ${paceNow.length}.'
+                                        : '${money(-gap)} abaixo do ritmo ideal: sobra espaço.',
+                                style: TextStyle(
+                                    fontWeight: FontWeight.w700,
+                                    color: gap > 0
+                                        ? NexoTones.expense(context)
+                                        : NexoTones.income(context))));
+                      }),
                   ],
                   if (!hidden)
                     Padding(
@@ -484,6 +536,13 @@ class _FinanceHomeScreenState extends State<FinanceHomeScreen>
                         onPressed: () => setState(() => _month = null),
                         child: const Text('Voltar para este mês')),
                 ]));
+
+            final spendCard = _Panel(
+                child: _SpendableBody(
+                    s: budgetFree,
+                    hidden: hidden,
+                    money: money,
+                    onSetup: () => _open(const RecurringScreen())));
 
             final quick = Row(children: [
               for (final action in <(String, IconData, Widget)>[
@@ -518,7 +577,7 @@ class _FinanceHomeScreenState extends State<FinanceHomeScreen>
                 .firstOrNull;
             final hot = budgets
                 .where(
-                    (b) => b.amount > 0 && app.budgetSpent(b) / b.amount >= .8)
+                    (b) => app.budgetProgressRaw(b) >= .8)
                 .firstOrNull;
             final insights = <NexoInsight>[
               if (overdue.isNotEmpty)
@@ -551,14 +610,14 @@ class _FinanceHomeScreenState extends State<FinanceHomeScreen>
               if (!hidden && hot != null)
                 NexoInsight(
                     icon: Icons.pie_chart_outline,
-                    color: app.budgetSpent(hot) > hot.amount
+                    color: app.budgetExceeded(hot)
                         ? NexoTones.expense(context)
                         : NexoTones.warning(context),
                     title:
-                        'Orçamento de ${app.categoryById(hot.categoryId)?.name ?? 'categoria'} em ${(app.budgetSpent(hot) / hot.amount * 100).round()}%',
-                    subtitle: app.budgetSpent(hot) > hot.amount
-                        ? 'Passou ${money(app.budgetSpent(hot) - hot.amount)} do limite'
-                        : 'Restam ${money(hot.amount - app.budgetSpent(hot))}',
+                        'Orçamento de ${app.categoryById(hot.categoryId)?.name ?? 'categoria'} em ${(app.budgetProgressRaw(hot) * 100).round()}%',
+                    subtitle: app.budgetExceeded(hot)
+                        ? 'Passou ${money(app.budgetSpent(hot) - app.budgetLimit(hot))} do limite'
+                        : 'Restam ${money(app.budgetRemaining(hot))}',
                     action: 'Ver',
                     onTap: () => _open(const BudgetScreen())),
               if (!hidden &&
@@ -1017,6 +1076,8 @@ class _FinanceHomeScreenState extends State<FinanceHomeScreen>
                                             children: [
                                               hero,
                                               const SizedBox(height: 12),
+                                              spendCard,
+                                              const SizedBox(height: 12),
                                               quick,
                                               const SizedBox(height: 8),
                                               links,
@@ -1039,6 +1100,8 @@ class _FinanceHomeScreenState extends State<FinanceHomeScreen>
                                         cards),
                                   ] else ...[
                                     hero,
+                                    const SizedBox(height: 12),
+                                    spendCard,
                                     const SizedBox(height: 12),
                                     quick,
                                     const SizedBox(height: 4),
@@ -1081,6 +1144,105 @@ class _FinanceHomeScreenState extends State<FinanceHomeScreen>
           context,
           data.realized.where((t) => t.type == 'expense' && t.categoryId == id),
           app.categoryById(id)?.name ?? 'Categoria');
+}
+
+/// "Quanto posso gastar": per day until the end of the month, and how the
+/// number is made, so it can be trusted.
+class _SpendableBody extends StatefulWidget {
+  const _SpendableBody(
+      {required this.s,
+      required this.hidden,
+      required this.money,
+      required this.onSetup});
+  final Spendable s;
+  final bool hidden;
+  final String Function(double) money;
+  final VoidCallback onSetup;
+  @override
+  State<_SpendableBody> createState() => _SpendableBodyState();
+}
+
+class _SpendableBodyState extends State<_SpendableBody> {
+  bool _open = false;
+  @override
+  Widget build(BuildContext context) {
+    final s = widget.s;
+    final money = widget.money;
+    final cs = Theme.of(context).colorScheme;
+    final small = Theme.of(context).textTheme.bodySmall;
+    if (!s.hasBase) {
+      return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Text('Quanto posso gastar',
+            style: Theme.of(context)
+                .textTheme
+                .titleMedium
+                ?.copyWith(fontWeight: FontWeight.w800)),
+        const SizedBox(height: 6),
+        const Text(
+            'Cadastre sua renda fixa (salário, bolsa) como recorrente e o Nexo mostra quanto cabe por dia depois das contas e metas.'),
+        TextButton(
+            onPressed: widget.onSetup,
+            child: const Text('Cadastrar renda fixa')),
+      ]);
+    }
+    final over = s.free < 0;
+    Widget row(String label, double value, {bool plus = false}) => Padding(
+        padding: const EdgeInsets.symmetric(vertical: 2),
+        child: Row(children: [
+          Expanded(child: Text(label)),
+          Text('${plus ? '+' : '−'} ${money(value)}',
+              style: const TextStyle(fontFeatures: NexoTones.figures)),
+        ]));
+    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      Row(children: [
+        Expanded(
+            child: Text('Quanto posso gastar',
+                style: Theme.of(context)
+                    .textTheme
+                    .titleMedium
+                    ?.copyWith(fontWeight: FontWeight.w800))),
+        TextButton(
+            onPressed: () => setState(() => _open = !_open),
+            child: Text(_open ? 'Ocultar conta' : 'Como chego nisso')),
+      ]),
+      if (over)
+        Text('Passou ${money(-s.free)} do que a renda fixa cobre neste mês',
+            style: TextStyle(
+                color: NexoTones.expense(context),
+                fontWeight: FontWeight.w800,
+                fontSize: 16))
+      else ...[
+        FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: Alignment.centerLeft,
+            child: Text.rich(TextSpan(children: [
+              TextSpan(
+                  text: money(s.perDay),
+                  style: TextStyle(
+                      fontSize: 28,
+                      fontWeight: FontWeight.w800,
+                      color: cs.primary,
+                      fontFeatures: NexoTones.figures)),
+              const TextSpan(text: '  por dia'),
+            ]))),
+        Text(
+            '${money(s.free)} livres até o fim do mês · ${s.daysLeft} dia(s)',
+            style: small),
+      ],
+      if (_open) ...[
+        const Divider(height: 20),
+        row('Renda fixa do mês', s.fixedIncome, plus: true),
+        row('Contas fixas do mês', s.fixedBills),
+        if (s.pendingBills > 0) row('Pendentes do mês', s.pendingBills),
+        if (s.goals > 0) row('Guardar para metas', s.goals),
+        row('Gasto variável até hoje', s.variableSpent),
+        const SizedBox(height: 6),
+        Text(
+            'Renda extra, transferências e reservas não entram. Contas fixas e renda fixa vêm das recorrentes.',
+            style: small),
+      ],
+    ]);
+  }
 }
 
 /// This week so far: total, comparison, a bar per day and what stood out.
@@ -1404,7 +1566,8 @@ class _BudgetRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final spent = app.budgetSpent(budget);
-    final left = budget.amount - spent;
+    final limit = app.budgetLimit(budget);
+    final left = limit - spent;
     return InkWell(
         onTap: onTap,
         child: Padding(
@@ -1417,13 +1580,13 @@ class _BudgetRow extends StatelessWidget {
               const SizedBox(height: 4),
               Text(
                   '${left < 0 ? 'Excedido' : 'Ainda disponível'} ${analysisMoney(app, left.abs())}'),
-              if (!app.settings.hideBalance && budget.amount > 0) ...[
+              if (!app.settings.hideBalance && limit > 0) ...[
                 const SizedBox(height: 8),
-                NexoProgress(value: spent / budget.amount),
+                NexoProgress(value: spent / limit),
               ],
               const SizedBox(height: 4),
               Text(
-                  '${analysisMoney(app, spent)} de ${analysisMoney(app, budget.amount)}',
+                  '${analysisMoney(app, spent)} de ${analysisMoney(app, limit)}',
                   style: Theme.of(context).textTheme.bodySmall),
             ])));
   }

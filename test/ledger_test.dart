@@ -599,7 +599,8 @@ void main() {
         id: 'b',
         categoryId: 'bills',
         amount: 100,
-        createdAt: now,
+        // An old budget: full month (one created today would be prorated).
+        createdAt: DateTime(now.year, now.month - 2),
         period: 'monthly');
     expect(app.budgetSpent(budget), 80);
     expect(app.budgetProgress(budget), .8);

@@ -2,6 +2,43 @@ import '../models/models.dart';
 import '../models/transaction_metadata.dart';
 import 'finance_rules.dart';
 
+/// The period a budget measures now. A budget created in the middle of a
+/// period counts only from its creation day, with a proportional limit, so
+/// it is not born over the limit because of what was spent before it.
+class BudgetWindow {
+  const BudgetWindow(this.start, this.end, this.countsFrom, this.limit);
+  final DateTime start;
+
+  /// Exclusive.
+  final DateTime end;
+  final DateTime countsFrom;
+  final double limit;
+  bool get partial => countsFrom.isAfter(start);
+}
+
+BudgetWindow budgetWindow(Budget b, DateTime now,
+    {String weekStart = 'monday'}) {
+  final today = DateTime(now.year, now.month, now.day);
+  final DateTime start, end;
+  if (b.period == 'weekly') {
+    final offset = weekStart == 'monday' ? now.weekday - 1 : now.weekday % 7;
+    start = DateTime(today.year, today.month, today.day - offset);
+    end = DateTime(start.year, start.month, start.day + 7);
+  } else {
+    start = DateTime(today.year, today.month);
+    end = DateTime(today.year, today.month + 1);
+  }
+  final created =
+      DateTime(b.createdAt.year, b.createdAt.month, b.createdAt.day);
+  if (!created.isAfter(start) || !created.isBefore(end)) {
+    return BudgetWindow(start, end, start, b.amount);
+  }
+  final days = end.difference(start).inDays;
+  final left = end.difference(created).inDays;
+  final limit = (b.amount * left / days * 100).roundToDouble() / 100;
+  return BudgetWindow(start, end, created, limit);
+}
+
 /// How a budget is doing against the time left in its period.
 class BudgetPace {
   const BudgetPace(
@@ -19,7 +56,7 @@ class BudgetPace {
 }
 
 BudgetPace budgetPace(Budget b, double spent, DateTime now,
-    {String weekStart = 'monday'}) {
+    {String weekStart = 'monday', double? limit}) {
   final today = DateTime(now.year, now.month, now.day);
   final int daysLeft;
   double? projection;
@@ -32,7 +69,7 @@ BudgetPace budgetPace(Budget b, double spent, DateTime now,
     daysLeft = days - today.day + 1;
     if (today.day >= 7) projection = spent / today.day * days;
   }
-  final left = b.amount - spent;
+  final left = (limit ?? b.amount) - spent;
   return BudgetPace(
       daysLeft: daysLeft,
       perDay: left <= 0 ? 0 : left / daysLeft,

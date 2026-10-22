@@ -264,7 +264,9 @@ function nextOf(r: Row): string {
   return day(text(r.next_date));
 }
 
-function budgetSpentCents(l: Ledger, b: Row, today: string): number {
+/// Period of a budget now; created mid-period it counts from its creation
+/// day with a proportional limit (same rule as the app's budgetWindow).
+function budgetWindow(b: Row, today: string): { from: string; to: string; limitCents: number; partial: boolean } {
   const [y, m, d] = today.split("-").map(Number);
   let from: string, to: string;
   if (text(b.period) === "weekly") {
@@ -281,6 +283,15 @@ function budgetSpentCents(l: Ledger, b: Row, today: string): number {
     const next = new Date(Date.UTC(y, m, 1));
     to = next.toISOString().slice(0, 10);
   }
+  const full = cents(num(b.amount));
+  const created = day(text(b.created_at));
+  if (!created || created <= from || created >= to) return { from, to, limitCents: full, partial: false };
+  const span = (a: string, z: string) => (Date.parse(`${z}T00:00:00Z`) - Date.parse(`${a}T00:00:00Z`)) / 86400000;
+  return { from: created, to, limitCents: Math.round(full * span(created, to) / span(from, to)), partial: true };
+}
+
+function budgetSpentCents(l: Ledger, b: Row, today: string): number {
+  const { from, to } = budgetWindow(b, today);
   const metas = metadataIndex(l);
   let total = 0;
   for (const tx of l.transactions) {
@@ -404,7 +415,8 @@ export async function callMoreAction(name: string, rawArgs: unknown, l: Ledger, 
       return {
         budgets: (l.budgets ?? []).map((b) => {
           const spent = budgetSpentCents(l, b, today);
-          const limit = cents(num(b.amount));
+          const window = budgetWindow(b, today);
+          const limit = window.limitCents;
           return {
             id: text(b.id),
             category: text(find(l.categories, b.category_id)?.name) || "Categoria",
@@ -414,9 +426,10 @@ export async function callMoreAction(name: string, rawArgs: unknown, l: Ledger, 
             spent: money(spent),
             remaining: money(limit - spent),
             used_percent: limit > 0 ? Math.round((spent / limit) * 100) : null,
+            counts_from: window.partial ? window.from : undefined,
           };
         }),
-        note: "Inclui gastos pendentes do período, como no app. Semana começando no domingo.",
+        note: "Inclui gastos pendentes do período, como no app. Semana começando no domingo. Orçamento criado no meio do período conta desde a criação, com limite proporcional (counts_from).",
       };
     }
     case "set_budget": {

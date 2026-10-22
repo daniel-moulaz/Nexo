@@ -153,11 +153,18 @@ void main() {
     await mount(tester, app);
     expect(find.text(formatAmount(2400, 'BRL')), findsWidgets);
     expect(find.text(formatAmount(1500, 'BRL')), findsWidgets);
+    await tester.ensureVisible(find.byTooltip('Mês anterior'));
+    await tester.pumpAndSettle();
     await tester.tap(find.byTooltip('Mês anterior'));
     await tester.pumpAndSettle();
     expect(find.text('Mês completo'), findsOneWidget);
     expect(find.text(formatAmount(2400, 'BRL')), findsWidgets);
+    await tester.ensureVisible(find.byTooltip('Próximo mês'));
+    await tester.pumpAndSettle();
     await tester.tap(find.byTooltip('Próximo mês'));
+    await tester.pumpAndSettle();
+    expect(find.text('Até hoje'), findsOneWidget);
+    await tester.ensureVisible(find.text('Entrou'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Entrou'));
     await tester.pumpAndSettle();
