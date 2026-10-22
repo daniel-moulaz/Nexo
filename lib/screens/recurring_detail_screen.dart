@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../database/db_helper.dart';
 import '../models/models.dart';
 import '../providers/app_provider.dart';
+import '../services/cancel_intents.dart';
 import '../services/recurring_projection.dart';
 import '../theme/app_theme.dart';
 import '../utils/finance_input.dart';
@@ -189,6 +190,8 @@ class _RecurringDetailScreenState extends State<RecurringDetailScreen> {
             ),
           ),
           const SizedBox(height: 14),
+          if (r.paymentType == 'expense' && r.recurringType != 'installment')
+            _CancelIntentTile(recurring: r),
           Card(
             elevation: 0,
             child: ExpansionTile(
@@ -413,6 +416,64 @@ class _HistoryTile extends StatelessWidget {
           style: const TextStyle(fontWeight: FontWeight.w900),
         ),
       ),
+    );
+  }
+}
+
+/// "Não vou renovar": a reminder to cancel a few days before the next charge.
+class _CancelIntentTile extends StatefulWidget {
+  const _CancelIntentTile({required this.recurring});
+  final RecurringPayment recurring;
+  @override
+  State<_CancelIntentTile> createState() => _CancelIntentTileState();
+}
+
+class _CancelIntentTileState extends State<_CancelIntentTile> {
+  int? _days;
+  bool _loaded = false;
+  @override
+  void initState() {
+    super.initState();
+    CancelIntents.load().then((all) {
+      if (mounted) {
+        setState(() {
+          _days = all[widget.recurring.id];
+          _loaded = true;
+        });
+      }
+    });
+  }
+
+  Future<void> _set(int? days) async {
+    await CancelIntents.set(widget.recurring.id, days);
+    if (mounted) setState(() => _days = days);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (!_loaded) return const SizedBox.shrink();
+    return Card(
+      margin: const EdgeInsets.only(bottom: 14),
+      child: Column(children: [
+        SwitchListTile.adaptive(
+            title: const Text('Não vou renovar'),
+            subtitle: Text(_days == null
+                ? 'Lembrar de cancelar antes da próxima cobrança'
+                : 'Aviso no início $_days dia(s) antes de ${ptShortDate(widget.recurring.nextDate)}. A cobrança continua prevista até você cancelar.'),
+            value: _days != null,
+            onChanged: (on) => _set(on ? 3 : null)),
+        if (_days != null)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+            child: Wrap(spacing: 8, children: [
+              for (final d in [1, 3, 7])
+                ChoiceChip(
+                    label: Text('$d dia(s) antes'),
+                    selected: _days == d,
+                    onSelected: (_) => _set(d)),
+            ]),
+          ),
+      ]),
     );
   }
 }

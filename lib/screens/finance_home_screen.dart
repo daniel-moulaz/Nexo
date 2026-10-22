@@ -15,6 +15,8 @@ import '../services/platform_capabilities.dart';
 import '../services/transaction_metadata_service.dart';
 import '../services/week_summary.dart';
 import '../services/spendable.dart';
+import '../services/charge_alerts.dart';
+import '../services/cancel_intents.dart';
 import '../utils/finance_input.dart';
 import '../widgets/analysis_widgets.dart';
 import '../widgets/cash_timeline_chart.dart';
@@ -50,6 +52,8 @@ class _FinanceHomeScreenState extends State<FinanceHomeScreen>
   DateTime? _month;
   int _horizon = 30;
   Set<String> _dismissedSubscriptions = {};
+  Set<String> _dismissedAlerts = {};
+  Map<String, int> _cancelIntents = {};
   @override
   void initState() {
     super.initState();
@@ -59,6 +63,14 @@ class _FinanceHomeScreenState extends State<FinanceHomeScreen>
 
   Future<void> _loadDismissed() async {
     try {
+      final alerts = await CancelIntents.dismissedAlerts();
+      final intents = await CancelIntents.load();
+      if (mounted) {
+        setState(() {
+          _dismissedAlerts = alerts;
+          _cancelIntents = intents;
+        });
+      }
       final v = await loadDismissedSubscriptions();
       if (mounted) setState(() => _dismissedSubscriptions = v);
     } catch (_) {
@@ -648,6 +660,43 @@ class _FinanceHomeScreenState extends State<FinanceHomeScreen>
                   action: 'Ver',
                   onTap: () => _open(const RecurringScreen())));
             }
+            for (final alert in hidden
+                ? const <ChargeAlert>[]
+                : chargeAlerts(
+                        transactions: app.transactions,
+                        metadata: app.transactionMetadata,
+                        recurring: app.recurring,
+                        now: now,
+                        dismissed: _dismissedAlerts)
+                    .take(3)) {
+              final first = alert.charges.first;
+              insights.add(NexoInsight(
+                  icon: alert.kind == 'duplicate'
+                      ? Icons.content_copy_outlined
+                      : Icons.price_change_outlined,
+                  color: NexoTones.warning(context),
+                  title: alert.kind == 'duplicate'
+                      ? 'Cobrança repetida: ${first.description}'
+                      : '${alert.recurring!.name} veio ${money(alert.charges.last.amount)}',
+                  subtitle: alert.kind == 'duplicate'
+                      ? '${alert.charges.length}× ${money(first.amount)} em ${alert.charges.last.date.difference(first.date).inDays + 1} dia(s). Confira se é isso mesmo.'
+                      : 'Previsto: ${money(alert.expected!)}. Mudou o preço?',
+                  action: 'Ver',
+                  onTap: () => _chargeAlert(app, alert)));
+            }
+            for (final r in app.recurring) {
+              final days = _cancelIntents[r.id];
+              if (days == null || !CancelIntents.due(r, days, now)) continue;
+              insights.add(NexoInsight(
+                  icon: Icons.cancel_schedule_send_outlined,
+                  color: NexoTones.warning(context),
+                  title: 'Cancele ${r.name} antes de ${ptShortDate(r.nextDate)}',
+                  subtitle:
+                      'Você marcou que não vai renovar. ${hidden ? '' : 'Próxima cobrança: ${money(r.amount)}.'}',
+                  action: 'Abrir',
+                  onTap: () => _open(RecurringDetailScreen(
+                      recurring: r, fmt: (v) => analysisMoney(app, v)))));
+            }
             final attention =
                 insights.isEmpty ? null : NexoInsightCarousel(items: insights);
 
@@ -1137,6 +1186,54 @@ class _FinanceHomeScreenState extends State<FinanceHomeScreen>
             });
           }),
     );
+  }
+
+  Future<void> _chargeAlert(AppProvider app, ChargeAlert alert) async {
+    final action = await showDialog<String>(
+        context: context,
+        builder: (c) => AlertDialog(
+                title: Text(alert.kind == 'duplicate'
+                    ? 'Cobrança repetida'
+                    : 'Valor diferente do previsto'),
+                content: Column(mainAxisSize: MainAxisSize.min, children: [
+                  for (final t in alert.charges)
+                    ListTile(
+                        dense: true,
+                        contentPadding: EdgeInsets.zero,
+                        title: Text(t.description),
+                        subtitle: Text(ptShortDate(t.date)),
+                        trailing: Text(analysisMoney(app, t.amount))),
+                  if (alert.kind == 'price')
+                    Text(
+                        'A recorrente prevê ${analysisMoney(app, alert.expected!)}.'),
+                ]),
+                actions: [
+                  TextButton(
+                      onPressed: () => Navigator.pop(c, 'ok'),
+                      child: const Text('Está certo')),
+                  if (alert.kind == 'price')
+                    TextButton(
+                        onPressed: () => Navigator.pop(c, 'update'),
+                        child: Text(
+                            'Prever ${analysisMoney(app, alert.charges.last.amount)}')),
+                  FilledButton(
+                      onPressed: () => Navigator.pop(c, 'view'),
+                      child: const Text('Ver lançamentos')),
+                ]));
+    if (!mounted || action == null) return;
+    if (action == 'view') {
+      openAnalysisEntries(context, alert.charges,
+          alert.kind == 'duplicate' ? 'Cobrança repetida' : alert.recurring!.name);
+      return;
+    }
+    if (action == 'update') {
+      final r = RecurringPayment.fromMap(alert.recurring!.toMap(),
+          skippedOccurrences: alert.recurring!.skippedOccurrences)
+        ..amount = alert.charges.last.amount;
+      await app.updateRecurring(r);
+    }
+    await CancelIntents.dismissAlert(chargeAlertKey(alert));
+    await _loadDismissed();
   }
 
   void _category(AppProvider app, FinancialAnalysis data, String id) =>
