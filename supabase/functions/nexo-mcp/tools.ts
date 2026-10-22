@@ -150,8 +150,10 @@ function describeTx(l: Ledger, tx: Row, metas: Map<string, Row>) {
     description: text(tx.description),
     account: accountName(l, text(tx.account_id)),
     account_id: text(tx.account_id),
-    category: categoryName(l, text(tx.category_id)),
-    category_id: text(tx.category_id),
+    // Transfers and balance adjustments are neither spending nor income.
+    category: m.source.startsWith("transfer:") ? "Transferência"
+      : m.source === "opening_balance" ? "Ajuste de saldo" : categoryName(l, text(tx.category_id)),
+    category_id: m.source.startsWith("transfer:") || m.source === "opening_balance" ? undefined : text(tx.category_id),
     subcategory: m.subcategory || undefined,
     status: m.status === "pending" ? "pendente" : "realizado",
     due_date: m.dueDate ? day(m.dueDate) : undefined,

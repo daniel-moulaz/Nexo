@@ -34,8 +34,7 @@ class _DesktopTransactionTableState extends State<DesktopTransactionTable> {
     if (widget.rows.length != oldWidget.rows.length) page = 0;
   }
 
-  String category(AppTransaction t) =>
-      widget.app.categoryById(t.categoryId)?.name ?? 'Sem categoria';
+  String category(AppTransaction t) => widget.app.categoryLabel(t);
   String account(AppTransaction t) =>
       widget.app.accountById(t.accountId)?.name ?? 'Conta indisponível';
   TransactionMetadata meta(AppTransaction t) =>

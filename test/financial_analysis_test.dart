@@ -201,4 +201,20 @@ void main() {
             ?.id,
         'bank');
   });
+
+  test('income from recurring items is fixed; the rest is extra', () {
+    final a = analyze([
+      tx('recurring:salary:2026-09-05', type: 'income', amount: 1500),
+      tx('grant', type: 'income', amount: 250),
+      tx('delivery job', type: 'income', amount: 100),
+      // Money from another own account is not income at all.
+      tx('own pix', type: 'income', amount: 500),
+    ], {
+      'grant': meta('grant', source: 'recurring'),
+      'own pix': meta('own pix', neutral: true, source: 'transfer:x'),
+    });
+    expect(a.income, 1850);
+    expect(a.fixedIncome, 1750);
+    expect(a.extraIncome, 100);
+  });
 }

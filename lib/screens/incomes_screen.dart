@@ -256,7 +256,7 @@ class _IncomesScreenState extends State<IncomesScreen> {
                           ),
                           ...txs.map((tx) {
                             final account = app.accountById(tx.accountId);
-                            final category = app.categoryById(tx.categoryId);
+                            final category = app.categoryFor(tx);
                             final title = tx.description.trim().isEmpty
                                 ? _categoryLabel(category)
                                 : tx.description.trim();

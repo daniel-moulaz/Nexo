@@ -638,6 +638,25 @@ class AppProvider extends ChangeNotifier {
       accounts.where((a) => a.id == id).firstOrNull;
   AppCategory? categoryById(String id) =>
       categories.where((c) => c.id == id).firstOrNull;
+
+  /// Category to show for [t]: none for transfer legs and balance
+  /// adjustments, which are neither spending nor income (older transfers
+  /// were stored with the first expense category).
+  AppCategory? categoryFor(AppTransaction t) {
+    final source = transactionMetadata[t.id]?.source ?? '';
+    if (source.startsWith('transfer:') || source == 'opening_balance') {
+      return null;
+    }
+    return categoryById(t.categoryId);
+  }
+
+  String categoryLabel(AppTransaction t) {
+    final source = transactionMetadata[t.id]?.source ?? '';
+    if (source.startsWith('transfer:')) return 'Transferência';
+    if (source == 'opening_balance') return 'Ajuste de saldo';
+    return categoryById(t.categoryId)?.name ?? 'Sem categoria';
+  }
+
   LendedPerson? personById(String id) =>
       lendedPeople.where((p) => p.id == id).firstOrNull;
 
@@ -963,9 +982,8 @@ class AppProvider extends ChangeNotifier {
     }
 
     final now = occurredAt ?? DateTime.now();
-    final catId = categories.where((c) => c.type == 'expense').isNotEmpty
-        ? categories.firstWhere((c) => c.type == 'expense').id
-        : '';
+    // A transfer is neither spending nor income: no category.
+    const catId = '';
 
     final debit = AppTransaction(
       id: newId(),
@@ -997,14 +1015,14 @@ class AppProvider extends ChangeNotifier {
         (txn) async {
       if (invoiceCycleEnd != null) {
         final key = DateFormat('yyyy-MM-dd').format(invoiceCycleEnd);
-        final cycle = BillingCycle.forDate(
+        final cycle = BillingCycle.endingOn(
             invoiceCycleEnd, toAcc.statementDay, toAcc.dueDay);
         final purchaseRows = await txn.rawQuery(
             "SELECT COALESCE(SUM(CASE WHEN t.type = 'income' THEN -t.amount ELSE t.amount END), 0) AS total FROM transactions t LEFT JOIN transaction_metadata m ON m.transaction_id = t.id WHERE t.account_id = ? AND t.date >= ? AND t.date < ? AND (COALESCE(m.exclude_from_spending, 0) = 0 OR m.source = 'opening_balance')",
             [
               toId,
               cycle.start.toIso8601String(),
-              cycle.end.add(const Duration(days: 1)).toIso8601String()
+              cycle.until.toIso8601String()
             ]);
         final paidRows = await txn.rawQuery(
             'SELECT COALESCE(SUM(amount), 0) AS total FROM card_invoice_payments WHERE card_id = ? AND cycle_end = ?',

@@ -15,9 +15,7 @@ double currentInvoiceRemaining({
   final key = cycle.end.toIso8601String().substring(0, 10);
   var total = 0.0;
   for (final tx in transactions) {
-    if (tx.accountId != card.id ||
-        tx.date.isBefore(cycle.start) ||
-        !tx.date.isBefore(cycle.end.add(const Duration(days: 1)))) continue;
+    if (tx.accountId != card.id || !cycle.contains(tx.date)) continue;
     if (FinanceRules.isNeutral(tx, metadata[tx.id]) &&
         metadata[tx.id]?.source != 'opening_balance') continue;
     total += convert(tx.type == 'income' ? -tx.amount : tx.amount,
