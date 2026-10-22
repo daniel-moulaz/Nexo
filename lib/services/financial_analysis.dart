@@ -37,6 +37,11 @@ class FinancialAnalysis {
   final Map<DateTime, double> dailyExpense = {};
   double income = 0, expense = 0, refunds = 0, pendingExpense = 0;
   double extraordinary = 0, recurring = 0, transfers = 0;
+
+  /// Income from recurring items (salary, grant): the base of the month.
+  /// The rest (odd jobs, sales) is extra and should not be planned on.
+  double fixedIncome = 0;
+  double get extraIncome => income - fixedIncome;
   double get normal => expense - extraordinary;
   double get variable => expense - recurring;
   double get result => income + refunds - expense;
@@ -73,6 +78,9 @@ class FinancialAnalysis {
       }
       if (t.type == 'income') {
         income += value;
+        if (m.source == 'recurring' || t.id.startsWith('recurring:')) {
+          fixedIncome += value;
+        }
         continue;
       }
       if (t.type != 'expense') continue;

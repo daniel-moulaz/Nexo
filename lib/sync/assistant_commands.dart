@@ -451,9 +451,7 @@ class AssistantCommands {
     final key = cycle.end.toIso8601String().substring(0, 10);
     var owed = 0.0;
     for (final tx in app.transactions) {
-      if (tx.accountId != card.id ||
-          tx.date.isBefore(cycle.start) ||
-          !tx.date.isBefore(cycle.end.add(const Duration(days: 1)))) continue;
+      if (tx.accountId != card.id || !cycle.contains(tx.date)) continue;
       final m = app.transactionMetadata[tx.id];
       if (FinanceRules.isNeutral(tx, m) && m?.source != 'opening_balance') {
         continue;

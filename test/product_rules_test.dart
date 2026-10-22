@@ -99,9 +99,14 @@ void main() {
   });
   test('Card partial payment refund and closing boundary count cash once', () {
     final result = forecast(transactions: [
-      tx('purchase', account: 'card', amount: 300),
-      tx('refund', account: 'card', type: 'income', amount: 50),
-      tx('future', account: 'card', amount: 500, date: DateTime(2026, 9, 21)),
+      tx('purchase', account: 'card', amount: 300, date: DateTime(2026, 9, 19)),
+      tx('refund',
+          account: 'card',
+          type: 'income',
+          amount: 50,
+          date: DateTime(2026, 9, 19)),
+      // Bought on the closing day: already the next invoice.
+      tx('future', account: 'card', amount: 500, date: DateTime(2026, 9, 20)),
       tx('debit', amount: 100),
       tx('credit', account: 'card', type: 'income', amount: 100)
     ], metadata: {

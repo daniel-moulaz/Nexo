@@ -16,16 +16,29 @@ void main() {
       expect(parseMoney(value), isNull);
     }
   });
-  test('Closing day includes purchases until midnight, due in same month', () {
-    final cycle = BillingCycle.forDate(DateTime(2026, 9, 20, 23, 59), 20, 27);
-    expect(cycle.end, DateTime(2026, 9, 20));
-    expect(cycle.due, DateTime(2026, 9, 27));
+  test('A purchase on the closing day is already in the next invoice', () {
+    // Closes on the 20th ("melhor dia de compra"), due on the 27th.
+    final before = BillingCycle.forDate(DateTime(2026, 9, 19, 23, 59), 20, 27);
+    expect(before.end, DateTime(2026, 9, 20));
+    expect(before.start, DateTime(2026, 8, 20));
+    expect(before.lastDay, DateTime(2026, 9, 19));
+    expect(before.due, DateTime(2026, 9, 27));
+    final onClosing = BillingCycle.forDate(DateTime(2026, 9, 20, 8), 20, 27);
+    expect(onClosing.end, DateTime(2026, 10, 20));
+    expect(onClosing.contains(DateTime(2026, 9, 20)), isTrue);
+    expect(before.contains(DateTime(2026, 9, 20)), isFalse);
     expect(BillingCycle.forDate(DateTime(2026, 9, 21), 20, 10).due,
         DateTime(2026, 11, 10));
+    // The invoice that closes on a date (payment key) is the one before it.
+    expect(BillingCycle.endingOn(DateTime(2026, 9, 20), 20, 27).start,
+        DateTime(2026, 8, 20));
   });
   test('Short months, year boundary and unconfigured card', () {
-    expect(BillingCycle.forDate(DateTime(2026, 2, 28, 12), 31, 5).end,
+    // Closing on the 31st closes on the 28th in February.
+    expect(BillingCycle.forDate(DateTime(2026, 2, 27, 12), 31, 5).end,
         DateTime(2026, 2, 28));
+    expect(BillingCycle.forDate(DateTime(2026, 2, 28, 12), 31, 5).end,
+        DateTime(2026, 3, 31));
     expect(BillingCycle.forDate(DateTime(2026, 12, 31), 20, 10).due,
         DateTime(2027, 2, 10));
     final cycle = BillingCycle.forDate(DateTime(2026, 2, 12), null, null);

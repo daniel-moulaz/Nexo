@@ -225,7 +225,7 @@ class _TransactionSearchScreenState extends State<TransactionSearchScreen> {
             if (_query.trim().isEmpty) return true;
             final q = _query.toLowerCase().trim();
             final account = app.accountById(tx.accountId)?.name ?? '';
-            final category = app.categoryById(tx.categoryId)?.name ?? '';
+            final category = app.categoryLabel(tx);
             final subcategory = meta[tx.id]?.subcategory ?? '';
             return tx.description.toLowerCase().contains(q) ||
                 tx.note.toLowerCase().contains(q) ||
@@ -468,7 +468,7 @@ class _DayList extends StatelessWidget {
         }
         final tx = item as AppTransaction;
         final account = app.accountById(tx.accountId);
-        final category = app.categoryById(tx.categoryId);
+        final category = app.categoryFor(tx);
         final m = app.transactionMetadata[tx.id];
         final neutral = FinanceRules.isNeutral(tx, m);
         final currency = tx.currency.isNotEmpty

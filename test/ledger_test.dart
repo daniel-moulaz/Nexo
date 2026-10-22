@@ -69,7 +69,8 @@ void main() {
     await db.execute('DROP TABLE notification_suggestions');
     await db.setVersion(22);
     await DBHelper.close();
-    expect(await (await DBHelper.database).getVersion(), DBHelper.schemaVersion);
+    expect(
+        await (await DBHelper.database).getVersion(), DBHelper.schemaVersion);
     expect(
         (await DBHelper.getAccounts())
             .firstWhere((a) => a.id == 'bank')
@@ -367,7 +368,7 @@ void main() {
   test('Card purchase and partial payment do not create a second expense',
       () async {
     await app.addTransaction(
-        tx('purchase', account: 'card', date: DateTime(2026, 9, 20, 18)));
+        tx('purchase', account: 'card', date: DateTime(2026, 9, 19, 18)));
     expect(app.accountById('bank')!.balance, 1000);
     expect(app.totalBalanceAll, 900);
     await app.addTransfer(

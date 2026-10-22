@@ -30,16 +30,16 @@ class _CardInvoiceScreenState extends State<CardInvoiceScreen> {
   int _monthOffset = 0;
   bool _paying = false;
 
-  ({DateTime start, DateTime end, DateTime? due}) _cycle(Account card) {
+  BillingCycle _cycle(Account card) {
     final initial = widget.initialCycleEnd;
-    final cycle = BillingCycle.forDate(
-        BillingCycle.date(
-            initial?.year ?? DateTime.now().year,
-            (initial?.month ?? DateTime.now().month) + _monthOffset,
-            initial?.day ?? DateTime.now().day),
-        card.statementDay,
-        card.dueDay);
-    return (start: cycle.start, end: cycle.end, due: cycle.due);
+    final day = BillingCycle.date(
+        initial?.year ?? DateTime.now().year,
+        (initial?.month ?? DateTime.now().month) + _monthOffset,
+        initial?.day ?? DateTime.now().day);
+    // A closing date given by the caller is the invoice that closes on it.
+    return initial == null
+        ? BillingCycle.forDate(day, card.statementDay, card.dueDay)
+        : BillingCycle.endingOn(day, card.statementDay, card.dueDay);
   }
 
   Future<void> _editSettings(Account card) async {
@@ -236,10 +236,8 @@ class _CardInvoiceScreenState extends State<CardInvoiceScreen> {
     }
 
     final cycle = _cycle(card);
-    final allCycleTx = app.transactions.where((t) =>
-        t.accountId == card.id &&
-        !t.date.isBefore(cycle.start) &&
-        t.date.isBefore(cycle.end.add(const Duration(days: 1))));
+    final allCycleTx = app.transactions
+        .where((t) => t.accountId == card.id && cycle.contains(t.date));
     final invoiceKey = '${card.id}|${cycle.start}|${cycle.end}';
     final revision = TransactionMetadataService.instance.revision.value;
     if (_invoiceKey != invoiceKey ||
@@ -349,7 +347,7 @@ class _CardInvoiceScreenState extends State<CardInvoiceScreen> {
                     ),
                     const SizedBox(height: 12),
                     Text(
-                      'Período ${DateFormat('dd/MM').format(cycle.start)} a ${DateFormat('dd/MM').format(cycle.end)}',
+                      'Compras de ${DateFormat('dd/MM').format(cycle.start)} a ${DateFormat('dd/MM').format(cycle.lastDay)} · fecha ${DateFormat('dd/MM').format(cycle.end)}',
                     ),
                     if (cycle.due != null)
                       Text(
@@ -413,7 +411,7 @@ class _CardInvoiceScreenState extends State<CardInvoiceScreen> {
                 )
               else
                 ...purchases.map((tx) {
-                  final category = app.categoryById(tx.categoryId);
+                  final category = app.categoryFor(tx);
                   final txMeta = meta[tx.id];
                   return Card(
                     elevation: 0,

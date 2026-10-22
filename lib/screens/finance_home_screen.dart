@@ -395,6 +395,10 @@ class _FinanceHomeScreenState extends State<FinanceHomeScreen>
                           _Value(
                               label: 'Entrou',
                               value: money(data.income),
+                              detail: data.extraIncome > .005 &&
+                                      data.fixedIncome > .005
+                                  ? '${money(data.fixedIncome)} fixa · ${money(data.extraIncome)} extra'
+                                  : null,
                               icon: Icons.south_west,
                               color: NexoTones.income(context),
                               onTap: () => openAnalysisEntries(
@@ -1307,12 +1311,14 @@ class _Amount extends StatelessWidget {
 
 class _Value extends StatelessWidget {
   final String label, value;
+  final String? detail;
   final IconData? icon;
   final Color? color;
   final VoidCallback? onTap;
   const _Value(
       {required this.label,
       required this.value,
+      this.detail,
       this.icon,
       this.color,
       this.onTap});
@@ -1335,6 +1341,11 @@ class _Value extends StatelessWidget {
             ]),
             const SizedBox(height: 4),
             _Amount(value, size: 22),
+            if (detail != null)
+              Text(detail!,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: Theme.of(context).textTheme.bodySmall),
           ])));
 }
 

@@ -382,8 +382,7 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
                         ...txs.map((tx) {
                           final meta = metadata[tx.id] ??
                               TransactionMetadata(transactionId: tx.id);
-                          final category =
-                              _categoryLabel(app.categoryById(tx.categoryId));
+                          final category = _categoryLabel(app.categoryFor(tx));
                           final account = app.accountById(tx.accountId);
                           final neutral = FinanceRules.isNeutral(tx, meta);
                           final status = neutral
