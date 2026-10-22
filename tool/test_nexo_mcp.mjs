@@ -447,4 +447,48 @@ await test('every new change tool is listed and annotated', async () => {
   assert.equal(byName.delete_account.annotations.destructiveHint, true);
 });
 
+await test('card invoices: the bank split, payment after closing, limit used', async () => {
+  const q = queue();
+  const buy = (id, amount, date) => ({ id, type: 'expense', amount, description: id, account_id: 'nu',
+    category_id: 'food_exp', date: `${date}T12:00:00.000` });
+  const card = { ...withIncome,
+    accounts: [...withIncome.accounts, { id: 'nu', name: 'Cartão roxo', type: 'credit', currency: 'BRL',
+      statement_day: 19, due_day: 26, credit_limit: 650 }],
+    transactions: [...withIncome.transactions,
+      buy('a', 300, '2026-09-19'), buy('b', 150.92, '2026-10-18'),
+      buy('c', 29.24, '2026-10-19'), buy('d', 39.90, '2026-10-19'), buy('e', 26.49, '2026-10-19'),
+      buy('f', 17.99, '2026-10-19'), buy('g', 26.42, '2026-10-21'), buy('h', 30.85, '2026-10-21'),
+      buy('i', 26.42, '2026-10-21'), buy('j', 16.28, '2026-10-26')],
+    invoicePayments: [{ id: 'p', card_id: 'nu', cycle_end: '2026-10-19', amount: 30 }],
+  };
+  const r = await act(q, 'get_card_invoices', { card_id: 'nu' }, card);
+  const [nov, oct] = r.cards[0].invoices;
+  assert.deepEqual([oct.closing_date, oct.total, oct.paid, oct.remaining, oct.due_date],
+    ['2026-10-19', 450.92, 30, 420.92, '2026-10-26']);
+  assert.deepEqual([nov.closing_date, nov.purchases_from, nov.total, nov.status],
+    ['2026-11-19', '2026-10-19', 213.59, 'aberta']);
+  assert.equal(r.cards[0].limit_used_percent, Math.round(634.51 / 650 * 100));
+  assert.equal(q.items.length, 0, 'reading never queues');
+});
+await test('refusals the assistant can act on; status says how long it waits', async () => {
+  const failing = (message) => ({ ...queue().deps, enqueue: async () => { throw new Error(`rpc_400:${message}`); } });
+  await assert.rejects(callAction('add_asset', { name: 'Carro', value: 10 }, withIncome, today, failing('kind_unsupported')),
+    (e) => e instanceof ToolInputError && /Atualize o app/.test(e.message));
+  await assert.rejects(callAction('add_asset', { name: 'Carro', value: 10 }, withIncome, today, failing('too_many_pending')),
+    (e) => e instanceof ToolInputError && /100 pedidos/.test(e.message));
+  const q = queue();
+  const { request_id } = await act(q, 'add_asset', { name: 'Carro', value: 10 });
+  q.items[0].created_at = new Date(Date.now() - 7 * 60000).toISOString();
+  const s = await act(q, 'get_request_status', { id: request_id });
+  assert.equal(s.waiting_minutes, 7);
+  assert.match(s.next_step, /Nexo estiver aberto/);
+});
+await test('ignoring in batch can be previewed first', async () => {
+  const q = queue();
+  const preview = await act(q, 'ignore_suggestions', { before: '2026-10-01', preview: true });
+  assert.equal(typeof preview.would_ignore, 'number');
+  assert.match(preview.note, /nada foi alterado/);
+  assert.equal(q.ignored.length, 0);
+});
+
 console.log(`NEXO MCP: ${passed} tests passed; synthetic fixture only.`);

@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:http/http.dart' as http;
+import 'package:package_info_plus/package_info_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../database/db_helper.dart';
@@ -25,6 +26,10 @@ class AssistantCommand {
 abstract interface class AssistantRemote {
   Future<AssistantCommand?> claim(String datasetId, String deviceId);
   Future<void> finish(String id, String status, Map<String, Object?> result);
+
+  /// Tells the server which requests this app version can apply.
+  Future<void> report(
+      String datasetId, String deviceId, String version, List<String> kinds);
 }
 
 class SupabaseAssistantRemote implements AssistantRemote {
@@ -63,6 +68,16 @@ class SupabaseAssistantRemote implements AssistantRemote {
   Future<void> finish(String id, String status, Map<String, Object?> result) =>
       _rpc('nexo_mcp_finish',
           {'p_id': id, 'p_status': status, 'p_result': result});
+
+  @override
+  Future<void> report(String datasetId, String deviceId, String version,
+          List<String> kinds) =>
+      _rpc('nexo_mcp_report_capabilities', {
+        'p_dataset_id': datasetId,
+        'p_device_id': deviceId,
+        'p_version': version,
+        'p_kinds': kinds,
+      });
 }
 
 /// Applies the assistant's requests on this device through the same
@@ -77,6 +92,34 @@ class AssistantCommands {
 
   static const _appliedKey = 'nexo_assistant_applied_v1';
   Future<int>? _running;
+  DateTime? _reportedAt;
+
+  /// Every request this version applies (see [_do] and
+  /// [AssistantMoreCommands]); a test keeps it equal to the server's list.
+  static const supportedKinds = [
+    'transaction.add', 'transfer.add', 'transaction.update', //
+    'transaction.delete', 'transaction.settle', 'suggestion.confirm',
+    'recurring.pay', 'recurring.skip', 'recurring.add', 'recurring.update',
+    'recurring.delete', 'budget.set', 'budget.delete', 'category.add',
+    'category.update', 'goal.move', 'invoice.pay', 'account.add',
+    'account.update', 'account.adjust', 'account.delete', 'category.delete',
+    'goal.add', 'goal.update', 'goal.delete', 'investment.add',
+    'investment.operation', 'investment.price', 'loan.pay', 'loan.skip',
+    'lended.add', 'lended.settle', 'asset.add', 'asset.update',
+    'asset.delete', 'wishlist.add', 'wishlist.update', 'wishlist.delete',
+  ];
+
+  /// Hourly at most; a server without the call (or offline) changes nothing.
+  Future<void> _report(String datasetId, String deviceId) async {
+    final last = _reportedAt;
+    if (last != null && DateTime.now().difference(last).inHours < 1) return;
+    _reportedAt = DateTime.now();
+    try {
+      final info = await PackageInfo.fromPlatform();
+      await remote.report(datasetId, deviceId,
+          '${info.version}+${info.buildNumber}', supportedKinds);
+    } catch (_) {}
+  }
 
   /// Claims and applies pending requests (at most [max]); returns how many.
   Future<int> run(
@@ -87,6 +130,7 @@ class AssistantCommands {
           _run(datasetId, deviceId, max).whenComplete(() => _running = null);
 
   Future<int> _run(String datasetId, String deviceId, int max) async {
+    await _report(datasetId, deviceId);
     var count = 0;
     for (; count < max; count++) {
       final command = await remote.claim(datasetId, deviceId);

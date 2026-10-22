@@ -4,6 +4,7 @@
 // applies with its own rules (the same calls as its screens).
 import { cents, day, type Ledger, money, num, type Row, text } from "./finance.ts";
 import { balanceCents, ToolInputError, type ToolDefinition } from "./tools.ts";
+import { cardInvoices } from "./invoices.ts";
 
 type Args = Record<string, unknown>;
 type Enqueue = (kind: string, args: Record<string, unknown>) => Promise<{ id: string; status: string }>;
@@ -16,9 +17,16 @@ const obj = (properties: Record<string, unknown>, required: string[] = []) => ({
 });
 const accountTypes = ["bank", "cash", "savings", "wallet", "credit", "debit"];
 
-export const readOnlyAll = new Set(["get_investments", "get_loans", "get_lended", "get_assets", "get_wishlist"]);
+export const readOnlyAll = new Set(["get_card_invoices", "get_investments", "get_loans", "get_lended", "get_assets", "get_wishlist"]);
 
 export const allActions: (ToolDefinition & { destructive?: boolean })[] = [
+  {
+    name: "get_card_invoices", title: "Faturas dos cartões",
+    description:
+      "Faturas de cada cartão: período de compras, fechamento, vencimento, total, pago, restante e situação " +
+      "(aberta, fechada, paga, atrasada) e quanto do limite está usado.",
+    inputSchema: obj({ card_id: idField }),
+  },
   {
     name: "add_account", title: "Nova conta ou cartão",
     description: "Cria conta (banco, dinheiro, poupança, carteira, débito) ou cartão de crédito com saldo inicial. Cartão: saldo negativo é fatura em aberto.",
@@ -252,6 +260,11 @@ export async function callAllAction(name: string, rawArgs: unknown, l: Ledger, t
   const args = (rawArgs ?? {}) as Args;
   if (typeof args !== "object" || Array.isArray(args)) throw new ToolInputError("Argumentos inválidos.");
   switch (name) {
+    case "get_card_invoices": {
+      only(args, ["card_id"]);
+      const id = args.card_id === undefined ? undefined : text(account(l, str(args, "card_id", 256)).id);
+      return cardInvoices(l, today, id);
+    }
     case "add_account": {
       only(args, ["name", "type", "balance", "statement_day", "due_day", "credit_limit"]);
       const type = oneOf(args, "type", accountTypes);
