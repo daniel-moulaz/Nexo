@@ -32,7 +32,16 @@ async function rpc(name: string, args: Record<string, unknown>): Promise<unknown
     },
     body: JSON.stringify(args),
   });
-  if (!response.ok) throw new Error(`rpc_${response.status}`);
+  if (!response.ok) {
+    // PostgREST puts the raised message (e.g. kind_unsupported) in `message`.
+    let reason = "";
+    try {
+      reason = String((JSON.parse(await response.text()) as { message?: unknown }).message ?? "");
+    } catch {
+      // Not JSON: the status is enough.
+    }
+    throw new Error(`rpc_${response.status}${reason ? `:${reason.slice(0, 60)}` : ""}`);
+  }
   const text = await response.text();
   return text ? JSON.parse(text) : null;
 }
@@ -69,6 +78,7 @@ const handler = createHandler({
       lendedPeople: of("lended_people"),
       assets: of("assets"),
       wishlist: of("wishlist"),
+      invoicePayments: of("card_invoice_payments"),
     };
   },
   async audit(c, tool, ok) {

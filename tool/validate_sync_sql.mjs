@@ -549,6 +549,32 @@ try {
     const ledger = await service('nexo_mcp_ledger', [conn.id]);
     assert(Array.isArray(ledger.entities));
   });
+  await test('assistant: a kind no device knows is refused when asked', async () => {
+    await db.exec(await readFile(new URL('../supabase/migrations/202610210006_mcp_capabilities.sql', import.meta.url), 'utf8'));
+    const conn = (await db.query(`select id, dataset_id from nexo_mcp_private.connectors
+      where owner_id = $1 and revoked_at is null`, [A])).rows[0];
+    // Nobody reported yet (older apps): requests queue as before.
+    assert.equal((await service('nexo_mcp_enqueue', [conn.id, 'loan.pay', '{}'])).status, 'pending');
+    const old = randomUUID(), fresh = randomUUID();
+    await denies(() => user(null, tx => rpc(tx, 'nexo_mcp_report_capabilities',
+      [conn.dataset_id, old, '1.9.0', ['transaction.add']])), '42501');
+    await denies(() => user(A, tx => rpc(tx, 'nexo_mcp_report_capabilities',
+      [conn.dataset_id, old, '1.9.0', ['DROP TABLE']])), '22023');
+    await user(A, tx => rpc(tx, 'nexo_mcp_report_capabilities',
+      [conn.dataset_id, old, '1.9.0', ['transaction.add', 'transfer.add']]));
+    await denies(() => service('nexo_mcp_enqueue', [conn.id, 'loan.pay', '{}']), '22023');
+    assert.equal((await service('nexo_mcp_enqueue', [conn.id, 'transaction.add', '{}'])).status, 'pending');
+    // A device with the newer app knows it.
+    await user(A, tx => rpc(tx, 'nexo_mcp_report_capabilities',
+      [conn.dataset_id, fresh, '1.11.0', ['transaction.add', 'loan.pay']]));
+    assert.equal((await service('nexo_mcp_enqueue', [conn.id, 'loan.pay', '{}'])).status, 'pending');
+    // Another person's report never unlocks this one's queue.
+    await user(B, tx => rpc(tx, 'nexo_mcp_report_capabilities',
+      [conn.dataset_id, randomUUID(), '9.9.9', ['asset.add']]));
+    await denies(() => service('nexo_mcp_enqueue', [conn.id, 'asset.add', '{}']), '22023');
+    const ledger = await service('nexo_mcp_ledger', [conn.id]);
+    assert(Array.isArray(ledger.entities));
+  });
   console.log(`SQL LAB: ${passed} tests passed; synthetic local data only.`);
 } finally {
   await db.close();

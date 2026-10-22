@@ -11,6 +11,7 @@ import 'package:expensy/models/transaction_metadata.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 import 'package:path/path.dart' as p;
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -30,6 +31,12 @@ class _Queue implements AssistantRemote {
   Future<void> finish(
           String id, String status, Map<String, Object?> result) async =>
       finished[id] = (status, result);
+
+  final reports = <List<String>>[];
+  @override
+  Future<void> report(String datasetId, String deviceId, String version,
+          List<String> kinds) async =>
+      reports.add(kinds);
 }
 
 void main() {
@@ -491,5 +498,37 @@ void main() {
       expect(app.loanPayments, hasLength(2));
       expect(await balance('bank'), closeTo(before - 100, 1e-9));
     });
+  });
+
+  test('the app knows exactly the server list, and every kind is handled',
+      () async {
+    final sql = File('supabase/migrations/202610210005_mcp_all_actions.sql')
+        .readAsStringSync()
+        .split('create or replace')
+        .first;
+    final server = RegExp(r"'([a-z]+\.[a-z_]+)'")
+        .allMatches(sql)
+        .map((m) => m.group(1)!)
+        .toSet();
+    expect(AssistantCommands.supportedKinds.toSet(), server);
+    PackageInfo.setMockInitialValues(
+        appName: 'Nexo',
+        packageName: 'com.ma.expensy',
+        version: '1.11.0',
+        buildNumber: '36',
+        buildSignature: '');
+    for (final kind in AssistantCommands.supportedKinds) {
+      queue.add('k-$kind', kind, {});
+    }
+    while (queue.pending.isNotEmpty) {
+      await run(); // at most 20 per round
+    }
+    expect(queue.reports.single, AssistantCommands.supportedKinds);
+    for (final kind in AssistantCommands.supportedKinds) {
+      final (status, result) = queue.finished['k-$kind']!;
+      // Empty arguments are refused, but never as an unknown request.
+      expect(result['reason'], isNot('Pedido desconhecido.'), reason: kind);
+      expect(status, isNotEmpty);
+    }
   });
 }

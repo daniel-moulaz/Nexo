@@ -25,6 +25,7 @@ export interface Ledger {
   lendedPeople?: Row[];
   assets?: Row[];
   wishlist?: Row[];
+  invoicePayments?: Row[];
 }
 
 export interface Meta {

@@ -12,6 +12,7 @@ export interface Request {
   kind: string;
   status: "pending" | "applying" | "done" | "rejected";
   result?: Record<string, unknown> | null;
+  created_at?: string;
 }
 
 export interface ActionDeps {
@@ -135,6 +136,7 @@ const baseActions: (ToolDefinition & { destructive?: boolean })[] = [
       properties: {
         ids: { type: "array", items: { type: "string" }, maxItems: 200 },
         before: { ...dateField, description: "Ignora todas com data anterior a esta" },
+        preview: { type: "boolean", description: "true: só mostra quantas e quais seriam ignoradas" },
       },
       additionalProperties: false,
     },
@@ -228,8 +230,32 @@ const statusText: Record<string, string> = {
 
 export const actions: (ToolDefinition & { destructive?: boolean })[] = [...baseActions, ...moreActions, ...allActions];
 
+/// Server refusals the assistant can act on, instead of a generic failure.
+function guarded(deps: ActionDeps): ActionDeps {
+  return {
+    ...deps,
+    enqueue: async (kind, args) => {
+      try {
+        return await deps.enqueue(kind, args);
+      } catch (error) {
+        const reason = error instanceof Error ? error.message : "";
+        if (reason.includes("kind_unsupported")) {
+          throw new ToolInputError(
+            "O Nexo instalado no celular/PC ainda não sabe fazer isto. Atualize o app e abra-o uma vez; depois peça de novo.");
+        }
+        if (reason.includes("too_many_pending")) {
+          throw new ToolInputError(
+            "Há 100 pedidos esperando um aparelho com o Nexo aberto. Abra o app no celular ou no PC e espere eles serem gravados.");
+        }
+        throw error;
+      }
+    },
+  };
+}
+
 export async function callAction(name: string, rawArgs: unknown, l: Ledger, today: string,
-  deps: ActionDeps): Promise<Record<string, unknown>> {
+  rawDeps: ActionDeps): Promise<Record<string, unknown>> {
+  const deps = guarded(rawDeps);
   const args = (rawArgs ?? {}) as Args;
   if (typeof args !== "object" || Array.isArray(args)) throw new ToolInputError("Argumentos inválidos.");
   switch (name) {
@@ -320,13 +346,31 @@ export async function callAction(name: string, rawArgs: unknown, l: Ledger, toda
       return pending(r.id, "Confirmação da sugestão");
     }
     case "ignore_suggestions": {
-      only(args, ["ids", "before"]);
+      only(args, ["ids", "before", "preview"]);
       const ids = args.ids;
+      if (args.preview !== undefined && typeof args.preview !== "boolean") {
+        throw new ToolInputError("preview deve ser verdadeiro ou falso.");
+      }
       if (ids !== undefined && (!Array.isArray(ids) || ids.length > 200 || ids.some((i) => typeof i !== "string"))) {
         throw new ToolInputError("ids deve ser uma lista de até 200 ids.");
       }
       const before = date(args, "before", today);
       if ((!ids || ids.length === 0) && !before) throw new ToolInputError("Informe ids ou before.");
+      if (args.preview === true) {
+        // What would be ignored, without changing anything.
+        const beforeMs = before ? Date.parse(`${before}T00:00:00-03:00`) : null;
+        const hit = (await deps.suggestions(200)).filter((s) =>
+          ids?.length ? (ids as string[]).includes(String(s.id)) : Number(s.occurred_at) < beforeMs!);
+        return {
+          would_ignore: hit.length,
+          total_value: Math.round(hit.reduce((t, s) => t + Number(s.amount_cents), 0)) / 100,
+          items: hit.slice(0, 50).map((s) => ({
+            id: s.id, date: new Date(Number(s.occurred_at)).toISOString().slice(0, 10),
+            amount: Number(s.amount_cents) / 100, description: s.description,
+          })),
+          note: "Prévia: nada foi alterado. Chame de novo sem preview para aplicar.",
+        };
+      }
       const count = await deps.ignoreSuggestions(ids?.length ? ids as string[] : null,
         before ? Date.parse(`${before}T00:00:00-03:00`) : null);
       return { ignored: count, message: `${count} sugestão(ões) descartada(s). Nenhum saldo mudou.` };
@@ -337,7 +381,15 @@ export async function callAction(name: string, rawArgs: unknown, l: Ledger, toda
       if (!/^[0-9a-f-]{36}$/.test(id)) throw new ToolInputError("id de pedido inválido.");
       const r = await deps.request(id);
       if (!r) throw new ToolInputError("Pedido não encontrado.");
-      return { request_id: r.id, kind: r.kind, status: statusText[r.status] ?? r.status, result: r.result ?? undefined };
+      const waiting = r.status === "pending" || r.status === "applying";
+      const minutes = waiting && r.created_at ? Math.max(0, Math.round((Date.now() - Date.parse(r.created_at)) / 60000)) : undefined;
+      return {
+        request_id: r.id, kind: r.kind, status: statusText[r.status] ?? r.status, result: r.result ?? undefined,
+        waiting_minutes: minutes,
+        next_step: !waiting ? undefined : r.status === "applying"
+          ? "Um aparelho está gravando agora; consulte de novo em alguns segundos."
+          : "Será gravado quando o Nexo estiver aberto no celular ou no PC (o PC aberto grava em até 20 s).",
+      };
     }
     default: {
       const more = await callMoreAction(name, args, l, today, deps.enqueue) ??
