@@ -70,7 +70,7 @@ class _BudgetScreenState extends State<BudgetScreen>
                 : app.accountById(t.accountId)?.currency ??
                     app.settings.currency),
         now: now);
-    double used(Budget b) => b.amount <= 0 ? 0 : app.budgetSpent(b) / b.amount;
+    double used(Budget b) => app.budgetProgressRaw(b);
     // Closest to the limit first: that is what needs attention.
     final budgets = [...app.budgets]
       ..sort((a, b) => used(b).compareTo(used(a)));
@@ -180,7 +180,7 @@ class _BudgetSummary extends StatelessWidget {
     final cs = Theme.of(context).colorScheme;
     final monthly = app.budgets.where((b) => b.period != 'weekly').toList();
     final over = app.budgets.where(app.budgetExceeded).length;
-    final limit = monthly.fold(0.0, (s, b) => s + b.amount);
+    final limit = monthly.fold(0.0, (s, b) => s + app.budgetLimit(b));
     final spent = monthly.fold(0.0, (s, b) => s + app.budgetSpent(b));
     final pace = budgetPace(
         Budget(
@@ -274,22 +274,27 @@ class _BudgetCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     final spent = app.budgetSpent(budget);
-    final ratio = budget.amount <= 0 ? 0.0 : spent / budget.amount;
+    final window =
+        budgetWindow(budget, now, weekStart: app.settings.weekStart);
+    final limit = window.limit;
+    final ratio = limit <= 0 ? 0.0 : spent / limit;
     final color = ratio >= 1
         ? NexoTones.expense(context)
         : ratio >= .8
             ? NexoTones.warning(context)
             : cs.primary;
-    final remaining = budget.amount - spent;
+    final remaining = limit - spent;
     final category = app.categoryById(budget.categoryId);
     final name = category?.name ?? 'Categoria';
-    final pace =
-        budgetPace(budget, spent, now, weekStart: app.settings.weekStart);
+    final pace = budgetPace(budget, spent, now,
+        weekStart: app.settings.weekStart, limit: limit);
     final projection = pace.projection;
     final String status;
     if (remaining < 0) {
       status = 'Passou ${money(-remaining)} do limite';
-    } else if (projection != null && projection > budget.amount * 1.05) {
+    } else if (projection != null &&
+        !window.partial &&
+        projection > limit * 1.05) {
       status = 'No ritmo atual fecha o mês em ${money(projection)}';
     } else {
       status =
@@ -335,7 +340,9 @@ class _BudgetCard extends StatelessWidget {
                             ])),
                         _Amounts(
                             top: money(spent),
-                            bottom: 'de ${money(budget.amount)}',
+                            bottom: window.partial
+                                ? 'de ${money(limit)} (proporcional)'
+                                : 'de ${money(limit)}',
                             color: color),
                       ]),
                       const SizedBox(height: 12),

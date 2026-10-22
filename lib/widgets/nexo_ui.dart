@@ -306,17 +306,25 @@ class NexoSpendingPace extends StatelessWidget {
       {super.key,
       required this.current,
       required this.previous,
-      required this.money});
+      required this.money,
+      this.ideal,
+      this.monthDays});
 
   /// Cumulative totals indexed by day-1 (current stops at today).
   final List<double> current, previous;
   final String Function(double) money;
 
+  /// Month total that keeps the plan; drawn as a dotted straight line.
+  final double? ideal;
+  final int? monthDays;
+
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    final days = math.max(previous.length, current.length);
-    final top = [...current, ...previous, 1.0].reduce(math.max) * 1.12;
+    final days =
+        math.max(math.max(previous.length, current.length), monthDays ?? 0);
+    final top =
+        [...current, ...previous, ideal ?? 0, 1.0].reduce(math.max) * 1.12;
     final now = current.isEmpty ? 0.0 : current.last;
     final then = previous.isEmpty
         ? null
@@ -342,6 +350,17 @@ class NexoSpendingPace extends StatelessWidget {
             titlesData: const FlTitlesData(show: false),
             lineTouchData: const LineTouchData(enabled: false),
             lineBarsData: [
+              if (ideal != null && monthDays != null)
+                LineChartBarData(
+                  spots: [
+                    const FlSpot(1, 0),
+                    FlSpot(monthDays!.toDouble(), ideal!)
+                  ],
+                  color: cs.tertiary,
+                  barWidth: 2,
+                  dashArray: [2, 4],
+                  dotData: const FlDotData(show: false),
+                ),
               if (previous.any((v) => v > 0))
                 LineChartBarData(
                   spots: spots(previous),
