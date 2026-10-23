@@ -35,14 +35,15 @@ class _Remote implements PluggyRemote {
   Future<void> decide(List<Map<String, Object?>> decisions) async {}
 }
 
-BankAccountSnapshot _card(List<BankBill> bills) => BankAccountSnapshot(
-    accountId: 'p-card',
-    bank: 'Banco fictício',
-    type: 'CREDIT',
-    name: 'Cartão',
-    currency: 'BRL',
-    nexoAccountId: 'card',
-    bills: bills);
+BankAccountSnapshot _card(List<BankBill> bills, {String? linkedTo = 'card'}) =>
+    BankAccountSnapshot(
+        accountId: 'p-card',
+        bank: 'Banco fictício',
+        type: 'CREDIT',
+        name: 'Cartão',
+        currency: 'BRL',
+        nexoAccountId: linkedTo,
+        bills: bills);
 
 void main() {
   // Closing day 20, due day 27: the invoice that closes on 20/10.
@@ -204,6 +205,20 @@ void main() {
     await tester.pumpWidget(const SizedBox());
     await show();
     expect(find.textContaining('Fatura do banco'), findsNothing);
+
+    // Not linked yet: the screen offers the link instead of guessing.
+    app.settings.hideBalance = false;
+    PluggyInbox.instance = PluggyInbox(_Remote([
+      _card(
+          [BankBill(id: 'out', dueDate: DateTime(2026, 10, 27), totalCents: 1)],
+          linkedTo: null)
+    ]));
+    await tester.runAsync(() => BankSnapshots.load(force: true));
+    await tester.pumpWidget(const SizedBox());
+    await show();
+    expect(find.textContaining('Fatura do banco'), findsNothing);
+    expect(find.text('Vincular ao cartão do banco para ver a fatura oficial'),
+        findsOneWidget);
 
     expect(tester.takeException(), isNull);
     await tester.pumpWidget(const SizedBox());
