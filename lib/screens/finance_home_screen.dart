@@ -17,6 +17,8 @@ import '../services/week_summary.dart';
 import '../services/spendable.dart';
 import '../services/charge_alerts.dart';
 import '../services/cancel_intents.dart';
+import '../services/bank_snapshots.dart';
+import '../services/balance_check.dart';
 import '../utils/finance_input.dart';
 import '../widgets/analysis_widgets.dart';
 import '../widgets/cash_timeline_chart.dart';
@@ -55,6 +57,7 @@ class _FinanceHomeScreenState extends State<FinanceHomeScreen>
   Set<String> _dismissedSubscriptions = {};
   Set<String> _dismissedAlerts = {};
   Map<String, int> _cancelIntents = {};
+  List<BankAccountSnapshot> _bank = const [];
   @override
   void initState() {
     super.initState();
@@ -74,6 +77,8 @@ class _FinanceHomeScreenState extends State<FinanceHomeScreen>
       }
       final v = await loadDismissedSubscriptions();
       if (mounted) setState(() => _dismissedSubscriptions = v);
+      final bank = await BankSnapshots.load();
+      if (mounted) setState(() => _bank = bank);
     } catch (_) {
       // Preferences unavailable: suggestions still show, nothing breaks.
     }
@@ -394,11 +399,10 @@ class _FinanceHomeScreenState extends State<FinanceHomeScreen>
                 budgetFree.fixedBills -
                 budgetFree.pendingBills -
                 budgetFree.goals;
-            final ideal = currentMonth &&
-                    budgetFree.hasBase &&
-                    variableAllowance > 0
-                ? variableAllowance
-                : null;
+            final ideal =
+                currentMonth && budgetFree.hasBase && variableAllowance > 0
+                    ? variableAllowance
+                    : null;
             final monthCard = _Panel(
                 child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -589,8 +593,7 @@ class _FinanceHomeScreenState extends State<FinanceHomeScreen>
                 .where((point) => point.balance < 0)
                 .firstOrNull;
             final hot = budgets
-                .where(
-                    (b) => app.budgetProgressRaw(b) >= .8)
+                .where((b) => app.budgetProgressRaw(b) >= .8)
                 .firstOrNull;
             final insights = <NexoInsight>[
               if (overdue.isNotEmpty)
@@ -696,13 +699,29 @@ class _FinanceHomeScreenState extends State<FinanceHomeScreen>
                   action: 'Ver',
                   onTap: () => _chargeAlert(app, alert)));
             }
+            for (final card in app.accounts.where((a) => a.type == 'credit')) {
+              final bank = BankSnapshots.linkedTo(_bank, card.id);
+              final used = bank == null ? null : BankSnapshots.limitUsed(bank);
+              if (used == null || used < .9) continue;
+              insights.add(NexoInsight(
+                  icon: Icons.credit_card_off_outlined,
+                  color: NexoTones.expense(context),
+                  title:
+                      '${card.name}: ${(used * 100).round()}% do limite usado',
+                  subtitle: hidden
+                      ? 'Segundo o banco. Compras novas podem ser recusadas.'
+                      : 'Disponível no banco: ${money(bank!.availableCents! / 100)}. Compras novas podem ser recusadas.',
+                  action: 'Ver',
+                  onTap: () => _open(CardInvoiceScreen(cardId: card.id))));
+            }
             for (final r in app.recurring) {
               final days = _cancelIntents[r.id];
               if (days == null || !CancelIntents.due(r, days, now)) continue;
               insights.add(NexoInsight(
                   icon: Icons.cancel_schedule_send_outlined,
                   color: NexoTones.warning(context),
-                  title: 'Cancele ${r.name} antes de ${ptShortDate(r.nextDate)}',
+                  title:
+                      'Cancele ${r.name} antes de ${ptShortDate(r.nextDate)}',
                   subtitle:
                       'Você marcou que não vai renovar. ${hidden ? '' : 'Próxima cobrança: ${money(r.amount)}.'}',
                   action: 'Abrir',
@@ -1240,8 +1259,12 @@ class _FinanceHomeScreenState extends State<FinanceHomeScreen>
                 ]));
     if (!mounted || action == null) return;
     if (action == 'view') {
-      openAnalysisEntries(context, alert.charges,
-          alert.kind == 'duplicate' ? 'Cobrança repetida' : alert.recurring!.name);
+      openAnalysisEntries(
+          context,
+          alert.charges,
+          alert.kind == 'duplicate'
+              ? 'Cobrança repetida'
+              : alert.recurring!.name);
       return;
     }
     if (action == 'update') {
@@ -1340,8 +1363,7 @@ class _SpendableBodyState extends State<_SpendableBody> {
                       fontFeatures: NexoTones.figures)),
               const TextSpan(text: '  por dia'),
             ]))),
-        Text(
-            '${money(s.free)} livres até o fim do mês · ${s.daysLeft} dia(s)',
+        Text('${money(s.free)} livres até o fim do mês · ${s.daysLeft} dia(s)',
             style: small),
       ],
       if (_open) ...[
