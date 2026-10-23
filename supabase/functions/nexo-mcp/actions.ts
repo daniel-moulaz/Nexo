@@ -2,8 +2,8 @@
 // a request that one of the person's devices applies with the app's own
 // rules (balances, cards, transfers). The answer says "pendente" until the
 // app confirms; get_request_status tells the outcome.
-import { type Ledger, meta, metadataIndex, text } from "./finance.ts";
-import { ToolInputError, type ToolDefinition } from "./tools.ts";
+import { analyze, cents, day, isNeutral, type Ledger, meta, metadataIndex, money, num, text } from "./finance.ts";
+import { callTool, ToolInputError, type ToolDefinition } from "./tools.ts";
 import { callMoreAction, moreActions } from "./more_actions.ts";
 import { allActions, callAllAction } from "./all_actions.ts";
 
@@ -171,6 +171,17 @@ const baseActions: (ToolDefinition & { destructive?: boolean })[] = [
         before: { ...dateField, description: "Ignora todas com data anterior a esta" },
         preview: { type: "boolean", description: "true: só mostra quantas e quais seriam ignoradas" },
       },
+      additionalProperties: false,
+    },
+  },
+  {
+    name: "get_daily_digest",
+    title: "Resumo do dia",
+    description:
+      "Como foi o dia: o que entrou, o que saiu, compras no cartão, orçamentos estourados, próximos vencimentos e se os dados do banco de hoje já chegaram. Padrão: hoje.",
+    inputSchema: {
+      type: "object",
+      properties: { date: { ...dateField, description: "Dia (AAAA-MM-DD); padrão hoje" } },
       additionalProperties: false,
     },
   },
@@ -415,6 +426,35 @@ export async function callAction(name: string, rawArgs: unknown, l: Ledger, toda
       const count = await deps.ignoreSuggestions(ids?.length ? ids as string[] : null,
         before ? Date.parse(`${before}T00:00:00-03:00`) : null);
       return { ignored: count, message: `${count} sugestão(ões) descartada(s). Nenhum saldo mudou.` };
+    }
+    case "get_daily_digest": {
+      only(args, ["date"]);
+      const d = date(args, "date", today) ?? today;
+      if (d > today) throw new ToolInputError("date não pode ser no futuro.");
+      const a = analyze(l, { from: d, to: d });
+      const metas = metadataIndex(l);
+      const credit = new Set(l.accounts.filter((x) => x.type === "credit").map((x) => text(x.id)));
+      const ofDay = l.transactions.filter((t) => day(text(t.date)) === d &&
+        meta(metas.get(text(t.id))).status !== "pending" && !isNeutral(t, meta(metas.get(text(t.id)))));
+      const item = (t: typeof ofDay[number]) => ({
+        description: text(t.description), amount: money(cents(num(t.amount))),
+        category: l.categories.find((c) => c.id === t.category_id)?.name ?? undefined,
+      });
+      const budgets = (await callMoreAction("get_budgets", {}, l, today, deps.enqueue))?.budgets as
+        { category: string; used_percent: number | null; remaining: number }[] | undefined;
+      const upcoming = callTool("get_upcoming_bills", { days: 3 }, l, today) as Record<string, unknown[]>;
+      return {
+        date: d,
+        income: money(a.income), expense: money(a.expense),
+        incomes: ofDay.filter((t) => t.type === "income").map(item),
+        expenses: ofDay.filter((t) => t.type === "expense" && !credit.has(text(t.account_id))).map(item),
+        card_purchases: ofDay.filter((t) => t.type === "expense" && credit.has(text(t.account_id))).map(item),
+        budgets_over: (budgets ?? []).filter((b) => (b.used_percent ?? 0) >= 100)
+          .map((b) => ({ category: b.category, used_percent: b.used_percent })),
+        due_next_3_days: [...(upcoming.pending_expenses ?? []), ...(upcoming.recurring_expected ?? [])],
+        bank_data: await bankFreshness(deps, today),
+        note: "Transferências, reservas e pendentes não contam como gasto. Se bank_data disser que hoje ainda não chegou, gastos do banco podem faltar.",
+      };
     }
     case "get_bank_sync_status": {
       only(args, []);

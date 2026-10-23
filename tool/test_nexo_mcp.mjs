@@ -508,4 +508,30 @@ await test('bank data until: an empty day is not "no spending" when today did no
   assert.deepEqual(none.banks, []);
 });
 
+await test('daily digest: what came in and out, card purchases, alerts and data freshness', async () => {
+  const q = queue();
+  q.deps.bankStatus = async () => [{ bank: 'Nubank', state: 'ok', bank_updated_at: '2026-10-19T09:00:00.000Z' }];
+  const t = (id, type, amount, account, category, date = '2026-10-20T12:00:00.000') =>
+    ({ id, type, amount, description: id, account_id: account, category_id: category, date });
+  const dayLedger = { ...withIncome,
+    accounts: [...withIncome.accounts, { id: 'nu', name: 'Cartão roxo', type: 'credit', currency: 'BRL' }],
+    transactions: [...withIncome.transactions,
+      t('Trabalho Ifood', 'income', 100, 'bank', 'pay'),
+      t('Batata frita', 'expense', 13.99, 'nu', 'food_exp'),
+      t('Padaria', 'expense', 8, 'bank', 'food_exp'),
+      t('Para a reserva', 'expense', 50, 'bank', 'food_exp'),
+      t('Ontem', 'expense', 99, 'bank', 'food_exp', '2026-10-19T12:00:00.000')],
+    metadata: [...(withIncome.metadata ?? []),
+      { transaction_id: 'Para a reserva', exclude_from_spending: 1, source: 'transfer:x' }],
+  };
+  const r = await act(q, 'get_daily_digest', {}, dayLedger);
+  assert.equal(r.date, '2026-10-20');
+  assert.deepEqual(r.incomes.map((x) => x.description), ['Trabalho Ifood']);
+  assert.deepEqual(r.card_purchases.map((x) => [x.description, x.amount]), [['Batata frita', 13.99]]);
+  assert.equal(r.expenses.some((x) => x.description === 'Para a reserva'), false, 'transfers are not spending');
+  assert.equal(r.expenses.some((x) => x.description === 'Ontem'), false);
+  assert.equal(r.bank_data.banks[0].today_arrived, false);
+  await assert.rejects(act(q, 'get_daily_digest', { date: '2026-10-21' }, dayLedger), ToolInputError);
+});
+
 console.log(`NEXO MCP: ${passed} tests passed; synthetic fixture only.`);

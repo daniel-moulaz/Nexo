@@ -664,6 +664,35 @@ class _FinanceHomeScreenState extends State<FinanceHomeScreen>
                   action: 'Ver',
                   onTap: () => _open(const RecurringScreen())));
             }
+            // Yesterday in one line, with what fits today (the daily digest).
+            final yesterday = DateTime(today.year, today.month, today.day - 1);
+            final yday = analyzePeriod(
+                app, AnalysisFilter(from: yesterday, to: yesterday));
+            if (yday.expense > 0 || yday.income > 0) {
+              final onCard = yday.realized
+                  .where((t) =>
+                      t.type == 'expense' &&
+                      app.accountById(t.accountId)?.type == 'credit')
+                  .fold<double>(0, (s, t) => s + t.amount);
+              insights.add(NexoInsight(
+                  icon: Icons.history_toggle_off,
+                  color: cs.primary,
+                  title: hidden
+                      ? 'Resumo de ontem'
+                      : 'Ontem: saiu ${money(yday.expense)}${yday.income > 0 ? ', entrou ${money(yday.income)}' : ''}',
+                  subtitle: hidden
+                      ? 'Toque para ver os lançamentos.'
+                      : [
+                          if (onCard > 0) '${money(onCard)} no cartão',
+                          if (budgetFree.hasBase && budgetFree.free > 0)
+                            'hoje cabe ${money(budgetFree.perDay)}',
+                        ].join(' · ').ifEmpty('Toque para ver os lançamentos.'),
+                  action: 'Ver',
+                  onTap: () => openAnalysisEntries(
+                      context,
+                      yday.realized.where((t) => t.type == 'expense'),
+                      'Gastos de ontem')));
+            }
             // The first days of a month: invite to look back at the last one.
             if (today.day <= 5) {
               final last = DateTime(today.year, today.month - 1);
@@ -1727,4 +1756,8 @@ class _BudgetRow extends StatelessWidget {
                   style: Theme.of(context).textTheme.bodySmall),
             ])));
   }
+}
+
+extension on String {
+  String ifEmpty(String other) => isEmpty ? other : this;
 }
