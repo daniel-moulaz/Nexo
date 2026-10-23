@@ -146,6 +146,14 @@ await test('rate limit is retryable; malformed cursor is refused', async () => {
   await assert.rejects(evil.transactions('acc-bank', '2026-10-01'), e => e instanceof PluggyError);
 });
 
+await test('bill count reads GET /bills of the card and returns only a number', async () => {
+  const api = fakeApi((url) => url.endsWith('/auth') ? json({ apiKey: 'k' })
+    : json({ total: 2, results: [{ totalAmount: 420.92 }, { totalAmount: 213.59 }] }));
+  const client = new PluggyClient('id', 'secret', api.fetcher, 'https://api.example');
+  assert.equal(await client.billCount('acc card'), 2);
+  assert.equal(api.calls[1].url, 'https://api.example/bills?accountId=acc%20card');
+});
+
 // ── syncOwner: one refresh with fake Pluggy and fake store ─────────────
 const { syncOwner } = await import('../supabase/functions/pluggy-sync/sync.ts');
 function fakeStore(items) {
@@ -247,6 +255,19 @@ await test('sync: stores balances and the bank time with each read', async () =>
   await syncOwner('owner', source([tx({ id: 'n', updatedAt: '2026-10-20T06:00:00.000Z' })],
     { status: 'UPDATED', lastUpdatedAt: '2026-10-01T00:00:00.000Z' }), store, { now });
   assert.deepEqual(saved, [['item-1', '2026-10-20T06:00:00.000Z', ['acc-bank']]]);
+});
+
+await test('sync: counts official invoices of cards only, a refusal does not stop the read', async () => {
+  const store = fakeStore([{ item_id: 'item-1', label: 'Banco', last_fetch_at: null }]);
+  const asked = [];
+  const withBills = { ...source([tx({ id: 'c' })]), accounts: async () => [bank, card, { ...card, id: 'acc-card2' }],
+    billCount: async (id) => { asked.push(id); if (id === 'acc-card2') throw new PluggyError(403, false); return 3; } };
+  const [r] = await syncOwner('owner', withBills, store, { now });
+  assert.deepEqual(asked, ['acc-card', 'acc-card2']);
+  assert.deepEqual(r.bills, [3, 'pluggy_403']);
+  assert.equal(r.fetched, true);
+  const [plain] = await syncOwner('owner', source([]), fakeStore([{ item_id: 'i', label: 'B', last_fetch_at: null }]), { now });
+  assert.equal(plain.bills, undefined);
 });
 
 console.log(`PLUGGY: ${passed} tests passed; synthetic data only.`);
