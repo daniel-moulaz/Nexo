@@ -1,5 +1,22 @@
 # Changelog
 
+## [1.12.0] - 2026-10-23
+Dados do banco (Meu Pluggy) usados para conferir, nunca para criar dinheiro sozinhos.
+
+### Adicionado
+- **Saldo do banco × saldo do Nexo:** por conta vinculada, com a diferença e um ajuste neutro em um toque (não vira receita nem gasto).
+- **"Dados do banco até…":** última movimentação recebida de cada banco, no app e para o assistente; aviso quando o dia ainda não chegou (o Open Finance atualiza uma vez por dia).
+- **Limite real do cartão** vindo do banco, com alerta perto do limite.
+- **Resumo do dia:** "como foi meu dia?" no assistente (`get_daily_digest`) e o dia anterior no início.
+- **Vencimento que o caixa não cobre:** aviso antes da data com opções reais, incluindo quanto dá para resgatar até lá (D+2 úteis em ações/FIIs/ETFs, D+0 em renda fixa, feriados de mercado).
+- **Navegação:** Hoje · Extrato · Orçamento · Contas · Mais (investimentos em Mais) e **"Mês em revisão"**.
+
+### Corrigido
+- Frescor do banco calculado pela movimentação mais recente: a data do espelho do Meu Pluggy fica parada na criação.
+
+### Servidor
+- Migrations `202610210006` e `202610230001` aplicadas; `nexo-mcp` e `pluggy-sync` republicados em 23/10.
+
 ## [1.11.0] - 2026-10-23
 Evolução guiada pela sessão de conciliação de outubro (`docs/PLAN.md`). Apostas ficaram fora por decisão do dono.
 

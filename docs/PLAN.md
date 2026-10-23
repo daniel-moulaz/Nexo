@@ -13,8 +13,9 @@ de bets). O resto segue em fases, cada uma com testes e commit próprio.
 | 3 MCP | Feita (`191faec`); migration `202610210006` aplicada e `nexo-mcp` republicado em 23/10. |
 | 4 Orçamento vivo | Feita (`746eaae`): quanto posso gastar, ritmo ideal, orçamento proporcional. Rollover e Flex ficaram. |
 | 5 Recorrentes | Parcial (`539cbc7`): alertas de valor/duplicidade, "não vou renovar". Despesa dividida ficou. |
-| 6 Navegação | Não iniciada. |
+| 6 Navegação | Feita (`ff73716`): Hoje · Extrato · Orçamento · Contas · Mais e "Mês em revisão". Onboarding ficou. |
 | 7 Extras | Não iniciada. |
+| Open Finance (1.12.0) | Saldo do banco × Nexo com ajuste neutro (`51e5156`), "dados do banco até…" (`ac68528`, `cadab59`), limite real do cartão (`c843eaa`), resumo do dia (`b471a66`), aviso de vencimento sem caixa com quanto dá para levantar (`90459d4`). Contagem de `/bills` no `pluggy-sync` (`e3cb3ca`) antes da fatura oficial. |
 
 ## Diagnóstico da arquitetura atual
 
