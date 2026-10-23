@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import '../widgets/nexo_ui.dart';
+import '../services/balance_check.dart';
+import '../services/bank_snapshots.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
@@ -366,6 +369,8 @@ class _CardInvoiceScreenState extends State<CardInvoiceScreen> {
                     if (freeLimit != null && !app.settings.hideBalance)
                       Text(
                           'Limite disponível ${formatAmount(freeLimit, card.currency)}'),
+                    if (!app.settings.hideBalance)
+                      _BankLimit(cardId: card.id, currency: card.currency),
                   ],
                 ),
               ),
@@ -447,5 +452,47 @@ class _CardInvoiceScreenState extends State<CardInvoiceScreen> {
         );
       },
     );
+  }
+}
+
+/// The limit as the bank reports it (Open Finance), when this card is
+/// linked in "Conferir com o banco".
+class _BankLimit extends StatelessWidget {
+  const _BankLimit({required this.cardId, required this.currency});
+  final String cardId, currency;
+
+  @override
+  Widget build(BuildContext context) {
+    return FutureBuilder<List<BankAccountSnapshot>>(
+        future: BankSnapshots.load(),
+        builder: (context, snapshot) {
+          final bank =
+              BankSnapshots.linkedTo(snapshot.data ?? const [], cardId);
+          final used = bank == null ? null : BankSnapshots.limitUsed(bank);
+          if (bank == null || used == null) return const SizedBox.shrink();
+          final warn = used >= .9;
+          final color = warn
+              ? Theme.of(context).colorScheme.error
+              : Theme.of(context).colorScheme.onSurfaceVariant;
+          return Padding(
+            padding: const EdgeInsets.only(top: 8),
+            child:
+                Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text(
+                  'No banco: limite ${formatAmount(bank.creditLimitCents! / 100, currency)} · disponível ${formatAmount(bank.availableCents! / 100, currency)}',
+                  style: TextStyle(color: color)),
+              const SizedBox(height: 4),
+              NexoProgress(value: used),
+              if (warn)
+                Padding(
+                  padding: const EdgeInsets.only(top: 4),
+                  child: Text(
+                      '${(used * 100).round()}% do limite usado. Compras novas podem ser recusadas.',
+                      style:
+                          TextStyle(color: color, fontWeight: FontWeight.w700)),
+                ),
+            ]),
+          );
+        });
   }
 }
