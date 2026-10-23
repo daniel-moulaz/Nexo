@@ -10,7 +10,7 @@ de bets). O resto segue em fases, cada uma com testes e commit próprio.
 |---|---|
 | 1 Fundação | Feita (`413b637`): regra do fechamento, transferências sem categoria, renda fixa × extra. |
 | 2 Conciliação | Feita (`6cbd78c`): `reconciliation.dart`, `inbox_reconciler.dart`, caixa "Para revisar". |
-| 3 MCP | Feita no código (`191faec`); **migration `202610210006` e redeploy do `nexo-mcp` pendentes**. |
+| 3 MCP | Feita (`191faec`); migration `202610210006` aplicada e `nexo-mcp` republicado em 23/10. |
 | 4 Orçamento vivo | Feita (`746eaae`): quanto posso gastar, ritmo ideal, orçamento proporcional. Rollover e Flex ficaram. |
 | 5 Recorrentes | Parcial (`539cbc7`): alertas de valor/duplicidade, "não vou renovar". Despesa dividida ficou. |
 | 6 Navegação | Não iniciada. |
