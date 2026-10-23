@@ -85,4 +85,11 @@ export class PluggyClient {
     if (query) throw new PluggyError(507, true); // more pages than allowed in one run
     return all;
   }
+
+  /// How many official invoices the bank exposes for a card. Only the count:
+  /// it tells whether Meu Pluggy mirrors bills before the app relies on them.
+  async billCount(accountId: string): Promise<number> {
+    const page = await this.get<{ results?: unknown[]; total?: number }>(`/bills?accountId=${encodeURIComponent(accountId)}`);
+    return typeof page.total === "number" ? page.total : (page.results ?? []).length;
+  }
 }
