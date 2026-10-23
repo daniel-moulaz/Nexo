@@ -220,7 +220,7 @@ void main() {
           expect(tester.takeException(), isNull);
         }
         if (screen == 'shell' && size.width >= 900) {
-          expect(find.text('Resumo'), findsOneWidget);
+          expect(find.widgetWithText(ListTile, 'Hoje'), findsOneWidget);
           await tester.tap(find.text('Análises').first);
           await tester.pumpAndSettle();
           expect(find.byType(AnalysisScreen), findsOneWidget);
@@ -267,7 +267,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('1 resultado'), findsOneWidget);
     expect(find.byType(DataTable), findsOneWidget);
-    await tester.tap(find.text('Resumo'));
+    await tester.tap(find.widgetWithText(ListTile, 'Hoje'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Transações'));
     await tester.pumpAndSettle();

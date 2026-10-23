@@ -378,11 +378,11 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
                     style: Theme.of(context).textTheme.titleLarge),
                 const SizedBox(height: 16),
                 const Text(
-                    'Esta movimentação está vinculada à carteira. Revise ou exclua a operação em Investir para atualizar posição e saldo juntos.'),
+                    'Esta movimentação está vinculada à carteira. Revise ou exclua a operação em Investimentos para atualizar posição e saldo juntos.'),
                 const SizedBox(height: 16),
                 FilledButton.icon(
                     icon: const Icon(Icons.trending_up),
-                    label: const Text('Abrir Investir'),
+                    label: const Text('Abrir Investimentos'),
                     onPressed: () {
                       context.read<AppProvider>().tabIndexNotifier.value = 11;
                       Navigator.pop(context);

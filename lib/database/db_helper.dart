@@ -817,7 +817,7 @@ class DBHelper {
               where: 'cash_account_id=?', whereArgs: [id], limit: 1))
           .isNotEmpty) {
         throw const FormatException(
-            'Esta conta possui operações de investimento vinculadas. Revise-as em Investir antes de excluir.');
+            'Esta conta possui operações de investimento vinculadas. Revise-as em Investimentos antes de excluir.');
       }
       // Never delete history or money in cascade: whoever calls this (screen,
       // sync, assistant) must first move or remove what depends on the account.
