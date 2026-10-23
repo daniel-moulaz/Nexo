@@ -100,6 +100,7 @@ const handler = createHandler({
         await rpc("nexo_mcp_suggestions", { p_connector_id: c.id, p_limit: limit }) as Record<string, unknown>[],
       ignoreSuggestions: async (ids, beforeMs) =>
         await rpc("nexo_mcp_ignore_suggestions", { p_connector_id: c.id, p_ids: ids, p_before_ms: beforeMs }) as number,
+      bankStatus: async () => await rpc("nexo_mcp_bank_status", { p_connector_id: c.id }) as Record<string, unknown>[],
     };
   },
 });

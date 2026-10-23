@@ -29,6 +29,9 @@ class _NotificationInboxScreenState extends State<NotificationInboxScreen>
     with WidgetsBindingObserver {
   InboxState? state;
   String? error;
+
+  /// "Os dados de hoje ainda não chegaram…" (Open Finance is daily).
+  String? _freshness;
   bool _showResolved = false;
   StreamSubscription<dynamic>? _events;
   @override
@@ -74,9 +77,15 @@ class _NotificationInboxScreenState extends State<NotificationInboxScreen>
               'Não foi possível buscar novas sugestões. As já salvas continuam disponíveis. Tente atualizar.';
         }
       }
+      String? freshness;
       if (PluggyInbox.instance case final pluggy?) {
         final problem = await pluggy.sync(force: force);
         if (problem != null) syncError = 'Open Finance: $problem';
+        try {
+          freshness = todayMissing(await pluggy.remote.items(), DateTime.now());
+        } catch (_) {
+          // Only a hint: the inbox works without it.
+        }
       }
       if (!mounted) return;
       final app = context.read<AppProvider>();
@@ -88,6 +97,7 @@ class _NotificationInboxScreenState extends State<NotificationInboxScreen>
         setState(() {
           state = result;
           error = syncError;
+          _freshness = freshness;
         });
     } catch (_) {
       if (mounted)
@@ -300,6 +310,16 @@ class _NotificationInboxScreenState extends State<NotificationInboxScreen>
                   Padding(
                       padding: const EdgeInsets.only(bottom: 8),
                       child: Text(error!, style: TextStyle(color: cs.error))),
+                if (_freshness != null)
+                  Padding(
+                      padding: const EdgeInsets.only(bottom: 8),
+                      child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Icon(Icons.schedule, size: 18, color: cs.tertiary),
+                            const SizedBox(width: 6),
+                            Expanded(child: Text(_freshness!)),
+                          ])),
                 if (state == null && error == null)
                   const LinearProgressIndicator(),
                 if (state != null) ...[

@@ -610,6 +610,13 @@ try {
     assert.deepEqual([bank.balance_cents, bank.nexo_account_id], [46700, 'nexo-mp']);
     assert.equal(new Date(bank.bank_updated_at).toISOString(), '2026-10-22T06:00:00.000Z');
     await denies(() => service('nexo_pluggy_store_accounts', [A, own, null, '[]']), '42501');
+    // An assistant only sees its own person's banks; never callable by users.
+    const connA = (await db.query(`select id from nexo_mcp_private.connectors
+      where owner_id = $1 and revoked_at is null`, [A])).rows[0];
+    const statusA = await service('nexo_mcp_bank_status', [connA.id]);
+    assert.ok(Array.isArray(statusA));
+    assert.equal(statusA.some(s => s.bank === 'Banco de saldos'), false);
+    await denies(() => user(A, tx => rpc(tx, 'nexo_mcp_bank_status', [connA.id])));
   });
   console.log(`SQL LAB: ${passed} tests passed; synthetic local data only.`);
 } finally {

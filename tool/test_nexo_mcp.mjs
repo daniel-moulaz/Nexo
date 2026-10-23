@@ -491,4 +491,21 @@ await test('ignoring in batch can be previewed first', async () => {
   assert.equal(q.ignored.length, 0);
 });
 
+await test('bank data until: an empty day is not "no spending" when today did not arrive', async () => {
+  const q = queue();
+  q.deps.bankStatus = async () => [
+    { bank: 'Nubank', state: 'ok', bank_updated_at: '2026-10-19T09:00:00.000Z' },
+    { bank: 'Inter', state: 'ok', bank_updated_at: '2026-10-20T09:30:00.000Z' },
+  ];
+  const r = await act(q, 'get_bank_sync_status', {});
+  assert.deepEqual(r.banks.map((b) => [b.bank, b.data_until, b.today_arrived]),
+    [['Nubank', '2026-10-19 06:00', false], ['Inter', '2026-10-20 06:30', true]]);
+  assert.match(r.note, /Não conclua que não houve gasto/);
+  const list = await act(q, 'list_suggestions', {});
+  assert.equal(list.bank_data.banks.length, 2);
+  const old = queue();
+  const none = await act(old, 'get_bank_sync_status', {});
+  assert.deepEqual(none.banks, []);
+});
+
 console.log(`NEXO MCP: ${passed} tests passed; synthetic fixture only.`);
