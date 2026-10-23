@@ -4,6 +4,18 @@ Origem: `prompt-claude-code-nexo.md` (sessão de conciliação com o assistente)
 Fora do escopo por decisão do dono: **tudo de apostas** (5.6, lista oficial
 de bets). O resto segue em fases, cada uma com testes e commit próprio.
 
+## Andamento (23/10/2026)
+
+| Fase | Situação |
+|---|---|
+| 1 Fundação | Feita (`413b637`): regra do fechamento, transferências sem categoria, renda fixa × extra. |
+| 2 Conciliação | Feita (`6cbd78c`): `reconciliation.dart`, `inbox_reconciler.dart`, caixa "Para revisar". |
+| 3 MCP | Feita no código (`191faec`); **migration `202610210006` e redeploy do `nexo-mcp` pendentes**. |
+| 4 Orçamento vivo | Feita (`746eaae`): quanto posso gastar, ritmo ideal, orçamento proporcional. Rollover e Flex ficaram. |
+| 5 Recorrentes | Parcial (`539cbc7`): alertas de valor/duplicidade, "não vou renovar". Despesa dividida ficou. |
+| 6 Navegação | Não iniciada. |
+| 7 Extras | Não iniciada. |
+
 ## Diagnóstico da arquitetura atual
 
 - **Local-first.** O dinheiro mora no SQLite de cada aparelho (Flutter,
