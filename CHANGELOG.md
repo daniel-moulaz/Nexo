@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.12.1] - 2026-10-23
+### Adicionado
+- **Fatura do banco ao lado da fatura do Nexo** (Open Finance, hoje só o Nubank expõe): total oficial, vencimento, mínimo, encargos e a diferença para o Nexo. O banco é a referência final; a diferença indica compras a conferir. Nada é lançado ou pago a partir dela.
+
+### Servidor
+- Migration `202610230002_pluggy_bills.sql` e `pluggy-sync` guardando as faturas oficiais (só totais, datas e somas).
+
 ## [1.12.0] - 2026-10-23
 Dados do banco (Meu Pluggy) usados para conferir, nunca para criar dinheiro sozinhos.
 
