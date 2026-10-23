@@ -1,6 +1,48 @@
 import '../models/models.dart';
 import '../models/transaction_metadata.dart';
 
+/// An official card invoice from the bank (Open Finance): totals and dates.
+class BankBill {
+  const BankBill({
+    required this.id,
+    required this.dueDate,
+    required this.totalCents,
+    this.closeDate,
+    this.minimumCents,
+    this.chargesCents = 0,
+    this.paidCents = 0,
+    this.currency = 'BRL',
+  });
+  final String id, currency;
+  final DateTime dueDate;
+  final DateTime? closeDate;
+  final int totalCents, chargesCents, paidCents;
+  final int? minimumCents;
+
+  static DateTime? _day(Object? v) {
+    final d = v is String ? DateTime.tryParse(v) : null;
+    return d == null ? null : DateTime(d.year, d.month, d.day);
+  }
+
+  /// Null for a row without its essentials (never guessed).
+  static BankBill? fromJson(Map<String, dynamic> j) {
+    final id = j['bill_id'],
+        due = _day(j['due_date']),
+        total = j['total_cents'];
+    if (id is! String || due == null || total is! num) return null;
+    return BankBill(
+      id: id,
+      dueDate: due,
+      closeDate: _day(j['close_date']),
+      totalCents: total.toInt(),
+      minimumCents: (j['minimum_cents'] as num?)?.toInt(),
+      chargesCents: (j['charges_cents'] as num?)?.toInt() ?? 0,
+      paidCents: (j['paid_cents'] as num?)?.toInt() ?? 0,
+      currency: j['currency'] as String? ?? 'BRL',
+    );
+  }
+}
+
 /// An Open Finance account as the server keeps it (no number, owner or CPF).
 class BankAccountSnapshot {
   const BankAccountSnapshot({
@@ -17,6 +59,7 @@ class BankAccountSnapshot {
     this.dueDate,
     this.nexoAccountId,
     this.bankUpdatedAt,
+    this.bills = const [],
   });
   final String accountId, bank, type, name, currency;
   final int? balanceCents,
@@ -25,6 +68,9 @@ class BankAccountSnapshot {
       minimumPaymentCents;
   final DateTime? closeDate, dueDate, bankUpdatedAt;
   final String? nexoAccountId;
+
+  /// Official invoices of a card, newest due date first.
+  final List<BankBill> bills;
 
   bool get isCard => type == 'CREDIT';
 
@@ -57,6 +103,11 @@ class BankAccountSnapshot {
         dueDate: _date(j['due_date']),
         nexoAccountId: j['nexo_account_id'] as String?,
         bankUpdatedAt: _date(j['bank_updated_at']),
+        // Malformed rows are skipped.
+        bills: [
+          for (final b in j['bills'] as List? ?? const [])
+            if (b is Map) BankBill.fromJson(b.cast<String, dynamic>())
+        ].whereType<BankBill>().toList(),
       );
 }
 
