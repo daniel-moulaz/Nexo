@@ -1,7 +1,7 @@
 // Tests for the Pluggy client and normalizer: `node tool/test_pluggy.mjs`.
 // Synthetic objects shaped by api.pluggy.ai/oas3.json; no network, no keys.
 import assert from 'node:assert/strict';
-import { isSkip, latestMovementAt, itemHealth, merge, toAccountSnapshot, toSuggestion } from '../supabase/functions/pluggy-sync/normalize.ts';
+import { isSkip, latestMovementAt, itemHealth, merge, toAccountSnapshot, toBillSnapshot, toSuggestion } from '../supabase/functions/pluggy-sync/normalize.ts';
 import { PluggyClient, PluggyError } from '../supabase/functions/pluggy-sync/pluggy.ts';
 
 let passed = 0;
@@ -146,12 +146,12 @@ await test('rate limit is retryable; malformed cursor is refused', async () => {
   await assert.rejects(evil.transactions('acc-bank', '2026-10-01'), e => e instanceof PluggyError);
 });
 
-await test('bill count reads GET /bills of the card and returns only a number', async () => {
+await test('bills reads GET /bills of the card, one page', async () => {
   const api = fakeApi((url) => url.endsWith('/auth') ? json({ apiKey: 'k' })
-    : json({ total: 2, results: [{ totalAmount: 420.92 }, { totalAmount: 213.59 }] }));
+    : json({ total: 2, results: [{ id: 'b1', totalAmount: 420.92 }, { id: 'b2', totalAmount: 213.59 }] }));
   const client = new PluggyClient('id', 'secret', api.fetcher, 'https://api.example');
-  assert.equal(await client.billCount('acc card'), 2);
-  assert.equal(api.calls[1].url, 'https://api.example/bills?accountId=acc%20card');
+  assert.deepEqual((await client.bills('acc card')).map(b => b.id), ['b1', 'b2']);
+  assert.equal(api.calls[1].url, 'https://api.example/bills?accountId=acc%20card&pageSize=24');
 });
 
 // ── syncOwner: one refresh with fake Pluggy and fake store ─────────────
@@ -257,14 +257,34 @@ await test('sync: stores balances and the bank time with each read', async () =>
   assert.deepEqual(saved, [['item-1', '2026-10-20T06:00:00.000Z', ['acc-bank']]]);
 });
 
-await test('sync: counts official invoices of cards only, a refusal does not stop the read', async () => {
+await test('bill snapshot: totals, dates and sums only', () => {
+  const b = toBillSnapshot({ id: 'bill-1', dueDate: '2026-10-26T00:00:00.000Z', billClosingDate: '2026-10-19T00:00:00Z',
+    totalAmount: 420.92, totalAmountCurrencyCode: 'BRL', minimumPaymentAmount: 63.14,
+    financeCharges: [{ id: 'c', type: 'IOF', amount: 1.5 }, { id: 'd', type: 'OTHER', amount: 2, additionalInfo: 'Tarifa' }],
+    payments: [{ id: 'p', valueType: 'FULL_PAYMENT', paymentMode: 'PIX', amount: 100 }] });
+  assert.deepEqual(b, { bill_id: 'bill-1', due_date: '2026-10-26', close_date: '2026-10-19', total_cents: 42092,
+    minimum_cents: 6314, charges_cents: 350, paid_cents: 10000, currency: 'BRL' });
+  assert.equal(JSON.stringify(b).includes('PIX'), false);
+  assert.equal(toBillSnapshot({ id: 'x', dueDate: 'logo', totalAmount: 1 }), null);
+  assert.equal(toBillSnapshot({ id: 'x/../y', dueDate: '2026-10-26', totalAmount: 1 }), null);
+});
+
+await test('sync: stores official invoices of cards after the accounts; a refusal does not stop the read', async () => {
   const store = fakeStore([{ item_id: 'item-1', label: 'Banco', last_fetch_at: null }]);
-  const asked = [];
+  const asked = [], order = [];
+  store.accounts = async (_o, _i, _u, rows) => order.push(['accounts', rows.length]);
+  store.bills = async (_o, accountId, rows) => order.push(['bills', accountId, rows.map(r => r.bill_id)]);
   const withBills = { ...source([tx({ id: 'c' })]), accounts: async () => [bank, card, { ...card, id: 'acc-card2' }],
-    billCount: async (id) => { asked.push(id); if (id === 'acc-card2') throw new PluggyError(403, false); return 3; } };
+    bills: async (id) => {
+      asked.push(id);
+      if (id === 'acc-card2') throw new PluggyError(403, false);
+      return [{ id: 'old', dueDate: '2026-09-26', totalAmount: 390.1 }, { id: 'new', dueDate: '2026-10-26', totalAmount: 420.92 },
+        { id: 'bad', dueDate: 'x', totalAmount: 1 }];
+    } };
   const [r] = await syncOwner('owner', withBills, store, { now });
   assert.deepEqual(asked, ['acc-card', 'acc-card2']);
-  assert.deepEqual(r.bills, [3, 'pluggy_403']);
+  assert.deepEqual(r.bills, [2, 'pluggy_403']);
+  assert.deepEqual(order, [['accounts', 3], ['bills', 'acc-card', ['new', 'old']]]);
   assert.equal(r.fetched, true);
   const [plain] = await syncOwner('owner', source([]), fakeStore([{ item_id: 'i', label: 'B', last_fetch_at: null }]), { now });
   assert.equal(plain.bills, undefined);

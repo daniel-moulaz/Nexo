@@ -1,7 +1,7 @@
 // Minimal Pluggy API client (read-only). Credentials come from Supabase
 // secrets set by the account owner; they never reach the app or logs.
 // No payment, Pix or transfer endpoint is called or exposed.
-import type { PluggyAccount, PluggyTransaction } from "./normalize.ts";
+import type { PluggyAccount, PluggyBill, PluggyTransaction } from "./normalize.ts";
 
 export class PluggyError extends Error {
   readonly status: number;
@@ -86,10 +86,10 @@ export class PluggyClient {
     return all;
   }
 
-  /// How many official invoices the bank exposes for a card. Only the count:
-  /// it tells whether Meu Pluggy mirrors bills before the app relies on them.
-  async billCount(accountId: string): Promise<number> {
-    const page = await this.get<{ results?: unknown[]; total?: number }>(`/bills?accountId=${encodeURIComponent(accountId)}`);
-    return typeof page.total === "number" ? page.total : (page.results ?? []).length;
+  /// Official invoices of a card (one page of up to 24; the newest matter).
+  async bills(accountId: string): Promise<PluggyBill[]> {
+    const page = await this.get<{ results?: PluggyBill[] }>(
+      `/bills?accountId=${encodeURIComponent(accountId)}&pageSize=24`);
+    return page.results ?? [];
   }
 }

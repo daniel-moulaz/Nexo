@@ -618,6 +618,29 @@ try {
     assert.equal(statusA.some(s => s.bank === 'Banco de saldos'), false);
     await denies(() => user(A, tx => rpc(tx, 'nexo_mcp_bank_status', [connA.id])));
   });
+  await test('pluggy: official card invoices ride on the account, replaced per card, per owner', async () => {
+    await db.exec(await readFile(new URL('../supabase/migrations/202610230002_pluggy_bills.sql', import.meta.url), 'utf8'));
+    const bill = (id, due, total, over = {}) => ({ bill_id: id, due_date: due, close_date: null,
+      total_cents: total, minimum_cents: 6300, charges_cents: 0, paid_cents: 0, currency: 'BRL', ...over });
+    await service('nexo_pluggy_store_bills', [B, 'acc-card', JSON.stringify([
+      bill('bill-set', '2026-09-26', 39010, { paid_cents: 39010 }), bill('bill-out', '2026-10-26', 42092),
+    ])]);
+    let card = (await user(B, tx => rpc(tx, 'nexo_pluggy_accounts', []))).find(a => a.account_id === 'acc-card');
+    assert.deepEqual(card.bills.map(b => [b.bill_id, b.due_date, b.total_cents]),
+      [['bill-out', '2026-10-26', 42092], ['bill-set', '2026-09-26', 39010]]);
+    assert.equal(card.bills[1].paid_cents, 39010);
+    // The bank's list replaces what was kept: a bill gone from it goes away.
+    await service('nexo_pluggy_store_bills', [B, 'acc-card', JSON.stringify([bill('bill-out', '2026-10-26', 42100)])]);
+    card = (await user(B, tx => rpc(tx, 'nexo_pluggy_accounts', []))).find(a => a.account_id === 'acc-card');
+    assert.deepEqual(card.bills.map(b => [b.bill_id, b.total_cents]), [['bill-out', 42100]]);
+    assert.deepEqual((await user(B, tx => rpc(tx, 'nexo_pluggy_accounts', []))).find(a => a.account_id === 'acc-bank').bills, []);
+    // Only cards of the owner; never callable by users.
+    await denies(() => service('nexo_pluggy_store_bills', [B, 'acc-bank', '[]']), '42501');
+    await denies(() => service('nexo_pluggy_store_bills', [A, 'acc-card', '[]']), '42501');
+    await denies(() => user(B, tx => rpc(tx, 'nexo_pluggy_store_bills', [B, 'acc-card', '[]'])), '42501');
+    await denies(() => service('nexo_pluggy_store_bills', [B, 'acc-card', JSON.stringify(
+      Array.from({ length: 25 }, (_, i) => bill(`b${i}`, '2026-10-26', 1)))]), '22023');
+  });
   console.log(`SQL LAB: ${passed} tests passed; synthetic local data only.`);
 } finally {
   await db.close();

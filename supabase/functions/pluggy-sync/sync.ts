@@ -2,8 +2,8 @@
 // transactions, turn them into suggestions and store them with the tested
 // merge rules. Read-only towards Pluggy; never creates money in the ledger.
 import {
-  type AccountSnapshot, type ItemHealth, latestMovementAt, isSkip, itemHealth, merge, type PluggyAccount,
-  type PluggyTransaction, type Suggestion, toAccountSnapshot, toSuggestion,
+  type AccountSnapshot, type BillSnapshot, type ItemHealth, latestMovementAt, isSkip, itemHealth, merge, type PluggyAccount,
+  type PluggyBill, type PluggyTransaction, type Suggestion, toAccountSnapshot, toBillSnapshot, toSuggestion,
 } from "./normalize.ts";
 import { PluggyError } from "./pluggy.ts";
 
@@ -11,8 +11,8 @@ export interface Source {
   item(id: string): Promise<Record<string, unknown>>;
   accounts(itemId: string): Promise<PluggyAccount[]>;
   transactions(accountId: string, dateFrom: string): Promise<PluggyTransaction[]>;
-  /// Official invoices of a card (count only; optional).
-  billCount?(accountId: string): Promise<number>;
+  /// Official invoices of a card (optional).
+  bills?(accountId: string): Promise<PluggyBill[]>;
 }
 
 export interface StoredItem { item_id: string; label: string; last_fetch_at: string | null }
@@ -25,6 +25,8 @@ export interface Store {
   store(owner: string, itemId: string, health: ItemHealth, rows: Row[]): Promise<number>;
   /// Latest balances and card limits of the item (optional: older servers).
   accounts?(owner: string, itemId: string, updatedAt: string | null, rows: AccountSnapshot[]): Promise<void>;
+  /// Official invoices of one card; the bank's list replaces the kept one.
+  bills?(owner: string, accountId: string, rows: BillSnapshot[]): Promise<void>;
 }
 
 export interface ItemResult {
@@ -34,8 +36,7 @@ export interface ItemResult {
   fetched: boolean;
   written: number;
   skipped: number;
-  /// Official invoices per card, or the error code: a probe before the app
-  /// shows the bank's own invoice. Never amounts.
+  /// Official invoices read per card, or the error code. Never amounts.
   bills?: (number | string)[];
 }
 
@@ -63,15 +64,20 @@ export async function syncOwner(owner: string, source: Source, store: Store,
     let updatedAt: string | null = null;
     let skipped = 0;
     const bills: (number | string)[] = [];
+    const cardBills = new Map<string, BillSnapshot[]>();
     try {
       const raw = await source.item(item.item_id);
       health = itemHealth(raw as Parameters<typeof itemHealth>[0], now);
       for (const account of await source.accounts(item.item_id)) {
         const snapshot = toAccountSnapshot(account);
         if (snapshot) snapshots.push(snapshot);
-        if (account.type === "CREDIT" && source.billCount) {
+        if (account.type === "CREDIT" && source.bills) {
           try {
-            bills.push(await source.billCount(account.id));
+            const rows = (await source.bills(account.id)).map(toBillSnapshot)
+              .filter((b): b is BillSnapshot => b !== null)
+              .sort((a, b) => b.due_date.localeCompare(a.due_date)).slice(0, 24);
+            cardBills.set(account.id, rows);
+            bills.push(rows.length);
           } catch (error) {
             if (!(error instanceof PluggyError)) throw error;
             bills.push(error.message);
@@ -114,6 +120,8 @@ export async function syncOwner(owner: string, source: Source, store: Store,
       written += await store.store(owner, item.item_id, health, rows.slice(i, i + 500));
     }
     if (store.accounts) await store.accounts(owner, item.item_id, updatedAt, snapshots);
+    // After the accounts: each bill belongs to a stored card.
+    if (store.bills) for (const [accountId, rows] of cardBills) await store.bills(owner, accountId, rows);
     results.push({
       item_id: item.item_id, label: item.label, health, fetched: true, written, skipped,
       bills: bills.length ? bills : undefined,
