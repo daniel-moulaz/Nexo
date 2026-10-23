@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../services/pluggy_inbox.dart';
+import 'balance_check_screen.dart';
 
 import '../models/models.dart';
 import '../providers/app_provider.dart';
@@ -48,6 +50,14 @@ class AccountsScreen extends StatelessWidget {
           title: const Text('Contas e cartões',
               style: TextStyle(fontWeight: FontWeight.w900)),
           actions: [
+            if (PluggyInbox.instance != null)
+              IconButton(
+                  tooltip: 'Conferir com o banco',
+                  icon: const Icon(Icons.fact_check_outlined),
+                  onPressed: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                          builder: (_) => const BalanceCheckScreen()))),
             Padding(
               padding: const EdgeInsets.only(right: 16),
               child: Column(

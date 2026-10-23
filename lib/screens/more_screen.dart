@@ -25,6 +25,7 @@ import 'debt_overview_screen.dart';
 import 'financial_checkup_screen.dart';
 import 'investments_screen.dart';
 import 'month_review_screen.dart';
+import 'balance_check_screen.dart';
 
 class MoreScreen extends StatelessWidget {
   const MoreScreen({super.key});
@@ -58,6 +59,12 @@ class MoreScreen extends StatelessWidget {
           sub: 'Carteira, proventos e comparação com o CDI',
           color: Color(0xFF00897B),
           screen: InvestmentsScreen()),
+      const _Item(
+          icon: Icons.fact_check_outlined,
+          label: 'Conferir com o banco',
+          sub: 'Saldo do Open Finance × saldo do Nexo, com ajuste neutro',
+          color: Color(0xFF00695C),
+          screen: BalanceCheckScreen()),
       const _Item(
           icon: Icons.auto_stories_outlined,
           label: 'Mês em revisão',
@@ -207,6 +214,7 @@ class MoreScreen extends StatelessWidget {
               ],
               'Organizar e proteger': [
                 'Sugestões de lançamentos',
+                'Conferir com o banco',
                 'Importar extrato',
                 'Exportar relatório',
                 'Categorias',
