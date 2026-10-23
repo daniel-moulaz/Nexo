@@ -1,5 +1,28 @@
 # Changelog
 
+## [1.11.0] - 2026-10-23
+Evolução guiada pela sessão de conciliação de outubro (`docs/PLAN.md`). Apostas ficaram fora por decisão do dono.
+
+### Corrigido
+- **Fatura do cartão:** compra feita no dia do fechamento ("melhor dia de compra") entra na fatura seguinte, como no banco. As chaves de pagamento continuam as mesmas. Cenário real: outubro R$ 420,92, novembro R$ 213,59, total R$ 634,51.
+- **Transferências sem categoria de gasto:** as novas nascem sem categoria; as antigas aparecem como "Transferência" (e ajustes como "Ajuste de saldo") em listas, exportação e assistente, sem reescrever dados.
+- **Orçamento criado no meio do mês:** conta a partir da criação, com limite proporcional; os meses seguintes são cheios.
+
+### Adicionado
+- **"Para revisar":** conciliação automática das sugestões do banco (vincula ao lançamento existente, separa estorno, reserva, rendimento pequeno e Pix entre contas próprias; "Na dúvida" com "É o mesmo"; ações em lote com desfazer; regra "sempre usar esta categoria").
+- **"Quanto posso gastar"** no início: por dia e no mês (renda fixa − contas fixas − pendentes − metas − gasto variável).
+- **Ritmo do mês** só com gasto variável e linha pontilhada do ritmo ideal.
+- **Renda fixa × extra** no mês.
+- **Alertas de cobrança:** recorrente com valor diferente do previsto e cobrança repetida em poucos dias.
+- **"Não vou renovar":** lembrete para cancelar antes da próxima cobrança.
+- **Assistente (MCP):** faturas dos cartões (`get_card_invoices`), recusa clara quando o app instalado não conhece o pedido, tempo de espera no status e prévia antes de ignorar sugestões em lote. O app informa ao servidor o que sabe fazer.
+
+### Ficou para depois
+- Despesa dividida com reembolso abatendo o orçamento.
+- `billId` da Pluggy como fonte da verdade da fatura e webhooks em vez de leitura periódica.
+- Processar pedidos do assistente com o celular em segundo plano.
+- Rollover e orçamento Flex; navegação Hoje · Transações · Orçamento · Cartões · Mais; mês em revisão; onboarding guiado.
+
 ## [1.1.0] - 2026-08-10
 ### Added
 - Floating Material 3 Navigation Bar: Modern floating pill navigation bar (`extendBody: true`) with circular active tab selection indicator (`CircleBorder()`), 24px icon-only destinations (`alwaysHide` labels), and 48px horizontal margins.
