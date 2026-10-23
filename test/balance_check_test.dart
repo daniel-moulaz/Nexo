@@ -117,4 +117,45 @@ void main() {
     expect(s.bankUpdatedAt!.toUtc(), DateTime.utc(2026, 10, 22, 6));
     expect(s.nexoAccountId, 'nu');
   });
+
+  test('one Nexo account holding every bank: balances summed, oldest read', () {
+    BankAccountSnapshot one(String id, String name, int? cents, DateTime at,
+            {String currency = 'BRL', String type = 'BANK'}) =>
+        BankAccountSnapshot(
+            accountId: id,
+            bank: name,
+            type: type,
+            name: 'Conta',
+            currency: currency,
+            balanceCents: cents,
+            nexoAccountId: 'mp',
+            bankUpdatedAt: at);
+    final group = [
+      one('a', 'Nubank', 10000, read),
+      one('b', 'Inter', 5000, read.subtract(const Duration(hours: 5))),
+      one('c', 'BTG', -1000, read.add(const Duration(hours: 1))),
+    ];
+    final all = combineBankAccounts(group)!;
+    expect(all.balanceCents, 14000);
+    expect(all.bankUpdatedAt, read.subtract(const Duration(hours: 5)));
+    expect(all.bank, 'Nubank + Inter + BTG');
+    expect(all.isCard, isFalse);
+    final c = checkBalance(
+        account: account(10),
+        bank: all,
+        transactions: const [],
+        metadata: const {});
+    expect(c!.differenceCents, 13000);
+    // Never a guess: a missing balance, another currency or a card.
+    expect(combineBankAccounts([...group, one('d', 'X', null, read)]), isNull);
+    expect(
+        combineBankAccounts(
+            [...group, one('d', 'X', 1, read, currency: 'USD')]),
+        isNull);
+    expect(
+        combineBankAccounts([...group, one('d', 'X', 1, read, type: 'CREDIT')]),
+        isNull);
+    expect(combineBankAccounts([group.first]), same(group.first));
+    expect(combineBankAccounts(const []), isNull);
+  });
 }

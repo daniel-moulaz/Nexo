@@ -110,6 +110,13 @@ class _BalanceCheckScreenState extends State<BalanceCheckScreen> {
     String money(double v) => analysisMoney(app, v);
     final when = DateFormat("dd/MM 'às' HH:mm");
     final list = _accounts;
+    // Bank accounts (not cards) linked to the same Nexo account are summed.
+    final groups = <String, List<BankAccountSnapshot>>{};
+    for (final b in list ?? const <BankAccountSnapshot>[]) {
+      final id = b.nexoAccountId;
+      if (id != null && !b.isCard) (groups[id] ??= []).add(b);
+    }
+    groups.removeWhere((_, v) => v.length < 2);
     return Scaffold(
       appBar: AppBar(title: const Text('Conferir com o banco'), actions: [
         IconButton(
@@ -131,6 +138,18 @@ class _BalanceCheckScreenState extends State<BalanceCheckScreen> {
             if (list != null && list.isEmpty)
               const Text(
                   'Nenhuma conta do banco ainda. Os saldos aparecem depois da próxima leitura do Open Finance.'),
+            for (final g in groups.entries)
+              if (app.accountById(g.key) case final acc?)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 12),
+                  child: _GroupCard(
+                      account: acc,
+                      banks: g.value,
+                      app: app,
+                      money: money,
+                      when: when,
+                      onAdjust: (acc, c) => _adjust(app, acc, c)),
+                ),
             for (final b in list ?? const <BankAccountSnapshot>[])
               Padding(
                 padding: const EdgeInsets.only(bottom: 12),
@@ -139,6 +158,7 @@ class _BalanceCheckScreenState extends State<BalanceCheckScreen> {
                     app: app,
                     money: money,
                     when: when,
+                    sharedWith: (groups[b.nexoAccountId]?.length ?? 1) - 1,
                     onLink: (id) => _link(b, id),
                     onAdjust: (acc, c) => _adjust(app, acc, c)),
               ),
@@ -156,8 +176,10 @@ class _BankCard extends StatelessWidget {
       required this.money,
       required this.when,
       required this.onLink,
-      required this.onAdjust});
+      required this.onAdjust,
+      this.sharedWith = 0});
   final BankAccountSnapshot bank;
+  final int sharedWith;
   final AppProvider app;
   final String Function(double) money;
   final DateFormat when;
@@ -227,41 +249,129 @@ class _BankCard extends StatelessWidget {
           ],
           onChanged: onLink,
         ),
-        if (check != null) ...[
-          const SizedBox(height: 10),
-          Text(
-              'No Nexo naquele momento: ${money(check.nexoAtBankCents / 100)}'),
-          if (check.laterEntries.isNotEmpty)
-            Text(
-                '${check.laterEntries.length} lançamento(s) depois da leitura do banco ficaram de fora.',
-                style: small),
-          const SizedBox(height: 8),
-          if (check.matches)
-            Row(children: [
-              Icon(Icons.check_circle, color: NexoTones.income(context)),
-              const SizedBox(width: 6),
-              const Text('Bate com o banco',
-                  style: TextStyle(fontWeight: FontWeight.w700)),
-            ])
-          else ...[
-            Text(
-                'Diferença: ${check.differenceCents > 0 ? '+' : '−'}${money(check.differenceCents.abs() / 100)}',
-                style: TextStyle(
-                    fontWeight: FontWeight.w800,
-                    color: NexoTones.warning(context))),
-            const SizedBox(height: 6),
-            FilledButton.tonalIcon(
-                onPressed: () => onAdjust(linked!, check),
-                icon: const Icon(Icons.tune),
-                label: const Text('Ajustar o Nexo (neutro)')),
-          ],
-        ] else if (linked != null)
+        if (sharedWith > 0 && linked != null)
           Padding(
             padding: const EdgeInsets.only(top: 8),
             child: Text(
-                'Não dá para comparar: o banco não informou o saldo ou a moeda é diferente.',
+                'Somada com mais $sharedWith conta(s) do banco em ${linked.name}: a comparação está no total acima.',
                 style: small),
-          ),
+          )
+        else
+          _CheckView(
+              linked: linked, check: check, money: money, onAdjust: onAdjust),
+      ]),
+    );
+  }
+}
+
+/// The bank against the Nexo at the same moment, with the neutral adjust.
+class _CheckView extends StatelessWidget {
+  const _CheckView(
+      {required this.linked,
+      required this.check,
+      required this.money,
+      required this.onAdjust});
+  final Account? linked;
+  final BalanceCheck? check;
+  final String Function(double) money;
+  final void Function(Account, BalanceCheck) onAdjust;
+
+  @override
+  Widget build(BuildContext context) {
+    final small = Theme.of(context).textTheme.bodySmall;
+    final check = this.check, linked = this.linked;
+    if (linked == null) return const SizedBox.shrink();
+    if (check == null) {
+      return Padding(
+        padding: const EdgeInsets.only(top: 8),
+        child: Text(
+            'Não dá para comparar: o banco não informou o saldo ou a moeda é diferente.',
+            style: small),
+      );
+    }
+    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      const SizedBox(height: 10),
+      Text('No Nexo naquele momento: ${money(check.nexoAtBankCents / 100)}'),
+      if (check.laterEntries.isNotEmpty)
+        Text(
+            '${check.laterEntries.length} lançamento(s) depois da leitura do banco ficaram de fora.',
+            style: small),
+      const SizedBox(height: 8),
+      if (check.matches)
+        Row(children: [
+          Icon(Icons.check_circle, color: NexoTones.income(context)),
+          const SizedBox(width: 6),
+          const Text('Bate com o banco',
+              style: TextStyle(fontWeight: FontWeight.w700)),
+        ])
+      else ...[
+        Text(
+            'Diferença: ${check.differenceCents > 0 ? '+' : '−'}${money(check.differenceCents.abs() / 100)}',
+            style: TextStyle(
+                fontWeight: FontWeight.w800,
+                color: NexoTones.warning(context))),
+        const SizedBox(height: 6),
+        FilledButton.tonalIcon(
+            onPressed: () => onAdjust(linked, check),
+            icon: const Icon(Icons.tune),
+            label: const Text('Ajustar o Nexo (neutro)')),
+      ],
+    ]);
+  }
+}
+
+/// One Nexo account that holds several bank accounts: their sum against it.
+class _GroupCard extends StatelessWidget {
+  const _GroupCard(
+      {required this.account,
+      required this.banks,
+      required this.app,
+      required this.money,
+      required this.when,
+      required this.onAdjust});
+  final Account account;
+  final List<BankAccountSnapshot> banks;
+  final AppProvider app;
+  final String Function(double) money;
+  final DateFormat when;
+  final void Function(Account, BalanceCheck) onAdjust;
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final small = Theme.of(context).textTheme.bodySmall;
+    final combined = combineBankAccounts(banks);
+    final check = combined == null
+        ? null
+        : checkBalance(
+            account: account,
+            bank: combined,
+            transactions: app.transactions,
+            metadata: app.transactionMetadata);
+    return NexoCard(
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Row(children: [
+          Icon(Icons.account_balance_wallet_outlined, color: cs.primary),
+          const SizedBox(width: 10),
+          Expanded(
+              child: Text('${account.name} · soma de ${banks.length} contas',
+                  style: const TextStyle(fontWeight: FontWeight.w700))),
+        ]),
+        const SizedBox(height: 4),
+        Text(banks.map((b) => b.bank).toSet().join(' + '), style: small),
+        const SizedBox(height: 8),
+        if (combined != null)
+          Text('Nos bancos: ${money(combined.balanceCents! / 100)}',
+              style: const TextStyle(
+                  fontWeight: FontWeight.w800,
+                  fontSize: 16,
+                  fontFeatures: NexoTones.figures)),
+        if (combined?.bankUpdatedAt != null)
+          Text(
+              'Conta a partir da leitura mais antiga: ${when.format(combined!.bankUpdatedAt!)}',
+              style: small),
+        _CheckView(
+            linked: account, check: check, money: money, onAdjust: onAdjust),
       ]),
     );
   }
