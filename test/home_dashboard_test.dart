@@ -135,8 +135,10 @@ void main() {
     final app = fixture();
     app.accounts.single.balance = 50;
     await mount(tester, app);
-    final warning = find.textContaining('Previsão abaixo de zero em');
+    // The bill that the cash will not cover, with how much is missing.
+    final warning = find.textContaining(RegExp(r'^Faltam .* para '));
     expect(warning, findsOneWidget);
+    expect(find.text('Plano'), findsOneWidget);
     expect(tester.getTopLeft(warning).dy,
         lessThan(tester.getTopLeft(find.text('Entrou')).dy));
     expect(app.accounts.single.balance, 50);

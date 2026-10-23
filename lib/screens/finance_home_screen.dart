@@ -19,6 +19,8 @@ import '../services/charge_alerts.dart';
 import '../services/cancel_intents.dart';
 import '../services/bank_snapshots.dart';
 import '../services/balance_check.dart';
+import '../services/liquidity.dart';
+import 'due_plan_screen.dart';
 import '../utils/finance_input.dart';
 import '../widgets/analysis_widgets.dart';
 import '../widgets/cash_timeline_chart.dart';
@@ -595,6 +597,8 @@ class _FinanceHomeScreenState extends State<FinanceHomeScreen>
             final hot = budgets
                 .where((b) => app.budgetProgressRaw(b) >= .8)
                 .firstOrNull;
+            final gap =
+                timeline == null ? null : shortfalls(timeline).firstOrNull;
             final insights = <NexoInsight>[
               if (overdue.isNotEmpty)
                 NexoInsight(
@@ -606,6 +610,16 @@ class _FinanceHomeScreenState extends State<FinanceHomeScreen>
                         '${money(overdue.fold<double>(0, (s, e) => s - app.convertToMain(e.amount, e.currency)))} · revisar na agenda',
                     action: 'Ver',
                     onTap: () => _open(const AgendaScreen()))
+              else if (gap != null && !hidden)
+                NexoInsight(
+                    icon: Icons.event_busy_outlined,
+                    color: NexoTones.expense(context),
+                    title:
+                        'Faltam ${money(gap.missing)} para ${gap.event.title} de ${ptShortDate(gap.event.date)}',
+                    subtitle:
+                        'Veja o que chega a tempo: reservas, investimentos e pagamento parcial.',
+                    action: 'Plano',
+                    onTap: () => _open(DuePlanScreen(shortfall: gap)))
               else if (firstShortfall != null && !hidden)
                 NexoInsight(
                     icon: Icons.event_busy_outlined,

@@ -137,15 +137,19 @@ void main() {
             localizationsDelegates: AppLocalizations.localizationsDelegates,
             supportedLocales: AppLocalizations.supportedLocales,
             home: const NotificationInboxScreen())));
-    Future<void> settle() async {
-      for (var i = 0; i < 20; i++) {
+    // SQLite FFI work runs outside the fake clock: wait for the outcome
+    // (bounded) instead of a fixed number of frames, so a busy machine
+    // does not fail the test.
+    Future<void> settle([Finder? until]) async {
+      for (var i = 0; i < 150; i++) {
         await tester.runAsync(
             () => Future<void>.delayed(const Duration(milliseconds: 30)));
         await tester.pump();
+        if (i >= 10 && (until == null || until.evaluate().isNotEmpty)) break;
       }
     }
 
-    await settle();
+    await settle(find.text('3 resolvida(s) automaticamente'));
     expect(tester.takeException(), isNull);
     // Linked (Pix = "lanche ufop"), reserve and tiny yield: automatic.
     expect(find.text('3 resolvida(s) automaticamente'), findsOneWidget);
