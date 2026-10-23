@@ -140,16 +140,18 @@ void main() {
     // SQLite FFI work runs outside the fake clock: wait for the outcome
     // (bounded) instead of a fixed number of frames, so a busy machine
     // does not fail the test.
-    Future<void> settle([Finder? until]) async {
-      for (var i = 0; i < 150; i++) {
+    Future<void> settle(bool Function() done) async {
+      for (var i = 0; i < 200; i++) {
         await tester.runAsync(
             () => Future<void>.delayed(const Duration(milliseconds: 30)));
         await tester.pump();
-        if (i >= 10 && (until == null || until.evaluate().isNotEmpty)) break;
+        if (i >= 5 && done()) break;
       }
     }
 
-    await settle(find.text('3 resolvida(s) automaticamente'));
+    bool shows(String text) => find.text(text).evaluate().isNotEmpty;
+
+    await settle(() => shows('3 resolvida(s) automaticamente'));
     expect(tester.takeException(), isNull);
     // Linked (Pix = "lanche ufop"), reserve and tiny yield: automatic.
     expect(find.text('3 resolvida(s) automaticamente'), findsOneWidget);
@@ -166,17 +168,17 @@ void main() {
     expect((await tester.runAsync(DBHelper.getTransactions))!, hasLength(2));
 
     await tester.tap(find.text('É o mesmo'));
-    await settle();
+    await settle(() => !shows('Na dúvida'));
     expect(find.text('Na dúvida'), findsNothing);
     expect(find.text('4 resolvida(s) automaticamente'), findsNothing);
 
     // Undo the reserve: it comes back and the app leaves it to the person.
     await tester.tap(find.text('3 resolvida(s) automaticamente'));
-    await settle();
+    await settle(() => find.text('Desfazer').evaluate().length >= 2);
     final undo = find.text('Desfazer');
     expect(undo, findsNWidgets(2)); // reserve and yield; the link is final
     await tester.tap(undo.first);
-    await settle();
+    await settle(() => shows('2 resolvida(s) automaticamente'));
     final pending = await tester.runAsync(NotificationInbox.pending);
     expect(pending!.map((r) => r['id']),
         containsAll(['pluggy:new', isNot('pluggy:pix8')]));
