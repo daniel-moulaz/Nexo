@@ -15,9 +15,9 @@ void main() {
     expect(todayMissing(items, now), contains('Nubank'));
     expect(todayMissing(items, now), isNot(contains('Inter')));
     expect(todayMissing(items, now), contains('uma vez por dia'));
-    expect(bankDataUntil(items.first), 'Dados do banco até 20/10 às 06:00');
-    expect(bankDataUntil(items.last),
-        'Data dos dados do banco ainda não informada');
+    expect(bankDataUntil(items.first),
+        'Última movimentação recebida em 20/10 às 06:00');
+    expect(bankDataUntil(items.last), 'Nenhuma movimentação recebida ainda');
   });
 
   test('everything up to date, or unknown: no warning', () {

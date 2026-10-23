@@ -200,8 +200,8 @@ class _BankCard extends StatelessWidget {
                 fontFeatures: NexoTones.figures)),
         Text(
             bank.bankUpdatedAt == null
-                ? 'Data da leitura do banco não informada'
-                : 'Leitura do banco em ${when.format(bank.bankUpdatedAt!)}',
+                ? 'Data da última movimentação não informada'
+                : 'Última movimentação recebida em ${when.format(bank.bankUpdatedAt!)}',
             style: small),
         if (bank.isCard && bank.creditLimitCents != null)
           Padding(

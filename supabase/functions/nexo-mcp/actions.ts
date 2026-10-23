@@ -50,7 +50,7 @@ async function bankFreshness(deps: ActionDeps, today: string) {
   return {
     banks,
     note: banks.some((b) => !b.today_arrived)
-      ? "O Open Finance atualiza uma vez por dia: movimentações de hoje podem ainda não ter chegado. Não conclua que não houve gasto."
+      ? "data_until é a última movimentação recebida de cada banco; o Open Finance atualiza uma vez por dia, então movimentações de hoje podem ainda não ter chegado. Não conclua que não houve gasto."
       : undefined,
   };
 }
