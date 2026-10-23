@@ -575,6 +575,42 @@ try {
     const ledger = await service('nexo_mcp_ledger', [conn.id]);
     assert(Array.isArray(ledger.entities));
   });
+  await test('pluggy: account balances and limits per owner; the link survives refreshes', async () => {
+    await db.exec(await readFile(new URL('../supabase/migrations/202610230001_pluggy_accounts.sql', import.meta.url), 'utf8'));
+    // Its own connection, owned by B; A is the other person here.
+    const own = 'item-saldos-00001';
+    await user(B, tx => rpc(tx, 'nexo_pluggy_add_item', [own, 'Banco de saldos']));
+    const acc = (over = {}) => ({ account_id: 'acc-card', type: 'CREDIT', subtype: 'CREDIT_CARD',
+      name: 'Cartão fictício', currency: 'BRL', balance_cents: 21359, credit_limit_cents: 65000,
+      available_cents: 1549, minimum_payment_cents: null, close_date: '2026-10-19',
+      due_date: '2026-10-26', ...over });
+    await service('nexo_pluggy_store_accounts', [B, own, '2026-10-22T06:00:00.000Z', JSON.stringify([
+      acc(), acc({ account_id: 'acc-bank', type: 'BANK', subtype: 'CHECKING_ACCOUNT', name: 'Conta fictícia',
+        balance_cents: -3300, credit_limit_cents: null, available_cents: null, close_date: null, due_date: null }),
+    ])]);
+    let list = await user(B, tx => rpc(tx, 'nexo_pluggy_accounts', []));
+    assert.equal(list.length, 2);
+    const card = list.find(a => a.account_id === 'acc-card');
+    assert.deepEqual([card.balance_cents, card.credit_limit_cents, card.available_cents, card.due_date],
+      [21359, 65000, 1549, '2026-10-26']);
+    assert.equal(new Date(card.bank_updated_at).toISOString(), '2026-10-22T06:00:00.000Z');
+    assert.ok((await user(B, tx => rpc(tx, 'nexo_pluggy_items', []))).find(i => i.item_id === own).bank_updated_at);
+    // Link to a Nexo account; another person cannot see or link it.
+    await user(B, tx => rpc(tx, 'nexo_pluggy_link_account', ['acc-bank', 'nexo-mp']));
+    await denies(() => user(A, tx => rpc(tx, 'nexo_pluggy_link_account', ['acc-bank', 'x'])), '22023');
+    assert.equal((await user(A, tx => rpc(tx, 'nexo_pluggy_accounts', []))).some(a => a.account_id === 'acc-bank'), false);
+    await denies(() => user(null, tx => rpc(tx, 'nexo_pluggy_accounts', []), 'anon'));
+    await denies(() => user(B, tx => rpc(tx, 'nexo_pluggy_store_accounts', [B, own, null, '[]'])), '42501');
+    // A refresh updates the balance and keeps the link and the last bank time.
+    await service('nexo_pluggy_store_accounts', [B, own, null, JSON.stringify([
+      acc({ account_id: 'acc-bank', type: 'BANK', balance_cents: 46700, credit_limit_cents: null,
+        available_cents: null, close_date: null, due_date: null })])]);
+    list = await user(B, tx => rpc(tx, 'nexo_pluggy_accounts', []));
+    const bank = list.find(a => a.account_id === 'acc-bank');
+    assert.deepEqual([bank.balance_cents, bank.nexo_account_id], [46700, 'nexo-mp']);
+    assert.equal(new Date(bank.bank_updated_at).toISOString(), '2026-10-22T06:00:00.000Z');
+    await denies(() => service('nexo_pluggy_store_accounts', [A, own, null, '[]']), '42501');
+  });
   console.log(`SQL LAB: ${passed} tests passed; synthetic local data only.`);
 } finally {
   await db.close();

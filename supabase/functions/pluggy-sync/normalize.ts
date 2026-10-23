@@ -11,6 +11,61 @@ export interface PluggyAccount {
   name: string;
   currencyCode: string;
   itemId: string;
+  marketingName?: string | null;
+  /// BANK: available to spend. CREDIT: open balance of the unpaid invoice.
+  balance?: number | null;
+  creditData?: {
+    creditLimit?: number | null;
+    availableCreditLimit?: number | null;
+    minimumPayment?: number | null;
+    balanceCloseDate?: string | null;
+    balanceDueDate?: string | null;
+  } | null;
+}
+
+/// What the app needs to compare balances and show the card limit. Account
+/// number, owner and tax number are deliberately left out.
+export interface AccountSnapshot {
+  account_id: string;
+  type: "BANK" | "CREDIT";
+  subtype: string;
+  name: string;
+  currency: string;
+  balance_cents: number | null;
+  credit_limit_cents: number | null;
+  available_cents: number | null;
+  minimum_payment_cents: number | null;
+  close_date: string | null;
+  due_date: string | null;
+}
+
+const cents = (v: unknown): number | null =>
+  typeof v === "number" && isFinite(v) && Math.abs(v) < 1e11 ? Math.round(v * 100) : null;
+const isoDay = (v: unknown): string | null =>
+  typeof v === "string" && /^\d{4}-\d{2}-\d{2}/.test(v) ? v.slice(0, 10) : null;
+
+export function toAccountSnapshot(a: PluggyAccount): AccountSnapshot | null {
+  if (!a.id || (a.type !== "BANK" && a.type !== "CREDIT")) return null;
+  const credit = a.type === "CREDIT" ? a.creditData ?? null : null;
+  return {
+    account_id: a.id,
+    type: a.type,
+    subtype: String(a.subtype ?? "").slice(0, 40),
+    name: (a.marketingName || a.name || "Conta").trim().slice(0, 60),
+    currency: String(a.currencyCode ?? "BRL").slice(0, 3),
+    balance_cents: cents(a.balance),
+    credit_limit_cents: cents(credit?.creditLimit),
+    available_cents: cents(credit?.availableCreditLimit),
+    minimum_payment_cents: cents(credit?.minimumPayment),
+    close_date: isoDay(credit?.balanceCloseDate),
+    due_date: isoDay(credit?.balanceDueDate),
+  };
+}
+
+/// When the bank data behind this item was last refreshed by Pluggy.
+export function bankUpdatedAt(item: Record<string, unknown>): string | null {
+  const v = item.lastUpdatedAt;
+  return typeof v === "string" && !isNaN(Date.parse(v)) ? new Date(v).toISOString() : null;
 }
 
 export interface PluggyTransaction {

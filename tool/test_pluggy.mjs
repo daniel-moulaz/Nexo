@@ -1,7 +1,7 @@
 // Tests for the Pluggy client and normalizer: `node tool/test_pluggy.mjs`.
 // Synthetic objects shaped by api.pluggy.ai/oas3.json; no network, no keys.
 import assert from 'node:assert/strict';
-import { isSkip, itemHealth, merge, toSuggestion } from '../supabase/functions/pluggy-sync/normalize.ts';
+import { bankUpdatedAt, isSkip, itemHealth, merge, toAccountSnapshot, toSuggestion } from '../supabase/functions/pluggy-sync/normalize.ts';
 import { PluggyClient, PluggyError } from '../supabase/functions/pluggy-sync/pluggy.ts';
 
 let passed = 0;
@@ -218,6 +218,30 @@ await test('sync: a Pluggy failure marks the item and keeps stored data', async 
   assert.deepEqual(store.healths, [['item-1', 'reconnect']]);
   const expired = source([], { status: 'LOGIN_ERROR', error: { code: 'USER_AUTHORIZATION_EXPIRED' } });
   assert.equal((await syncOwner('owner', expired, fakeStore([{ item_id: 'i', label: 'B', last_fetch_at: null }]), { now }))[0].health.state, 'reconnect');
+});
+
+await test('account snapshot: balance and card limits, never number, owner or CPF', () => {
+  const snap = toAccountSnapshot({ ...card, number: '1234', owner: 'Pessoa Fictícia', taxNumber: '000.000.000-00',
+    balance: 213.59, marketingName: 'Cartão Roxo', creditData: { creditLimit: 650, availableCreditLimit: 15.49,
+      minimumPayment: 57.29, balanceCloseDate: '2026-11-19', balanceDueDate: '2026-11-26T00:00:00Z' } });
+  assert.deepEqual(snap, { account_id: 'acc-card', type: 'CREDIT', subtype: 'CREDIT_CARD', name: 'Cartão Roxo',
+    currency: 'BRL', balance_cents: 21359, credit_limit_cents: 65000, available_cents: 1549,
+    minimum_payment_cents: 5729, close_date: '2026-11-19', due_date: '2026-11-26' });
+  assert.equal(JSON.stringify(snap).includes('Fictícia'), false);
+  const b = toAccountSnapshot({ ...bank, balance: -33 });
+  assert.equal(b.balance_cents, -3300);
+  assert.equal(b.credit_limit_cents, null);
+  assert.equal(toAccountSnapshot({ ...bank, balance: Infinity }).balance_cents, null);
+  assert.equal(bankUpdatedAt({ lastUpdatedAt: '2026-10-22T06:00:00.000Z' }), '2026-10-22T06:00:00.000Z');
+  assert.equal(bankUpdatedAt({ lastUpdatedAt: 'ontem' }), null);
+});
+
+await test('sync: stores balances and the bank time with each read', async () => {
+  const store = fakeStore([{ item_id: 'item-1', label: 'Banco', last_fetch_at: null }]);
+  const saved = [];
+  store.accounts = async (_o, itemId, updatedAt, rows) => saved.push([itemId, updatedAt, rows.map(r => r.account_id)]);
+  await syncOwner('owner', source([], { status: 'UPDATED', lastUpdatedAt: '2026-10-20T06:00:00.000Z' }), store, { now });
+  assert.deepEqual(saved, [['item-1', '2026-10-20T06:00:00.000Z', ['acc-bank']]]);
 });
 
 console.log(`PLUGGY: ${passed} tests passed; synthetic data only.`);

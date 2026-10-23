@@ -8,6 +8,7 @@ import 'package:expensy/providers/app_provider.dart';
 import 'package:expensy/screens/notification_inbox_screen.dart';
 import 'package:expensy/services/inbox_reconciler.dart';
 import 'package:expensy/services/notification_inbox.dart';
+import 'package:expensy/services/balance_check.dart';
 import 'package:expensy/services/pluggy_inbox.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -20,6 +21,10 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 /// Server stand-in with the decision rules of `nexo_pluggy_decide`.
 class _Remote implements PluggyRemote {
+  @override
+  Future<List<BankAccountSnapshot>> accounts() async => const [];
+  @override
+  Future<void> link(String accountId, String? nexoAccountId) async {}
   final rows = <String, Map<String, dynamic>>{};
   @override
   Future<List<PluggyItem>> refresh({bool force = false}) async => const [];

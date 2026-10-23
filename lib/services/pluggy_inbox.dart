@@ -5,6 +5,7 @@ import 'package:http/http.dart' as http;
 import 'package:sqflite/sqflite.dart';
 
 import '../database/db_helper.dart';
+import 'balance_check.dart';
 import '../sync/supabase_auth.dart';
 import '../sync/sync_config.dart';
 
@@ -43,6 +44,11 @@ abstract interface class PluggyRemote {
   Future<void> removeItem(String itemId);
   Future<List<Map<String, dynamic>>> suggestions(int sinceMs);
   Future<void> decide(List<Map<String, Object?>> decisions);
+
+  /// Latest balance and card limits of each bank account, with the link to
+  /// a Nexo account.
+  Future<List<BankAccountSnapshot>> accounts();
+  Future<void> link(String accountId, String? nexoAccountId);
 }
 
 class SupabasePluggyRemote implements PluggyRemote {
@@ -83,6 +89,8 @@ class SupabasePluggyRemote implements PluggyRemote {
       throw PluggyUnavailable(switch ((status, code)) {
         (404, _) when path.startsWith('/functions') =>
           'A busca no Pluggy ainda não foi publicada no servidor.',
+        (404, _) =>
+          'O servidor ainda não tem esta função. Publique a atualização do servidor.',
         (503, 'not_configured') =>
           'As credenciais do Pluggy ainda não foram cadastradas no servidor.',
         (403, 'not_owner') => 'Esta conta não é a dona das conexões Pluggy.',
@@ -141,6 +149,19 @@ class SupabasePluggyRemote implements PluggyRemote {
   @override
   Future<void> decide(List<Map<String, Object?>> decisions) =>
       _rpc('nexo_pluggy_decide', {'p_decisions': decisions});
+
+  @override
+  Future<List<BankAccountSnapshot>> accounts() async => [
+        for (final r
+            in (await _rpc('nexo_pluggy_accounts', const {}) as List? ??
+                const []))
+          BankAccountSnapshot.fromJson((r as Map).cast<String, dynamic>())
+      ];
+
+  @override
+  Future<void> link(String accountId, String? nexoAccountId) => _rpc(
+      'nexo_pluggy_link_account',
+      {'p_account_id': accountId, 'p_nexo_account_id': nexoAccountId});
 }
 
 /// Open Finance movements as reviewable suggestions in the same inbox as the

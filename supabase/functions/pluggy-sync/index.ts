@@ -48,6 +48,14 @@ const store: Store = {
   stored: async (owner, ids) => await rpc("nexo_pluggy_stored", { p_owner: owner, p_ids: ids }) as never,
   store: async (owner, itemId, health, rows) =>
     await rpc("nexo_pluggy_store", { p_owner: owner, p_item_id: itemId, p_health: health, p_rows: rows }) as number,
+  accounts: async (owner, itemId, updatedAt, rows) => {
+    try {
+      await rpc("nexo_pluggy_store_accounts",
+        { p_owner: owner, p_item_id: itemId, p_bank_updated_at: updatedAt, p_accounts: rows });
+    } catch {
+      // Balances are an extra: a server without the migration keeps working.
+    }
+  },
 };
 
 /// Validates the session with Supabase Auth instead of trusting the token.

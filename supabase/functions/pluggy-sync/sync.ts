@@ -1,7 +1,10 @@
 // One refresh of a person's Pluggy connections: read accounts and recent
 // transactions, turn them into suggestions and store them with the tested
 // merge rules. Read-only towards Pluggy; never creates money in the ledger.
-import { type ItemHealth, isSkip, itemHealth, merge, type PluggyAccount, type PluggyTransaction, type Suggestion, toSuggestion } from "./normalize.ts";
+import {
+  type AccountSnapshot, bankUpdatedAt, type ItemHealth, isSkip, itemHealth, merge, type PluggyAccount,
+  type PluggyTransaction, type Suggestion, toAccountSnapshot, toSuggestion,
+} from "./normalize.ts";
 import { PluggyError } from "./pluggy.ts";
 
 export interface Source {
@@ -18,6 +21,8 @@ export interface Store {
   items(owner: string): Promise<StoredItem[]>;
   stored(owner: string, ids: string[]): Promise<Stored[]>;
   store(owner: string, itemId: string, health: ItemHealth, rows: Row[]): Promise<number>;
+  /// Latest balances and card limits of the item (optional: older servers).
+  accounts?(owner: string, itemId: string, updatedAt: string | null, rows: AccountSnapshot[]): Promise<void>;
 }
 
 export interface ItemResult {
@@ -49,10 +54,16 @@ export async function syncOwner(owner: string, source: Source, store: Store,
     }
     let health: ItemHealth;
     const incoming: Suggestion[] = [];
+    const snapshots: AccountSnapshot[] = [];
+    let updatedAt: string | null = null;
     let skipped = 0;
     try {
-      health = itemHealth(await source.item(item.item_id) as Parameters<typeof itemHealth>[0], now);
+      const raw = await source.item(item.item_id);
+      health = itemHealth(raw as Parameters<typeof itemHealth>[0], now);
+      updatedAt = bankUpdatedAt(raw);
       for (const account of await source.accounts(item.item_id)) {
+        const snapshot = toAccountSnapshot(account);
+        if (snapshot) snapshots.push(snapshot);
         for (const tx of await source.transactions(account.id, dateFrom)) {
           const s = toSuggestion(tx, account);
           if (isSkip(s)) skipped++;
@@ -86,6 +97,7 @@ export async function syncOwner(owner: string, source: Source, store: Store,
     for (let i = 0; i < Math.max(rows.length, 1); i += 500) {
       written += await store.store(owner, item.item_id, health, rows.slice(i, i + 500));
     }
+    if (store.accounts) await store.accounts(owner, item.item_id, updatedAt, snapshots);
     results.push({ item_id: item.item_id, label: item.label, health, fetched: true, written, skipped });
   }
   return results;
