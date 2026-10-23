@@ -111,6 +111,34 @@ class BankAccountSnapshot {
       );
 }
 
+/// Several bank accounts kept as one Nexo account ("Conta principal" holding
+/// every bank): one snapshot with the summed balance, read at the oldest of
+/// their times. Null when a balance is missing or the currencies differ.
+BankAccountSnapshot? combineBankAccounts(List<BankAccountSnapshot> group) {
+  if (group.isEmpty) return null;
+  if (group.length == 1) return group.single;
+  final currency = group.first.currency;
+  var sum = 0;
+  DateTime? oldest;
+  for (final b in group) {
+    final cents = b.nexoSignedCents;
+    if (b.isCard || cents == null || b.currency != currency) return null;
+    sum += cents;
+    final at = b.bankUpdatedAt;
+    if (at != null && (oldest == null || at.isBefore(oldest))) oldest = at;
+  }
+  return BankAccountSnapshot(
+    accountId: group.map((b) => b.accountId).join('+'),
+    bank: group.map((b) => b.bank).toSet().join(' + '),
+    type: 'BANK',
+    name: '${group.length} contas',
+    currency: currency,
+    balanceCents: sum,
+    nexoAccountId: group.first.nexoAccountId,
+    bankUpdatedAt: oldest,
+  );
+}
+
 /// The bank balance against the Nexo balance at the same moment.
 class BalanceCheck {
   const BalanceCheck(

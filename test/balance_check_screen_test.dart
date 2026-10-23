@@ -149,4 +149,60 @@ void main() {
     await tester.pumpWidget(const SizedBox());
     debugDefaultTargetPlatformOverride = null;
   });
+
+  testWidgets('every bank in the main account: one total, one adjust',
+      (tester) async {
+    tester.view.physicalSize = const Size(360, 2400);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    final at = DateTime.now().subtract(const Duration(hours: 1));
+    BankAccountSnapshot bank(String id, String name, int cents) =>
+        BankAccountSnapshot(
+            accountId: id,
+            bank: name,
+            type: 'BANK',
+            name: 'Conta',
+            currency: 'BRL',
+            balanceCents: cents,
+            nexoAccountId: 'mp',
+            bankUpdatedAt: at);
+    final remote = _Remote([
+      bank('p-nu', 'Nubank', 10000),
+      bank('p-in', 'Inter', 5000),
+      bank('p-btg', 'BTG', -1000),
+    ]);
+    Future<void> settle() async {
+      for (var i = 0; i < 12; i++) {
+        await tester.runAsync(
+            () => Future<void>.delayed(const Duration(milliseconds: 30)));
+        await tester.pump();
+      }
+    }
+
+    await tester.pumpWidget(ChangeNotifierProvider.value(
+        value: app,
+        child: MaterialApp(
+            locale: const Locale('pt'),
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: BalanceCheckScreen(remote: remote))));
+    await settle();
+    expect(tester.takeException(), isNull);
+    expect(find.text('Conta principal · soma de 3 contas'), findsOneWidget);
+    expect(find.textContaining('Somada com mais 2 conta(s)'), findsNWidgets(3));
+    expect(find.text('Ajustar o Nexo (neutro)'), findsOneWidget);
+
+    await tester.tap(find.text('Ajustar o Nexo (neutro)'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Ajustar'));
+    await settle();
+    final mp = (await tester.runAsync(DBHelper.getAccounts))!
+        .firstWhere((a) => a.id == 'mp');
+    expect(mp.balance, closeTo(140, 1e-9));
+    expect((await tester.runAsync(DBHelper.getTransactions))!, isEmpty);
+    expect(find.text('Bate com o banco'), findsOneWidget);
+    await tester.pumpWidget(const SizedBox());
+    debugDefaultTargetPlatformOverride = null;
+  });
 }
