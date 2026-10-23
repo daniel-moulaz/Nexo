@@ -3,6 +3,7 @@ import '../widgets/nexo_ui.dart';
 import '../services/balance_check.dart';
 import '../services/bank_snapshots.dart';
 import '../services/official_invoice.dart';
+import 'balance_check_screen.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
@@ -479,8 +480,25 @@ class _OfficialBill extends StatelessWidget {
     return FutureBuilder<List<BankAccountSnapshot>>(
         future: BankSnapshots.load(),
         builder: (context, snapshot) {
-          final official = officialFor(
-              BankSnapshots.linkedTo(snapshot.data ?? const [], cardId), cycle,
+          final list = snapshot.data ?? const <BankAccountSnapshot>[];
+          final linked = BankSnapshots.linkedTo(list, cardId);
+          if (linked == null &&
+              list.any((s) => s.isCard && s.nexoAccountId == null)) {
+            // A bank card nobody linked yet: the official invoice is one
+            // choice away.
+            return Align(
+              alignment: Alignment.centerLeft,
+              child: TextButton.icon(
+                  onPressed: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                          builder: (_) => const BalanceCheckScreen())),
+                  icon: const Icon(Icons.link_rounded),
+                  label: const Text(
+                      'Vincular ao cartão do banco para ver a fatura oficial')),
+            );
+          }
+          final official = officialFor(linked, cycle,
               nexoTotal: nexoTotal, currency: currency);
           if (official == null) return const SizedBox.shrink();
           final bill = official.bill;

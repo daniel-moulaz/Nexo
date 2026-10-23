@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import '../models/models.dart';
 import '../providers/app_provider.dart';
 import '../services/balance_check.dart';
+import '../services/bank_snapshots.dart';
 import '../services/pluggy_inbox.dart';
 import '../widgets/analysis_widgets.dart';
 import '../widgets/nexo_ui.dart';
@@ -63,6 +64,8 @@ class _BalanceCheckScreenState extends State<BalanceCheckScreen> {
   Future<void> _link(BankAccountSnapshot b, String? nexoId) async {
     try {
       await _remote!.link(b.accountId, nexoId);
+      // Other screens (invoice, limit) read the shared cache: refresh it now.
+      await BankSnapshots.load(force: true);
       await _load();
     } catch (_) {
       if (mounted)
