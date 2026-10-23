@@ -18,6 +18,32 @@ da Pluggy).
 
 ---
 
+## Confirmado no portal da Pluggy (23/10/2026, MCP `pluggy-docs`)
+
+- **Conta:** time em plano **TRIAL** (vence 06/11/2026), aplicação em
+  ambiente DEMO. As conexões são **4 itens do conector MeuPluggy (id 200)**,
+  todos `UPDATED`, sem erro. Pela documentação e pelo suporte da Pluggy, o
+  caminho Meu Pluggy para uso pessoal é **gratuito e continua funcionando
+  depois do trial** (até 5 conexões, sem uso comercial). Autorização do banco
+  dura **1 ano**; renovar exige entrar de novo no meu.pluggy.ai.
+- **Chamadas ao Open Finance feitas pelo Nexo: zero.** `summarize_of_calls`
+  não mostra nenhuma chamada ao banco pela nossa aplicação: quem chama o
+  banco é o item original dentro do Meu Pluggy (1×/dia). As leituras do
+  `pluggy-sync` na última semana: 38 `GET /items/{id}`, 31
+  `GET /v2/transactions`, 27 `GET /accounts` — só dados já guardados pela
+  Pluggy, **sem consumir o limite mensal do banco**.
+- **O item espelho não informa a data dos dados:** `lastUpdatedAt` ficou na
+  criação (21/10 02:19) e as execuções registradas são só a inicial, com
+  contadores zerados. O Nexo passou a usar a data do registro mais recente
+  (transação) como "última movimentação recebida".
+- **Produtos do conector MeuPluggy:** ACCOUNTS, TRANSACTIONS, CREDIT_CARDS,
+  INVESTMENTS, INVESTMENTS_TRANSACTIONS, PAYMENT_DATA, IDENTITY,
+  BROKERAGE_NOTE. `/bills` não aparece listado e o portal não mostra o
+  conteúdo dos espelhos; **confirmar com uma leitura real** (não consome
+  limite do banco).
+- Recursos do trial (categorização, merchant) aparecem habilitados agora;
+  não contar com eles depois de 06/11.
+
 ## 0. O que o Nexo usa hoje (código)
 
 - `supabase/functions/pluggy-sync`: só **leituras** — `POST /auth`,

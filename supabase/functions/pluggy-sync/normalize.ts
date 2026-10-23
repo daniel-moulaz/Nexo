@@ -62,10 +62,19 @@ export function toAccountSnapshot(a: PluggyAccount): AccountSnapshot | null {
   };
 }
 
-/// When the bank data behind this item was last refreshed by Pluggy.
-export function bankUpdatedAt(item: Record<string, unknown>): string | null {
-  const v = item.lastUpdatedAt;
-  return typeof v === "string" && !isNaN(Date.parse(v)) ? new Date(v).toISOString() : null;
+/// When the latest bank movement of this item reached Pluggy. A Meu Pluggy
+/// proxy item keeps `lastUpdatedAt` at its creation (it only mirrors the
+/// original connection), so the item date says nothing; the newest
+/// transaction record does. On a day without movements it does not move.
+export function latestMovementAt(txs: PluggyTransaction[]): string | null {
+  let best: number | null = null;
+  for (const t of txs) {
+    for (const v of [t.createdAt, t.updatedAt]) {
+      const ms = typeof v === "string" ? Date.parse(v) : NaN;
+      if (!isNaN(ms) && (best === null || ms > best)) best = ms;
+    }
+  }
+  return best === null ? null : new Date(best).toISOString();
 }
 
 export interface PluggyTransaction {
@@ -83,6 +92,7 @@ export interface PluggyTransaction {
   creditCardMetadata?: { installmentNumber?: number; totalInstallments?: number } | null;
   operationType?: string | null;
   updatedAt: string;
+  createdAt?: string;
 }
 
 export interface Suggestion {

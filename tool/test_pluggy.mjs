@@ -1,7 +1,7 @@
 // Tests for the Pluggy client and normalizer: `node tool/test_pluggy.mjs`.
 // Synthetic objects shaped by api.pluggy.ai/oas3.json; no network, no keys.
 import assert from 'node:assert/strict';
-import { bankUpdatedAt, isSkip, itemHealth, merge, toAccountSnapshot, toSuggestion } from '../supabase/functions/pluggy-sync/normalize.ts';
+import { isSkip, latestMovementAt, itemHealth, merge, toAccountSnapshot, toSuggestion } from '../supabase/functions/pluggy-sync/normalize.ts';
 import { PluggyClient, PluggyError } from '../supabase/functions/pluggy-sync/pluggy.ts';
 
 let passed = 0;
@@ -232,15 +232,20 @@ await test('account snapshot: balance and card limits, never number, owner or CP
   assert.equal(b.balance_cents, -3300);
   assert.equal(b.credit_limit_cents, null);
   assert.equal(toAccountSnapshot({ ...bank, balance: Infinity }).balance_cents, null);
-  assert.equal(bankUpdatedAt({ lastUpdatedAt: '2026-10-22T06:00:00.000Z' }), '2026-10-22T06:00:00.000Z');
-  assert.equal(bankUpdatedAt({ lastUpdatedAt: 'ontem' }), null);
+  // The proxy item date is useless; the newest movement record tells.
+  assert.equal(latestMovementAt([tx({ updatedAt: '2026-10-21T09:00:00.000Z' }),
+    tx({ createdAt: '2026-10-22T06:00:00.000Z', updatedAt: '2026-10-21T10:00:00.000Z' })]), '2026-10-22T06:00:00.000Z');
+  assert.equal(latestMovementAt([]), null);
+  assert.equal(latestMovementAt([tx({ updatedAt: 'ontem' })]), null);
 });
 
 await test('sync: stores balances and the bank time with each read', async () => {
   const store = fakeStore([{ item_id: 'item-1', label: 'Banco', last_fetch_at: null }]);
   const saved = [];
   store.accounts = async (_o, itemId, updatedAt, rows) => saved.push([itemId, updatedAt, rows.map(r => r.account_id)]);
-  await syncOwner('owner', source([], { status: 'UPDATED', lastUpdatedAt: '2026-10-20T06:00:00.000Z' }), store, { now });
+  // lastUpdatedAt of a Meu Pluggy proxy stays at its creation: ignored.
+  await syncOwner('owner', source([tx({ id: 'n', updatedAt: '2026-10-20T06:00:00.000Z' })],
+    { status: 'UPDATED', lastUpdatedAt: '2026-10-01T00:00:00.000Z' }), store, { now });
   assert.deepEqual(saved, [['item-1', '2026-10-20T06:00:00.000Z', ['acc-bank']]]);
 });
 

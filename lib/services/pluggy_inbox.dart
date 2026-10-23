@@ -14,8 +14,9 @@ class PluggyItem {
       {this.bankUpdatedAt});
   final String itemId, label;
 
-  /// When the bank data behind this connection was last refreshed (the
-  /// Open Finance updates once a day); null when the server does not know.
+  /// When the newest bank movement of this connection reached Pluggy (Meu
+  /// Pluggy refreshes once a day; a day without movements does not move
+  /// it); null when the server does not know.
   final DateTime? bankUpdatedAt;
 
   /// ok | updating | reconnect | expiring | error | unknown (never read yet)
@@ -36,12 +37,12 @@ class PluggyItem {
   }
 }
 
-/// "Dados do banco até 22/10 às 06:00".
+/// "Última movimentação recebida em 22/10 às 06:00".
 String bankDataUntil(PluggyItem item) {
   final at = item.bankUpdatedAt;
-  if (at == null) return 'Data dos dados do banco ainda não informada';
+  if (at == null) return 'Nenhuma movimentação recebida ainda';
   String two(int v) => v.toString().padLeft(2, '0');
-  return 'Dados do banco até ${two(at.day)}/${two(at.month)} às ${two(at.hour)}:${two(at.minute)}';
+  return 'Última movimentação recebida em ${two(at.day)}/${two(at.month)} às ${two(at.hour)}:${two(at.minute)}';
 }
 
 /// Banks whose data for today did not arrive yet (null when all did or the
@@ -53,7 +54,7 @@ String? todayMissing(List<PluggyItem> items, DateTime now) {
       .map((i) => i.label)
       .toList();
   if (late.isEmpty) return null;
-  return 'Os dados de hoje ainda não chegaram de ${late.join(', ')}: o Open Finance atualiza uma vez por dia. Gastos de hoje podem faltar aqui.';
+  return 'Nenhuma movimentação de hoje chegou ainda de ${late.join(', ')}: o Open Finance atualiza uma vez por dia. Gastos de hoje podem faltar aqui.';
 }
 
 /// A server answer the person can act on.

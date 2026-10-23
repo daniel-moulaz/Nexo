@@ -2,7 +2,7 @@
 // transactions, turn them into suggestions and store them with the tested
 // merge rules. Read-only towards Pluggy; never creates money in the ledger.
 import {
-  type AccountSnapshot, bankUpdatedAt, type ItemHealth, isSkip, itemHealth, merge, type PluggyAccount,
+  type AccountSnapshot, type ItemHealth, latestMovementAt, isSkip, itemHealth, merge, type PluggyAccount,
   type PluggyTransaction, type Suggestion, toAccountSnapshot, toSuggestion,
 } from "./normalize.ts";
 import { PluggyError } from "./pluggy.ts";
@@ -60,11 +60,13 @@ export async function syncOwner(owner: string, source: Source, store: Store,
     try {
       const raw = await source.item(item.item_id);
       health = itemHealth(raw as Parameters<typeof itemHealth>[0], now);
-      updatedAt = bankUpdatedAt(raw);
       for (const account of await source.accounts(item.item_id)) {
         const snapshot = toAccountSnapshot(account);
         if (snapshot) snapshots.push(snapshot);
-        for (const tx of await source.transactions(account.id, dateFrom)) {
+        const txs = await source.transactions(account.id, dateFrom);
+        const latest = latestMovementAt(txs);
+        if (latest && (!updatedAt || latest > updatedAt)) updatedAt = latest;
+        for (const tx of txs) {
           const s = toSuggestion(tx, account);
           if (isSkip(s)) skipped++;
           else incoming.push(s);
