@@ -56,6 +56,13 @@ const store: Store = {
       // Balances are an extra: a server without the migration keeps working.
     }
   },
+  bills: async (owner, accountId, rows) => {
+    try {
+      await rpc("nexo_pluggy_store_bills", { p_owner: owner, p_account_id: accountId, p_bills: rows });
+    } catch {
+      // Same: official invoices are a check, never required.
+    }
+  },
 };
 
 /// Validates the session with Supabase Auth instead of trusting the token.
@@ -89,8 +96,6 @@ Deno.serve(async (request) => {
   }
   try {
     const items = await syncOwner(owner, new PluggyClient(clientId, clientSecret), store, { force });
-    // Counts only (no amounts, numbers or names besides the bank label).
-    for (const i of items) if (i.bills) console.log(JSON.stringify({ probe: "bills", bank: i.label, bills: i.bills }));
     return json(200, { items });
   } catch (error) {
     // Only a code, never Pluggy or database text.

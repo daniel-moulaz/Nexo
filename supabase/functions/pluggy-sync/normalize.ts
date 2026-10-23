@@ -62,6 +62,49 @@ export function toAccountSnapshot(a: PluggyAccount): AccountSnapshot | null {
   };
 }
 
+/// An official credit card invoice as Pluggy returns it (GET /bills).
+export interface PluggyBill {
+  id: string;
+  dueDate: string;
+  billClosingDate?: string | null;
+  totalAmount: number;
+  totalAmountCurrencyCode?: string;
+  minimumPaymentAmount?: number | null;
+  financeCharges?: { amount?: number | null }[] | null;
+  payments?: { amount?: number | null }[] | null;
+}
+
+/// What the app needs to check its invoice: totals and dates. Payment and
+/// charge details (ids, modes, descriptions) are reduced to sums.
+export interface BillSnapshot {
+  bill_id: string;
+  due_date: string;
+  close_date: string | null;
+  total_cents: number;
+  minimum_cents: number | null;
+  charges_cents: number;
+  paid_cents: number;
+  currency: string;
+}
+
+const sumCents = (rows: { amount?: number | null }[] | null | undefined) =>
+  (rows ?? []).reduce((s, r) => s + (cents(r.amount) ?? 0), 0);
+
+export function toBillSnapshot(b: PluggyBill): BillSnapshot | null {
+  const total = cents(b.totalAmount), due = isoDay(b.dueDate);
+  if (!b.id || !/^[0-9A-Za-z-]{1,64}$/.test(b.id) || total === null || !due) return null;
+  return {
+    bill_id: b.id,
+    due_date: due,
+    close_date: isoDay(b.billClosingDate),
+    total_cents: total,
+    minimum_cents: cents(b.minimumPaymentAmount),
+    charges_cents: sumCents(b.financeCharges),
+    paid_cents: sumCents(b.payments),
+    currency: String(b.totalAmountCurrencyCode ?? "BRL").slice(0, 3),
+  };
+}
+
 /// When the latest bank movement of this item reached Pluggy. A Meu Pluggy
 /// proxy item keeps `lastUpdatedAt` at its creation (it only mirrors the
 /// original connection), so the item date says nothing; the newest
