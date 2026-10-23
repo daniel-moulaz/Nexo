@@ -120,6 +120,20 @@ begin
 end;
 $$;
 
+-- For the assistant: when each bank was last refreshed, so "no expenses
+-- today" is never said when today's data simply did not arrive yet.
+create or replace function public.nexo_mcp_bank_status(p_connector_id uuid)
+returns jsonb language sql security definer set search_path = '' as $$
+  select coalesce(jsonb_agg(jsonb_build_object(
+      'bank', i.label, 'state', i.health->>'state', 'message', i.health->>'message',
+      'bank_updated_at', i.bank_updated_at, 'read_at', i.last_fetch_at) order by i.created_at), '[]'::jsonb)
+  from nexo_pluggy_private.items i
+  join nexo_mcp_private.connectors k
+    on k.id = p_connector_id and k.revoked_at is null and k.owner_id = i.owner_id;
+$$;
+revoke all on function public.nexo_mcp_bank_status(uuid) from public, anon, authenticated;
+grant execute on function public.nexo_mcp_bank_status(uuid) to service_role;
+
 revoke all on function public.nexo_pluggy_store_accounts(uuid, text, timestamptz, jsonb) from public, anon, authenticated;
 grant execute on function public.nexo_pluggy_store_accounts(uuid, text, timestamptz, jsonb) to service_role;
 revoke all on function public.nexo_pluggy_accounts() from public, anon;

@@ -27,7 +27,7 @@ export interface Deps {
   actions?(connector: Connector): ActionDeps;
 }
 
-const readOnlyActions = new Set(["list_suggestions", "get_request_status", ...readOnlyMore, ...readOnlyAll]);
+const readOnlyActions = new Set(["list_suggestions", "get_request_status", "get_bank_sync_status", ...readOnlyMore, ...readOnlyAll]);
 
 type Json = Record<string, unknown>;
 const rpcError = (id: unknown, code: number, message: string) => ({

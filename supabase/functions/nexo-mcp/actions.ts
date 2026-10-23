@@ -20,6 +20,39 @@ export interface ActionDeps {
   request(id: string): Promise<Request | null>;
   suggestions(limit: number): Promise<Record<string, unknown>[]>;
   ignoreSuggestions(ids: string[] | null, beforeMs: number | null): Promise<number>;
+  /// When each bank was last refreshed (absent on older servers).
+  bankStatus?(): Promise<Record<string, unknown>[]>;
+}
+
+/// "Dados do banco até…": the assistant must not read an empty day as no
+/// spending when the bank simply did not send today's data yet.
+async function bankFreshness(deps: ActionDeps, today: string) {
+  if (!deps.bankStatus) return undefined;
+  let rows: Record<string, unknown>[];
+  try {
+    rows = await deps.bankStatus();
+  } catch {
+    return undefined;
+  }
+  const banks = rows.map((r) => {
+    const at = typeof r.bank_updated_at === "string" ? r.bank_updated_at : null;
+    const local = at
+      ? new Intl.DateTimeFormat("sv-SE", { timeZone: "America/Sao_Paulo", dateStyle: "short", timeStyle: "short" })
+        .format(new Date(at))
+      : null;
+    return {
+      bank: String(r.bank ?? "Banco"),
+      data_until: local ?? "desconhecido",
+      today_arrived: local ? local.slice(0, 10) >= today : false,
+      state: r.state ?? undefined,
+    };
+  });
+  return {
+    banks,
+    note: banks.some((b) => !b.today_arrived)
+      ? "O Open Finance atualiza uma vez por dia: movimentações de hoje podem ainda não ter chegado. Não conclua que não houve gasto."
+      : undefined,
+  };
 }
 
 const dateField = { type: "string", pattern: "^\\d{4}-\\d{2}-\\d{2}$" };
@@ -140,6 +173,13 @@ const baseActions: (ToolDefinition & { destructive?: boolean })[] = [
       },
       additionalProperties: false,
     },
+  },
+  {
+    name: "get_bank_sync_status",
+    title: "Dados do banco até quando",
+    description:
+      "Para cada banco do Open Finance: até quando os dados chegaram e se os de hoje já vieram. Consulte antes de afirmar que não houve gastos em um dia.",
+    inputSchema: { type: "object", properties: {}, additionalProperties: false },
   },
   {
     name: "get_request_status",
@@ -326,6 +366,7 @@ export async function callAction(name: string, rawArgs: unknown, l: Ledger, toda
           description: s.description, settled: s.settled, installment: s.installment ?? undefined,
         })),
         note: "Sugestões não são lançamentos. Confirme as que são reais com confirm_suggestion e descarte o resto com ignore_suggestions.",
+        bank_data: await bankFreshness(deps, today),
       };
     }
     case "confirm_suggestion": {
@@ -374,6 +415,11 @@ export async function callAction(name: string, rawArgs: unknown, l: Ledger, toda
       const count = await deps.ignoreSuggestions(ids?.length ? ids as string[] : null,
         before ? Date.parse(`${before}T00:00:00-03:00`) : null);
       return { ignored: count, message: `${count} sugestão(ões) descartada(s). Nenhum saldo mudou.` };
+    }
+    case "get_bank_sync_status": {
+      only(args, []);
+      return (await bankFreshness(deps, today)) ??
+        { banks: [], note: "O servidor ainda não informa a data dos dados do banco." };
     }
     case "get_request_status": {
       only(args, ["id"]);

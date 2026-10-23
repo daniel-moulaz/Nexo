@@ -289,7 +289,8 @@ class _SyncSettingsScreenState extends State<SyncSettingsScreen> {
                     ? theme.colorScheme.error
                     : null),
             title: Text(item.label),
-            subtitle: Text(item.message),
+            subtitle: Text('${item.message}\n${bankDataUntil(item)}'),
+            isThreeLine: true,
             trailing: IconButton(
                 tooltip: 'Remover conexão',
                 onPressed: _busy ? null : () => _removePluggyItem(item),

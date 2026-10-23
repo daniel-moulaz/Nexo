@@ -10,8 +10,13 @@ import '../sync/supabase_auth.dart';
 import '../sync/sync_config.dart';
 
 class PluggyItem {
-  const PluggyItem(this.itemId, this.label, this.state, this.message);
+  const PluggyItem(this.itemId, this.label, this.state, this.message,
+      {this.bankUpdatedAt});
   final String itemId, label;
+
+  /// When the bank data behind this connection was last refreshed (the
+  /// Open Finance updates once a day); null when the server does not know.
+  final DateTime? bankUpdatedAt;
 
   /// ok | updating | reconnect | expiring | error | unknown (never read yet)
   final String state;
@@ -24,8 +29,31 @@ class PluggyItem {
         json['label'] as String,
         health?['state'] as String? ?? 'unknown',
         health?['message'] as String? ??
-            'Ainda não lido. Toque em Atualizar agora.');
+            'Ainda não lido. Toque em Atualizar agora.',
+        bankUpdatedAt: json['bank_updated_at'] is String
+            ? DateTime.tryParse(json['bank_updated_at'] as String)?.toLocal()
+            : null);
   }
+}
+
+/// "Dados do banco até 22/10 às 06:00".
+String bankDataUntil(PluggyItem item) {
+  final at = item.bankUpdatedAt;
+  if (at == null) return 'Data dos dados do banco ainda não informada';
+  String two(int v) => v.toString().padLeft(2, '0');
+  return 'Dados do banco até ${two(at.day)}/${two(at.month)} às ${two(at.hour)}:${two(at.minute)}';
+}
+
+/// Banks whose data for today did not arrive yet (null when all did or the
+/// server does not tell).
+String? todayMissing(List<PluggyItem> items, DateTime now) {
+  final today = DateTime(now.year, now.month, now.day);
+  final late = items
+      .where((i) => i.bankUpdatedAt != null && i.bankUpdatedAt!.isBefore(today))
+      .map((i) => i.label)
+      .toList();
+  if (late.isEmpty) return null;
+  return 'Os dados de hoje ainda não chegaram de ${late.join(', ')}: o Open Finance atualiza uma vez por dia. Gastos de hoje podem faltar aqui.';
 }
 
 /// A server answer the person can act on.
