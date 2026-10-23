@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../widgets/nexo_ui.dart';
 import '../services/balance_check.dart';
 import '../services/bank_snapshots.dart';
+import '../services/official_invoice.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
@@ -371,6 +372,12 @@ class _CardInvoiceScreenState extends State<CardInvoiceScreen> {
                           'Limite disponível ${formatAmount(freeLimit, card.currency)}'),
                     if (!app.settings.hideBalance)
                       _BankLimit(cardId: card.id, currency: card.currency),
+                    if (!app.settings.hideBalance)
+                      _OfficialBill(
+                          cardId: card.id,
+                          cycle: cycle,
+                          nexoTotal: total,
+                          currency: card.currency),
                   ],
                 ),
               ),
@@ -452,6 +459,70 @@ class _CardInvoiceScreenState extends State<CardInvoiceScreen> {
         );
       },
     );
+  }
+}
+
+/// The bank's own invoice for this cycle (Open Finance), next to the Nexo
+/// total: the bank is the final word once it closes.
+class _OfficialBill extends StatelessWidget {
+  const _OfficialBill(
+      {required this.cardId,
+      required this.cycle,
+      required this.nexoTotal,
+      required this.currency});
+  final String cardId, currency;
+  final BillingCycle cycle;
+  final double nexoTotal;
+
+  @override
+  Widget build(BuildContext context) {
+    return FutureBuilder<List<BankAccountSnapshot>>(
+        future: BankSnapshots.load(),
+        builder: (context, snapshot) {
+          final official = officialFor(
+              BankSnapshots.linkedTo(snapshot.data ?? const [], cardId), cycle,
+              nexoTotal: nexoTotal, currency: currency);
+          if (official == null) return const SizedBox.shrink();
+          final bill = official.bill;
+          String money(int cents) => formatAmount(cents / 100, currency);
+          final scheme = Theme.of(context).colorScheme;
+          final diff = official.differenceCents;
+          return Padding(
+            padding: const EdgeInsets.only(top: 12),
+            child: Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                  color: scheme.surface.withValues(alpha: .6),
+                  borderRadius: BorderRadius.circular(16)),
+              child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Fatura do banco ${money(bill.totalCents)}',
+                        style: const TextStyle(fontWeight: FontWeight.w900)),
+                    Text([
+                      'vence ${DateFormat('dd/MM').format(bill.dueDate)}',
+                      if (bill.minimumCents != null)
+                        'mínimo ${money(bill.minimumCents!)}',
+                      if (bill.paidCents > 0)
+                        'pago no banco ${money(bill.paidCents)}',
+                    ].join(' · ')),
+                    if (bill.chargesCents > 0)
+                      Text(
+                          'Inclui ${money(bill.chargesCents)} de encargos (juros, multa, IOF).'),
+                    const SizedBox(height: 4),
+                    Text(
+                        official.matches
+                            ? 'Bate com o Nexo.'
+                            : 'O banco cobra ${money(diff.abs())} a ${diff > 0 ? 'mais' : 'menos'} que o Nexo. O valor do banco é o final: confira compras que faltam ou foram lançadas duas vezes.',
+                        style: TextStyle(
+                            fontWeight: FontWeight.w700,
+                            color: official.matches
+                                ? scheme.primary
+                                : scheme.error)),
+                  ]),
+            ),
+          );
+        });
   }
 }
 
