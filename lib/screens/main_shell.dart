@@ -27,7 +27,8 @@ class MainShell extends StatefulWidget {
 
 class _MainShellState extends State<MainShell> {
   // Keep internal route IDs stable for Home shortcuts and desktop navigation.
-  static const _mobileTabs = [0, 8, 3, 11, 5];
+  // Hoje · Extrato · Orçamento · Contas · Mais (investments live in Mais).
+  static const _mobileTabs = [0, 8, 4, 3, 5];
   int _index = 0;
   final searchFocus = FocusNode();
   AppProvider? _app;
@@ -134,12 +135,12 @@ class _MainShellState extends State<MainShell> {
                       style: TextStyle(
                           fontSize: 28, fontWeight: FontWeight.w800))),
               for (final entry in const [
-                (0, 'Resumo', Icons.dashboard_outlined),
+                (0, 'Hoje', Icons.today_outlined),
                 (8, 'Transações', Icons.receipt_long_outlined),
+                (4, 'Orçamentos e objetivos', Icons.pie_chart_outline),
                 (3, 'Contas e cartões', Icons.account_balance_wallet_outlined),
                 (11, 'Investimentos', Icons.show_chart),
                 (2, 'Recorrentes', Icons.repeat),
-                (4, 'Orçamentos e objetivos', Icons.pie_chart_outline),
                 (6, 'Análises', Icons.bar_chart),
                 (7, 'Agenda', Icons.event_note),
                 (10, 'Importar', Icons.upload_file_outlined),
@@ -216,21 +217,21 @@ class _MainShellState extends State<MainShell> {
                   },
                   destinations: [
                     const NavigationDestination(
-                        icon: Icon(Icons.home_outlined),
-                        selectedIcon: Icon(Icons.home_rounded),
-                        label: 'Início'),
+                        icon: Icon(Icons.today_outlined),
+                        selectedIcon: Icon(Icons.today),
+                        label: 'Hoje'),
                     const NavigationDestination(
                         icon: Icon(Icons.receipt_long_outlined),
                         selectedIcon: Icon(Icons.receipt_long),
                         label: 'Extrato'),
                     const NavigationDestination(
+                        icon: Icon(Icons.pie_chart_outline),
+                        selectedIcon: Icon(Icons.pie_chart),
+                        label: 'Orçamento'),
+                    const NavigationDestination(
                         icon: Icon(Icons.account_balance_wallet_outlined),
                         selectedIcon: Icon(Icons.account_balance_wallet),
                         label: 'Contas'),
-                    const NavigationDestination(
-                        icon: Icon(Icons.show_chart),
-                        selectedIcon: Icon(Icons.show_chart),
-                        label: 'Investir'),
                     NavigationDestination(
                         icon: const Icon(Icons.more_horiz_outlined),
                         selectedIcon: const Icon(Icons.more_horiz),

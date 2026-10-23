@@ -37,6 +37,7 @@ import 'transaction_search_screen.dart';
 import 'transfer_screen.dart';
 import 'statement_import_screen.dart';
 import 'investments_screen.dart';
+import 'month_review_screen.dart';
 import 'net_worth_screen.dart';
 
 class FinanceHomeScreen extends StatefulWidget {
@@ -660,6 +661,17 @@ class _FinanceHomeScreenState extends State<FinanceHomeScreen>
                   action: 'Ver',
                   onTap: () => _open(const RecurringScreen())));
             }
+            // The first days of a month: invite to look back at the last one.
+            if (today.day <= 5) {
+              final last = DateTime(today.year, today.month - 1);
+              insights.add(NexoInsight(
+                  icon: Icons.auto_stories_outlined,
+                  color: cs.primary,
+                  title: 'Seu ${ptMonthYear(last).split(' ').first} em revisão',
+                  subtitle: 'Quanto saiu, para onde foi e o que mudou.',
+                  action: 'Ver',
+                  onTap: () => _open(MonthReviewScreen(month: last))));
+            }
             for (final alert in hidden
                 ? const <ChargeAlert>[]
                 : chargeAlerts(
@@ -820,11 +832,17 @@ class _FinanceHomeScreenState extends State<FinanceHomeScreen>
                         total: data.expense,
                         money: money,
                         onSlice: (id) => _category(app, data, id)),
-                  TextButton.icon(
-                      onPressed: () => _open(
-                          AnalysisScreen(initialMonth: month, closing: true)),
-                      icon: const Icon(Icons.fact_check_outlined),
-                      label: const Text('Ver fechamento do mês')),
+                  Wrap(spacing: 4, children: [
+                    TextButton.icon(
+                        onPressed: () => _open(MonthReviewScreen(month: month)),
+                        icon: const Icon(Icons.auto_stories_outlined),
+                        label: const Text('Mês em revisão')),
+                    TextButton.icon(
+                        onPressed: () => _open(
+                            AnalysisScreen(initialMonth: month, closing: true)),
+                        icon: const Icon(Icons.fact_check_outlined),
+                        label: const Text('Fechamento')),
+                  ]),
                 ]));
 
             final budgetCard = _Panel(

@@ -23,6 +23,8 @@ import 'agenda_screen.dart';
 import 'notification_inbox_screen.dart';
 import 'debt_overview_screen.dart';
 import 'financial_checkup_screen.dart';
+import 'investments_screen.dart';
+import 'month_review_screen.dart';
 
 class MoreScreen extends StatelessWidget {
   const MoreScreen({super.key});
@@ -50,6 +52,18 @@ class MoreScreen extends StatelessWidget {
           sub: 'Limites de gastos e metas para guardar dinheiro',
           color: Color(0xFF00897B),
           screen: BudgetScreen()),
+      const _Item(
+          icon: Icons.show_chart,
+          label: 'Investimentos',
+          sub: 'Carteira, proventos e comparação com o CDI',
+          color: Color(0xFF00897B),
+          screen: InvestmentsScreen()),
+      const _Item(
+          icon: Icons.auto_stories_outlined,
+          label: 'Mês em revisão',
+          sub: 'Destaques do mês e comparação com o anterior',
+          color: Color(0xFF00695C),
+          screen: MonthReviewScreen()),
       const _Item(
           icon: Icons.fact_check_outlined,
           label: 'Revisão financeira',
@@ -184,10 +198,11 @@ class MoreScreen extends StatelessWidget {
             for (final group in <String, List<String>>{
               'Planejar e acompanhar': [
                 'Agenda financeira',
+                'Investimentos',
                 'Recorrentes e assinaturas',
-                'Orçamentos e objetivos',
                 'Dívidas e compromissos',
                 'Análises',
+                'Mês em revisão',
                 'Revisão financeira',
               ],
               'Organizar e proteger': [

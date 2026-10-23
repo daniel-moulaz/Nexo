@@ -874,7 +874,7 @@ class AppProvider extends ChangeNotifier {
     if (original.id.startsWith('investment:') ||
         old.source.startsWith('investment:')) {
       throw const FormatException(
-          'Revise esta movimentação na aba Investir para manter conta e carteira consistentes.');
+          'Revise esta movimentação em Investimentos para manter conta e carteira consistentes.');
     }
     if (old.source.startsWith('transfer:'))
       throw StateError(
@@ -918,7 +918,7 @@ class AppProvider extends ChangeNotifier {
   Future<void> deleteTransaction(String id) async {
     if (id.startsWith('investment:')) {
       throw const FormatException(
-          'Exclua a operação na aba Investir. O valor da conta será estornado junto.');
+          'Exclua a operação em Investimentos. O valor da conta será estornado junto.');
     }
     final meta = await TransactionMetadataService.instance.getFor(id);
     final db = await DBHelper.database;
