@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.12.2] - 2026-10-23
+### Adicionado
+- **Conta principal com vários bancos:** contas do banco vinculadas à mesma conta do Nexo são somadas e comparadas de uma vez, com um único ajuste neutro.
+- Na fatura do cartão, botão para vincular ao cartão do banco quando ainda não há vínculo.
+
+### Corrigido
+- Depois de vincular, a fatura e o limite do banco aparecem na hora (antes esperavam até 10 minutos).
+
 ## [1.12.1] - 2026-10-23
 ### Adicionado
 - **Fatura do banco ao lado da fatura do Nexo** (Open Finance, hoje só o Nubank expõe): total oficial, vencimento, mínimo, encargos e a diferença para o Nexo. O banco é a referência final; a diferença indica compras a conferir. Nada é lançado ou pago a partir dela.
