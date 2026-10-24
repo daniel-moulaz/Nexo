@@ -208,8 +208,7 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
     int overdue = 0;
 
     for (final tx in expenses) {
-      final meta =
-          metadata[tx.id] ?? TransactionMetadata(transactionId: tx.id);
+      final meta = metadata[tx.id] ?? TransactionMetadata(transactionId: tx.id);
       if (FinanceRules.isNeutral(tx, meta)) continue;
       final amount = _mainAmount(app, tx);
       if (meta.status == 'pending') {
@@ -221,8 +220,7 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
     }
 
     final visible = expenses.where((tx) {
-      final meta =
-          metadata[tx.id] ?? TransactionMetadata(transactionId: tx.id);
+      final meta = metadata[tx.id] ?? TransactionMetadata(transactionId: tx.id);
       final neutral = FinanceRules.isNeutral(tx, meta);
       switch (_filter) {
         case 'pending':
@@ -290,7 +288,7 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  'Total comprometido',
+                  'Total comprometido · mês completo',
                   style: theme.textTheme.labelLarge?.copyWith(
                     color: cs.onSurfaceVariant,
                   ),
@@ -301,6 +299,11 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
                     fontWeight: FontWeight.w900,
                     letterSpacing: -0.8,
                   ),
+                ),
+                const Text(
+                  'Inclui datas futuras deste mês. Na Home, o consumo vai até hoje.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(fontSize: 12),
                 ),
                 const SizedBox(height: 12),
                 Row(
@@ -379,8 +382,7 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
                         ...txs.map((tx) {
                           final meta = metadata[tx.id] ??
                               TransactionMetadata(transactionId: tx.id);
-                          final category =
-                              _categoryLabel(app.categoryById(tx.categoryId));
+                          final category = _categoryLabel(app.categoryFor(tx));
                           final account = app.accountById(tx.accountId);
                           final neutral = FinanceRules.isNeutral(tx, meta);
                           final status = neutral
@@ -399,6 +401,10 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
                             if (meta.installmentLabel.isNotEmpty)
                               'Parcela ${meta.installmentLabel}',
                           ];
+                          final now = DateTime.now();
+                          final futureDate = DateTime(
+                                  tx.date.year, tx.date.month, tx.date.day)
+                              .isAfter(DateTime(now.year, now.month, now.day));
 
                           return Card(
                             elevation: 0,
@@ -423,7 +429,7 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
                                 ),
                               ),
                               subtitle: Text(
-                                '${details.join(' • ')}\n$status',
+                                '${details.join(' • ')}\n$status${futureDate ? ' · Data futura' : ''}',
                                 maxLines: 3,
                                 overflow: TextOverflow.ellipsis,
                               ),

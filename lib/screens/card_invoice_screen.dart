@@ -1,4 +1,9 @@
 import 'package:flutter/material.dart';
+import '../widgets/nexo_ui.dart';
+import '../services/balance_check.dart';
+import '../services/bank_snapshots.dart';
+import '../services/official_invoice.dart';
+import 'balance_check_screen.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
@@ -23,20 +28,23 @@ class CardInvoiceScreen extends StatefulWidget {
 }
 
 class _CardInvoiceScreenState extends State<CardInvoiceScreen> {
-  Future<Map<String, TransactionMetadata>>? _metadata;
+  Future<List<dynamic>>? _invoiceData;
+  String? _invoiceKey;
+  List<AppTransaction>? _lastTransactions;
+  int _metadataRevision = -1;
   int _monthOffset = 0;
   bool _paying = false;
 
-  ({DateTime start, DateTime end, DateTime? due}) _cycle(Account card) {
+  BillingCycle _cycle(Account card) {
     final initial = widget.initialCycleEnd;
-    final cycle = BillingCycle.forDate(
-        BillingCycle.date(
-            initial?.year ?? DateTime.now().year,
-            (initial?.month ?? DateTime.now().month) + _monthOffset,
-            initial?.day ?? DateTime.now().day),
-        card.statementDay,
-        card.dueDay);
-    return (start: cycle.start, end: cycle.end, due: cycle.due);
+    final day = BillingCycle.date(
+        initial?.year ?? DateTime.now().year,
+        (initial?.month ?? DateTime.now().month) + _monthOffset,
+        initial?.day ?? DateTime.now().day);
+    // A closing date given by the caller is the invoice that closes on it.
+    return initial == null
+        ? BillingCycle.forDate(day, card.statementDay, card.dueDay)
+        : BillingCycle.endingOn(day, card.statementDay, card.dueDay);
   }
 
   Future<void> _editSettings(Account card) async {
@@ -214,7 +222,7 @@ class _CardInvoiceScreenState extends State<CardInvoiceScreen> {
     if (!mounted) return;
     _snack('Pagamento registrado sem duplicar seus gastos.');
     setState(() {
-      _metadata = null;
+      _invoiceData = null;
     });
   }
 
@@ -233,19 +241,42 @@ class _CardInvoiceScreenState extends State<CardInvoiceScreen> {
     }
 
     final cycle = _cycle(card);
-    final allCycleTx = app.transactions.where((t) =>
-        t.accountId == card.id &&
-        !t.date.isBefore(cycle.start) &&
-        t.date.isBefore(cycle.end.add(const Duration(days: 1))));
-    _metadata ??= TransactionMetadataService.instance
-        .getForMany(allCycleTx.map((e) => e.id));
+    final allCycleTx = app.transactions
+        .where((t) => t.accountId == card.id && cycle.contains(t.date));
+    final invoiceKey = '${card.id}|${cycle.start}|${cycle.end}';
+    final revision = TransactionMetadataService.instance.revision.value;
+    if (_invoiceKey != invoiceKey ||
+        !identical(_lastTransactions, app.transactions) ||
+        _metadataRevision != revision) {
+      _invoiceData = null;
+      _invoiceKey = invoiceKey;
+      _lastTransactions = app.transactions;
+      _metadataRevision = revision;
+    }
+    _invoiceData ??= Future.wait<dynamic>([
+      TransactionMetadataService.instance
+          .getForMany(allCycleTx.map((e) => e.id)),
+      CardInvoiceService.instance.paidForCycle(card.id, cycle.end),
+    ]);
 
     return FutureBuilder<List<dynamic>>(
-      future: Future.wait<dynamic>([
-        _metadata!,
-        CardInvoiceService.instance.paidForCycle(card.id, cycle.end),
-      ]),
+      key: ObjectKey(_invoiceData),
+      future: _invoiceData,
       builder: (context, snapshot) {
+        if (snapshot.hasError) {
+          return Scaffold(
+              appBar: AppBar(title: Text(card.name)),
+              body: Center(
+                  child: TextButton(
+                      onPressed: () => setState(() => _invoiceData = null),
+                      child: const Text(
+                          'Não foi possível carregar a fatura. Tentar novamente'))));
+        }
+        if (!snapshot.hasData) {
+          return Scaffold(
+              appBar: AppBar(title: Text(card.name)),
+              body: const Center(child: CircularProgressIndicator()));
+        }
         final values = snapshot.data;
         final meta = values == null
             ? const <String, TransactionMetadata>{}
@@ -278,14 +309,14 @@ class _CardInvoiceScreenState extends State<CardInvoiceScreen> {
                   icon: const Icon(Icons.chevron_left),
                   onPressed: () => setState(() {
                         _monthOffset--;
-                        _metadata = null;
+                        _invoiceData = null;
                       })),
               IconButton(
                   tooltip: 'Próxima fatura',
                   icon: const Icon(Icons.chevron_right),
                   onPressed: () => setState(() {
                         _monthOffset++;
-                        _metadata = null;
+                        _invoiceData = null;
                       })),
               IconButton(
                 tooltip: 'Configurar fatura',
@@ -306,10 +337,14 @@ class _CardInvoiceScreenState extends State<CardInvoiceScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text('Fatura atual'),
+                    Text(_monthOffset == 0 && widget.initialCycleEnd == null
+                        ? 'Fatura atual'
+                        : 'Fatura do período'),
                     const SizedBox(height: 4),
                     Text(
-                      formatAmount(total, card.currency),
+                      app.settings.hideBalance
+                          ? '••••'
+                          : formatAmount(total, card.currency),
                       style:
                           Theme.of(context).textTheme.headlineLarge?.copyWith(
                                 fontWeight: FontWeight.w900,
@@ -317,23 +352,33 @@ class _CardInvoiceScreenState extends State<CardInvoiceScreen> {
                     ),
                     const SizedBox(height: 12),
                     Text(
-                      'Período ${DateFormat('dd/MM').format(cycle.start)} a ${DateFormat('dd/MM').format(cycle.end)}',
+                      'Compras de ${DateFormat('dd/MM').format(cycle.start)} a ${DateFormat('dd/MM').format(cycle.lastDay)} · fecha ${DateFormat('dd/MM').format(cycle.end)}',
                     ),
                     if (cycle.due != null)
                       Text(
                           'Vencimento ${DateFormat('dd/MM/yyyy').format(cycle.due!)}'),
-                    if (alreadyPaid > 0)
+                    if (alreadyPaid > 0 && !app.settings.hideBalance)
                       Text(
                           'Já pago ${formatAmount(alreadyPaid, card.currency)}'),
                     Text(
-                      remaining <= 0
-                          ? 'Situação: paga'
-                          : 'Em aberto ${formatAmount(remaining, card.currency)}',
+                      app.settings.hideBalance
+                          ? 'Valores ocultos'
+                          : remaining <= 0
+                              ? 'Situação: paga'
+                              : 'Em aberto ${formatAmount(remaining, card.currency)}',
                       style: const TextStyle(fontWeight: FontWeight.w800),
                     ),
-                    if (freeLimit != null)
+                    if (freeLimit != null && !app.settings.hideBalance)
                       Text(
                           'Limite disponível ${formatAmount(freeLimit, card.currency)}'),
+                    if (!app.settings.hideBalance)
+                      _BankLimit(cardId: card.id, currency: card.currency),
+                    if (!app.settings.hideBalance)
+                      _OfficialBill(
+                          cardId: card.id,
+                          cycle: cycle,
+                          nexoTotal: total,
+                          currency: card.currency),
                   ],
                 ),
               ),
@@ -379,7 +424,7 @@ class _CardInvoiceScreenState extends State<CardInvoiceScreen> {
                 )
               else
                 ...purchases.map((tx) {
-                  final category = app.categoryById(tx.categoryId);
+                  final category = app.categoryFor(tx);
                   final txMeta = meta[tx.id];
                   return Card(
                     elevation: 0,
@@ -388,9 +433,11 @@ class _CardInvoiceScreenState extends State<CardInvoiceScreen> {
                         child: Icon(Icons.shopping_bag_outlined),
                       ),
                       title: Text(
-                        tx.description.trim().isEmpty
-                            ? (category?.name ?? 'Compra')
-                            : tx.description,
+                        app.settings.hideBalance
+                            ? 'Movimentação no cartão'
+                            : tx.description.trim().isEmpty
+                                ? (category?.name ?? 'Compra')
+                                : tx.description,
                       ),
                       subtitle: Text([
                         DateFormat('dd/MM/yyyy').format(tx.date),
@@ -400,7 +447,9 @@ class _CardInvoiceScreenState extends State<CardInvoiceScreen> {
                           'Parcela ${txMeta!.installmentLabel}',
                       ].join(' • ')),
                       trailing: Text(
-                        '${tx.type == 'income' ? '− ' : ''}${formatAmount(tx.amount, card.currency)}',
+                        app.settings.hideBalance
+                            ? '••••'
+                            : '${tx.type == 'income' ? '− ' : ''}${formatAmount(tx.amount, card.currency)}',
                         style: const TextStyle(fontWeight: FontWeight.w900),
                       ),
                     ),
@@ -411,5 +460,128 @@ class _CardInvoiceScreenState extends State<CardInvoiceScreen> {
         );
       },
     );
+  }
+}
+
+/// The bank's own invoice for this cycle (Open Finance), next to the Nexo
+/// total: the bank is the final word once it closes.
+class _OfficialBill extends StatelessWidget {
+  const _OfficialBill(
+      {required this.cardId,
+      required this.cycle,
+      required this.nexoTotal,
+      required this.currency});
+  final String cardId, currency;
+  final BillingCycle cycle;
+  final double nexoTotal;
+
+  @override
+  Widget build(BuildContext context) {
+    return FutureBuilder<List<BankAccountSnapshot>>(
+        future: BankSnapshots.load(),
+        builder: (context, snapshot) {
+          final list = snapshot.data ?? const <BankAccountSnapshot>[];
+          final linked = BankSnapshots.linkedTo(list, cardId);
+          if (linked == null &&
+              list.any((s) => s.isCard && s.nexoAccountId == null)) {
+            // A bank card nobody linked yet: the official invoice is one
+            // choice away.
+            return Align(
+              alignment: Alignment.centerLeft,
+              child: TextButton.icon(
+                  onPressed: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                          builder: (_) => const BalanceCheckScreen())),
+                  icon: const Icon(Icons.link_rounded),
+                  label: const Text(
+                      'Vincular ao cartão do banco para ver a fatura oficial')),
+            );
+          }
+          final official = officialFor(linked, cycle,
+              nexoTotal: nexoTotal, currency: currency);
+          if (official == null) return const SizedBox.shrink();
+          final bill = official.bill;
+          String money(int cents) => formatAmount(cents / 100, currency);
+          final scheme = Theme.of(context).colorScheme;
+          final diff = official.differenceCents;
+          return Padding(
+            padding: const EdgeInsets.only(top: 12),
+            child: Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                  color: scheme.surface.withValues(alpha: .6),
+                  borderRadius: BorderRadius.circular(16)),
+              child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Fatura do banco ${money(bill.totalCents)}',
+                        style: const TextStyle(fontWeight: FontWeight.w900)),
+                    Text([
+                      'vence ${DateFormat('dd/MM').format(bill.dueDate)}',
+                      if (bill.minimumCents != null)
+                        'mínimo ${money(bill.minimumCents!)}',
+                      if (bill.paidCents > 0)
+                        'pago no banco ${money(bill.paidCents)}',
+                    ].join(' · ')),
+                    if (bill.chargesCents > 0)
+                      Text(
+                          'Inclui ${money(bill.chargesCents)} de encargos (juros, multa, IOF).'),
+                    const SizedBox(height: 4),
+                    Text(
+                        official.matches
+                            ? 'Bate com o Nexo.'
+                            : 'O banco cobra ${money(diff.abs())} a ${diff > 0 ? 'mais' : 'menos'} que o Nexo. O valor do banco é o final: confira compras que faltam ou foram lançadas duas vezes.',
+                        style: TextStyle(
+                            fontWeight: FontWeight.w700,
+                            color: official.matches
+                                ? scheme.primary
+                                : scheme.error)),
+                  ]),
+            ),
+          );
+        });
+  }
+}
+
+/// The limit as the bank reports it (Open Finance), when this card is
+/// linked in "Conferir com o banco".
+class _BankLimit extends StatelessWidget {
+  const _BankLimit({required this.cardId, required this.currency});
+  final String cardId, currency;
+
+  @override
+  Widget build(BuildContext context) {
+    return FutureBuilder<List<BankAccountSnapshot>>(
+        future: BankSnapshots.load(),
+        builder: (context, snapshot) {
+          final bank =
+              BankSnapshots.linkedTo(snapshot.data ?? const [], cardId);
+          final used = bank == null ? null : BankSnapshots.limitUsed(bank);
+          if (bank == null || used == null) return const SizedBox.shrink();
+          final warn = used >= .9;
+          final color = warn
+              ? Theme.of(context).colorScheme.error
+              : Theme.of(context).colorScheme.onSurfaceVariant;
+          return Padding(
+            padding: const EdgeInsets.only(top: 8),
+            child:
+                Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text(
+                  'No banco: limite ${formatAmount(bank.creditLimitCents! / 100, currency)} · disponível ${formatAmount(bank.availableCents! / 100, currency)}',
+                  style: TextStyle(color: color)),
+              const SizedBox(height: 4),
+              NexoProgress(value: used),
+              if (warn)
+                Padding(
+                  padding: const EdgeInsets.only(top: 4),
+                  child: Text(
+                      '${(used * 100).round()}% do limite usado. Compras novas podem ser recusadas.',
+                      style:
+                          TextStyle(color: color, fontWeight: FontWeight.w700)),
+                ),
+            ]),
+          );
+        });
   }
 }

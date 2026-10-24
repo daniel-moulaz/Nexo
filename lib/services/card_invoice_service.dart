@@ -25,17 +25,18 @@ class CardInvoiceService {
     required DateTime cycleEnd,
     required double amount,
   }) async {
-    final db = await _database;
-    await db.insert(
-      'card_invoice_payments',
-      {
-        'id': id,
-        'card_id': cardId,
-        'cycle_end': _cycleKey(cycleEnd),
-        'amount': amount,
-        'paid_at': DateTime.now().toIso8601String(),
-      },
-      conflictAlgorithm: ConflictAlgorithm.replace,
-    );
+    await DBHelper.operation(
+        'invoice.record_payment',
+        (txn) => txn.insert(
+              'card_invoice_payments',
+              {
+                'id': id,
+                'card_id': cardId,
+                'cycle_end': _cycleKey(cycleEnd),
+                'amount': amount,
+                'paid_at': DateTime.now().toIso8601String(),
+              },
+              conflictAlgorithm: ConflictAlgorithm.replace,
+            ));
   }
 }

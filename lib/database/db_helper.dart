@@ -4,15 +4,25 @@ import 'package:intl/intl.dart';
 import 'package:flutter/foundation.dart';
 import '../models/models.dart';
 import 'database_platform.dart';
+import '../investments/investment_repository.dart';
+import '../sync/ledger_capture.dart';
+import '../services/notification_inbox.dart' show NotificationInbox;
 
 class DBHelper {
   static Database? _db;
-  static const int _version = 23;
+  static const int _version = 25;
 
   /// Public accessor for the current DB/backup schema version, so UI code
   /// (e.g. the Backup screen) never has to hardcode a copy that can drift
   /// out of sync with the real schema version.
   static int get schemaVersion => _version;
+
+  /// One SQLite transaction that is also one named domain operation, so a
+  /// future sync journal captures the whole change or none of it.
+  static Future<T> operation<T>(
+          String kind, Future<T> Function(DatabaseExecutor txn) body,
+          {LedgerScope scope = LedgerScope.user}) async =>
+      ledgerTransaction(await database, kind, body, scope: scope);
 
   static Future<void> close() async {
     await _db?.close();
@@ -475,6 +485,13 @@ class DBHelper {
     if (oldV < 21) await _ensureFinanceSchema(db);
     if (oldV < 22) await _createImportRules(db);
     if (oldV < 23) await _createSuggestions(db);
+    if (oldV < 24) await InvestmentRepository.createSchema(db);
+    if (oldV >= 24 && oldV < 25) {
+      await db.execute(
+          'ALTER TABLE investments ADD COLUMN archived INTEGER NOT NULL DEFAULT 0');
+      await db.execute(
+          'ALTER TABLE investment_operations ADD COLUMN cash_account_id TEXT');
+    }
     if (oldV < 20) {
       try {
         await db
@@ -560,7 +577,7 @@ class DBHelper {
           id,
           'pending',
           DateTime.now()
-              .subtract(const Duration(days: 7))
+              .subtract(NotificationInbox.windowFor(id))
               .millisecondsSinceEpoch
         ]);
     if (changed != 1) throw StateError('Sugestão já resolvida ou expirada.');
@@ -735,6 +752,7 @@ class DBHelper {
     await _ensureFinanceSchema(db);
     await _createImportRules(db);
     await _createSuggestions(db);
+    await InvestmentRepository.createSchema(db);
     await _insertDefaults(db);
   }
 
@@ -771,15 +789,51 @@ class DBHelper {
     return rows.map(Account.fromMap).toList();
   }
 
-  static Future<void> insertAccount(Account a) async =>
-      (await database).insert('accounts', a.toMap(),
-          conflictAlgorithm: ConflictAlgorithm.replace);
-  static Future<void> updateAccount(Account a) async => (await database)
-      .update('accounts', a.toMap(), where: 'id=?', whereArgs: [a.id]);
+  static Future<void> insertAccount(Account a) => operation(
+      'account.insert',
+      (txn) => txn.insert('accounts', a.toMap(),
+          conflictAlgorithm: ConflictAlgorithm.replace));
+  static Future<void> validateInvestmentCashAccount(
+      DatabaseExecutor db, Account a) async {
+    if (a.currency == 'BRL' && !['credit', 'gold'].contains(a.type)) return;
+    if ((await db.query('investment_operations',
+            where: 'cash_account_id=?', whereArgs: [a.id], limit: 1))
+        .isNotEmpty) {
+      throw const FormatException(
+          'Esta conta está vinculada a investimentos e precisa continuar como conta de saldo em reais.');
+    }
+  }
+
+  static Future<void> updateAccount(Account a) =>
+      operation('account.update', (txn) async {
+        await validateInvestmentCashAccount(txn, a);
+        await txn
+            .update('accounts', a.toMap(), where: 'id=?', whereArgs: [a.id]);
+      });
+
   static Future<void> deleteAccount(String id) async {
-    final db = await database;
-    await db.transaction((txn) async {
-      await txn.delete('transactions', where: 'account_id=?', whereArgs: [id]);
+    await operation('account.delete', (txn) async {
+      if ((await txn.query('investment_operations',
+              where: 'cash_account_id=?', whereArgs: [id], limit: 1))
+          .isNotEmpty) {
+        throw const FormatException(
+            'Esta conta possui operações de investimento vinculadas. Revise-as em Investimentos antes de excluir.');
+      }
+      // Never delete history or money in cascade: whoever calls this (screen,
+      // sync, assistant) must first move or remove what depends on the account.
+      Future<bool> uses(String table, String where) async =>
+          (await txn.query(table, where: where, whereArgs: [id], limit: 1))
+              .isNotEmpty;
+      if (await uses('transactions', 'account_id=?') ||
+          await uses('recurring_payments', 'account_id=?') ||
+          await uses('accounts', 'linked_account_id=?') ||
+          await uses('savings_contributions', 'account_id=?') ||
+          await uses('loans', 'account_id=?1 OR transfer_account_id=?1') ||
+          await uses('loan_payments', 'account_id=?') ||
+          await uses('lended_money', 'account_id=? AND is_settled=0')) {
+        throw const FormatException(
+            'Esta conta possui vínculos. Realoque os lançamentos, recorrentes, cartões, empréstimos e objetivos antes de excluir. Você também pode ocultá-la do saldo total na edição.');
+      }
       await txn.delete('accounts', where: 'id=?', whereArgs: [id]);
     });
   }
@@ -791,13 +845,16 @@ class DBHelper {
     return rows.map(AppCategory.fromMap).toList();
   }
 
-  static Future<void> insertCategory(AppCategory c) async =>
-      (await database).insert('categories', c.toMap(),
-          conflictAlgorithm: ConflictAlgorithm.replace);
-  static Future<void> updateCategory(AppCategory c) async => (await database)
-      .update('categories', c.toMap(), where: 'id=?', whereArgs: [c.id]);
-  static Future<void> deleteCategory(String id) async =>
-      (await database).delete('categories', where: 'id=?', whereArgs: [id]);
+  static Future<void> insertCategory(AppCategory c) => operation(
+      'category.insert',
+      (txn) => txn.insert('categories', c.toMap(),
+          conflictAlgorithm: ConflictAlgorithm.replace));
+  static Future<void> updateCategory(AppCategory c) => operation(
+      'category.update',
+      (txn) => txn
+          .update('categories', c.toMap(), where: 'id=?', whereArgs: [c.id]));
+  static Future<void> deleteCategory(String id) => operation('category.delete',
+      (txn) => txn.delete('categories', where: 'id=?', whereArgs: [id]));
 
   // ── Transactions ─────────────────────────────────────────────────────
   static Future<List<AppTransaction>> getTransactions(
@@ -822,15 +879,6 @@ class DBHelper {
     return rows.map(AppTransaction.fromMap).toList();
   }
 
-  static Future<void> insertTransaction(AppTransaction t) async =>
-      (await database).insert('transactions', t.toMap(),
-          conflictAlgorithm: ConflictAlgorithm.replace);
-  static Future<void> updateTransaction(AppTransaction t) async =>
-      (await database)
-          .update('transactions', t.toMap(), where: 'id=?', whereArgs: [t.id]);
-  static Future<void> deleteTransaction(String id) async =>
-      (await database).delete('transactions', where: 'id=?', whereArgs: [id]);
-
   // ── Recurring ────────────────────────────────────────────────────────
   static Future<List<RecurringPayment>> getRecurring() async {
     final db = await database;
@@ -849,14 +897,23 @@ class DBHelper {
         .toList();
   }
 
-  static Future<void> insertRecurring(RecurringPayment r) async =>
-      (await database).insert('recurring_payments', r.toMap(),
-          conflictAlgorithm: ConflictAlgorithm.replace);
-  static Future<void> updateRecurring(RecurringPayment r) async =>
-      (await database).update('recurring_payments', r.toMap(),
-          where: 'id=?', whereArgs: [r.id]);
-  static Future<void> deleteRecurring(String id) async => (await database)
-      .delete('recurring_payments', where: 'id=?', whereArgs: [id]);
+  static Future<void> insertRecurring(RecurringPayment r) => operation(
+      'recurring.insert',
+      (txn) => txn.insert('recurring_payments', r.toMap(),
+          conflictAlgorithm: ConflictAlgorithm.replace));
+  static Future<void> updateRecurring(RecurringPayment r) => operation(
+      'recurring.update',
+      (txn) => txn.update('recurring_payments', r.toMap(),
+          where: 'id=?', whereArgs: [r.id]));
+
+  /// The rule and its history leave together; paid occurrences remain as
+  /// ordinary transactions with their original balance effect.
+  static Future<void> deleteRecurring(String id) =>
+      operation('recurring.delete', (txn) async {
+        await txn.delete('recurring_history',
+            where: 'recurring_id = ?', whereArgs: [id]);
+        await txn.delete('recurring_payments', where: 'id=?', whereArgs: [id]);
+      });
 
   // ── Wishlist ─────────────────────────────────────────────────────────
   static Future<List<WishlistItem>> getWishlist() async {
@@ -865,13 +922,16 @@ class DBHelper {
     return rows.map(WishlistItem.fromMap).toList();
   }
 
-  static Future<void> insertWishlist(WishlistItem w) async =>
-      (await database).insert('wishlist', w.toMap(),
-          conflictAlgorithm: ConflictAlgorithm.replace);
-  static Future<void> updateWishlist(WishlistItem w) async => (await database)
-      .update('wishlist', w.toMap(), where: 'id=?', whereArgs: [w.id]);
-  static Future<void> deleteWishlist(String id) async =>
-      (await database).delete('wishlist', where: 'id=?', whereArgs: [id]);
+  static Future<void> insertWishlist(WishlistItem w) => operation(
+      'wishlist.insert',
+      (txn) => txn.insert('wishlist', w.toMap(),
+          conflictAlgorithm: ConflictAlgorithm.replace));
+  static Future<void> updateWishlist(WishlistItem w) => operation(
+      'wishlist.update',
+      (txn) =>
+          txn.update('wishlist', w.toMap(), where: 'id=?', whereArgs: [w.id]));
+  static Future<void> deleteWishlist(String id) => operation('wishlist.delete',
+      (txn) => txn.delete('wishlist', where: 'id=?', whereArgs: [id]));
 
   // ── Lended People ────────────────────────────────────────────────────
   static Future<List<LendedPerson>> getLendedPeople() async {
@@ -880,19 +940,14 @@ class DBHelper {
     return rows.map(LendedPerson.fromMap).toList();
   }
 
-  static Future<void> insertLendedPerson(LendedPerson p) async =>
-      (await database).insert('lended_people', p.toMap(),
-          conflictAlgorithm: ConflictAlgorithm.replace);
-  static Future<void> updateLendedPerson(LendedPerson p) async =>
-      (await database)
-          .update('lended_people', p.toMap(), where: 'id=?', whereArgs: [p.id]);
-  static Future<void> deleteLendedPerson(String id) async {
-    final db = await database;
-    await db.transaction((txn) async {
-      await txn.delete('lended_money', where: 'person_id=?', whereArgs: [id]);
-      await txn.delete('lended_people', where: 'id=?', whereArgs: [id]);
-    });
-  }
+  static Future<void> insertLendedPerson(LendedPerson p) => operation(
+      'lended_person.insert',
+      (txn) => txn.insert('lended_people', p.toMap(),
+          conflictAlgorithm: ConflictAlgorithm.replace));
+  static Future<void> updateLendedPerson(LendedPerson p) => operation(
+      'lended_person.update',
+      (txn) => txn.update('lended_people', p.toMap(),
+          where: 'id=?', whereArgs: [p.id]));
 
   // ── Lended Money (per-person ledger entries) ────────────────────────────
   static Future<List<LendedMoney>> getLended() async {
@@ -908,17 +963,6 @@ class DBHelper {
     return rows.map(LendedMoney.fromMap).toList();
   }
 
-  static Future<void> insertLended(LendedMoney l) async =>
-      (await database).insert('lended_money', l.toMap(),
-          conflictAlgorithm: ConflictAlgorithm.replace);
-  static Future<void> updateLended(LendedMoney l) async => (await database)
-      .update('lended_money', l.toMap(), where: 'id=?', whereArgs: [l.id]);
-  static Future<void> deleteLended(String id) async =>
-      (await database).delete('lended_money', where: 'id=?', whereArgs: [id]);
-  static Future<void> deleteLendedForPerson(String personId) async =>
-      (await database)
-          .delete('lended_money', where: 'person_id=?', whereArgs: [personId]);
-
   // ── Assets ────────────────────────────────────────────────────────────
   static Future<List<AssetItem>> getAssets() async {
     final db = await database;
@@ -926,13 +970,16 @@ class DBHelper {
     return rows.map(AssetItem.fromMap).toList();
   }
 
-  static Future<void> insertAsset(AssetItem a) async =>
-      (await database).insert('assets', a.toMap(),
-          conflictAlgorithm: ConflictAlgorithm.replace);
-  static Future<void> updateAsset(AssetItem a) async => (await database)
-      .update('assets', a.toMap(), where: 'id=?', whereArgs: [a.id]);
-  static Future<void> deleteAsset(String id) async =>
-      (await database).delete('assets', where: 'id=?', whereArgs: [id]);
+  static Future<void> insertAsset(AssetItem a) => operation(
+      'asset.insert',
+      (txn) => txn.insert('assets', a.toMap(),
+          conflictAlgorithm: ConflictAlgorithm.replace));
+  static Future<void> updateAsset(AssetItem a) => operation(
+      'asset.update',
+      (txn) =>
+          txn.update('assets', a.toMap(), where: 'id=?', whereArgs: [a.id]));
+  static Future<void> deleteAsset(String id) => operation('asset.delete',
+      (txn) => txn.delete('assets', where: 'id=?', whereArgs: [id]));
 
   // ── Budgets ───────────────────────────────────────────────────────────
   static Future<List<Budget>> getBudgets() async {
@@ -941,13 +988,16 @@ class DBHelper {
     return rows.map(Budget.fromMap).toList();
   }
 
-  static Future<void> insertBudget(Budget b) async =>
-      (await database).insert('budgets', b.toMap(),
-          conflictAlgorithm: ConflictAlgorithm.replace);
-  static Future<void> updateBudget(Budget b) async => (await database)
-      .update('budgets', b.toMap(), where: 'id=?', whereArgs: [b.id]);
-  static Future<void> deleteBudget(String id) async =>
-      (await database).delete('budgets', where: 'id=?', whereArgs: [id]);
+  static Future<void> insertBudget(Budget b) => operation(
+      'budget.insert',
+      (txn) => txn.insert('budgets', b.toMap(),
+          conflictAlgorithm: ConflictAlgorithm.replace));
+  static Future<void> updateBudget(Budget b) => operation(
+      'budget.update',
+      (txn) =>
+          txn.update('budgets', b.toMap(), where: 'id=?', whereArgs: [b.id]));
+  static Future<void> deleteBudget(String id) => operation('budget.delete',
+      (txn) => txn.delete('budgets', where: 'id=?', whereArgs: [id]));
 
   // ── Savings Goals ──────────────────────────────────────────────────────────
   static Future<List<SavingsGoal>> getSavingsGoals() async {
@@ -956,19 +1006,45 @@ class DBHelper {
     return rows.map(SavingsGoal.fromMap).toList();
   }
 
-  static Future<void> insertSavingsGoal(SavingsGoal g) async =>
-      (await database).insert('savings_goals', g.toMap(),
-          conflictAlgorithm: ConflictAlgorithm.replace);
-  static Future<void> updateSavingsGoal(SavingsGoal g) async => (await database)
-      .update('savings_goals', g.toMap(), where: 'id=?', whereArgs: [g.id]);
-  static Future<void> deleteSavingsGoal(String id) async {
-    final db = await database;
-    await db.transaction((txn) async {
-      await txn
-          .delete('savings_contributions', where: 'goal_id=?', whereArgs: [id]);
-      await txn.delete('savings_goals', where: 'id=?', whereArgs: [id]);
-    });
-  }
+  static Future<void> insertSavingsGoal(SavingsGoal g) => operation(
+      'goal.insert',
+      (txn) => txn.insert('savings_goals', g.toMap(),
+          conflictAlgorithm: ConflictAlgorithm.replace));
+  static Future<void> updateSavingsGoal(SavingsGoal g) => operation(
+      'goal.update',
+      (txn) => txn.update('savings_goals', g.toMap(),
+          where: 'id=?', whereArgs: [g.id]));
+
+  /// Money reserved from an account lives in the goal. Deleting the goal
+  /// would make it vanish, so it must first be withdrawn to an account.
+  static Future<List<SavingsContribution>> deleteSavingsGoal(String id) =>
+      operation('goal.delete', (txn) async {
+        final goals =
+            await txn.query('savings_goals', where: 'id=?', whereArgs: [id]);
+        final contributions = (await txn.query('savings_contributions',
+                where: 'goal_id=?', whereArgs: [id]))
+            .map(SavingsContribution.fromMap)
+            .toList();
+        if (goals.isNotEmpty &&
+            (goals.single['current_amount'] as num) > 0.005 &&
+            contributions.any((c) => c.accountId.isNotEmpty)) {
+          throw const FormatException(
+              'Retire o valor guardado para uma conta antes de excluir este objetivo.');
+        }
+        await txn.delete('savings_contributions',
+            where: 'goal_id=?', whereArgs: [id]);
+        await txn.delete('savings_goals', where: 'id=?', whereArgs: [id]);
+        return contributions;
+      });
+
+  static Future<void> restoreSavingsGoal(
+          SavingsGoal goal, List<SavingsContribution> contributions) =>
+      operation('goal.restore', (txn) async {
+        await txn.insert('savings_goals', goal.toMap());
+        for (final c in contributions) {
+          await txn.insert('savings_contributions', c.toMap());
+        }
+      });
 
   // ── Savings Contributions ─────────────────────────────────────────────────
   static Future<List<SavingsContribution>> getSavingsContributionsFor(
@@ -985,9 +1061,12 @@ class DBHelper {
     return rows.map(SavingsContribution.fromMap).toList();
   }
 
-  static Future<void> insertSavingsContribution(SavingsContribution c) async =>
-      (await database).insert('savings_contributions', c.toMap(),
-          conflictAlgorithm: ConflictAlgorithm.replace);
+  static Future<void> insertSavingsContribution(
+          SavingsContribution c) =>
+      operation(
+          'goal.contribution_insert',
+          (txn) => txn.insert('savings_contributions', c.toMap(),
+              conflictAlgorithm: ConflictAlgorithm.replace));
 
   // ── Recurring History ─────────────────────────────────────────────────
   static Future<List<RecurringHistoryEntry>> getRecurringHistory(
@@ -1016,33 +1095,17 @@ class DBHelper {
     return (rows.first['c'] as int?) ?? 0;
   }
 
-  static Future<void> insertRecurringHistory(RecurringHistoryEntry e) async =>
-      (await database).insert('recurring_history', e.toMap(),
-          conflictAlgorithm: ConflictAlgorithm.replace);
-
-  static Future<void> deleteRecurringHistoryFor(String recurringId) async =>
-      (await database).delete('recurring_history',
-          where: 'recurring_id = ?', whereArgs: [recurringId]);
+  static Future<void> insertRecurringHistory(RecurringHistoryEntry e) =>
+      operation(
+          'recurring.history_insert',
+          (txn) => txn.insert('recurring_history', e.toMap(),
+              conflictAlgorithm: ConflictAlgorithm.replace));
 
   // ── Loans ────────────────────────────────────────────────────────────
   static Future<List<Loan>> getLoans() async {
     final db = await database;
     final rows = await db.query('loans', orderBy: 'created_at ASC');
     return rows.map(Loan.fromMap).toList();
-  }
-
-  static Future<void> insertLoan(Loan l) async => (await database)
-      .insert('loans', l.toMap(), conflictAlgorithm: ConflictAlgorithm.replace);
-
-  static Future<void> updateLoan(Loan l) async => (await database)
-      .update('loans', l.toMap(), where: 'id=?', whereArgs: [l.id]);
-
-  static Future<void> deleteLoan(String id) async {
-    final db = await database;
-    await db.transaction((txn) async {
-      await txn.delete('loan_payments', where: 'loan_id=?', whereArgs: [id]);
-      await txn.delete('loans', where: 'id=?', whereArgs: [id]);
-    });
   }
 
   // ── Loan Payments ───────────────────────────────────────────────────
@@ -1058,17 +1121,6 @@ class DBHelper {
     final rows = await db.query('loan_payments', orderBy: 'date DESC');
     return rows.map(LoanPayment.fromMap).toList();
   }
-
-  static Future<void> insertLoanPayment(LoanPayment p) async =>
-      (await database).insert('loan_payments', p.toMap(),
-          conflictAlgorithm: ConflictAlgorithm.replace);
-
-  static Future<void> deleteLoanPayment(String id) async =>
-      (await database).delete('loan_payments', where: 'id=?', whereArgs: [id]);
-
-  static Future<void> deleteLoanPaymentsFor(String loanId) async =>
-      (await database)
-          .delete('loan_payments', where: 'loan_id=?', whereArgs: [loanId]);
 
   // ── Aggregations ─────────────────────────────────────────────────────
   static Future<double> getMonthlySpentForCategory(
@@ -1148,6 +1200,8 @@ class DBHelper {
       db.query('net_worth_snapshots'),
       db.query('import_rules'),
       db.query('notification_suggestions'),
+      db.query('investments'),
+      db.query('investment_operations'),
     ]);
     return {
       'accounts': results[0],
@@ -1169,15 +1223,32 @@ class DBHelper {
       'net_worth_snapshots': results[16],
       'import_rules': results[17],
       'notification_suggestions': results[18],
+      'investments': results[19],
+      'investment_operations': results[20],
       'version': _version,
     };
   }
 
   static Future<void> importAll(Map<String, dynamic> data) async {
-    final db = await database;
+    validateBackup(data);
+    InvestmentRepository.validateCashBackup(data);
+    try {
+      InvestmentRepository.decode(
+          ((data['investments'] as List?) ?? [])
+              .map((r) => Map<String, dynamic>.from(r as Map))
+              .toList(),
+          ((data['investment_operations'] as List?) ?? [])
+              .map((r) => Map<String, dynamic>.from(r as Map))
+              .toList());
+    } catch (_) {
+      throw const FormatException(
+          'Carteira de investimentos inválida. Nenhum dado foi alterado.');
+    }
     _normaliseBackup(data);
 
-    await db.transaction((txn) async {
+    // A restore is never journaled as recreations: once capture exists it
+    // raises a barrier that requires a new bootstrap before syncing again.
+    await operation('backup.restore', scope: LedgerScope.restore, (txn) async {
       for (final table in [
         'accounts',
         'categories',
@@ -1198,6 +1269,8 @@ class DBHelper {
         'net_worth_snapshots',
         'import_rules',
         'notification_suggestions',
+        'investments',
+        'investment_operations',
       ]) {
         await txn.delete(table);
         final rows = (data[table] as List?)?.cast<Map<String, dynamic>>() ?? [];
@@ -1210,6 +1283,60 @@ class DBHelper {
         await batch.commit(noResult: true);
       }
     });
+    InvestmentRepository.revision.value++;
+  }
+
+  /// Reject incomplete or ambiguous restores before deleting any live row.
+  static void validateBackup(Map<String, dynamic> data) {
+    final version = data['version'] ?? 1;
+    if (version is! int || version < 1 || version > _version) {
+      throw const FormatException(
+          'Versão de backup não suportada. Nenhum dado foi alterado.');
+    }
+    const tables = [
+      'accounts',
+      'categories',
+      'transactions',
+      'recurring_payments',
+      'wishlist',
+      'lended_people',
+      'lended_money',
+      'assets',
+      'budgets',
+      'recurring_history',
+      'savings_goals',
+      'savings_contributions',
+      'loans',
+      'loan_payments',
+      'transaction_metadata',
+      'card_invoice_payments',
+      'net_worth_snapshots',
+      'import_rules',
+      'notification_suggestions',
+      'investments',
+      'investment_operations',
+    ];
+    for (final table in tables) {
+      final required = version == _version ||
+          (version >= 23 &&
+              !['investments', 'investment_operations'].contains(table)) ||
+          const ['accounts', 'categories', 'transactions'].contains(table);
+      if (!data.containsKey(table) && !required) continue;
+      final rows = data[table];
+      if (rows is! List || rows.any((row) => row is! Map)) {
+        throw const FormatException(
+            'Backup incompleto ou inválido. Nenhum dado foi alterado.');
+      }
+      final ids = <Object>{};
+      for (final row in rows.cast<Map>()) {
+        final id = row['id'] ??
+            (table == 'transaction_metadata' ? row['transaction_id'] : null);
+        if (id != null && !ids.add(id)) {
+          throw const FormatException(
+              'Backup contém identificadores duplicados. Nenhum dado foi alterado.');
+        }
+      }
+    }
   }
 
   static void _normaliseBackup(Map<String, dynamic> data) {

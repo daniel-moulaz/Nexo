@@ -24,6 +24,13 @@ import 'services/nexo_security.dart';
 import 'services/financial_reminders.dart';
 import 'widgets/security_gate.dart';
 import 'services/desktop_profile.dart';
+import 'screens/financial_checkup_screen.dart';
+import 'sync/supabase_auth.dart';
+import 'sync/sync_config.dart';
+import 'sync/sync_controller.dart';
+import 'services/pluggy_inbox.dart';
+import 'sync/mcp_connectors.dart';
+import 'sync/assistant_commands.dart';
 
 final GlobalKey<NavigatorState> rootNavigatorKey = GlobalKey<NavigatorState>();
 
@@ -66,6 +73,28 @@ Future<void> startNexo() async {
   await NexoSecurity.instance.load();
   await provider.load();
   await FinanceBootstrapService.apply(provider);
+  final syncConfig = SyncConfig.current;
+  SupabaseAuth.app = syncConfig == null ? null : SupabaseAuth(syncConfig);
+  SyncController.instance = SyncController.forApp(
+      syncConfig, SupabaseAuth.app, provider.reloadFromStorage,
+      real: !DesktopProfile.isTest);
+  // Open Finance reads real bank data: never in a Windows test profile.
+  if (syncConfig != null && !DesktopProfile.isTest) {
+    PluggyInbox.instance =
+        PluggyInbox(SupabasePluggyRemote(syncConfig, SupabaseAuth.app!));
+    McpConnectors.instance = McpConnectors(syncConfig, SupabaseAuth.app!);
+    final assistant = AssistantCommands.instance = AssistantCommands(
+        SupabaseAssistantRemote(syncConfig, SupabaseAuth.app!), provider);
+    SyncController.instance?.afterSync = () async {
+      final sync = SyncController.instance!;
+      if (!sync.bound || sync.datasetId == null || sync.deviceId == null) {
+        return;
+      }
+      await assistant.run(datasetId: sync.datasetId!, deviceId: sync.deviceId!);
+    };
+  }
+  // Never blocks opening the app: offline or signed out just waits.
+  unawaited(SyncController.instance?.start());
   NexoSecurity.instance.addListener(provider.updateHomeWidgets);
   provider
       .addListener(() => FinancialReminders.instance.requestRefresh(provider));
@@ -88,6 +117,7 @@ class ExpensyApp extends StatefulWidget {
 
 class _ExpensyAppState extends State<ExpensyApp> {
   StreamSubscription<String?>? _quickAddSub;
+  StreamSubscription<String>? _reminderSub;
 
   @override
   void initState() {
@@ -99,6 +129,16 @@ class _ExpensyAppState extends State<ExpensyApp> {
         _pushQuickAdd();
       } else if (initialRoute == 'notification_inbox') {
         _pushInbox();
+      }
+    });
+
+    _reminderSub = FinancialReminders.instance.routes.listen((route) {
+      if (route == weeklyReviewRoute) _pushWeeklyReview();
+    });
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      if (await FinancialReminders.instance.listenToTaps() ==
+          weeklyReviewRoute) {
+        _pushWeeklyReview();
       }
     });
 
@@ -120,6 +160,14 @@ class _ExpensyAppState extends State<ExpensyApp> {
     );
   }
 
+  /// The review is generated on screen from local data; the notification
+  /// itself never carries amounts. The security gate still applies.
+  void _pushWeeklyReview() {
+    if (!mounted || !context.read<AppProvider>().settings.onboarded) return;
+    rootNavigatorKey.currentState?.push(
+        MaterialPageRoute(builder: (_) => const FinancialCheckupScreen()));
+  }
+
   void _pushInbox() {
     if (!mounted || !context.read<AppProvider>().settings.onboarded) return;
     rootNavigatorKey.currentState?.push(
@@ -129,6 +177,7 @@ class _ExpensyAppState extends State<ExpensyApp> {
   @override
   void dispose() {
     _quickAddSub?.cancel();
+    _reminderSub?.cancel();
     super.dispose();
   }
 
@@ -169,7 +218,9 @@ class _ExpensyAppState extends State<ExpensyApp> {
             debugShowCheckedModeBanner: false,
             builder: (context, child) => DesktopProfile.isTest
                 ? Banner(
-                    message: 'TESTE LOCAL',
+                    message: DesktopProfile.testName.isEmpty
+                        ? 'TESTE LOCAL'
+                        : 'TESTE ${DesktopProfile.testName.toUpperCase()}',
                     location: BannerLocation.topEnd,
                     child: SecurityGate(child: child!))
                 : SecurityGate(child: child!),

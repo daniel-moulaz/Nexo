@@ -2,7 +2,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/app_provider.dart';
-import '../l10n/app_localizations.dart';
 import 'finance_home_screen.dart';
 import 'expenses_v2_screen.dart';
 import 'recurring_screen.dart';
@@ -15,6 +14,7 @@ import 'agenda_screen.dart';
 import 'transaction_search_screen.dart';
 import 'settings_screen.dart';
 import 'statement_import_screen.dart';
+import 'investments_screen.dart';
 import 'add_transaction_screen.dart';
 import '../services/nexo_security.dart';
 import 'package:flutter/services.dart';
@@ -26,6 +26,9 @@ class MainShell extends StatefulWidget {
 }
 
 class _MainShellState extends State<MainShell> {
+  // Keep internal route IDs stable for Home shortcuts and desktop navigation.
+  // Hoje · Extrato · Orçamento · Contas · Mais (investments live in Mais).
+  static const _mobileTabs = [0, 8, 4, 3, 5];
   int _index = 0;
   final searchFocus = FocusNode();
   AppProvider? _app;
@@ -47,9 +50,10 @@ class _MainShellState extends State<MainShell> {
         MoreScreen(),
         AnalysisScreen(),
         AgendaScreen(),
-        TransactionSearchScreen(searchFocus: searchFocus),
+        TransactionSearchScreen(searchFocus: searchFocus, autofocus: false),
         SettingsScreen(),
         StatementImportScreen(),
+        InvestmentsScreen(active: _index == 11),
       ];
 
   @override
@@ -118,7 +122,6 @@ class _MainShellState extends State<MainShell> {
 
   @override
   Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context)!;
     if (MediaQuery.sizeOf(context).width >= 900) {
       return Scaffold(
           body: Row(children: [
@@ -132,11 +135,12 @@ class _MainShellState extends State<MainShell> {
                       style: TextStyle(
                           fontSize: 28, fontWeight: FontWeight.w800))),
               for (final entry in const [
-                (0, 'Resumo', Icons.dashboard_outlined),
+                (0, 'Hoje', Icons.today_outlined),
                 (8, 'Transações', Icons.receipt_long_outlined),
-                (3, 'Contas e cartões', Icons.account_balance_wallet_outlined),
-                (2, 'Recorrentes', Icons.repeat),
                 (4, 'Orçamentos e objetivos', Icons.pie_chart_outline),
+                (3, 'Contas e cartões', Icons.account_balance_wallet_outlined),
+                (11, 'Investimentos', Icons.show_chart),
+                (2, 'Recorrentes', Icons.repeat),
                 (6, 'Análises', Icons.bar_chart),
                 (7, 'Agenda', Icons.event_note),
                 (10, 'Importar', Icons.upload_file_outlined),
@@ -195,43 +199,43 @@ class _MainShellState extends State<MainShell> {
                   }),
                 ),
                 child: NavigationBar(
-                  labelBehavior:
-                      NavigationDestinationLabelBehavior.onlyShowSelected,
-                  selectedIndex: _index.clamp(0, 5),
+                  labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
+                  selectedIndex: _mobileTabs.contains(_index)
+                      ? _mobileTabs.indexOf(_index)
+                      : _index == 1
+                          ? 1
+                          : 4,
                   animationDuration: const Duration(milliseconds: 120),
                   onDestinationSelected: (i) {
+                    FocusScope.of(context).unfocus();
                     AppHaptics.tap(context, HapticStrength.selection);
                     final app = context.read<AppProvider>();
                     setState(() {
-                      _index = i;
-                      app.tabIndexNotifier.value = i;
+                      _index = _mobileTabs[i];
+                      app.tabIndexNotifier.value = _index;
                     });
                   },
                   destinations: [
                     const NavigationDestination(
-                        icon: Icon(Icons.home_outlined),
-                        selectedIcon: Icon(Icons.home_rounded),
-                        label: 'Início'),
+                        icon: Icon(Icons.today_outlined),
+                        selectedIcon: Icon(Icons.today),
+                        label: 'Hoje'),
                     const NavigationDestination(
                         icon: Icon(Icons.receipt_long_outlined),
                         selectedIcon: Icon(Icons.receipt_long),
-                        label: 'Despesas'),
-                    NavigationDestination(
-                        icon: const Icon(Icons.repeat_rounded),
-                        selectedIcon: const Icon(Icons.repeat_rounded),
-                        label: l10n.main_recurring),
+                        label: 'Extrato'),
+                    const NavigationDestination(
+                        icon: Icon(Icons.pie_chart_outline),
+                        selectedIcon: Icon(Icons.pie_chart),
+                        label: 'Orçamento'),
                     const NavigationDestination(
                         icon: Icon(Icons.account_balance_wallet_outlined),
                         selectedIcon: Icon(Icons.account_balance_wallet),
                         label: 'Contas'),
-                    const NavigationDestination(
-                        icon: Icon(Icons.pie_chart_outline_rounded),
-                        selectedIcon: Icon(Icons.pie_chart_rounded),
-                        label: 'Orçamento'),
                     NavigationDestination(
                         icon: const Icon(Icons.more_horiz_outlined),
                         selectedIcon: const Icon(Icons.more_horiz),
-                        label: l10n.main_more),
+                        label: 'Mais'),
                   ],
                 ),
               ),

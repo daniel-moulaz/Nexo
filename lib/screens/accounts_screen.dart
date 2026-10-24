@@ -1,11 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../services/pluggy_inbox.dart';
+import 'balance_check_screen.dart';
 
 import '../models/models.dart';
 import '../providers/app_provider.dart';
 import '../theme/app_theme.dart';
 import '../utils/finance_input.dart';
 import '../widgets/shared_widgets.dart' show showCurrencyPicker;
+import '../widgets/nexo_ui.dart';
 import 'card_invoice_screen.dart';
 
 class AccountsScreen extends StatelessWidget {
@@ -47,6 +50,14 @@ class AccountsScreen extends StatelessWidget {
           title: const Text('Contas e cartões',
               style: TextStyle(fontWeight: FontWeight.w900)),
           actions: [
+            if (PluggyInbox.instance != null)
+              IconButton(
+                  tooltip: 'Conferir com o banco',
+                  icon: const Icon(Icons.fact_check_outlined),
+                  onPressed: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                          builder: (_) => const BalanceCheckScreen()))),
             Padding(
               padding: const EdgeInsets.only(right: 16),
               child: Column(
@@ -56,7 +67,10 @@ class AccountsScreen extends StatelessWidget {
                   Text('Saldo total',
                       style: Theme.of(context).textTheme.labelSmall),
                   Text(
-                    formatAmount(app.totalBalanceAll, app.settings.currency),
+                    app.settings.hideBalance
+                        ? '••••'
+                        : formatAmount(
+                            app.totalBalanceAll, app.settings.currency),
                     style: const TextStyle(fontWeight: FontWeight.w900),
                   ),
                 ],
@@ -193,7 +207,9 @@ class _AccountTile extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.end,
           children: [
             Text(
-              formatAmount(balance, account.currency),
+              app.settings.hideBalance
+                  ? '••••'
+                  : formatAmount(balance, account.currency),
               style: TextStyle(
                   fontWeight: FontWeight.w900,
                   color:
@@ -252,133 +268,142 @@ class _CardTile extends StatelessWidget {
         ? null
         : app.accountById(card.linkedAccountId!);
 
-    return Card(
-      elevation: 0,
-      margin: const EdgeInsets.only(bottom: 10),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(20),
-        onTap: card.type == 'credit'
-            ? () => Navigator.of(context).push(
-                  MaterialPageRoute(
-                      builder: (_) => CardInvoiceScreen(cardId: card.id)),
-                )
-            : () =>
-                AccountsScreen.openSheet(context, existing: card, isCard: true),
-        onLongPress: () => _confirmDelete(context, card),
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  CircleAvatar(
-                    backgroundColor: color.withValues(alpha: .15),
-                    child: Icon(Icons.credit_card_rounded, color: color),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(card.name,
-                            style: const TextStyle(
-                                fontWeight: FontWeight.w900, fontSize: 16)),
-                        Text(
-                          card.type == 'credit'
-                              ? 'Cartão de crédito'
-                              : 'Cartão de débito',
-                          style: Theme.of(context).textTheme.bodySmall,
+    final hidden = app.settings.hideBalance;
+    String money(double v) => hidden ? '••••' : formatAmount(v, card.currency);
+    final limit = card.creditLimit;
+    final top = Color.lerp(color, Colors.white, .08)!;
+    final bottom = Color.lerp(color, Colors.black, .45)!;
+    const fg = Colors.white;
+    Widget tag(String text) => Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+        decoration: BoxDecoration(
+            color: Colors.white.withValues(alpha: .16),
+            borderRadius: BorderRadius.circular(20)),
+        child: Text(text, style: const TextStyle(color: fg, fontSize: 12)));
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Material(
+        type: MaterialType.transparency,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
+        clipBehavior: Clip.antiAlias,
+        child: Ink(
+          decoration: BoxDecoration(
+              gradient: LinearGradient(
+                  colors: [top, bottom],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight)),
+          child: InkWell(
+            onTap: card.type == 'credit'
+                ? () => Navigator.of(context).push(
+                      MaterialPageRoute(
+                          builder: (_) => CardInvoiceScreen(cardId: card.id)),
+                    )
+                : () => AccountsScreen.openSheet(context,
+                    existing: card, isCard: true),
+            onLongPress: () => _confirmDelete(context, card),
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(18, 14, 8, 18),
+              child: DefaultTextStyle.merge(
+                style: const TextStyle(color: fg),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(children: [
+                      Expanded(
+                        child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(card.name,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: const TextStyle(
+                                      fontWeight: FontWeight.w900,
+                                      fontSize: 17)),
+                              Text(
+                                  card.type == 'credit'
+                                      ? 'Cartão de crédito'
+                                      : 'Cartão de débito',
+                                  style: TextStyle(
+                                      color: fg.withValues(alpha: .8),
+                                      fontSize: 12)),
+                            ]),
+                      ),
+                      IconButton(
+                        tooltip: 'Editar cartão',
+                        color: fg,
+                        onPressed: () => AccountsScreen.openSheet(context,
+                            existing: card, isCard: true),
+                        icon: const Icon(Icons.edit_outlined),
+                      ),
+                    ]),
+                    // The chip of a physical card.
+                    Container(
+                        margin: const EdgeInsets.symmetric(vertical: 10),
+                        width: 34,
+                        height: 24,
+                        decoration: BoxDecoration(
+                            color:
+                                const Color(0xFFE8C66A).withValues(alpha: .85),
+                            borderRadius: BorderRadius.circular(5))),
+                    if (card.type == 'credit') ...[
+                      Text('Usado',
+                          style: TextStyle(
+                              color: fg.withValues(alpha: .8), fontSize: 12)),
+                      Padding(
+                        padding: const EdgeInsets.only(right: 10),
+                        child: FittedBox(
+                          fit: BoxFit.scaleDown,
+                          alignment: Alignment.centerLeft,
+                          child: Text(money(used),
+                              style: const TextStyle(
+                                  fontWeight: FontWeight.w900,
+                                  fontSize: 26,
+                                  fontFeatures: NexoTones.figures)),
+                        ),
+                      ),
+                      if (limit != null && limit > 0 && !hidden) ...[
+                        const SizedBox(height: 8),
+                        Padding(
+                          padding: const EdgeInsets.only(right: 10),
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(6),
+                            child: LinearProgressIndicator(
+                                value: (used / limit).clamp(0.0, 1.0),
+                                minHeight: 6,
+                                color: used >= limit * .9
+                                    ? const Color(0xFFFFB4AB)
+                                    : fg,
+                                backgroundColor: fg.withValues(alpha: .2)),
+                          ),
                         ),
                       ],
-                    ),
-                  ),
-                  IconButton(
-                    tooltip: 'Editar cartão',
-                    onPressed: () => AccountsScreen.openSheet(context,
-                        existing: card, isCard: true),
-                    icon: const Icon(Icons.edit_outlined),
-                  ),
-                ],
-              ),
-              if (card.type == 'credit') ...[
-                const SizedBox(height: 14),
-                Row(
-                  children: [
-                    Expanded(
-                        child: _CardStat(
-                            label: 'Usado',
-                            value: formatAmount(used, card.currency))),
-                    Expanded(
-                        child: _CardStat(
-                            label: 'Limite livre',
-                            value: available == null
-                                ? 'Não definido'
-                                : formatAmount(available, card.currency))),
-                  ],
-                ),
-                const SizedBox(height: 10),
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 6,
-                  children: [
-                    _Tag(
-                        text: card.statementDay == null
+                      const SizedBox(height: 8),
+                      Text(
+                          available == null
+                              ? 'Limite não definido'
+                              : 'Limite livre ${money(available)} de ${money(limit!)}',
+                          style: TextStyle(
+                              color: fg.withValues(alpha: .9), fontSize: 13)),
+                      const SizedBox(height: 10),
+                      Wrap(spacing: 8, runSpacing: 6, children: [
+                        tag(card.statementDay == null
                             ? 'Fechamento não definido'
                             : 'Fecha dia ${card.statementDay}'),
-                    _Tag(
-                        text: card.dueDay == null
+                        tag(card.dueDay == null
                             ? 'Vencimento não definido'
                             : 'Vence dia ${card.dueDay}'),
-                    if (linked != null) _Tag(text: 'Paga por ${linked.name}'),
+                        if (linked != null) tag('Paga por ${linked.name}'),
+                      ]),
+                    ] else
+                      Text('Saldo ${money(card.balance)}',
+                          style: const TextStyle(fontWeight: FontWeight.w800)),
                   ],
                 ),
-              ] else ...[
-                const SizedBox(height: 12),
-                Text('Saldo ${formatAmount(card.balance, card.currency)}'),
-              ],
-            ],
+              ),
+            ),
           ),
         ),
       ),
-    );
-  }
-}
-
-class _CardStat extends StatelessWidget {
-  final String label;
-  final String value;
-
-  const _CardStat({required this.label, required this.value});
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(label, style: Theme.of(context).textTheme.labelSmall),
-        const SizedBox(height: 2),
-        Text(value, style: const TextStyle(fontWeight: FontWeight.w900)),
-      ],
-    );
-  }
-}
-
-class _Tag extends StatelessWidget {
-  final String text;
-
-  const _Tag({required this.text});
-
-  @override
-  Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
-      decoration: BoxDecoration(
-        color: cs.surfaceContainerHigh,
-        borderRadius: BorderRadius.circular(999),
-      ),
-      child: Text(text, style: Theme.of(context).textTheme.labelSmall),
     );
   }
 }
@@ -399,7 +424,7 @@ Future<void> _confirmDelete(BuildContext context, Account account) async {
     builder: (dialogContext) => AlertDialog(
       title: const Text('Excluir conta?'),
       content: Text(
-          'Excluir “${account.name}” também pode remover lançamentos vinculados a ela.'),
+          '“${account.name}” será excluída. Lançamentos e outros registros nunca são apagados junto: contas com vínculos não podem ser excluídas.'),
       actions: [
         TextButton(
           onPressed: () => Navigator.pop(dialogContext, false),
@@ -413,7 +438,14 @@ Future<void> _confirmDelete(BuildContext context, Account account) async {
     ),
   );
   if (confirmed != true || !context.mounted) return;
-  await context.read<AppProvider>().deleteAccount(account.id);
+  try {
+    await context.read<AppProvider>().deleteAccount(account.id);
+  } on FormatException catch (e) {
+    if (context.mounted) {
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(e.message)));
+    }
+  }
 }
 
 IconData _accountIcon(String type) => switch (type) {
@@ -628,6 +660,7 @@ class _AccountEditorState extends State<_AccountEditor> {
           clearLinkedAccount: isCard && _linkedAccountId == null,
           clearCredit: !isCredit,
         ),
+        original: existing,
       );
     }
 
@@ -707,7 +740,7 @@ class _AccountEditorState extends State<_AccountEditor> {
                                 ),
                                 ('debit', 'Débito', Icons.credit_card_outlined),
                               ]
-                            : const [
+                            : [
                                 (
                                   'bank',
                                   'Banco',
@@ -720,7 +753,13 @@ class _AccountEditorState extends State<_AccountEditor> {
                                   'Carteira',
                                   Icons.account_balance_wallet_outlined
                                 ),
-                                ('gold', 'Ouro/ativo', Icons.diamond_outlined),
+                                // Legacy type: offered only to who already uses it.
+                                if (_type == 'gold')
+                                  (
+                                    'gold',
+                                    'Ouro/ativo',
+                                    Icons.diamond_outlined
+                                  ),
                               ])
                         .map((option) => ChoiceChip(
                               selected: _type == option.$1,

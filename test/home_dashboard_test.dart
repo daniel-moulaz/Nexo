@@ -111,6 +111,43 @@ void main() {
     expect(tester.takeException(), isNull);
   }
 
+  testWidgets('No comparison bars without prior spending; review is accessible',
+      (tester) async {
+    final app = fixture();
+    app.transactions.removeWhere((t) => t.id == 'past');
+    await mount(tester, app);
+    expect(find.text('Anterior'), findsNothing);
+    expect(find.text('Sem gastos no período anterior para comparar'),
+        findsOneWidget);
+    expect(find.widgetWithText(ActionChip, 'Análises'), findsOneWidget);
+    expect(find.widgetWithText(ActionChip, 'Revisão de 3 ou 7 dias'),
+        findsOneWidget);
+    await tester.ensureVisible(find.widgetWithText(ActionChip, 'Análises'));
+    await tester.tap(find.widgetWithText(ActionChip, 'Análises'));
+    await tester.pumpAndSettle();
+    expect(find.byType(AnalysisScreen), findsOneWidget);
+    expect(app.accounts.single.balance, 2400);
+  });
+
+  testWidgets(
+      'Cash shortfall appears before monthly consumption and stays private',
+      (tester) async {
+    final app = fixture();
+    app.accounts.single.balance = 50;
+    await mount(tester, app);
+    // The bill that the cash will not cover, with how much is missing.
+    final warning = find.textContaining(RegExp(r'^Faltam .* para '));
+    expect(warning, findsOneWidget);
+    expect(find.text('Plano'), findsOneWidget);
+    expect(tester.getTopLeft(warning).dy,
+        lessThan(tester.getTopLeft(find.text('Entrou')).dy));
+    expect(app.accounts.single.balance, 50);
+    app.settings.hideBalance = true;
+    await tester.pumpWidget(const SizedBox());
+    await mount(tester, app);
+    expect(warning, findsNothing);
+  });
+
   testWidgets(
       'Month navigation changes consumption, not current balances; income excludes refunds',
       (tester) async {
@@ -118,11 +155,18 @@ void main() {
     await mount(tester, app);
     expect(find.text(formatAmount(2400, 'BRL')), findsWidgets);
     expect(find.text(formatAmount(1500, 'BRL')), findsWidgets);
+    await tester.ensureVisible(find.byTooltip('Mês anterior'));
+    await tester.pumpAndSettle();
     await tester.tap(find.byTooltip('Mês anterior'));
     await tester.pumpAndSettle();
     expect(find.text('Mês completo'), findsOneWidget);
     expect(find.text(formatAmount(2400, 'BRL')), findsWidgets);
+    await tester.ensureVisible(find.byTooltip('Próximo mês'));
+    await tester.pumpAndSettle();
     await tester.tap(find.byTooltip('Próximo mês'));
+    await tester.pumpAndSettle();
+    expect(find.text('Até hoje'), findsOneWidget);
+    await tester.ensureVisible(find.text('Entrou'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Entrou'));
     await tester.pumpAndSettle();
@@ -142,8 +186,8 @@ void main() {
     final chart =
         tester.widget<CashTimelineChart>(find.byType(CashTimelineChart));
     expect(chart.timeline.points, hasLength(92));
-    await tester.ensureVisible(find.text('Agenda'));
-    await tester.tap(find.text('Agenda'));
+    await tester.ensureVisible(find.widgetWithText(TextButton, 'Agenda'));
+    await tester.tap(find.widgetWithText(TextButton, 'Agenda'));
     await tester.pump(const Duration(milliseconds: 400));
     await tester.runAsync(
         () => Future<void>.delayed(const Duration(milliseconds: 150)));

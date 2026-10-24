@@ -1,0 +1,230 @@
+import 'dart:convert';
+import 'dart:io';
+
+import 'package:expensy/models/models.dart';
+import 'package:expensy/services/financial_analysis.dart';
+import 'package:expensy/services/transaction_metadata_service.dart';
+import 'package:flutter_test/flutter_test.dart';
+
+/// Writes/validates test/fixtures/mcp_parity.json: synthetic rows as the
+/// server stores them and what the app itself computes. The server mirror
+/// (supabase/functions/nexo-mcp) must reproduce these numbers exactly;
+/// `node tool/test_nexo_mcp.mjs` checks that side.
+/// Regenerate with NEXO_UPDATE_FIXTURES=1 after changing reporting rules.
+void main() {
+  test('server reporting fixture matches the app rules', () {
+    AppTransaction tx(String id, String type, double amount, String day,
+            {String account = 'bank',
+            String category = 'food_exp',
+            String description = 'Compra fictícia',
+            String note = '',
+            String currency = 'BRL'}) =>
+        AppTransaction(
+            id: id,
+            type: type,
+            amount: amount,
+            description: description,
+            accountId: account,
+            categoryId: category,
+            date: DateTime.parse('${day}T12:00:00'),
+            note: note,
+            currency: currency);
+    final transactions = [
+      tx('t-food', 'expense', 32.9, '2026-10-03'),
+      tx('t-market', 'expense', 210.45, '2026-10-08', category: 'shopping'),
+      tx('t-salary', 'income', 5000, '2026-10-05', category: 'salary'),
+      tx('t-pending', 'expense', 180, '2026-10-25', category: 'bills'),
+      tx('t-transfer-out', 'expense', 300, '2026-10-06',
+          description: 'Transferência enviada'),
+      tx('t-transfer-in', 'income', 300, '2026-10-06',
+          account: 'reserve', description: 'Transferência recebida'),
+      tx('t-invoice', 'expense', 450, '2026-10-10',
+          description: 'Pagamento da fatura do cartão'),
+      tx('t-refund', 'income', 20, '2026-10-11'),
+      tx('t-extra', 'expense', 1200, '2026-10-12', category: 'health'),
+      tx('recurring:stream:2026-10-15', 'expense', 29.9, '2026-10-15',
+          category: 'entertainment'),
+      tx('t-card', 'expense', 100, '2026-10-16', account: 'card'),
+      tx('t-sept', 'expense', 50, '2026-09-04'),
+      tx('t-sept-late', 'expense', 70, '2026-09-28'),
+      tx('t-usd', 'expense', 15, '2026-10-09', account: 'usd', currency: 'USD'),
+    ];
+    final metadata = {
+      't-pending': const TransactionMetadata(
+          transactionId: 't-pending', status: 'pending'),
+      't-transfer-out': const TransactionMetadata(
+          transactionId: 't-transfer-out',
+          excludeFromSpending: true,
+          source: 'transfer:t-transfer-out'),
+      't-transfer-in': const TransactionMetadata(
+          transactionId: 't-transfer-in',
+          excludeFromSpending: true,
+          source: 'transfer:t-transfer-out'),
+      't-refund': const TransactionMetadata(
+          transactionId: 't-refund', source: 'notification_refund'),
+      't-extra': const TransactionMetadata(
+          transactionId: 't-extra', expenseClass: 'extraordinary'),
+      't-card': const TransactionMetadata(
+          transactionId: 't-card', installmentCurrent: 1, installmentTotal: 3),
+    };
+    for (final m in metadata.values) {
+      expect(m.transactionId, isNotEmpty);
+    }
+    final pendingMeta = metadata['t-pending']!.toMap()
+      ..['due_date'] = '2026-10-25T00:00:00.000';
+    final brl = transactions.where((t) => t.currency == 'BRL');
+
+    Map<String, Object?> expected(AnalysisFilter filter) {
+      final a = FinancialAnalysis(
+          transactions: brl,
+          metadata: metadata,
+          filter: filter,
+          amount: (t) => t.amount);
+      int c(double v) => (v * 100).round();
+      return {
+        'income': c(a.income),
+        'expense': c(a.expense),
+        'refunds': c(a.refunds),
+        'pendingExpense': c(a.pendingExpense),
+        'extraordinary': c(a.extraordinary),
+        'recurring': c(a.recurring),
+        'transfers': c(a.transfers),
+        'result': c(a.result),
+        'categories': {for (final e in a.categories.entries) e.key: c(e.value)},
+      };
+    }
+
+    String d(DateTime x) => x.toIso8601String().substring(0, 10);
+    final now = DateTime(2026, 10, 20);
+    final month = FinancialAnalysis.month(DateTime(2026, 10), now);
+    final previous = FinancialAnalysis.previousMonth(month, partial: true);
+    final cases = [
+      ('month', month),
+      ('previous_partial', previous),
+      (
+        'card_only',
+        AnalysisFilter(
+            from: DateTime(2026, 10),
+            to: DateTime(2026, 10, 31),
+            accountId: 'card')
+      ),
+      (
+        'food_category',
+        AnalysisFilter(
+            from: DateTime(2026, 9),
+            to: DateTime(2026, 10, 31),
+            categoryId: 'food_exp')
+      ),
+    ];
+    final fixture = {
+      'note': 'Synthetic data only. Generated by test/mcp_parity_test.dart.',
+      'today': '2026-10-20',
+      'ledger': {
+        'mainCurrency': 'BRL',
+        'accounts': [
+          for (final a in [
+            Account(
+                id: 'bank',
+                name: 'Banco fictício',
+                type: 'bank',
+                balance: 0,
+                currency: 'BRL',
+                colorValue: 0,
+                createdAt: DateTime(2026)),
+            Account(
+                id: 'reserve',
+                name: 'Reserva fictícia',
+                type: 'bank',
+                balance: 0,
+                currency: 'BRL',
+                colorValue: 0,
+                createdAt: DateTime(2026)),
+            Account(
+                id: 'card',
+                name: 'Cartão fictício',
+                type: 'credit',
+                balance: 0,
+                currency: 'BRL',
+                colorValue: 0,
+                createdAt: DateTime(2026)),
+            Account(
+                id: 'usd',
+                name: 'Conta em dólar',
+                type: 'bank',
+                balance: 0,
+                currency: 'USD',
+                colorValue: 0,
+                createdAt: DateTime(2026)),
+          ])
+            a.toMap()..remove('balance')
+        ],
+        'balances': {
+          'bank': 3000000000,
+          'reserve': 300000000,
+          'card': -100000000,
+          'usd': 15000000,
+        },
+        'categories': [
+          for (final id in [
+            'food_exp',
+            'shopping',
+            'bills',
+            'health',
+            'entertainment',
+            'salary'
+          ])
+            {
+              'id': id,
+              'name': 'Categoria $id',
+              'type': 'expense',
+              'color_value': 0,
+              'icon_code_point': 0,
+              'order_index': 0
+            }
+        ],
+        'transactions': [for (final t in transactions) t.toMap()],
+        'metadata': [
+          for (final m in metadata.values)
+            m.transactionId == 't-pending' ? pendingMeta : m.toMap()
+        ],
+        'recurring': [
+          RecurringPayment(
+                  id: 'stream',
+                  name: 'Streaming fictício',
+                  accountId: 'bank',
+                  categoryId: 'entertainment',
+                  amount: 29.9,
+                  freqVal: 1,
+                  freqUnit: 'months',
+                  startDate: DateTime(2026, 9, 15),
+                  nextDate: DateTime(2026, 11, 15))
+              .toMap()
+        ],
+        'investments': const [],
+        'investmentOperations': const [],
+      },
+      'cases': [
+        for (final (name, f) in cases)
+          {
+            'name': name,
+            'filter': {
+              'from': d(f.from),
+              'to': d(f.to),
+              if (f.accountId != null) 'accountId': f.accountId,
+              if (f.categoryId != null) 'categoryId': f.categoryId,
+            },
+            'expected': expected(f),
+          }
+      ],
+    };
+    final encoded = '${const JsonEncoder.withIndent('  ').convert(fixture)}\n';
+    final file = File('test/fixtures/mcp_parity.json');
+    if (Platform.environment['NEXO_UPDATE_FIXTURES'] == '1' ||
+        !file.existsSync()) {
+      file.parent.createSync(recursive: true);
+      file.writeAsStringSync(encoded);
+    }
+    expect(file.readAsStringSync().replaceAll('\r\n', '\n'), encoded,
+        reason: 'rules changed: regenerate with NEXO_UPDATE_FIXTURES=1');
+  });
+}

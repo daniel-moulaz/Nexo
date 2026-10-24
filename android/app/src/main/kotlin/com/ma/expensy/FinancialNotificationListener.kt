@@ -78,6 +78,37 @@ object FinancialInboxQueue {
 }
 
 class FinancialNotificationListener : NotificationListenerService() {
+    companion object {
+        private var active: FinancialNotificationListener? = null
+        var onSuggestion: (() -> Unit)? = null
+        val connected: Boolean get() = active != null
+        fun recover(context: Context) {
+            val listener = active
+            if (listener != null) listener.scanActive()
+            else if (Build.VERSION.SDK_INT >= 24) requestRebind(
+                android.content.ComponentName(context, FinancialNotificationListener::class.java))
+        }
+    }
+    private fun scanActive() {
+        try { activeNotifications?.forEach { onNotificationPosted(it) } }
+        catch (_: Exception) { diagnostic("listener_unavailable") }
+    }
+    override fun onListenerConnected() {
+        super.onListenerConnected()
+        active = this
+        scanActive()
+    }
+    override fun onListenerDisconnected() {
+        active = null
+        super.onListenerDisconnected()
+        if (getSharedPreferences("nexo_automation", 0).getBoolean("enabled", false)) {
+            try { recover(this) } catch (_: Exception) { diagnostic("listener_unavailable") }
+        }
+    }
+    override fun onDestroy() {
+        if (active === this) active = null
+        super.onDestroy()
+    }
     private fun diagnostic(reason: String, confidence: String = "") {
         getSharedPreferences("nexo_automation", 0).edit()
             .putLong("last_analyzed", System.currentTimeMillis()).putString("last_result", reason)
@@ -108,13 +139,15 @@ class FinancialNotificationListener : NotificationListenerService() {
         // Learn source identities only, never unapproved notification content.
         val observed = prefs.getStringSet("observed_apps", emptySet())!!.toMutableSet()
         if (observed.size < 100 && observed.add(sbn.packageName)) prefs.edit().putStringSet("observed_apps", observed).apply()
-        if (!prefs.getStringSet("apps", emptySet())!!.contains(sbn.packageName)) { diagnostic("app_not_allowed"); return }
+        if (!prefs.getStringSet("apps", emptySet())!!.contains(sbn.packageName)) return
         if (sbn.notification.flags and Notification.FLAG_GROUP_SUMMARY != 0) { diagnostic("group_summary"); return }
         val now = System.currentTimeMillis()
         if (sbn.postTime < now - 7 * 86400000L || sbn.postTime > now + 60000L) { diagnostic("old"); return }
         val extras = sbn.notification.extras
-        val parsed = FinancialNotificationParser.analyzeParts(extras.getCharSequence(Notification.EXTRA_TITLE)?.toString(),
-            (extras.getCharSequence(Notification.EXTRA_BIG_TEXT) ?: extras.getCharSequence(Notification.EXTRA_TEXT))?.toString())
+        val body = extras.getCharSequence(Notification.EXTRA_BIG_TEXT)?.toString()?.takeIf { it.isNotBlank() }
+            ?: extras.getCharSequence(Notification.EXTRA_TEXT)?.toString()?.takeIf { it.isNotBlank() }
+            ?: extras.getCharSequenceArray(Notification.EXTRA_TEXT_LINES)?.joinToString(" ")
+        val parsed = FinancialNotificationParser.analyzeParts(extras.getCharSequence(Notification.EXTRA_TITLE)?.toString(), body)
         val item = parsed.suggestion ?: run { diagnostic(parsed.reason); return }
         val eventTime = sbn.notification.`when`.takeIf { it >= now - 7 * 86400000L && it <= now + 60000L } ?: sbn.postTime
         try {
@@ -124,6 +157,7 @@ class FinancialNotificationListener : NotificationListenerService() {
                 .put("occurred_at", eventTime))
             prefs.edit().remove("queue_error").apply()
             diagnostic(if (added) "created" else "duplicate", item.confidence)
+            if (added) android.os.Handler(mainLooper).post { onSuggestion?.invoke() }
             if (added) try { notifyReview() } catch (_: Exception) { /* Delivery cannot discard the queued suggestion. */ }
         } catch (_: Exception) {
             // No raw payload or financial fields in logs, even on failure.

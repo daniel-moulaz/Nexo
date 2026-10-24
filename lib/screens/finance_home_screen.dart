@@ -13,9 +13,19 @@ import '../services/financial_analysis.dart';
 import '../services/finance_rules.dart';
 import '../services/platform_capabilities.dart';
 import '../services/transaction_metadata_service.dart';
+import '../services/week_summary.dart';
+import '../services/spendable.dart';
+import '../services/charge_alerts.dart';
+import '../services/cancel_intents.dart';
+import '../services/bank_snapshots.dart';
+import '../services/balance_check.dart';
+import '../services/liquidity.dart';
+import 'due_plan_screen.dart';
 import '../utils/finance_input.dart';
 import '../widgets/analysis_widgets.dart';
 import '../widgets/cash_timeline_chart.dart';
+import '../widgets/nexo_ui.dart';
+import '../widgets/shared_widgets.dart' show CategoryDot;
 import 'accounts_screen.dart';
 import 'analysis_screen.dart';
 import 'add_transaction_screen.dart';
@@ -30,6 +40,9 @@ import 'recurring_screen.dart';
 import 'transaction_search_screen.dart';
 import 'transfer_screen.dart';
 import 'statement_import_screen.dart';
+import 'investments_screen.dart';
+import 'month_review_screen.dart';
+import 'net_worth_screen.dart';
 
 class FinanceHomeScreen extends StatefulWidget {
   const FinanceHomeScreen({super.key});
@@ -43,10 +56,34 @@ class _FinanceHomeScreenState extends State<FinanceHomeScreen>
   List<AppTransaction>? _lastTransactions;
   DateTime? _month;
   int _horizon = 30;
+  Set<String> _dismissedSubscriptions = {};
+  Set<String> _dismissedAlerts = {};
+  Map<String, int> _cancelIntents = {};
+  List<BankAccountSnapshot> _bank = const [];
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    _loadDismissed();
+  }
+
+  Future<void> _loadDismissed() async {
+    try {
+      final alerts = await CancelIntents.dismissedAlerts();
+      final intents = await CancelIntents.load();
+      if (mounted) {
+        setState(() {
+          _dismissedAlerts = alerts;
+          _cancelIntents = intents;
+        });
+      }
+      final v = await loadDismissedSubscriptions();
+      if (mounted) setState(() => _dismissedSubscriptions = v);
+      final bank = await BankSnapshots.load();
+      if (mounted) setState(() => _bank = bank);
+    } catch (_) {
+      // Preferences unavailable: suggestions still show, nothing breaks.
+    }
   }
 
   @override
@@ -82,7 +119,10 @@ class _FinanceHomeScreenState extends State<FinanceHomeScreen>
 
   Future<void> _open(Widget screen) async {
     await Navigator.push(context, MaterialPageRoute(builder: (_) => screen));
-    if (mounted) await _refresh();
+    if (mounted) {
+      await _loadDismissed();
+      await _refresh();
+    }
   }
 
   void _event(AppProvider app, ForecastEvent event) {
@@ -216,67 +256,158 @@ class _FinanceHomeScreenState extends State<FinanceHomeScreen>
                     <ForecastEvent>[];
             final budgets = app.budgets.toList()
               ..sort((a, b) =>
-                  (b.amount <= 0 ? 0.0 : app.budgetSpent(b) / b.amount)
-                      .compareTo(
-                          a.amount <= 0 ? 0.0 : app.budgetSpent(a) / a.amount));
+                  app.budgetProgressRaw(b).compareTo(app.budgetProgressRaw(a)));
 
-            final hero = _Panel(
-                color: cs.primaryContainer,
-                child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(children: [
-                        const Expanded(
-                            child: Text('Saldo em contas · hoje',
-                                style: TextStyle(fontWeight: FontWeight.w600))),
-                        IconButton(
-                            tooltip: 'Entender os valores',
-                            visualDensity: VisualDensity.compact,
-                            onPressed: _explain,
-                            icon: const Icon(Icons.info_outline, size: 20)),
-                      ]),
-                      InkWell(
-                          onTap: () => _open(const AccountsScreen()),
-                          child: _Amount(money(commitment.cash), size: 34)),
-                      const SizedBox(height: 10),
-                      _Pair(
-                          _Value(
-                              label: 'Cartões em aberto',
-                              value: money(commitment.outstanding),
-                              small: true,
-                              onTap: () => _open(const DebtOverviewScreen())),
-                          _Value(
-                              label: 'Após cartões',
-                              value: money(commitment.available),
-                              small: true,
-                              onTap: _explain)),
-                      Divider(
-                          color: cs.onPrimaryContainer.withValues(alpha: .15)),
-                      InkWell(
-                          onTap: () =>
-                              _open(const AgendaScreen(initialDays: -1)),
-                          child: Padding(
-                              padding: const EdgeInsets.symmetric(vertical: 6),
-                              child: Row(children: [
-                                const Icon(Icons.trending_up, size: 20),
+            final hidden = app.settings.hideBalance;
+            final dark = Theme.of(context).brightness == Brightness.dark;
+            final hero = NexoCard(
+                gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    // Rich at night (deep container tone), crisp by day.
+                    colors: dark
+                        ? [
+                            Color.lerp(cs.primaryContainer, cs.primary, .22)!,
+                            Color.lerp(cs.primaryContainer, Colors.black, .45)!,
+                          ]
+                        : [
+                            cs.primary,
+                            Color.lerp(cs.primary, Colors.black, .38)!,
+                          ]),
+                padding: const EdgeInsets.fromLTRB(20, 12, 12, 18),
+                child: DefaultTextStyle.merge(
+                    style: const TextStyle(color: Colors.white),
+                    child: IconTheme.merge(
+                        data: const IconThemeData(color: Colors.white),
+                        child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(children: [
+                                const Icon(
+                                    Icons.account_balance_wallet_outlined,
+                                    size: 18),
                                 const SizedBox(width: 8),
                                 const Expanded(
-                                    child: Text('Previsão no fim do mês',
-                                        style: TextStyle(fontSize: 12))),
-                                Flexible(
-                                    child: Text(
-                                        monthEnd == null
-                                            ? '—'
-                                            : money(monthEnd.projected),
-                                        style: const TextStyle(
-                                            fontWeight: FontWeight.bold))),
-                                const Icon(Icons.chevron_right, size: 18),
-                              ]))),
-                    ]));
+                                    child: Text('Saldo em contas · hoje',
+                                        style: TextStyle(
+                                            fontWeight: FontWeight.w600))),
+                                IconButton(
+                                    tooltip: 'Entender os valores',
+                                    visualDensity: VisualDensity.compact,
+                                    onPressed: _explain,
+                                    icon: const Icon(Icons.info_outline,
+                                        size: 20)),
+                              ]),
+                              Padding(
+                                  padding: const EdgeInsets.only(right: 8),
+                                  child: InkWell(
+                                      onTap: () =>
+                                          _open(const AccountsScreen()),
+                                      child: _Amount(money(commitment.cash),
+                                          size: 38))),
+                              const SizedBox(height: 14),
+                              LayoutBuilder(builder: (context, c) {
+                                final pills = [
+                                  NexoStatPill(
+                                      onDark: true,
+                                      icon: Icons.credit_card,
+                                      label: 'Cartões em aberto',
+                                      value: money(commitment.outstanding),
+                                      onTap: () =>
+                                          _open(const DebtOverviewScreen())),
+                                  NexoStatPill(
+                                      onDark: true,
+                                      icon: Icons.account_balance_outlined,
+                                      label: 'Após cartões',
+                                      value: money(commitment.available),
+                                      onTap: _explain),
+                                  NexoStatPill(
+                                      onDark: true,
+                                      icon: Icons.trending_up,
+                                      label: 'Previsão fim do mês',
+                                      value: monthEnd == null
+                                          ? '—'
+                                          : money(monthEnd.projected),
+                                      onTap: () => _open(
+                                          const AgendaScreen(initialDays: -1))),
+                                ];
+                                if (c.maxWidth /
+                                        MediaQuery.textScalerOf(context)
+                                            .scale(1) <
+                                    300) {
+                                  return Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.stretch,
+                                      children: [
+                                        for (final p in pills)
+                                          Padding(
+                                              padding: const EdgeInsets.only(
+                                                  bottom: 8, right: 8),
+                                              child: p)
+                                      ]);
+                                }
+                                return Padding(
+                                    padding: const EdgeInsets.only(right: 8),
+                                    child: Row(children: [
+                                      for (var i = 0;
+                                          i < pills.length;
+                                          i++) ...[
+                                        if (i > 0) const SizedBox(width: 8),
+                                        Expanded(child: pills[i]),
+                                      ]
+                                    ]));
+                              }),
+                            ]))));
 
+            final daysInMonth = DateTime(month.year, month.month + 1, 0).day;
+            final previousMonth = DateTime(month.year, month.month - 1);
+            final previousFull =
+                analyzePeriod(app, FinancialAnalysis.month(previousMonth, now));
+            List<double> cumulative(FinancialAnalysis a, DateTime m, int days) {
+              var sum = 0.0;
+              return [
+                for (var d = 1; d <= days; d++)
+                  sum += a.dailyVariable[DateTime(m.year, m.month, d)] ?? 0
+              ];
+            }
+
+            final paceNow =
+                cumulative(data, month, currentMonth ? today.day : daysInMonth);
+            final pacePrevious = cumulative(previousFull, previousMonth,
+                DateTime(month.year, month.month, 0).day);
+            final paceThen = pacePrevious.isEmpty
+                ? 0.0
+                : pacePrevious[
+                    math.min(paceNow.length, pacePrevious.length) - 1];
+
+            final budgetFree = spendable(
+                transactions: app.transactions,
+                metadata: app.transactionMetadata,
+                recurring: app.recurring,
+                goals: app.savingsGoals,
+                toMain: (t) => app.convertToMain(
+                    t.amount,
+                    t.currency.isEmpty
+                        ? app.accountById(t.accountId)?.currency ??
+                            app.settings.currency
+                        : t.currency),
+                convert: app.convertToMain,
+                currencyOf: (r) =>
+                    app.accountById(r.accountId)?.currency ??
+                    app.settings.currency,
+                now: now);
+            // What fixed income leaves for variable spending this month.
+            final variableAllowance = budgetFree.fixedIncome -
+                budgetFree.fixedBills -
+                budgetFree.pendingBills -
+                budgetFree.goals;
+            final ideal =
+                currentMonth && budgetFree.hasBase && variableAllowance > 0
+                    ? variableAllowance
+                    : null;
             final monthCard = _Panel(
                 child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
                   Row(children: [
                     IconButton(
@@ -287,7 +418,8 @@ class _FinanceHomeScreenState extends State<FinanceHomeScreen>
                     Expanded(
                         child: Column(children: [
                       Text(ptMonthYear(month),
-                          style: const TextStyle(fontWeight: FontWeight.w800)),
+                          style: const TextStyle(
+                              fontWeight: FontWeight.w800, fontSize: 16)),
                       Text(currentMonth ? 'Até hoje' : 'Mês completo',
                           style: Theme.of(context).textTheme.labelSmall),
                     ])),
@@ -299,41 +431,109 @@ class _FinanceHomeScreenState extends State<FinanceHomeScreen>
                                 _month = DateTime(month.year, month.month + 1)),
                         icon: const Icon(Icons.chevron_right)),
                   ]),
-                  const SizedBox(height: 4),
-                  _Pair(
-                      _Value(
-                          label: 'Entrou',
-                          value: money(data.income),
-                          icon: Icons.south_west,
-                          color: cs.primary,
-                          onTap: () => openAnalysisEntries(
-                              context,
-                              data.realized.where((t) =>
-                                  t.type == 'income' &&
-                                  !FinancialAnalysis.isRefund(
-                                      t,
-                                      app.transactionMetadata[t.id] ??
-                                          TransactionMetadata(
-                                              transactionId: t.id))),
-                              'Receitas · ${ptMonthYear(month)}')),
-                      _Value(
-                          label: 'Gastou',
-                          value: money(data.expense),
-                          icon: Icons.north_east,
-                          color: cs.error,
-                          onTap: () => openAnalysisEntries(
-                              context,
-                              data.realized.where((t) => t.type == 'expense'),
-                              'Despesas · ${ptMonthYear(month)}'))),
-                  const SizedBox(height: 8),
-                  if (!app.settings.hideBalance)
-                    _Comparison(
-                        current: data.expense,
-                        previous: previous.expense,
-                        money: money),
-                  if (!app.settings.hideBalance)
+                  const SizedBox(height: 6),
+                  LayoutBuilder(builder: (context, c) {
+                    final flows = Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          _Value(
+                              label: 'Entrou',
+                              value: money(data.income),
+                              detail: data.extraIncome > .005 &&
+                                      data.fixedIncome > .005
+                                  ? '${money(data.fixedIncome)} fixa · ${money(data.extraIncome)} extra'
+                                  : null,
+                              icon: Icons.south_west,
+                              color: NexoTones.income(context),
+                              onTap: () => openAnalysisEntries(
+                                  context,
+                                  data.realized.where((t) =>
+                                      t.type == 'income' &&
+                                      !FinancialAnalysis.isRefund(
+                                          t,
+                                          app.transactionMetadata[t.id] ??
+                                              TransactionMetadata(
+                                                  transactionId: t.id))),
+                                  'Receitas · ${ptMonthYear(month)}')),
+                          const SizedBox(height: 8),
+                          _Value(
+                              label: 'Gastou',
+                              value: money(data.expense),
+                              icon: Icons.north_east,
+                              color: NexoTones.expense(context),
+                              onTap: () => openAnalysisEntries(
+                                  context,
+                                  data.realized
+                                      .where((t) => t.type == 'expense'),
+                                  'Despesas · ${ptMonthYear(month)}')),
+                        ]);
+                    if (hidden) return flows;
+                    final gauge = NexoSavingsGauge(
+                        ratio:
+                            data.income > 0 ? data.result / data.income : null,
+                        label: 'do que entrou\nficou com você');
+                    if (c.maxWidth / MediaQuery.textScalerOf(context).scale(1) <
+                        300) {
+                      return Column(children: [flows, gauge]);
+                    }
+                    return Row(children: [
+                      Expanded(child: flows),
+                      const SizedBox(width: 12),
+                      gauge
+                    ]);
+                  }),
+                  if (!hidden &&
+                      (paceNow.any((v) => v > 0) ||
+                          pacePrevious.any((v) => v > 0))) ...[
+                    const SizedBox(height: 14),
+                    Wrap(
+                        spacing: 12,
+                        runSpacing: 4,
+                        crossAxisAlignment: WrapCrossAlignment.center,
+                        children: [
+                          Text('Ritmo de gastos variáveis',
+                              style: Theme.of(context).textTheme.titleSmall),
+                          _Legend(color: cs.primary, label: 'Este mês'),
+                          if (ideal != null)
+                            _Legend(
+                                color: cs.tertiary,
+                                label: 'Ritmo ideal',
+                                dashed: true),
+                          if (pacePrevious.any((v) => v > 0))
+                            _Legend(
+                                color: cs.outline,
+                                label: 'Mês anterior',
+                                dashed: true),
+                        ]),
+                    const SizedBox(height: 8),
+                    NexoSpendingPace(
+                        current: paceNow,
+                        previous: pacePrevious,
+                        money: money,
+                        ideal: ideal,
+                        monthDays: daysInMonth),
+                    if (ideal != null && paceNow.isNotEmpty)
+                      Builder(builder: (context) {
+                        final expected = ideal * paceNow.length / daysInMonth;
+                        final gap = paceNow.last - expected;
+                        return Padding(
+                            padding: const EdgeInsets.only(top: 6),
+                            child: Text(
+                                gap.abs() < 1
+                                    ? 'No ritmo ideal para fechar o mês dentro da renda fixa.'
+                                    : gap > 0
+                                        ? '${money(gap)} acima do ritmo ideal para o dia ${paceNow.length}.'
+                                        : '${money(-gap)} abaixo do ritmo ideal: sobra espaço.',
+                                style: TextStyle(
+                                    fontWeight: FontWeight.w700,
+                                    color: gap > 0
+                                        ? NexoTones.expense(context)
+                                        : NexoTones.income(context))));
+                      }),
+                  ],
+                  if (!hidden)
                     Padding(
-                        padding: const EdgeInsets.only(top: 4),
+                        padding: const EdgeInsets.only(top: 8),
                         child: Text(
                             data.changeFrom(previous) == null
                                 ? 'Sem gastos no período anterior para comparar'
@@ -350,79 +550,229 @@ class _FinanceHomeScreenState extends State<FinanceHomeScreen>
                                 'Reembolsos: ${money(data.refunds)}',
                             ].join(' · '),
                             style: Theme.of(context).textTheme.bodySmall)),
-                  if (data.topCategories.isNotEmpty &&
-                      !app.settings.hideBalance)
-                    Padding(
-                        padding: const EdgeInsets.only(top: 6),
-                        child: InkWell(
-                            onTap: () => _category(
-                                app, data, data.topCategories.first.key),
-                            child: Text(
-                                'Maior gasto: ${app.categoryById(data.topCategories.first.key)?.name ?? 'Sem categoria'} · ${money(data.topCategories.first.value)}',
-                                style: const TextStyle(
-                                    fontWeight: FontWeight.w600,
-                                    fontSize: 12)))),
                   if (!currentMonth)
                     TextButton(
                         onPressed: () => setState(() => _month = null),
                         child: const Text('Voltar para este mês')),
                 ]));
 
-            final actions = LayoutBuilder(builder: (context, constraints) {
-              final columns = MediaQuery.textScalerOf(context).scale(1) > 1.4 &&
-                      constraints.maxWidth < 450
-                  ? 2
-                  : 4;
-              return Wrap(spacing: 8, runSpacing: 8, children: [
-                for (final action in <(String, IconData, Widget)>[
-                  (
-                    'Despesa',
-                    Icons.add,
-                    const AddTransactionScreen(initialType: 'expense')
-                  ),
-                  (
-                    'Receita',
-                    Icons.south_west,
-                    const AddTransactionScreen(initialType: 'income')
-                  ),
-                  (
-                    'Dívidas',
-                    Icons.account_balance_outlined,
-                    const DebtOverviewScreen()
-                  ),
-                  ('Recorrentes', Icons.event_repeat, const RecurringScreen()),
-                ])
-                  SizedBox(
-                      width:
-                          (constraints.maxWidth - 8 * (columns - 1)) / columns,
-                      child: _QuickAction(
-                          label: action.$1,
-                          icon: action.$2,
-                          primary: action.$1 == 'Despesa',
-                          onTap: () => _open(action.$3))),
-              ]);
-            });
+            final spendCard = _Panel(
+                child: _SpendableBody(
+                    s: budgetFree,
+                    hidden: hidden,
+                    money: money,
+                    onSetup: () => _open(const RecurringScreen())));
 
-            final attention = overdue.isEmpty
-                ? null
-                : Material(
-                    color: cs.errorContainer,
-                    borderRadius: BorderRadius.circular(18),
-                    child: ListTile(
-                      leading: Icon(Icons.notification_important_outlined,
-                          color: cs.onErrorContainer),
-                      title: Text(
-                          '${overdue.length} ${overdue.length == 1 ? 'vencimento em atraso' : 'vencimentos em atraso'}',
-                          style: TextStyle(
-                              fontWeight: FontWeight.bold,
-                              color: cs.onErrorContainer)),
-                      subtitle: Text(
-                          '${money(overdue.fold<double>(0, (s, e) => s - app.convertToMain(e.amount, e.currency)))} · revisar na agenda',
-                          style: TextStyle(color: cs.onErrorContainer)),
-                      trailing:
-                          Icon(Icons.chevron_right, color: cs.onErrorContainer),
-                      onTap: () => _open(const AgendaScreen()),
-                    ));
+            final quick = Row(children: [
+              for (final action in <(String, IconData, Widget)>[
+                (
+                  'Despesa',
+                  Icons.add,
+                  const AddTransactionScreen(initialType: 'expense')
+                ),
+                (
+                  'Receita',
+                  Icons.south_west,
+                  const AddTransactionScreen(initialType: 'income')
+                ),
+                ('Transferir', Icons.swap_horiz, const TransferScreen()),
+                (
+                  'Dívidas',
+                  Icons.account_balance_outlined,
+                  const DebtOverviewScreen()
+                ),
+                ('Recorrentes', Icons.event_repeat, const RecurringScreen()),
+              ])
+                Expanded(
+                    child: NexoQuickAction(
+                        label: action.$1,
+                        icon: action.$2,
+                        primary: action.$1 == 'Despesa',
+                        onTap: () => _open(action.$3))),
+            ]);
+
+            final firstShortfall = timeline?.points
+                .where((point) => point.balance < 0)
+                .firstOrNull;
+            final hot = budgets
+                .where((b) => app.budgetProgressRaw(b) >= .8)
+                .firstOrNull;
+            final gap =
+                timeline == null ? null : shortfalls(timeline).firstOrNull;
+            final insights = <NexoInsight>[
+              if (overdue.isNotEmpty)
+                NexoInsight(
+                    icon: Icons.notification_important_outlined,
+                    color: NexoTones.expense(context),
+                    title:
+                        '${overdue.length} ${overdue.length == 1 ? 'vencimento em atraso' : 'vencimentos em atraso'}',
+                    subtitle:
+                        '${money(overdue.fold<double>(0, (s, e) => s - app.convertToMain(e.amount, e.currency)))} · revisar na agenda',
+                    action: 'Ver',
+                    onTap: () => _open(const AgendaScreen()))
+              else if (gap != null && !hidden)
+                NexoInsight(
+                    icon: Icons.event_busy_outlined,
+                    color: NexoTones.expense(context),
+                    title:
+                        'Faltam ${money(gap.missing)} para ${gap.event.title} de ${ptShortDate(gap.event.date)}',
+                    subtitle:
+                        'Veja o que chega a tempo: reservas, investimentos e pagamento parcial.',
+                    action: 'Plano',
+                    onTap: () => _open(DuePlanScreen(shortfall: gap)))
+              else if (firstShortfall != null && !hidden)
+                NexoInsight(
+                    icon: Icons.event_busy_outlined,
+                    color: NexoTones.expense(context),
+                    title:
+                        'Previsão abaixo de zero em ${ptShortDate(firstShortfall.date)}',
+                    subtitle: 'Confira entradas e vencimentos na agenda.',
+                    action: 'Ver',
+                    onTap: () => _open(AgendaScreen(initialDays: _horizon))),
+              if (currentMonth && data.pendingExpense > 0)
+                NexoInsight(
+                    icon: Icons.schedule,
+                    color: NexoTones.warning(context),
+                    title: 'Despesas pendentes neste mês',
+                    subtitle: '${money(data.pendingExpense)} ainda a pagar',
+                    action: 'Agenda',
+                    onTap: () => _open(const AgendaScreen())),
+              if (!hidden && hot != null)
+                NexoInsight(
+                    icon: Icons.pie_chart_outline,
+                    color: app.budgetExceeded(hot)
+                        ? NexoTones.expense(context)
+                        : NexoTones.warning(context),
+                    title:
+                        'Orçamento de ${app.categoryById(hot.categoryId)?.name ?? 'categoria'} em ${(app.budgetProgressRaw(hot) * 100).round()}%',
+                    subtitle: app.budgetExceeded(hot)
+                        ? 'Passou ${money(app.budgetSpent(hot) - app.budgetLimit(hot))} do limite'
+                        : 'Restam ${money(app.budgetRemaining(hot))}',
+                    action: 'Ver',
+                    onTap: () => _open(const BudgetScreen())),
+              if (!hidden &&
+                  currentMonth &&
+                  paceThen > 0 &&
+                  paceNow.isNotEmpty &&
+                  paceNow.last > paceThen * 1.1)
+                NexoInsight(
+                    icon: Icons.speed,
+                    color: NexoTones.warning(context),
+                    title: 'Gastando mais rápido que no mês passado',
+                    subtitle:
+                        '${money(paceNow.last)} até hoje, contra ${money(paceThen)} no mesmo dia',
+                    action: 'Ver',
+                    onTap: () => _open(AnalysisScreen(initialMonth: month))),
+            ];
+            final subscriptions = hidden
+                ? const []
+                : detectSubscriptions(app, _dismissedSubscriptions);
+            if (subscriptions.isNotEmpty) {
+              insights.add(NexoInsight(
+                  icon: Icons.auto_awesome_outlined,
+                  color: cs.tertiary,
+                  title:
+                      '${subscriptions.length} ${subscriptions.length == 1 ? 'possível assinatura' : 'possíveis assinaturas'} sem cadastro',
+                  subtitle:
+                      '~${money(subscriptions.fold<double>(0, (s, c) => s + c.monthlyAmount))} por mês. Cadastre para prever e ser lembrado.',
+                  action: 'Ver',
+                  onTap: () => _open(const RecurringScreen())));
+            }
+            // Yesterday in one line, with what fits today (the daily digest).
+            final yesterday = DateTime(today.year, today.month, today.day - 1);
+            final yday = analyzePeriod(
+                app, AnalysisFilter(from: yesterday, to: yesterday));
+            if (yday.expense > 0 || yday.income > 0) {
+              final onCard = yday.realized
+                  .where((t) =>
+                      t.type == 'expense' &&
+                      app.accountById(t.accountId)?.type == 'credit')
+                  .fold<double>(0, (s, t) => s + t.amount);
+              insights.add(NexoInsight(
+                  icon: Icons.history_toggle_off,
+                  color: cs.primary,
+                  title: hidden
+                      ? 'Resumo de ontem'
+                      : 'Ontem: saiu ${money(yday.expense)}${yday.income > 0 ? ', entrou ${money(yday.income)}' : ''}',
+                  subtitle: hidden
+                      ? 'Toque para ver os lançamentos.'
+                      : [
+                          if (onCard > 0) '${money(onCard)} no cartão',
+                          if (budgetFree.hasBase && budgetFree.free > 0)
+                            'hoje cabe ${money(budgetFree.perDay)}',
+                        ].join(' · ').ifEmpty('Toque para ver os lançamentos.'),
+                  action: 'Ver',
+                  onTap: () => openAnalysisEntries(
+                      context,
+                      yday.realized.where((t) => t.type == 'expense'),
+                      'Gastos de ontem')));
+            }
+            // The first days of a month: invite to look back at the last one.
+            if (today.day <= 5) {
+              final last = DateTime(today.year, today.month - 1);
+              insights.add(NexoInsight(
+                  icon: Icons.auto_stories_outlined,
+                  color: cs.primary,
+                  title: 'Seu ${ptMonthYear(last).split(' ').first} em revisão',
+                  subtitle: 'Quanto saiu, para onde foi e o que mudou.',
+                  action: 'Ver',
+                  onTap: () => _open(MonthReviewScreen(month: last))));
+            }
+            for (final alert in hidden
+                ? const <ChargeAlert>[]
+                : chargeAlerts(
+                        transactions: app.transactions,
+                        metadata: app.transactionMetadata,
+                        recurring: app.recurring,
+                        now: now,
+                        dismissed: _dismissedAlerts)
+                    .take(3)) {
+              final first = alert.charges.first;
+              insights.add(NexoInsight(
+                  icon: alert.kind == 'duplicate'
+                      ? Icons.content_copy_outlined
+                      : Icons.price_change_outlined,
+                  color: NexoTones.warning(context),
+                  title: alert.kind == 'duplicate'
+                      ? 'Cobrança repetida: ${first.description}'
+                      : '${alert.recurring!.name} veio ${money(alert.charges.last.amount)}',
+                  subtitle: alert.kind == 'duplicate'
+                      ? '${alert.charges.length}× ${money(first.amount)} em ${alert.charges.last.date.difference(first.date).inDays + 1} dia(s). Confira se é isso mesmo.'
+                      : 'Previsto: ${money(alert.expected!)}. Mudou o preço?',
+                  action: 'Ver',
+                  onTap: () => _chargeAlert(app, alert)));
+            }
+            for (final card in app.accounts.where((a) => a.type == 'credit')) {
+              final bank = BankSnapshots.linkedTo(_bank, card.id);
+              final used = bank == null ? null : BankSnapshots.limitUsed(bank);
+              if (used == null || used < .9) continue;
+              insights.add(NexoInsight(
+                  icon: Icons.credit_card_off_outlined,
+                  color: NexoTones.expense(context),
+                  title:
+                      '${card.name}: ${(used * 100).round()}% do limite usado',
+                  subtitle: hidden
+                      ? 'Segundo o banco. Compras novas podem ser recusadas.'
+                      : 'Disponível no banco: ${money(bank!.availableCents! / 100)}. Compras novas podem ser recusadas.',
+                  action: 'Ver',
+                  onTap: () => _open(CardInvoiceScreen(cardId: card.id))));
+            }
+            for (final r in app.recurring) {
+              final days = _cancelIntents[r.id];
+              if (days == null || !CancelIntents.due(r, days, now)) continue;
+              insights.add(NexoInsight(
+                  icon: Icons.cancel_schedule_send_outlined,
+                  color: NexoTones.warning(context),
+                  title:
+                      'Cancele ${r.name} antes de ${ptShortDate(r.nextDate)}',
+                  subtitle:
+                      'Você marcou que não vai renovar. ${hidden ? '' : 'Próxima cobrança: ${money(r.amount)}.'}',
+                  action: 'Abrir',
+                  onTap: () => _open(RecurringDetailScreen(
+                      recurring: r, fmt: (v) => analysisMoney(app, v)))));
+            }
+            final attention =
+                insights.isEmpty ? null : NexoInsightCarousel(items: insights);
 
             final futureCard = _Panel(
                 child: Column(
@@ -454,7 +804,7 @@ class _FinanceHomeScreenState extends State<FinanceHomeScreen>
                             'Saldo previsto em ${ptShortDate(timeline.points.last.date)}',
                         value: money(timeline.points.last.balance)),
                     const SizedBox(height: 12),
-                    if (app.settings.hideBalance)
+                    if (hidden)
                       const Padding(
                           padding: EdgeInsets.all(16),
                           child:
@@ -463,16 +813,17 @@ class _FinanceHomeScreenState extends State<FinanceHomeScreen>
                       CashTimelineChart(timeline: timeline, money: money),
                     const SizedBox(height: 12),
                     _Pair(
-                        _Value(
+                        NexoStatPill(
+                            icon: Icons.south_west,
                             label: 'A receber no período',
                             value: money(timeline.inflow),
-                            small: true),
-                        _Value(
+                            valueColor: NexoTones.income(context)),
+                        NexoStatPill(
+                            icon: Icons.north_east,
                             label: 'A pagar no período',
                             value: money(timeline.outflow),
-                            small: true)),
-                    if (!app.settings.hideBalance &&
-                        timeline.lowest.balance < 0)
+                            valueColor: NexoTones.expense(context))),
+                    if (!hidden && timeline.lowest.balance < 0)
                       Padding(
                           padding: const EdgeInsets.only(top: 10),
                           child: Text(
@@ -522,16 +873,38 @@ class _FinanceHomeScreenState extends State<FinanceHomeScreen>
                   Text(ptMonthYear(month),
                       style: Theme.of(context).textTheme.bodySmall),
                   const SizedBox(height: 12),
-                  CategoryBreakdown(
-                      app: app,
-                      data: data,
-                      compact: true,
-                      onCategory: (id) => _category(app, data, id)),
-                  TextButton.icon(
-                      onPressed: () => _open(
-                          AnalysisScreen(initialMonth: month, closing: true)),
-                      icon: const Icon(Icons.fact_check_outlined),
-                      label: const Text('Ver fechamento do mês')),
+                  if (data.expense == 0)
+                    const Text(
+                        'Sem despesas realizadas neste período. Registre uma despesa para começar a análise.')
+                  else if (hidden)
+                    const Text(
+                        'Valores e distribuição ocultos no modo privado.')
+                  else
+                    NexoCategoryDonut(
+                        slices: [
+                          for (final e in data.topCategories)
+                            NexoDonutSlice(
+                                e.key,
+                                app.categoryById(e.key)?.name ??
+                                    'Sem categoria',
+                                e.value,
+                                Color(app.categoryById(e.key)?.colorValue ??
+                                    0xFF607D8B)),
+                        ],
+                        total: data.expense,
+                        money: money,
+                        onSlice: (id) => _category(app, data, id)),
+                  Wrap(spacing: 4, children: [
+                    TextButton.icon(
+                        onPressed: () => _open(MonthReviewScreen(month: month)),
+                        icon: const Icon(Icons.auto_stories_outlined),
+                        label: const Text('Mês em revisão')),
+                    TextButton.icon(
+                        onPressed: () => _open(
+                            AnalysisScreen(initialMonth: month, closing: true)),
+                        icon: const Icon(Icons.fact_check_outlined),
+                        label: const Text('Fechamento')),
+                  ]),
                 ]));
 
             final budgetCard = _Panel(
@@ -575,11 +948,10 @@ class _FinanceHomeScreenState extends State<FinanceHomeScreen>
                   for (final card in cardRows.take(3))
                     ListTile(
                         contentPadding: EdgeInsets.zero,
-                        leading: CircleAvatar(
-                            backgroundColor:
-                                Color(card.colorValue).withValues(alpha: .15),
-                            child: const Icon(Icons.credit_card)),
-                        title: Text(card.name),
+                        leading: _MiniCard(color: Color(card.colorValue)),
+                        title: Text(card.name,
+                            style:
+                                const TextStyle(fontWeight: FontWeight.w700)),
                         subtitle: Text(
                             'Em aberto: ${money(app.convertToMain((-card.balance).clamp(0.0, double.infinity), card.currency))}\nFatura atual: ${snapshot.hasData ? money(currentInvoiceRemaining(card: card, now: now, transactions: app.transactions, metadata: app.transactionMetadata, payments: snapshot.data!, convert: app.convertToMain)) : 'indisponível'}${card.excludeFromTotal ? ' · fora do total' : ''}'),
                         trailing: const Icon(Icons.chevron_right),
@@ -602,6 +974,73 @@ class _FinanceHomeScreenState extends State<FinanceHomeScreen>
                   ]),
                 ]));
 
+            // Same figure as the net worth screen: accounts plus assets.
+            final netWorth = app.totalBalanceAll + app.totalAssetsValue;
+            final history = [
+              for (final snap in app.netWorthSnapshots.length > 90
+                  ? app.netWorthSnapshots
+                      .sublist(app.netWorthSnapshots.length - 90)
+                  : app.netWorthSnapshots)
+                snap.netWorth,
+              netWorth,
+            ];
+            final monthAgo = app.netWorthSnapshots
+                .where((s) =>
+                    DateTime.tryParse(s.date)
+                        ?.isBefore(today.subtract(const Duration(days: 29))) ==
+                    true)
+                .lastOrNull;
+            final netChange =
+                monthAgo == null ? null : netWorth - monthAgo.netWorth;
+            final netWorthCard = _Panel(
+                child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                  _Heading('Patrimônio',
+                      action: 'Detalhes',
+                      onTap: () => _open(const NetWorthScreen())),
+                  _Amount(money(netWorth), size: 26),
+                  if (netChange != null && !hidden)
+                    Padding(
+                        padding: const EdgeInsets.only(top: 2),
+                        child: Text(
+                            '${netChange >= 0 ? '▲' : '▼'} ${money(netChange.abs())} em 30 dias',
+                            style: TextStyle(
+                                fontWeight: FontWeight.w700,
+                                color: netChange >= 0
+                                    ? NexoTones.income(context)
+                                    : NexoTones.expense(context)))),
+                  const SizedBox(height: 10),
+                  if (!hidden && history.length > 2)
+                    NexoSparkline(values: history)
+                  else
+                    Text(
+                        hidden
+                            ? 'Evolução oculta no modo privado.'
+                            : 'Contas e bens somados. A evolução aparece com o uso diário.',
+                        style: Theme.of(context).textTheme.bodySmall),
+                ]));
+
+            final week = WeekSummary.build(
+                transactions: app.transactions,
+                metadata: app.transactionMetadata,
+                amount: (t) => app.convertToMain(
+                    t.amount,
+                    t.currency.isEmpty
+                        ? app.accountById(t.accountId)?.currency ??
+                            app.settings.currency
+                        : t.currency),
+                now: today,
+                weekStart: app.settings.weekStart);
+            final weekCard = _Panel(
+                child: _WeekBody(
+                    week: week,
+                    hidden: hidden,
+                    money: money,
+                    categoryName: (id) =>
+                        app.categoryById(id)?.name ?? 'Categoria',
+                    onReview: () => _open(const FinancialCheckupScreen())));
+
             final recent = app.transactions
                 .where((t) => !t.date.isAfter(now))
                 .toList()
@@ -618,55 +1057,106 @@ class _FinanceHomeScreenState extends State<FinanceHomeScreen>
                         padding: EdgeInsets.symmetric(vertical: 12),
                         child: Text(
                             'Comece registrando uma receita ou despesa pelos atalhos acima.')),
-                  for (final t in recent.take(4))
-                    ListTile(
-                        contentPadding: EdgeInsets.zero,
-                        title: Text(
-                            app.settings.hideBalance
-                                ? 'Lançamento'
-                                : t.description,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis),
-                        subtitle: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                  '${ptShortDate(t.date)} · ${app.transactionMetadata[t.id]?.isPending == true ? 'Pendente' : FinanceRules.isNeutral(t, app.transactionMetadata[t.id]) ? 'Movimentação' : t.type == 'income' ? 'Receita' : 'Despesa'}'),
-                              Text(
-                                  money(app.convertToMain(
-                                      t.amount,
-                                      t.currency.isEmpty
-                                          ? app
-                                                  .accountById(t.accountId)
-                                                  ?.currency ??
-                                              app.settings.currency
-                                          : t.currency)),
-                                  style: const TextStyle(
-                                      fontWeight: FontWeight.w700)),
-                            ]),
-                        trailing: FinanceRules.isNeutral(
-                                t, app.transactionMetadata[t.id])
-                            ? null
-                            : PopupMenuButton<String>(
-                                tooltip: 'Ações do lançamento',
-                                onSelected: (v) => _open(v == 'repeat'
-                                    ? AddTransactionScreen(
-                                        template: t, initialType: t.type)
-                                    : AddTransactionScreen(
-                                        existing: t, initialType: t.type)),
-                                itemBuilder: (_) => [
-                                      const PopupMenuItem(
-                                          value: 'edit', child: Text('Editar')),
-                                      const PopupMenuItem(
-                                          value: 'repeat',
-                                          child: Text('Repetir como novo…'))
-                                    ]),
-                        onTap: FinanceRules.isNeutral(
-                                t, app.transactionMetadata[t.id])
-                            ? null
-                            : () => _open(AddTransactionScreen(
-                                existing: t, initialType: t.type))),
+                  for (final t in recent.take(5))
+                    Builder(builder: (context) {
+                      final meta = app.transactionMetadata[t.id];
+                      final neutral = FinanceRules.isNeutral(t, meta);
+                      final pending = meta?.isPending == true;
+                      final value = money(app.convertToMain(
+                          t.amount,
+                          t.currency.isEmpty
+                              ? app.accountById(t.accountId)?.currency ??
+                                  app.settings.currency
+                              : t.currency));
+                      final income = t.type == 'income';
+                      return ListTile(
+                          contentPadding: EdgeInsets.zero,
+                          leading: neutral
+                              ? CircleAvatar(
+                                  radius: 20,
+                                  backgroundColor: cs.surfaceContainerHigh,
+                                  child: const Icon(Icons.swap_horiz, size: 20))
+                              : CategoryDot(
+                                  category: app.categoryById(t.categoryId),
+                                  size: 40),
+                          title: Text(hidden ? 'Lançamento' : t.description,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style:
+                                  const TextStyle(fontWeight: FontWeight.w600)),
+                          subtitle: Text(
+                              '${ptShortDate(t.date)} · ${pending ? 'Pendente' : neutral ? 'Movimentação' : income ? 'Receita' : 'Despesa'}',
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis),
+                          trailing:
+                              Row(mainAxisSize: MainAxisSize.min, children: [
+                            // Large amounts shrink instead of taking the row.
+                            ConstrainedBox(
+                                constraints:
+                                    const BoxConstraints(maxWidth: 120),
+                                child: FittedBox(
+                                    fit: BoxFit.scaleDown,
+                                    alignment: Alignment.centerRight,
+                                    child: Text(
+                                        hidden || neutral
+                                            ? value
+                                            : '${income ? '+' : '−'} $value',
+                                        style: TextStyle(
+                                            fontWeight: FontWeight.w800,
+                                            fontFeatures: NexoTones.figures,
+                                            color: neutral || hidden
+                                                ? null
+                                                : income
+                                                    ? NexoTones.income(context)
+                                                    : pending
+                                                        ? NexoTones.warning(
+                                                            context)
+                                                        : null)))),
+                            if (!neutral)
+                              PopupMenuButton<String>(
+                                  tooltip: 'Ações do lançamento',
+                                  onSelected: (v) => _open(v == 'repeat'
+                                      ? AddTransactionScreen(
+                                          template: t, initialType: t.type)
+                                      : AddTransactionScreen(
+                                          existing: t, initialType: t.type)),
+                                  itemBuilder: (_) => const [
+                                        PopupMenuItem(
+                                            value: 'edit',
+                                            child: Text('Editar')),
+                                        PopupMenuItem(
+                                            value: 'repeat',
+                                            child: Text('Repetir como novo…'))
+                                      ]),
+                          ]),
+                          onTap: neutral
+                              ? null
+                              : () => _open(AddTransactionScreen(
+                                  existing: t, initialType: t.type)));
+                    }),
                 ]));
+
+            final links = Wrap(spacing: 8, runSpacing: 4, children: [
+              for (final link in <(String, IconData, Widget)>[
+                (
+                  'Análises',
+                  Icons.bar_chart,
+                  AnalysisScreen(initialMonth: month)
+                ),
+                ('Agenda', Icons.event_note, const AgendaScreen()),
+                (
+                  'Revisão de 3 ou 7 dias',
+                  Icons.fact_check_outlined,
+                  const FinancialCheckupScreen()
+                ),
+                ('Investimentos', Icons.show_chart, const InvestmentsScreen()),
+              ])
+                ActionChip(
+                  avatar: Icon(link.$2, size: 18),
+                  label: Text(link.$1),
+                  onPressed: () => _open(link.$3),
+                ),
+            ]);
 
             return LayoutBuilder(builder: (context, constraints) {
               final wide = constraints.maxWidth >= 1050;
@@ -676,12 +1166,13 @@ class _FinanceHomeScreenState extends State<FinanceHomeScreen>
                     const SizedBox(width: 20),
                     Expanded(flex: flex == 3 ? 2 : 1, child: right),
                   ]);
+              const gap = SizedBox(height: 16);
               return RefreshIndicator(
                 onRefresh: _refresh,
                 child: SingleChildScrollView(
                     physics: const AlwaysScrollableScrollPhysics(),
                     padding: EdgeInsets.fromLTRB(
-                        wide ? 24 : 16, 12, wide ? 24 : 16, 28),
+                        wide ? 24 : 16, 8, wide ? 24 : 16, 28),
                     child: Center(
                         child: ConstrainedBox(
                             constraints: const BoxConstraints(maxWidth: 1760),
@@ -705,36 +1196,64 @@ class _FinanceHomeScreenState extends State<FinanceHomeScreen>
                                                 const Icon(Icons.arrow_forward),
                                             onTap: () =>
                                                 _open(const AccountsScreen()))),
-                                  if (wide)
-                                    row(hero, monthCard)
-                                  else ...[
-                                    hero,
-                                    const SizedBox(height: 12),
-                                    monthCard
-                                  ],
-                                  const SizedBox(height: 12),
-                                  actions,
-                                  if (attention != null) ...[
-                                    const SizedBox(height: 12),
-                                    attention
-                                  ],
-                                  const SizedBox(height: 20),
                                   if (wide) ...[
+                                    if (attention != null) ...[attention, gap],
+                                    row(
+                                        Column(
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.stretch,
+                                            children: [
+                                              hero,
+                                              const SizedBox(height: 12),
+                                              spendCard,
+                                              const SizedBox(height: 12),
+                                              quick,
+                                              const SizedBox(height: 8),
+                                              links,
+                                            ]),
+                                        monthCard),
+                                    const SizedBox(height: 20),
                                     row(futureCard, categories, flex: 3),
                                     const SizedBox(height: 20),
-                                    row(budgetCard, cards),
+                                    row(
+                                        Column(
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.stretch,
+                                            children: [
+                                              weekCard,
+                                              gap,
+                                              netWorthCard,
+                                              gap,
+                                              budgetCard
+                                            ]),
+                                        cards),
                                   ] else ...[
-                                    futureCard,
-                                    const SizedBox(height: 16),
+                                    hero,
+                                    const SizedBox(height: 12),
+                                    spendCard,
+                                    const SizedBox(height: 12),
+                                    quick,
+                                    const SizedBox(height: 4),
+                                    links,
+                                    const SizedBox(height: 12),
+                                    if (attention != null) ...[attention, gap],
+                                    monthCard,
+                                    gap,
+                                    weekCard,
+                                    gap,
                                     categories,
-                                    const SizedBox(height: 16),
+                                    gap,
+                                    netWorthCard,
+                                    gap,
+                                    futureCard,
+                                    gap,
                                     budgetCard,
-                                    const SizedBox(height: 16),
+                                    gap,
                                     cards,
                                   ],
-                                  const SizedBox(height: 16),
+                                  gap,
                                   activity,
-                                  const SizedBox(height: 16),
+                                  gap,
                                   OutlinedButton.icon(
                                       onPressed: () =>
                                           _open(const FinancialCheckupScreen()),
@@ -749,6 +1268,58 @@ class _FinanceHomeScreenState extends State<FinanceHomeScreen>
     );
   }
 
+  Future<void> _chargeAlert(AppProvider app, ChargeAlert alert) async {
+    final action = await showDialog<String>(
+        context: context,
+        builder: (c) => AlertDialog(
+                title: Text(alert.kind == 'duplicate'
+                    ? 'Cobrança repetida'
+                    : 'Valor diferente do previsto'),
+                content: Column(mainAxisSize: MainAxisSize.min, children: [
+                  for (final t in alert.charges)
+                    ListTile(
+                        dense: true,
+                        contentPadding: EdgeInsets.zero,
+                        title: Text(t.description),
+                        subtitle: Text(ptShortDate(t.date)),
+                        trailing: Text(analysisMoney(app, t.amount))),
+                  if (alert.kind == 'price')
+                    Text(
+                        'A recorrente prevê ${analysisMoney(app, alert.expected!)}.'),
+                ]),
+                actions: [
+                  TextButton(
+                      onPressed: () => Navigator.pop(c, 'ok'),
+                      child: const Text('Está certo')),
+                  if (alert.kind == 'price')
+                    TextButton(
+                        onPressed: () => Navigator.pop(c, 'update'),
+                        child: Text(
+                            'Prever ${analysisMoney(app, alert.charges.last.amount)}')),
+                  FilledButton(
+                      onPressed: () => Navigator.pop(c, 'view'),
+                      child: const Text('Ver lançamentos')),
+                ]));
+    if (!mounted || action == null) return;
+    if (action == 'view') {
+      openAnalysisEntries(
+          context,
+          alert.charges,
+          alert.kind == 'duplicate'
+              ? 'Cobrança repetida'
+              : alert.recurring!.name);
+      return;
+    }
+    if (action == 'update') {
+      final r = RecurringPayment.fromMap(alert.recurring!.toMap(),
+          skippedOccurrences: alert.recurring!.skippedOccurrences)
+        ..amount = alert.charges.last.amount;
+      await app.updateRecurring(r);
+    }
+    await CancelIntents.dismissAlert(chargeAlertKey(alert));
+    await _loadDismissed();
+  }
+
   void _category(AppProvider app, FinancialAnalysis data, String id) =>
       openAnalysisEntries(
           context,
@@ -756,15 +1327,276 @@ class _FinanceHomeScreenState extends State<FinanceHomeScreen>
           app.categoryById(id)?.name ?? 'Categoria');
 }
 
+/// "Quanto posso gastar": per day until the end of the month, and how the
+/// number is made, so it can be trusted.
+class _SpendableBody extends StatefulWidget {
+  const _SpendableBody(
+      {required this.s,
+      required this.hidden,
+      required this.money,
+      required this.onSetup});
+  final Spendable s;
+  final bool hidden;
+  final String Function(double) money;
+  final VoidCallback onSetup;
+  @override
+  State<_SpendableBody> createState() => _SpendableBodyState();
+}
+
+class _SpendableBodyState extends State<_SpendableBody> {
+  bool _open = false;
+  @override
+  Widget build(BuildContext context) {
+    final s = widget.s;
+    final money = widget.money;
+    final cs = Theme.of(context).colorScheme;
+    final small = Theme.of(context).textTheme.bodySmall;
+    if (!s.hasBase) {
+      return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Text('Quanto posso gastar',
+            style: Theme.of(context)
+                .textTheme
+                .titleMedium
+                ?.copyWith(fontWeight: FontWeight.w800)),
+        const SizedBox(height: 6),
+        const Text(
+            'Cadastre sua renda fixa (salário, bolsa) como recorrente e o Nexo mostra quanto cabe por dia depois das contas e metas.'),
+        TextButton(
+            onPressed: widget.onSetup,
+            child: const Text('Cadastrar renda fixa')),
+      ]);
+    }
+    final over = s.free < 0;
+    Widget row(String label, double value, {bool plus = false}) => Padding(
+        padding: const EdgeInsets.symmetric(vertical: 2),
+        child: Row(children: [
+          Expanded(child: Text(label)),
+          Text('${plus ? '+' : '−'} ${money(value)}',
+              style: const TextStyle(fontFeatures: NexoTones.figures)),
+        ]));
+    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      Row(children: [
+        Expanded(
+            child: Text('Quanto posso gastar',
+                style: Theme.of(context)
+                    .textTheme
+                    .titleMedium
+                    ?.copyWith(fontWeight: FontWeight.w800))),
+        TextButton(
+            onPressed: () => setState(() => _open = !_open),
+            child: Text(_open ? 'Ocultar conta' : 'Como chego nisso')),
+      ]),
+      if (over)
+        Text('Passou ${money(-s.free)} do que a renda fixa cobre neste mês',
+            style: TextStyle(
+                color: NexoTones.expense(context),
+                fontWeight: FontWeight.w800,
+                fontSize: 16))
+      else ...[
+        FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: Alignment.centerLeft,
+            child: Text.rich(TextSpan(children: [
+              TextSpan(
+                  text: money(s.perDay),
+                  style: TextStyle(
+                      fontSize: 28,
+                      fontWeight: FontWeight.w800,
+                      color: cs.primary,
+                      fontFeatures: NexoTones.figures)),
+              const TextSpan(text: '  por dia'),
+            ]))),
+        Text('${money(s.free)} livres até o fim do mês · ${s.daysLeft} dia(s)',
+            style: small),
+      ],
+      if (_open) ...[
+        const Divider(height: 20),
+        row('Renda fixa do mês', s.fixedIncome, plus: true),
+        row('Contas fixas do mês', s.fixedBills),
+        if (s.pendingBills > 0) row('Pendentes do mês', s.pendingBills),
+        if (s.goals > 0) row('Guardar para metas', s.goals),
+        row('Gasto variável até hoje', s.variableSpent),
+        const SizedBox(height: 6),
+        Text(
+            'Renda extra, transferências e reservas não entram. Contas fixas e renda fixa vêm das recorrentes.',
+            style: small),
+      ],
+    ]);
+  }
+}
+
+/// This week so far: total, comparison, a bar per day and what stood out.
+class _WeekBody extends StatelessWidget {
+  const _WeekBody(
+      {required this.week,
+      required this.hidden,
+      required this.money,
+      required this.categoryName,
+      required this.onReview});
+  final WeekSummary week;
+  final bool hidden;
+  final String Function(double) money;
+  final String Function(String id) categoryName;
+  final VoidCallback onReview;
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final change = week.change;
+    final up = (change ?? 0) > 0;
+    final days = week.days;
+    final peak = days.fold(0.0, math.max);
+    final letters = week.start.weekday == DateTime.monday
+        ? const ['S', 'T', 'Q', 'Q', 'S', 'S', 'D']
+        : const ['D', 'S', 'T', 'Q', 'Q', 'S', 'S'];
+    final biggest = week.biggest;
+    final top = week.topCategory;
+    final small = Theme.of(context).textTheme.bodySmall;
+    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      _Heading('Sua semana', action: 'Revisar', onTap: onReview),
+      Text('${ptShortDate(week.start)} até hoje', style: small),
+      const SizedBox(height: 10),
+      Row(crossAxisAlignment: CrossAxisAlignment.end, children: [
+        Expanded(
+            child:
+                Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          _Amount(money(week.spent), size: 26),
+          const SizedBox(height: 2),
+          Text(
+              hidden
+                  ? 'Gasto na semana'
+                  : change == null
+                      ? 'Sem gastos no mesmo período da semana passada'
+                      : change.abs() < 1
+                          ? 'Igual ao mesmo período da semana passada'
+                          : '${up ? '▲' : '▼'} ${change.abs().toStringAsFixed(0)}% vs. ${money(week.previousSpent)} na semana passada',
+              style: TextStyle(
+                  fontSize: 12.5,
+                  fontWeight: FontWeight.w600,
+                  color: hidden || change == null || change.abs() < 1
+                      ? cs.onSurfaceVariant
+                      : up
+                          ? NexoTones.expense(context)
+                          : NexoTones.income(context))),
+        ])),
+        if (!hidden)
+          SizedBox(
+              width: 132,
+              height: 72,
+              child: Row(crossAxisAlignment: CrossAxisAlignment.end, children: [
+                for (var i = 0; i < 7; i++)
+                  Expanded(
+                      child: Column(
+                          mainAxisAlignment: MainAxisAlignment.end,
+                          children: [
+                        Container(
+                            height: peak <= 0
+                                ? 3
+                                : math.max(3, 40 * days[i] / peak),
+                            margin: const EdgeInsets.symmetric(horizontal: 3),
+                            decoration: BoxDecoration(
+                                color: i == week.daysElapsed - 1
+                                    ? cs.primary
+                                    : i < week.daysElapsed
+                                        ? cs.primary.withValues(alpha: .45)
+                                        : cs.surfaceContainerHighest,
+                                borderRadius: BorderRadius.circular(3))),
+                        const SizedBox(height: 4),
+                        Text(letters[i],
+                            style: TextStyle(
+                                fontSize: 10,
+                                fontWeight: i == week.daysElapsed - 1
+                                    ? FontWeight.w800
+                                    : FontWeight.w500,
+                                color: cs.onSurfaceVariant)),
+                      ])),
+              ])),
+      ]),
+      const SizedBox(height: 12),
+      Wrap(spacing: 16, runSpacing: 8, children: [
+        _WeekFact(Icons.spa_outlined,
+            '${week.quietDays} de ${week.daysElapsed} dia(s) sem gastos'),
+        if (top != null && !hidden)
+          _WeekFact(Icons.donut_small_outlined,
+              '${categoryName(top.key)}: ${money(top.value)}'),
+        if (biggest != null && !hidden)
+          _WeekFact(Icons.north_east,
+              'Maior: ${biggest.description} · ${money(week.amountOf(biggest))}'),
+      ]),
+    ]);
+  }
+}
+
+class _WeekFact extends StatelessWidget {
+  const _WeekFact(this.icon, this.text);
+  final IconData icon;
+  final String text;
+  @override
+  Widget build(BuildContext context) => ConstrainedBox(
+      constraints: const BoxConstraints(maxWidth: 320),
+      child: Row(mainAxisSize: MainAxisSize.min, children: [
+        Icon(icon, size: 16, color: Theme.of(context).colorScheme.primary),
+        const SizedBox(width: 6),
+        Flexible(
+            child: Text(text,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(fontSize: 12.5))),
+      ]));
+}
+
 class _Panel extends StatelessWidget {
   final Widget child;
-  final Color? color;
-  const _Panel({required this.child, this.color});
+  const _Panel({required this.child});
   @override
-  Widget build(BuildContext context) => Material(
-      color: color ?? Theme.of(context).colorScheme.surfaceContainerLow,
-      borderRadius: BorderRadius.circular(24),
-      child: Padding(padding: const EdgeInsets.all(18), child: child));
+  Widget build(BuildContext context) => NexoCard(child: child);
+}
+
+class _Legend extends StatelessWidget {
+  final Color color;
+  final String label;
+  final bool dashed;
+  const _Legend(
+      {required this.color, required this.label, this.dashed = false});
+  @override
+  Widget build(BuildContext context) =>
+      Row(mainAxisSize: MainAxisSize.min, children: [
+        Container(
+            width: 14,
+            height: 3,
+            decoration: BoxDecoration(
+                color: dashed ? null : color,
+                border: dashed
+                    ? Border(top: BorderSide(color: color, width: 2))
+                    : null,
+                borderRadius: BorderRadius.circular(2))),
+        const SizedBox(width: 4),
+        Text(label, style: const TextStyle(fontSize: 11)),
+      ]);
+}
+
+/// Card-shaped badge in the card's own color.
+class _MiniCard extends StatelessWidget {
+  final Color color;
+  const _MiniCard({required this.color});
+  @override
+  Widget build(BuildContext context) => Container(
+      width: 46,
+      height: 32,
+      decoration: BoxDecoration(
+          gradient: LinearGradient(colors: [
+            color,
+            Color.lerp(color, Colors.black, .35)!,
+          ], begin: Alignment.topLeft, end: Alignment.bottomRight),
+          borderRadius: BorderRadius.circular(7)),
+      alignment: Alignment.bottomLeft,
+      padding: const EdgeInsets.all(5),
+      child: Container(
+          width: 9,
+          height: 7,
+          decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: .75),
+              borderRadius: BorderRadius.circular(2))));
 }
 
 class _Heading extends StatelessWidget {
@@ -815,22 +1647,23 @@ class _Amount extends StatelessWidget {
               style: TextStyle(
                   fontSize: size,
                   fontWeight: FontWeight.w800,
-                  letterSpacing: -.4))));
+                  letterSpacing: -.4,
+                  fontFeatures: NexoTones.figures))));
 }
 
 class _Value extends StatelessWidget {
   final String label, value;
+  final String? detail;
   final IconData? icon;
   final Color? color;
   final VoidCallback? onTap;
-  final bool small;
   const _Value(
       {required this.label,
       required this.value,
+      this.detail,
       this.icon,
       this.color,
-      this.onTap,
-      this.small = false});
+      this.onTap});
   @override
   Widget build(BuildContext context) => InkWell(
       onTap: onTap,
@@ -849,79 +1682,13 @@ class _Value extends StatelessWidget {
                       Text(label, style: TextStyle(fontSize: 12, color: color)))
             ]),
             const SizedBox(height: 4),
-            _Amount(value, size: small ? 17 : 22),
+            _Amount(value, size: 22),
+            if (detail != null)
+              Text(detail!,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: Theme.of(context).textTheme.bodySmall),
           ])));
-}
-
-class _QuickAction extends StatelessWidget {
-  final String label;
-  final IconData icon;
-  final VoidCallback onTap;
-  final bool primary;
-  const _QuickAction(
-      {required this.label,
-      required this.icon,
-      required this.onTap,
-      this.primary = false});
-  @override
-  Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-    return Material(
-        color: primary ? cs.primary : cs.surfaceContainerLow,
-        borderRadius: BorderRadius.circular(18),
-        child: InkWell(
-            onTap: onTap,
-            borderRadius: BorderRadius.circular(18),
-            child: Padding(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 2, vertical: 12),
-                child: Column(children: [
-                  Icon(icon, color: primary ? cs.onPrimary : cs.primary),
-                  const SizedBox(height: 4),
-                  Text(label,
-                      style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                          color: primary ? cs.onPrimary : cs.onSurface))
-                ]))));
-  }
-}
-
-class _Comparison extends StatelessWidget {
-  final double current, previous;
-  final String Function(double) money;
-  const _Comparison(
-      {required this.current, required this.previous, required this.money});
-  @override
-  Widget build(BuildContext context) {
-    final max = math.max(math.max(current, previous), 1.0);
-    final cs = Theme.of(context).colorScheme;
-    return Semantics(
-        label:
-            'Gastos do período ${money(current)}. Período anterior ${money(previous)}.',
-        child: Column(children: [
-          for (final item in [
-            ('Período', current, cs.primary),
-            ('Anterior', previous, cs.outlineVariant)
-          ])
-            Padding(
-                padding: const EdgeInsets.only(bottom: 5),
-                child: Row(children: [
-                  SizedBox(
-                      width: 64,
-                      child:
-                          Text(item.$1, style: const TextStyle(fontSize: 11))),
-                  Expanded(
-                      child: ClipRRect(
-                          borderRadius: BorderRadius.circular(6),
-                          child: LinearProgressIndicator(
-                              value: (item.$2 / max).clamp(0, 1),
-                              color: item.$3,
-                              backgroundColor: cs.surfaceContainerHighest,
-                              minHeight: 6))),
-                ])),
-        ]));
-  }
 }
 
 class _EventTile extends StatelessWidget {
@@ -979,8 +1746,8 @@ class _BudgetRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final spent = app.budgetSpent(budget);
-    final left = budget.amount - spent;
-    final cs = Theme.of(context).colorScheme;
+    final limit = app.budgetLimit(budget);
+    final left = limit - spent;
     return InkWell(
         onTap: onTap,
         child: Padding(
@@ -993,19 +1760,18 @@ class _BudgetRow extends StatelessWidget {
               const SizedBox(height: 4),
               Text(
                   '${left < 0 ? 'Excedido' : 'Ainda disponível'} ${analysisMoney(app, left.abs())}'),
-              if (!app.settings.hideBalance && budget.amount > 0) ...[
+              if (!app.settings.hideBalance && limit > 0) ...[
                 const SizedBox(height: 8),
-                ClipRRect(
-                    borderRadius: BorderRadius.circular(4),
-                    child: LinearProgressIndicator(
-                        minHeight: 6,
-                        value: (spent / budget.amount).clamp(0, 1),
-                        color: left < 0 ? cs.error : cs.primary)),
+                NexoProgress(value: spent / limit),
               ],
               const SizedBox(height: 4),
               Text(
-                  '${analysisMoney(app, spent)} de ${analysisMoney(app, budget.amount)}',
+                  '${analysisMoney(app, spent)} de ${analysisMoney(app, limit)}',
                   style: Theme.of(context).textTheme.bodySmall),
             ])));
   }
+}
+
+extension on String {
+  String ifEmpty(String other) => isEmpty ? other : this;
 }

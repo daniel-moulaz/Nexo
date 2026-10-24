@@ -2,6 +2,7 @@
 #include <flutter/flutter_view_controller.h>
 #include <windows.h>
 #include <algorithm>
+#include <string>
 
 #include "flutter_window.h"
 #include "utils.h"
@@ -23,10 +24,32 @@ int APIENTRY wWinMain(_In_ HINSTANCE instance, _In_opt_ HINSTANCE prev,
   std::vector<std::string> command_line_arguments =
       GetCommandLineArguments();
 
-  const bool test_profile = std::find(command_line_arguments.begin(),
-      command_line_arguments.end(), "--test-profile") != command_line_arguments.end();
-  HANDLE instance_mutex = ::CreateMutexW(nullptr, FALSE,
-      test_profile ? L"Local\\NexoDesktopQA" : L"Local\\NexoDesktop");
+  // --test-profile or --test-profile=<name> (a-z, 0-9, up to 16): each named
+  // QA profile has its own data and its own single-instance lock.
+  bool test_profile = false;
+  std::wstring test_name;
+  for (const auto& argument : command_line_arguments) {
+    if (argument == "--test-profile") test_profile = true;
+    const std::string prefix = "--test-profile=";
+    if (argument.rfind(prefix, 0) == 0) {
+      const std::string name = argument.substr(prefix.size());
+      const bool valid = !name.empty() && name.size() <= 16 &&
+          std::all_of(name.begin(), name.end(), [](char c) {
+            return (c >= 'a' && c <= 'z') || (c >= '0' && c <= '9');
+          });
+      if (!valid) {
+        ::MessageBoxW(nullptr, L"Nome de perfil de teste invalido (use a-z e 0-9).",
+            L"Nexo", MB_OK | MB_ICONERROR);
+        return EXIT_FAILURE;
+      }
+      test_profile = true;
+      test_name = std::wstring(name.begin(), name.end());
+    }
+  }
+  const std::wstring mutex_name = test_profile
+      ? L"Local\\NexoDesktopQA" + (test_name.empty() ? std::wstring() : L"-" + test_name)
+      : std::wstring(L"Local\\NexoDesktop");
+  HANDLE instance_mutex = ::CreateMutexW(nullptr, FALSE, mutex_name.c_str());
   if (!instance_mutex) return EXIT_FAILURE;
   if (::GetLastError() == ERROR_ALREADY_EXISTS) {
     ::CloseHandle(instance_mutex);
@@ -40,7 +63,10 @@ int APIENTRY wWinMain(_In_ HINSTANCE instance, _In_opt_ HINSTANCE prev,
   FlutterWindow window(project);
   Win32Window::Point origin(10, 10);
   Win32Window::Size size(1280, 720);
-  if (!window.Create(test_profile ? L"Nexo (teste local)" : L"Nexo", origin, size)) {
+  const std::wstring title = test_profile
+      ? L"Nexo (teste local" + (test_name.empty() ? std::wstring() : L" " + test_name) + L")"
+      : std::wstring(L"Nexo");
+  if (!window.Create(title, origin, size)) {
     return EXIT_FAILURE;
   }
   window.SetQuitOnClose(true);

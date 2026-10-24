@@ -1,4 +1,6 @@
-# Sincronização Nexo — design técnico, não implementado
+# Sincronização Nexo — arquitetura
+
+Atualização em 16/10/2026: há um **protótipo local isolado**, ainda sem integração ao aplicativo ou backend. Implementação, testes, limitações e configuração necessária estão em [NEXO_SYNC_IMPLEMENTATION.md](NEXO_SYNC_IMPLEMENTATION.md). O Nexo instalado ainda não sincroniza; o desenho abaixo continua sendo o alvo de produção.
 
 Revisão: 30/09/2026. Base local: SQLite `expensy.db`, schema 23. Não há servidor, cliente de sync, conta externa, transmissão, credencial ou custo contratado nesta rodada. Não chamar sincronização de pronta com base nos testes locais existentes.
 
@@ -89,3 +91,8 @@ Matriz ainda **não executada**, pois não existe motor de sync:
 | Criptografia e recuperação | Vetores da biblioteca, rotação, perda de chave e revogação |
 
 Próximo lote pode implementar um servidor de teste local e dois SQLite sintéticos antes de qualquer credencial externa. Para backend real será necessário: autorização de serviço/plano/região, projeto sob controle do usuário, configuração de Auth e e-mail, política de recuperação/criptografia e consentimento separado para subir o acervo. Nenhuma senha bancária será necessária.
+
+
+## Lote Windows nativo — 30/09/2026
+
+A versão 1.5.1+17 usa `DatabasePlatform` para configurar SQLite FFI em `%LOCALAPPDATA%/Nexo/expensy.db`. Schema permanece 23, com repositório e regras contábeis compartilhados. Nenhum backend, upload, cópia compartilhada de banco ou motor de sync foi habilitado. O perfil de QA separa banco, preferências e chave de proteção. Homologação Windows local precede qualquer implementação remota; ver [validação Windows](NEXO_WINDOWS_VALIDATION.md).

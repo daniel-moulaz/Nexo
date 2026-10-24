@@ -9,6 +9,7 @@ import '../models/models.dart';
 import '../database/db_helper.dart';
 import '../services/transaction_metadata_service.dart';
 import '../services/finance_rules.dart';
+import '../services/budget_insights.dart';
 import '../services/billing_cycle.dart';
 import '../services/exchange_rate_service.dart';
 import '../services/notification_service.dart';
@@ -24,6 +25,10 @@ import '../l10n/app_localizations.dart';
 import 'package:home_widget/home_widget.dart';
 import '../services/credit_reminder_service.dart';
 import '../services/loan_reminder_service.dart';
+import '../services/loan_ledger.dart';
+import '../investments/investment_repository.dart';
+import '../services/lended_ledger.dart';
+import '../sync/ledger_capture.dart';
 import '../theme/app_theme.dart';
 
 class AppSettings {
@@ -274,6 +279,33 @@ class AppProvider extends ChangeNotifier {
     await updateHomeWidgets();
   }
 
+  /// Reloads what another device changed through synchronization. No
+  /// reminders are rescheduled from scratch and no network is touched.
+  Future<void> reloadFromStorage() async {
+    accounts = await DBHelper.getAccounts();
+    categories = await DBHelper.getCategories();
+    transactions = await DBHelper.getTransactions();
+    transactionMetadata = await TransactionMetadataService.instance
+        .getForMany(transactions.map((t) => t.id));
+    recurring = await DBHelper.getRecurring();
+    wishlist = await DBHelper.getWishlist();
+    lendedPeople = await DBHelper.getLendedPeople();
+    lended = await DBHelper.getLended();
+    assets = await DBHelper.getAssets();
+    budgets = await DBHelper.getBudgets();
+    savingsGoals = await DBHelper.getSavingsGoals();
+    savingsContributions = await DBHelper.getAllSavingsContributions();
+    loans = await DBHelper.getLoans();
+    loanPayments = await DBHelper.getAllLoanPayments();
+    recurringHistoryCount = await DBHelper.getRecurringHistoryCount();
+    _historyCache.clear();
+    TransactionMetadataService.instance.revision.value++;
+    InvestmentRepository.revision.value++;
+    notifyListeners();
+    await updateHomeWidgets();
+    FinancialReminders.instance.requestRefresh(this);
+  }
+
   Future<void> updateHomeWidgets() async {
     if (!PlatformCapabilities.homeWidgets) return;
     try {
@@ -300,15 +332,16 @@ class AppProvider extends ChangeNotifier {
 
       final budgetData = budgets.map((b) {
         final spent = budgetSpent(b);
+        final limit = budgetLimit(b);
         return {
           'hidden': hidden,
           'category': hidden
               ? 'Valores ocultos'
               : categoryById(b.categoryId)?.name ?? 'Orçamento',
           'spent': hidden ? 0.0 : spent,
-          'amount': hidden ? 0.0 : b.amount,
-          'progress': !hidden && b.amount > 0 ? spent / b.amount : 0.0,
-          'exceeded': !hidden && spent > b.amount,
+          'amount': hidden ? 0.0 : limit,
+          'progress': !hidden && limit > 0 ? spent / limit : 0.0,
+          'exceeded': !hidden && spent > limit,
           'currency': settings.currency,
         };
       }).toList();
@@ -435,7 +468,13 @@ class AppProvider extends ChangeNotifier {
       if ((newBalance - acc.balance).abs() < 0.001) continue;
 
       final updated = acc.copyWith(balance: newBalance);
-      await DBHelper.updateAccount(updated);
+      // Derived from grams and price: each device recomputes it, so it is
+      // never journaled as money and never rewrites other account columns.
+      await DBHelper.operation(
+          'gold.refresh',
+          scope: LedgerScope.derived,
+          (txn) => txn.update('accounts', {'balance': newBalance},
+              where: 'id = ?', whereArgs: [acc.id]));
       accounts[i] = updated;
       changed = true;
     }
@@ -601,6 +640,25 @@ class AppProvider extends ChangeNotifier {
       accounts.where((a) => a.id == id).firstOrNull;
   AppCategory? categoryById(String id) =>
       categories.where((c) => c.id == id).firstOrNull;
+
+  /// Category to show for [t]: none for transfer legs and balance
+  /// adjustments, which are neither spending nor income (older transfers
+  /// were stored with the first expense category).
+  AppCategory? categoryFor(AppTransaction t) {
+    final source = transactionMetadata[t.id]?.source ?? '';
+    if (source.startsWith('transfer:') || source == 'opening_balance') {
+      return null;
+    }
+    return categoryById(t.categoryId);
+  }
+
+  String categoryLabel(AppTransaction t) {
+    final source = transactionMetadata[t.id]?.source ?? '';
+    if (source.startsWith('transfer:')) return 'Transferência';
+    if (source == 'opening_balance') return 'Ajuste de saldo';
+    return categoryById(t.categoryId)?.name ?? 'Sem categoria';
+  }
+
   LendedPerson? personById(String id) =>
       lendedPeople.where((p) => p.id == id).firstOrNull;
 
@@ -618,25 +676,37 @@ class AppProvider extends ChangeNotifier {
   }
 
   Future<void> addAccount(Account a) => _persistAccount(a, create: true);
-  Future<void> updateAccount(Account a) => _persistAccount(a, create: false);
 
-  Future<void> _persistAccount(Account a, {required bool create}) async {
+  /// [original] is the account as the editing screen loaded it. Only the
+  /// balance difference typed by the person is applied, so a balance changed
+  /// meanwhile (another flow or, later, another device) is never reverted.
+  Future<void> updateAccount(Account a, {Account? original}) =>
+      _persistAccount(a,
+          create: false, original: original ?? accountById(a.id));
+
+  Future<void> _persistAccount(Account a,
+      {required bool create, Account? original}) async {
     final previouslyReminded =
         accountById(a.id)?.creditReminderEnabled ?? false;
     final db = await DBHelper.database;
-    await db.transaction((txn) async {
+    await ledgerTransaction(db, create ? 'account.create' : 'account.update',
+        (txn) async {
       final previous =
           await txn.query('accounts', where: 'id = ?', whereArgs: [a.id]);
-      final oldBalance = previous.isEmpty
-          ? 0.0
-          : (previous.first['balance'] as num).toDouble();
+      await DBHelper.validateInvestmentCashAccount(txn, a);
+      final double difference;
       if (create) {
         await txn.insert('accounts', a.toMap());
+        difference = a.balance;
       } else {
-        await txn
-            .update('accounts', a.toMap(), where: 'id = ?', whereArgs: [a.id]);
+        if (previous.isEmpty) throw StateError('Conta não encontrada.');
+        final stored = (previous.first['balance'] as num).toDouble();
+        final base = original?.balance ?? stored;
+        difference = a.balance - base;
+        final row = a.toMap()
+          ..['balance'] = base == stored ? a.balance : stored + difference;
+        await txn.update('accounts', row, where: 'id = ?', whereArgs: [a.id]);
       }
-      final difference = a.balance - oldBalance;
       if (a.type == 'credit' && difference.abs() > .005) {
         final tx = AppTransaction(
             id: newId(),
@@ -665,28 +735,13 @@ class AppProvider extends ChangeNotifier {
       await CreditReminderService().scheduleReminder(a);
   }
 
-  Future<VoidCallback> deleteAccountWithUndo(String id) async {
-    final a = accounts.firstWhere((acc) => acc.id == id);
-    await deleteAccount(id);
-    return () async {
-      await addAccount(a);
-    };
-  }
-
+  /// Refused (FormatException) while anything still depends on the account.
   Future<void> deleteAccount(String id) async {
-    await CreditReminderService().cancelReminder(id);
     await DBHelper.deleteAccount(id);
+    await CreditReminderService().cancelReminder(id);
     accounts = await DBHelper.getAccounts();
     transactions = await DBHelper.getTransactions();
     notifyListeners();
-  }
-
-  Future<void> _updateAccountBalance(String id, double delta) async {
-    final acc = accountById(id);
-    if (acc == null) return;
-    if (acc.isGold) return;
-    await DBHelper.updateAccount(acc.copyWith(balance: acc.balance + delta));
-    accounts = await DBHelper.getAccounts();
   }
 
   // ── Categories ────────────────────────────────────────────────────────
@@ -727,6 +782,16 @@ class AppProvider extends ChangeNotifier {
 
   Map<String, TransactionMetadata> transactionMetadata = {};
 
+  Future<void> refreshInvestmentCash() async {
+    accounts = await DBHelper.getAccounts();
+    transactions = await DBHelper.getTransactions();
+    transactionMetadata = await TransactionMetadataService.instance
+        .getForMany(transactions.map((t) => t.id));
+    TransactionMetadataService.instance.revision.value++;
+    notifyListeners();
+    await updateHomeWidgets();
+  }
+
   Future<void> _reloadLedger() async {
     transactions = await DBHelper.getTransactions();
     accounts = await DBHelper.getAccounts();
@@ -750,7 +815,7 @@ class AppProvider extends ChangeNotifier {
       throw ArgumentError('Conta, tipo ou valor inválido.');
     }
     final meta = metadata ?? TransactionMetadata(transactionId: t.id);
-    await db.transaction((txn) async {
+    await ledgerTransaction(db, 'transaction.add', (txn) async {
       if (suggestionId != null)
         await DBHelper.confirmSuggestion(txn, suggestionId, t.id);
       final current = meta.installmentCurrent ?? 1;
@@ -806,12 +871,17 @@ class AppProvider extends ChangeNotifier {
       AppTransaction updated, AppTransaction original,
       {TransactionMetadata? metadata}) async {
     final old = await TransactionMetadataService.instance.getFor(original.id);
+    if (original.id.startsWith('investment:') ||
+        old.source.startsWith('investment:')) {
+      throw const FormatException(
+          'Revise esta movimentação em Investimentos para manter conta e carteira consistentes.');
+    }
     if (old.source.startsWith('transfer:'))
       throw StateError(
           'Para alterar uma transferência, exclua o par e registre novamente.');
     final meta = metadata ?? old;
     final db = await DBHelper.database;
-    await db.transaction((txn) async {
+    await ledgerTransaction(db, 'transaction.update', (txn) async {
       if (!old.isPending && old.affectsBalance) {
         await txn.rawUpdate(
             'UPDATE accounts SET balance = balance + ? WHERE id = ?',
@@ -846,6 +916,10 @@ class AppProvider extends ChangeNotifier {
   }
 
   Future<void> deleteTransaction(String id) async {
+    if (id.startsWith('investment:')) {
+      throw const FormatException(
+          'Exclua a operação em Investimentos. O valor da conta será estornado junto.');
+    }
     final meta = await TransactionMetadataService.instance.getFor(id);
     final db = await DBHelper.database;
     final ids = meta.source.startsWith('transfer:')
@@ -854,7 +928,7 @@ class AppProvider extends ChangeNotifier {
             .map((r) => r['transaction_id'] as String)
             .toList()
         : [id];
-    await db.transaction((txn) async {
+    await ledgerTransaction(db, 'transaction.delete', (txn) async {
       for (final txId in ids) {
         final rows =
             await txn.query('transactions', where: 'id = ?', whereArgs: [txId]);
@@ -910,9 +984,8 @@ class AppProvider extends ChangeNotifier {
     }
 
     final now = occurredAt ?? DateTime.now();
-    final catId = categories.where((c) => c.type == 'expense').isNotEmpty
-        ? categories.firstWhere((c) => c.type == 'expense').id
-        : '';
+    // A transfer is neither spending nor income: no category.
+    const catId = '';
 
     final debit = AppTransaction(
       id: newId(),
@@ -939,17 +1012,19 @@ class AppProvider extends ChangeNotifier {
     if (fromAcc == null || toAcc == null)
       throw StateError('Conta não encontrada.');
     final db = await DBHelper.database;
-    await db.transaction((txn) async {
+    await ledgerTransaction(
+        db, invoiceCycleEnd == null ? 'transfer.add' : 'invoice.pay',
+        (txn) async {
       if (invoiceCycleEnd != null) {
         final key = DateFormat('yyyy-MM-dd').format(invoiceCycleEnd);
-        final cycle = BillingCycle.forDate(
+        final cycle = BillingCycle.endingOn(
             invoiceCycleEnd, toAcc.statementDay, toAcc.dueDay);
         final purchaseRows = await txn.rawQuery(
             "SELECT COALESCE(SUM(CASE WHEN t.type = 'income' THEN -t.amount ELSE t.amount END), 0) AS total FROM transactions t LEFT JOIN transaction_metadata m ON m.transaction_id = t.id WHERE t.account_id = ? AND t.date >= ? AND t.date < ? AND (COALESCE(m.exclude_from_spending, 0) = 0 OR m.source = 'opening_balance')",
             [
               toId,
               cycle.start.toIso8601String(),
-              cycle.end.add(const Duration(days: 1)).toIso8601String()
+              cycle.until.toIso8601String()
             ]);
         final paidRows = await txn.rawQuery(
             'SELECT COALESCE(SUM(amount), 0) AS total FROM card_invoice_payments WHERE card_id = ? AND cycle_end = ?',
@@ -1014,7 +1089,6 @@ class AppProvider extends ChangeNotifier {
   Future<void> deleteRecurring(String id) async {
     await _notif.cancelReminder(id);
     await DBHelper.deleteRecurring(id);
-    await DBHelper.deleteRecurringHistoryFor(id);
     _historyCache.remove(id);
     recurring = await DBHelper.getRecurring();
     recurringHistoryCount = await DBHelper.getRecurringHistoryCount();
@@ -1030,7 +1104,8 @@ class AppProvider extends ChangeNotifier {
 
   Future<void> _completeRecurring(RecurringPayment expected, bool skip) async {
     final db = await DBHelper.database;
-    await db.transaction((txn) async {
+    await ledgerTransaction(db, skip ? 'recurring.skip' : 'recurring.pay',
+        (txn) async {
       final rows = await txn.query('recurring_payments',
           where: 'id = ?', whereArgs: [expected.id]);
       if (rows.isEmpty) return;
@@ -1170,10 +1245,14 @@ class AppProvider extends ChangeNotifier {
     for (final l in lended.where((l) => l.personId == id)) {
       await _lendedNotif.cancelLendedReminder(l.id);
     }
-    await DBHelper.deleteLendedForPerson(id);
-    await DBHelper.deleteLendedPerson(id);
+    await LendedLedger(await DBHelper.database).removePerson(id);
+    await _reloadLended();
+  }
+
+  Future<void> _reloadLended() async {
     lended = await DBHelper.getLended();
     lendedPeople = await DBHelper.getLendedPeople();
+    accounts = await DBHelper.getAccounts();
     notifyListeners();
   }
 
@@ -1201,34 +1280,19 @@ class AppProvider extends ChangeNotifier {
 
   // ── Lended Money (ledger entries) ───────────────────────────────────────
   Future<void> addLended(LendedMoney l) async {
-    await DBHelper.insertLended(l);
-    if (l.accountId != null) {
-      final delta = l.type == 'lent' ? -l.amount : l.amount;
-      await _updateAccountBalance(l.accountId!, delta);
-    }
-    lended = await DBHelper.getLended();
-    accounts = await DBHelper.getAccounts();
-    notifyListeners();
+    await LendedLedger(await DBHelper.database).add(l);
+    await _reloadLended();
     if (l.reminderEnabled && l.dueDate != null) {
       await _lendedNotif.scheduleLendedReminder(l, settings.currency,
           personName: personById(l.personId)?.name ?? '');
     }
   }
 
+  /// The stored entry, not [original] from the screen, defines what is
+  /// reversed; [original] only identifies the reminder to cancel.
   Future<void> updateLended(LendedMoney updated, LendedMoney original) async {
-    if (original.accountId != null && !original.isSettled) {
-      final delta =
-          original.type == 'lent' ? original.amount : -original.amount;
-      await _updateAccountBalance(original.accountId!, delta);
-    }
-    if (updated.accountId != null && !updated.isSettled) {
-      final delta = updated.type == 'lent' ? -updated.amount : updated.amount;
-      await _updateAccountBalance(updated.accountId!, delta);
-    }
-    await DBHelper.updateLended(updated);
-    lended = await DBHelper.getLended();
-    accounts = await DBHelper.getAccounts();
-    notifyListeners();
+    await LendedLedger(await DBHelper.database).update(updated);
+    await _reloadLended();
     // Always cancel old reminder, then reschedule if still enabled
     await _lendedNotif.cancelLendedReminder(original.id);
     if (updated.reminderEnabled &&
@@ -1240,32 +1304,27 @@ class AppProvider extends ChangeNotifier {
   }
 
   Future<void> settleLended(LendedMoney l) async {
-    if (l.accountId != null) {
-      final delta = l.type == 'lent' ? l.amount : -l.amount;
-      await _updateAccountBalance(l.accountId!, delta);
-    }
-    final settled = l.copyWith(isSettled: true);
-    await DBHelper.updateLended(settled);
-    lended = await DBHelper.getLended();
-    accounts = await DBHelper.getAccounts();
-    notifyListeners();
+    // A second tap finds the stored entry settled and moves nothing.
+    await LendedLedger(await DBHelper.database).settle(l.id);
+    await _reloadLended();
     await _lendedNotif
         .cancelLendedReminder(l.id); // no reminder needed after settlement
   }
 
   Future<void> deleteLended(String id) async {
     await _lendedNotif.cancelLendedReminder(id);
-    await DBHelper.deleteLended(id);
-    lended = await DBHelper.getLended();
-    notifyListeners();
+    await LendedLedger(await DBHelper.database).remove(id);
+    await _reloadLended();
   }
 
   Future<VoidCallback> deleteLendedWithUndo(String id) async {
-    final record = lended.firstWhere((l) => l.id == id);
-    await deleteLended(id);
+    await _lendedNotif.cancelLendedReminder(id);
+    final record = await LendedLedger(await DBHelper.database).remove(id);
+    await _reloadLended();
     return () async {
-      await DBHelper.insertLended(record);
-      lended = await DBHelper.getLended();
+      if (record == null) return;
+      await LendedLedger(await DBHelper.database).restore(record);
+      await _reloadLended();
       if (!record.isSettled) {
         final p = lendedPeople.firstWhere((p) => p.id == record.personId);
         _lendedNotif.scheduleLendedReminder(record, settings.currency,
@@ -1347,25 +1406,16 @@ class AppProvider extends ChangeNotifier {
   /// Sum of all expenses for [budget]'s category in the current period,
   /// converted to the main currency.
   double budgetSpent(Budget budget) {
-    final now = DateTime.now();
-    final DateTime periodStart;
-    if (budget.period == 'weekly') {
-      final dow = now.weekday; // 1=Mon, 7=Sun
-      final offset = settings.weekStart == 'monday' ? (dow - 1) : (dow % 7);
-      periodStart = DateTime(now.year, now.month, now.day - offset);
-    } else {
-      periodStart = DateTime(now.year, now.month, 1);
-    }
-
+    // From the creation day in the period the budget was created.
+    final window = budgetWindow(budget, DateTime.now(),
+        weekStart: settings.weekStart);
     return transactions
         .where((t) =>
             t.type == 'expense' &&
             t.categoryId == budget.categoryId &&
             !FinanceRules.isNeutral(t, transactionMetadata[t.id]) &&
-            t.date.isBefore(budget.period == 'weekly'
-                ? periodStart.add(const Duration(days: 7))
-                : DateTime(now.year, now.month + 1)) &&
-            !t.date.isBefore(periodStart))
+            t.date.isBefore(window.end) &&
+            !t.date.isBefore(window.countsFrom))
         .fold(0.0, (sum, t) {
       final acct = accountById(t.accountId);
       final txCur = t.currency.isNotEmpty
@@ -1375,15 +1425,26 @@ class AppProvider extends ChangeNotifier {
     });
   }
 
-  double budgetProgress(Budget b) =>
-      (budgetSpent(b) / b.amount).clamp(0.0, 1.0);
+  /// Limit of the current period (proportional when created mid-period).
+  double budgetLimit(Budget b) =>
+      budgetWindow(b, DateTime.now(), weekStart: settings.weekStart).limit;
+
+  /// Spent / limit, not clamped (1.5 = 50% over).
+  double budgetProgressRaw(Budget b) {
+    final limit = budgetLimit(b);
+    return limit <= 0 ? 0 : budgetSpent(b) / limit;
+  }
+
+  double budgetProgress(Budget b) => budgetLimit(b) <= 0
+      ? 0
+      : (budgetSpent(b) / budgetLimit(b)).clamp(0.0, 1.0);
 
   double budgetRemaining(Budget b) {
-    final rem = b.amount - budgetSpent(b);
+    final rem = budgetLimit(b) - budgetSpent(b);
     return rem < 0 ? 0 : rem;
   }
 
-  bool budgetExceeded(Budget b) => budgetSpent(b) > b.amount;
+  bool budgetExceeded(Budget b) => budgetSpent(b) > budgetLimit(b);
 
   // ── Savings Goals ──────────────────────────────────────────────────────────
 
@@ -1415,14 +1476,21 @@ class AppProvider extends ChangeNotifier {
   Future<void> deleteSavingsGoal(String id) async {
     await DBHelper.deleteSavingsGoal(id);
     savingsGoals = await DBHelper.getSavingsGoals();
+    savingsContributions = await DBHelper.getAllSavingsContributions();
     notifyListeners();
   }
 
   Future<VoidCallback> deleteSavingsGoalWithUndo(String id) async {
     final s = savingsGoals.firstWhere((s) => s.id == id);
-    await deleteSavingsGoal(id);
+    final contributions = await DBHelper.deleteSavingsGoal(id);
+    savingsGoals = await DBHelper.getSavingsGoals();
+    savingsContributions = await DBHelper.getAllSavingsContributions();
+    notifyListeners();
     return () async {
-      await addSavingsGoal(s);
+      await DBHelper.restoreSavingsGoal(s, contributions);
+      savingsGoals = await DBHelper.getSavingsGoals();
+      savingsContributions = await DBHelper.getAllSavingsContributions();
+      notifyListeners();
     };
   }
 
@@ -1452,7 +1520,8 @@ class AppProvider extends ChangeNotifier {
     if (account == null || account.type == 'credit' || account.isGold)
       throw StateError('Selecione uma conta válida.');
     final db = await DBHelper.database;
-    await db.transaction((txn) async {
+    await ledgerTransaction(db, deposit ? 'goal.contribute' : 'goal.withdraw',
+        (txn) async {
       final rows = await txn
           .query('savings_goals', where: 'id = ?', whereArgs: [goalId]);
       if (rows.isEmpty) throw StateError('Objetivo não encontrado.');
@@ -1502,10 +1571,7 @@ class AppProvider extends ChangeNotifier {
 
   // ── Loans ────────────────────────────────────────────────────────────
   Future<void> addLoan(Loan l) async {
-    await DBHelper.insertLoan(l);
-    if (l.transferAccountId != null) {
-      await _updateAccountBalance(l.transferAccountId!, l.principal);
-    }
+    await LoanLedger(await DBHelper.database).create(l);
     loans = await DBHelper.getLoans();
     accounts = await DBHelper.getAccounts();
     notifyListeners();
@@ -1513,19 +1579,8 @@ class AppProvider extends ChangeNotifier {
   }
 
   Future<void> updateLoan(Loan l) async {
+    await LoanLedger(await DBHelper.database).update(l);
     await _loanNotif.cancelReminder(l.id);
-    final oldL = loans.firstWhere((x) => x.id == l.id);
-
-    // Reverse old principal transfer if any
-    if (oldL.transferAccountId != null) {
-      await _updateAccountBalance(oldL.transferAccountId!, -oldL.principal);
-    }
-    // Apply new principal transfer if any
-    if (l.transferAccountId != null) {
-      await _updateAccountBalance(l.transferAccountId!, l.principal);
-    }
-
-    await DBHelper.updateLoan(l);
     loans = await DBHelper.getLoans();
     accounts = await DBHelper.getAccounts();
     notifyListeners();
@@ -1533,20 +1588,8 @@ class AppProvider extends ChangeNotifier {
   }
 
   Future<void> deleteLoan(String id) async {
+    await LoanLedger(await DBHelper.database).remove(id);
     await _loanNotif.cancelReminder(id);
-    final l = loans.firstWhere((x) => x.id == id);
-
-    // Reverse principal transfer if any
-    if (l.transferAccountId != null) {
-      await _updateAccountBalance(l.transferAccountId!, -l.principal);
-    }
-
-    for (final p in loanPaymentsFor(id)) {
-      if (p.accountId != null) {
-        await _updateAccountBalance(p.accountId!, p.amount); // reverse debit
-      }
-    }
-    await DBHelper.deleteLoan(id);
     loans = await DBHelper.getLoans();
     loanPayments = await DBHelper.getAllLoanPayments();
     accounts = await DBHelper.getAccounts();
@@ -1554,20 +1597,16 @@ class AppProvider extends ChangeNotifier {
   }
 
   Future<VoidCallback> deleteLoanWithUndo(String id) async {
-    final l = loans.firstWhere((x) => x.id == id);
-    final payments = loanPaymentsFor(id);
-    await deleteLoan(id);
+    final removed = await LoanLedger(await DBHelper.database).remove(id);
+    final l = removed.loan;
+    await _loanNotif.cancelReminder(id);
+    loans = await DBHelper.getLoans();
+    loanPayments = await DBHelper.getAllLoanPayments();
+    accounts = await DBHelper.getAccounts();
+    notifyListeners();
     return () async {
-      await DBHelper.insertLoan(l);
-      if (l.transferAccountId != null) {
-        await _updateAccountBalance(l.transferAccountId!, l.principal);
-      }
-      for (final p in payments) {
-        await DBHelper.insertLoanPayment(p);
-        if (p.accountId != null) {
-          await _updateAccountBalance(p.accountId!, -p.amount);
-        }
-      }
+      await LoanLedger(await DBHelper.database)
+          .create(l, payments: removed.payments);
       loans = await DBHelper.getLoans();
       loanPayments = await DBHelper.getAllLoanPayments();
       accounts = await DBHelper.getAccounts();
@@ -1590,19 +1629,14 @@ class AppProvider extends ChangeNotifier {
       accountId: useAccount,
       notes: notes,
     );
-    await DBHelper.insertLoanPayment(payment);
-    if (useAccount != null) {
-      await _updateAccountBalance(useAccount, -payAmount); // expense-like debit
+    if (!payAmount.isFinite || payAmount <= 0) {
+      throw const FormatException('Informe um valor de pagamento positivo.');
     }
+    await LoanLedger(await DBHelper.database).pay(payment);
     loanPayments = await DBHelper.getAllLoanPayments();
     accounts = await DBHelper.getAccounts();
-
-    // Auto-settle when the loan is fully paid off
-    final totalPaid = loanTotalPaid(l) + payAmount;
-    if (totalPaid >= l.totalPayable && !l.isSettled) {
-      final settled = l.copyWith(isSettled: true);
-      await DBHelper.updateLoan(settled);
-      loans = await DBHelper.getLoans();
+    loans = await DBHelper.getLoans();
+    if (loans.firstWhere((item) => item.id == l.id).isSettled) {
       await _loanNotif.cancelReminder(l.id);
     }
     notifyListeners();
@@ -1618,17 +1652,14 @@ class AppProvider extends ChangeNotifier {
       accountId: null,
       notes: notes,
     );
-    await DBHelper.insertLoanPayment(payment);
+    await LoanLedger(await DBHelper.database).pay(payment);
     loanPayments = await DBHelper.getAllLoanPayments();
     notifyListeners();
   }
 
   Future<void> deleteLoanPayment(String id) async {
-    final p = loanPayments.firstWhere((x) => x.id == id);
-    if (p.accountId != null) {
-      await _updateAccountBalance(p.accountId!, p.amount); // reverse the debit
-    }
-    await DBHelper.deleteLoanPayment(id);
+    await LoanLedger(await DBHelper.database).removePayment(id);
+    loans = await DBHelper.getLoans();
     loanPayments = await DBHelper.getAllLoanPayments();
     accounts = await DBHelper.getAccounts();
     notifyListeners();
@@ -1638,10 +1669,8 @@ class AppProvider extends ChangeNotifier {
     final p = loanPayments.firstWhere((x) => x.id == id);
     await deleteLoanPayment(id);
     return () async {
-      await DBHelper.insertLoanPayment(p);
-      if (p.accountId != null) {
-        await _updateAccountBalance(p.accountId!, -p.amount);
-      }
+      await LoanLedger(await DBHelper.database).pay(p);
+      loans = await DBHelper.getLoans();
       loanPayments = await DBHelper.getAllLoanPayments();
       accounts = await DBHelper.getAccounts();
       notifyListeners();
@@ -1671,11 +1700,18 @@ class AppProvider extends ChangeNotifier {
       .fold(0.0, (s, l) => s + convertToMain(loanRemaining(l), l.currency));
 
   // ── Export ────────────────────────────────────────────────────────────
-  Future<String?> createBackup() async {
+  /// The backup file content, validated as restorable before anyone relies
+  /// on it.
+  Future<Uint8List> backupBytes() async {
     final data = await DBHelper.exportAll();
     data['settings'] = settings.toJson();
     final json = const JsonEncoder.withIndent('  ').convert(data);
-    final uint8 = Uint8List.fromList(utf8.encode(json));
+    DBHelper.validateBackup(jsonDecode(json) as Map<String, dynamic>);
+    return Uint8List.fromList(utf8.encode(json));
+  }
+
+  Future<String?> createBackup() async {
+    final uint8 = await backupBytes();
     final ts = DateTime.now().millisecondsSinceEpoch;
 
     final savePath = await FileOutput.save(
@@ -1734,11 +1770,22 @@ class AppProvider extends ChangeNotifier {
           'Invalid backup file: no recognisable Expensy data found.');
     }
 
+    // Parse preferences before replacing SQLite: malformed settings must not
+    // leave a replaced ledger behind when parsing fails afterwards.
+    AppSettings? restoredSettings;
+    if (data.containsKey('settings')) {
+      try {
+        restoredSettings = AppSettings.fromJson(
+            Map<String, dynamic>.from(data['settings'] as Map));
+      } catch (_) {
+        throw const FormatException(
+            'Configurações inválidas no backup. Nenhum dado foi alterado.');
+      }
+    }
     await DBHelper.importAll(data);
 
-    if (data['settings'] is Map) {
-      settings = AppSettings.fromJson(
-          Map<String, dynamic>.from(data['settings'] as Map));
+    if (restoredSettings != null) {
+      settings = restoredSettings;
       await _saveSettings();
     }
 
@@ -1788,54 +1835,59 @@ class AppProvider extends ChangeNotifier {
       throw const FormatException('Invalid GreenStash format.');
     }
 
-    for (var item in decoded['data']) {
-      final goal = item['goal'];
-      if (goal == null) continue;
+    await DBHelper.operation('import.greenstash', (txn) async {
+      for (var item in decoded['data']) {
+        final goal = item['goal'];
+        if (goal == null) continue;
 
-      final sg = SavingsGoal(
-        id: newId(),
-        name: goal['title'] ?? 'GreenStash Goal',
-        targetAmount: (goal['targetAmount'] ?? 0).toDouble(),
-        currency: settings.currency,
-        colorValue: 0xFF386A1F, // Greenish
-        targetDate: goal['deadline'] != null && goal['deadline'] > 0
-            ? DateTime.fromMillisecondsSinceEpoch(goal['deadline'])
-            : null,
-      );
-      await addSavingsGoal(sg);
+        final sg = SavingsGoal(
+          id: newId(),
+          name: goal['title'] ?? 'GreenStash Goal',
+          targetAmount: (goal['targetAmount'] ?? 0).toDouble(),
+          currency: settings.currency,
+          colorValue: 0xFF386A1F, // Greenish
+          targetDate: goal['deadline'] != null && goal['deadline'] > 0
+              ? DateTime.fromMillisecondsSinceEpoch(goal['deadline'])
+              : null,
+        );
+        await txn.insert('savings_goals', sg.toMap());
 
-      double currentAmount = 0.0;
-      if (item['transactions'] is List) {
-        for (var tx in item['transactions']) {
-          bool isDeposit = true;
-          if (tx['type'] == 1 ||
-              tx['type'] == 'withdrawal' ||
-              tx['type'] == 'Withdraw' ||
-              tx['isDeposit'] == false) {
-            isDeposit = false;
-          }
-          double amt = (tx['amount'] ?? 0).toDouble().abs();
+        double currentAmount = 0.0;
+        if (item['transactions'] is List) {
+          for (var tx in item['transactions']) {
+            bool isDeposit = true;
+            if (tx['type'] == 1 ||
+                tx['type'] == 'withdrawal' ||
+                tx['type'] == 'Withdraw' ||
+                tx['isDeposit'] == false) {
+              isDeposit = false;
+            }
+            double amt = (tx['amount'] ?? 0).toDouble().abs();
 
-          await DBHelper.insertSavingsContribution(SavingsContribution(
-            id: newId(),
-            goalId: sg.id,
-            amount: amt,
-            accountId: '',
-            type: isDeposit ? 'contribution' : 'withdrawal',
-            date: DateTime.fromMillisecondsSinceEpoch(
-                tx['timeStamp'] ?? DateTime.now().millisecondsSinceEpoch),
-            note: tx['notes'] ?? '',
-          ));
-          if (isDeposit) {
-            currentAmount += amt;
-          } else {
-            currentAmount -= amt;
+            await txn.insert(
+                'savings_contributions',
+                SavingsContribution(
+                  id: newId(),
+                  goalId: sg.id,
+                  amount: amt,
+                  accountId: '',
+                  type: isDeposit ? 'contribution' : 'withdrawal',
+                  date: DateTime.fromMillisecondsSinceEpoch(
+                      tx['timeStamp'] ?? DateTime.now().millisecondsSinceEpoch),
+                  note: tx['notes'] ?? '',
+                ).toMap());
+            if (isDeposit) {
+              currentAmount += amt;
+            } else {
+              currentAmount -= amt;
+            }
           }
         }
+        sg.currentAmount = currentAmount;
+        await txn.update('savings_goals', sg.toMap(),
+            where: 'id = ?', whereArgs: [sg.id]);
       }
-      sg.currentAmount = currentAmount;
-      await DBHelper.updateSavingsGoal(sg);
-    }
+    });
     await load();
   }
 
@@ -1923,7 +1975,7 @@ class AppProvider extends ChangeNotifier {
     final payments = await db.query('card_invoice_payments');
     await deleteTransaction(id);
     return () async {
-      await db.transaction((txn) async {
+      await ledgerTransaction(db, 'transaction.restore', (txn) async {
         for (final tx in txs) {
           final m = metas.firstWhere((m) => m.transactionId == tx.id);
           await txn.insert('transactions', tx.toMap());
@@ -1942,30 +1994,40 @@ class AppProvider extends ChangeNotifier {
   }
 
   Future<VoidCallback> deleteLendedPersonWithUndo(String id) async {
-    final person = lendedPeople.firstWhere((p) => p.id == id);
-    final personLended = lended.where((l) => l.personId == id).toList();
-
-    await DBHelper.deleteLendedPerson(id);
-    for (final l in personLended) {
-      await DBHelper.deleteLended(l.id);
+    for (final l in lended.where((l) => l.personId == id)) {
+      await _lendedNotif.cancelLendedReminder(l.id);
     }
+    final removed =
+        await LendedLedger(await DBHelper.database).removePerson(id);
     await load();
     return () async {
-      await DBHelper.insertLendedPerson(person);
-      for (final l in personLended) {
-        await DBHelper.insertLended(l);
-      }
+      if (removed == null) return;
+      await LendedLedger(await DBHelper.database)
+          .restorePerson(removed.person, removed.entries);
       await load();
     };
   }
 
+  /// Undo brings back the rule together with its paid/skipped history.
   Future<VoidCallback> deleteRecurringWithUndo(String id) async {
     final rec = recurring.firstWhere((r) => r.id == id);
+    final history = await DBHelper.getRecurringHistory(id);
+    await _notif.cancelReminder(id);
     await DBHelper.deleteRecurring(id);
+    _historyCache.remove(id);
     await load();
     return () async {
-      await DBHelper.insertRecurring(rec);
+      await DBHelper.operation('recurring.restore', (txn) async {
+        await txn.insert('recurring_payments', rec.toMap());
+        for (final entry in history) {
+          await txn.insert('recurring_history', entry.toMap());
+        }
+      });
+      _historyCache.remove(id);
       await load();
+      if (rec.reminderEnabled) {
+        await _notif.scheduleReminder(rec, settings.currency);
+      }
     };
   }
 

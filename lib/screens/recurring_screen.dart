@@ -10,6 +10,8 @@ import '../utils/finance_input.dart';
 import 'recurring_detail_screen.dart';
 import 'debt_overview_screen.dart';
 import 'agenda_screen.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import '../services/subscription_detector.dart';
 
 class RecurringScreen extends StatefulWidget {
   const RecurringScreen({super.key});
@@ -21,6 +23,7 @@ class _RecurringScreenState extends State<RecurringScreen>
     with SingleTickerProviderStateMixin {
   late final TabController _tabs;
   String _expenseFilter = 'all', _view = 'active';
+  Set<String> _dismissed = {};
   Future<List<RecurringHistoryEntry>>? _history;
   int? _historyCount;
 
@@ -31,6 +34,16 @@ class _RecurringScreenState extends State<RecurringScreen>
     _tabs.addListener(() {
       if (mounted) setState(() {});
     });
+    loadDismissedSubscriptions().then((v) {
+      if (mounted) setState(() => _dismissed = v);
+    });
+  }
+
+  Future<void> _dismiss(SubscriptionCandidate c) async {
+    final next = {..._dismissed, c.key};
+    setState(() => _dismissed = next);
+    await (await SharedPreferences.getInstance())
+        .setStringList(dismissedSubscriptionsKey, next.toList());
   }
 
   @override
@@ -50,6 +63,55 @@ class _RecurringScreenState extends State<RecurringScreen>
                     v,
                     app.accountById(r.accountId)?.currency ??
                         app.settings.currency))));
+  }
+
+  List<Widget> _subscriptions(AppProvider app, String Function(double) money) {
+    final found = detectSubscriptions(app, _dismissed);
+    if (found.isEmpty) return const [];
+    final cs = Theme.of(context).colorScheme;
+    return [
+      const SizedBox(height: 8),
+      Card(
+        color: cs.tertiaryContainer.withValues(alpha: .35),
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(16, 14, 8, 8),
+          child:
+              Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Row(children: [
+              Icon(Icons.auto_awesome_outlined, color: cs.tertiary),
+              const SizedBox(width: 8),
+              Expanded(
+                  child: Text('Possíveis assinaturas',
+                      style: Theme.of(context)
+                          .textTheme
+                          .titleMedium
+                          ?.copyWith(fontWeight: FontWeight.w800))),
+            ]),
+            const SizedBox(height: 4),
+            const Text(
+                'Cobranças que se repetem todo mês com valor parecido e ainda não estão cadastradas. Cadastre para entrar na previsão e nos lembretes.'),
+            for (final c in found.take(6))
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                title:
+                    Text(c.label, maxLines: 1, overflow: TextOverflow.ellipsis),
+                subtitle: Text(
+                    '~${money(c.monthlyAmount)}/mês · vista em ${c.months} meses'),
+                trailing: Wrap(spacing: 0, children: [
+                  IconButton(
+                      tooltip: 'Não é assinatura',
+                      onPressed: () => _dismiss(c),
+                      icon: const Icon(Icons.close)),
+                  FilledButton.tonal(
+                      onPressed: () =>
+                          openRecurringSheet(context, suggestion: c),
+                      child: const Text('Cadastrar')),
+                ]),
+              ),
+          ]),
+        ),
+      ),
+    ];
   }
 
   @override
@@ -125,18 +187,42 @@ class _RecurringScreenState extends State<RecurringScreen>
                     onSelected: (_) => setState(() => _view = e.key)),
             ]),
             if (_tabs.index == 0)
-              Wrap(spacing: 8, children: [
-                for (final e in const {
-                  'all': 'Todas',
-                  'subscription': 'Fixas / assinaturas',
-                  'installment': 'Parceladas'
-                }.entries)
-                  FilterChip(
-                      label: Text(e.value),
-                      selected: _expenseFilter == e.key,
-                      onSelected: (_) =>
-                          setState(() => _expenseFilter = e.key)),
-              ]),
+              Align(
+                alignment: Alignment.centerLeft,
+                child: PopupMenuButton<String>(
+                  tooltip: 'Filtrar tipo de recorrência',
+                  initialValue: _expenseFilter,
+                  onSelected: (value) => setState(() => _expenseFilter = value),
+                  itemBuilder: (_) => [
+                    for (final e in const {
+                      'all': 'Todos os tipos',
+                      'subscription': 'Fixas / assinaturas',
+                      'installment': 'Parceladas',
+                    }.entries)
+                      CheckedPopupMenuItem(
+                        value: e.key,
+                        checked: _expenseFilter == e.key,
+                        child: Text(e.value),
+                      ),
+                  ],
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    child: Row(mainAxisSize: MainAxisSize.min, children: [
+                      const Icon(Icons.filter_list, size: 20),
+                      const SizedBox(width: 8),
+                      Flexible(
+                          child: Text(const {
+                        'all': 'Todos os tipos',
+                        'subscription': 'Fixas / assinaturas',
+                        'installment': 'Parceladas',
+                      }[_expenseFilter]!)),
+                      const Icon(Icons.arrow_drop_down),
+                    ]),
+                  ),
+                ),
+              ),
+            if (_tabs.index == 0 && _view == 'active')
+              ..._subscriptions(app, money),
             if (_view == 'active' || _view == 'future') ...[
               Card(
                   child: Padding(
@@ -151,7 +237,7 @@ class _RecurringScreenState extends State<RecurringScreen>
                                 style:
                                     Theme.of(context).textTheme.headlineSmall),
                             Text(
-                                '${thisMonth.length} vencimentos de hoje até ${ptDate(DateTime(today.year, today.month + 1, 0))}'),
+                                '${thisMonth.length} ${thisMonth.length == 1 ? 'vencimento' : 'vencimentos'} de hoje até ${ptDate(DateTime(today.year, today.month + 1, 0))}'),
                             if (overdue.isNotEmpty)
                               Padding(
                                   padding: const EdgeInsets.only(top: 8),
@@ -537,10 +623,34 @@ Future<void> confirmRecurringAction(
   }
 }
 
+const dismissedSubscriptionsKey = 'nexo_subscription_dismissed_v1';
+
+Future<Set<String>> loadDismissedSubscriptions() async =>
+    ((await SharedPreferences.getInstance())
+                .getStringList(dismissedSubscriptionsKey) ??
+            const <String>[])
+        .toSet();
+
+List<SubscriptionCandidate> detectSubscriptions(
+        AppProvider app, Set<String> dismissed) =>
+    SubscriptionDetector.detect(
+        transactions: app.transactions,
+        metadata: app.transactionMetadata,
+        recurring: app.recurring,
+        now: DateTime.now(),
+        amount: (t) => app.convertToMain(
+            t.amount,
+            t.currency.isEmpty
+                ? app.accountById(t.accountId)?.currency ??
+                    app.settings.currency
+                : t.currency),
+        dismissed: dismissed);
+
 void openRecurringSheet(
   BuildContext context, {
   RecurringPayment? existing,
   String defaultType = 'expense',
+  SubscriptionCandidate? suggestion,
 }) {
   showModalBottomSheet<void>(
     context: context,
@@ -550,6 +660,7 @@ void openRecurringSheet(
     builder: (_) => _RecurringEditor(
       existing: existing,
       defaultType: defaultType,
+      suggestion: suggestion,
     ),
   );
 }
@@ -558,9 +669,13 @@ class _RecurringEditor extends StatefulWidget {
   final RecurringPayment? existing;
   final String defaultType;
 
+  /// Prefill from a detected subscription; the person still reviews and saves.
+  final SubscriptionCandidate? suggestion;
+
   const _RecurringEditor({
     this.existing,
     required this.defaultType,
+    this.suggestion,
   });
 
   @override
@@ -598,6 +713,22 @@ class _RecurringEditorState extends State<_RecurringEditor> {
     final categories = app.categories.where((c) => c.type == _type).toList();
     if (categories.isNotEmpty) _categoryId = categories.first.id;
 
+    final sug = widget.suggestion;
+    if (widget.existing == null && sug != null) {
+      _type = 'expense';
+      _recurringType = 'subscription';
+      _nameCtrl.text = sug.label;
+      _amountCtrl.text =
+          sug.monthlyAmount.toStringAsFixed(2).replaceAll('.', ',');
+      if (app.accountById(sug.accountId) != null) _accountId = sug.accountId;
+      if (app.categories.any((c) => c.id == sug.categoryId)) {
+        _categoryId = sug.categoryId;
+      }
+      // Next charge one month after the last one seen.
+      final l = sug.lastDate;
+      _firstDate = DateTime(l.year, l.month + 1,
+          l.day.clamp(1, DateTime(l.year, l.month + 2, 0).day));
+    }
     final e = widget.existing;
     if (e != null) {
       _type = e.paymentType;

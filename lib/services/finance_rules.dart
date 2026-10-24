@@ -1,5 +1,5 @@
 import '../models/models.dart';
-import 'transaction_metadata_service.dart';
+import '../models/transaction_metadata.dart';
 
 class FinanceRules {
   static bool isImplicitNeutral(AppTransaction tx) {

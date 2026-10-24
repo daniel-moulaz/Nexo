@@ -153,9 +153,36 @@ ThemeData buildTheme({
             surfaceContainerHigh: const Color(0xFF1A1A1A),
             surfaceContainerHighest: const Color(0xFF222222),
           )
-        : seeded;
+        : _layered(seeded, seedColor, dark);
   }
   return _base(base, appFont);
+}
+
+/// Calm, layered surfaces (ink-blue at night, paper by day) tinted with a
+/// touch of the chosen color, so cards read as levels instead of flat grey.
+ColorScheme _layered(ColorScheme cs, Color seed, bool dark) {
+  Color tint(Color base, double amount) =>
+      Color.alphaBlend(seed.withValues(alpha: amount), base);
+  if (dark) {
+    return cs.copyWith(
+      surface: tint(const Color(0xFF0B0F15), .03),
+      surfaceContainerLowest: tint(const Color(0xFF080B10), .02),
+      surfaceContainerLow: tint(const Color(0xFF111720), .04),
+      surfaceContainer: tint(const Color(0xFF151C26), .05),
+      surfaceContainerHigh: tint(const Color(0xFF1B232F), .06),
+      surfaceContainerHighest: tint(const Color(0xFF222B38), .07),
+      outlineVariant: tint(const Color(0xFF2A3443), .06),
+    );
+  }
+  return cs.copyWith(
+    surface: tint(const Color(0xFFF4F6F9), .02),
+    surfaceContainerLowest: Colors.white,
+    surfaceContainerLow: Colors.white,
+    surfaceContainer: tint(const Color(0xFFF0F2F6), .03),
+    surfaceContainerHigh: tint(const Color(0xFFE9EDF2), .04),
+    surfaceContainerHighest: tint(const Color(0xFFE1E6ED), .05),
+    outlineVariant: tint(const Color(0xFFD9DEE6), .04),
+  );
 }
 
 ThemeData _base(ColorScheme cs, String appFont) {
@@ -169,8 +196,24 @@ ThemeData _base(ColorScheme cs, String appFont) {
       TargetPlatform.android: CupertinoPageTransitionsBuilder(),
       TargetPlatform.iOS: CupertinoPageTransitionsBuilder(),
     }),
-    appBarTheme: const AppBarTheme(centerTitle: false, elevation: 0),
+    scaffoldBackgroundColor: cs.surface,
+    appBarTheme: AppBarTheme(
+        centerTitle: false,
+        elevation: 0,
+        scrolledUnderElevation: 0,
+        backgroundColor: cs.surface,
+        surfaceTintColor: Colors.transparent),
+    navigationRailTheme: NavigationRailThemeData(
+      backgroundColor: cs.surface,
+      indicatorColor: cs.primaryContainer,
+      indicatorShape: const StadiumBorder(),
+    ),
     navigationBarTheme: NavigationBarThemeData(
+      height: 70,
+      backgroundColor: cs.surfaceContainerLow,
+      surfaceTintColor: Colors.transparent,
+      indicatorColor: cs.primaryContainer,
+      indicatorShape: const StadiumBorder(),
       labelTextStyle: WidgetStateProperty.resolveWith((states) {
         final style = fontTextTheme.labelMedium ?? const TextStyle();
         if (states.contains(WidgetState.selected)) {
@@ -182,10 +225,39 @@ ThemeData _base(ColorScheme cs, String appFont) {
       }),
     ),
     cardTheme: CardThemeData(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(24),
+          side: BorderSide(color: cs.outlineVariant.withValues(alpha: .35))),
       elevation: 0,
-      color: cs.surfaceContainerHighest.withValues(alpha: 0.3),
+      color: cs.surfaceContainerLow,
     ),
+    chipTheme: ChipThemeData(
+      shape: StadiumBorder(
+          side: BorderSide(color: cs.outlineVariant.withValues(alpha: .6))),
+      backgroundColor: cs.surfaceContainerLow,
+    ),
+    filledButtonTheme: FilledButtonThemeData(
+        style: FilledButton.styleFrom(
+            minimumSize: const Size(64, 48),
+            shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16)))),
+    outlinedButtonTheme: OutlinedButtonThemeData(
+        style: OutlinedButton.styleFrom(
+            minimumSize: const Size(64, 48),
+            side: BorderSide(color: cs.outlineVariant),
+            shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16)))),
+    floatingActionButtonTheme: FloatingActionButtonThemeData(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20))),
+    dialogTheme: DialogThemeData(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
+        backgroundColor: cs.surfaceContainerHigh),
+    bottomSheetTheme: BottomSheetThemeData(
+        backgroundColor: cs.surfaceContainerLow,
+        shape: const RoundedRectangleBorder(
+            borderRadius: BorderRadius.vertical(top: Radius.circular(28)))),
+    dividerTheme: DividerThemeData(
+        color: cs.outlineVariant.withValues(alpha: .5), space: 1),
     snackBarTheme: SnackBarThemeData(
       behavior: SnackBarBehavior.floating,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
@@ -195,11 +267,13 @@ ThemeData _base(ColorScheme cs, String appFont) {
     ),
     inputDecorationTheme: InputDecorationTheme(
       filled: true,
-      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-      enabledBorder:
-          OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+      fillColor: cs.surfaceContainer,
+      border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
+      enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(14),
+          borderSide: BorderSide(color: cs.outlineVariant)),
       focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(14),
           borderSide: BorderSide(color: cs.primary, width: 2)),
     ),
   );

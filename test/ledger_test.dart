@@ -69,7 +69,8 @@ void main() {
     await db.execute('DROP TABLE notification_suggestions');
     await db.setVersion(22);
     await DBHelper.close();
-    expect(await (await DBHelper.database).getVersion(), 23);
+    expect(
+        await (await DBHelper.database).getVersion(), DBHelper.schemaVersion);
     expect(
         (await DBHelper.getAccounts())
             .firstWhere((a) => a.id == 'bank')
@@ -258,7 +259,11 @@ void main() {
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
         .setMockMethodCallHandler(
             const MethodChannel('home_widget'), (call) async => true);
-    await DBHelper.importAll({'version': DBHelper.schemaVersion});
+    final empty = await DBHelper.exportAll();
+    for (final key in empty.keys.toList()) {
+      if (empty[key] is List) empty[key] = <Map<String, dynamic>>[];
+    }
+    await DBHelper.importAll(empty);
     app = AppProvider();
     app.settings.budgetAlertsEnabled = false;
     for (final a in [
@@ -363,7 +368,7 @@ void main() {
   test('Card purchase and partial payment do not create a second expense',
       () async {
     await app.addTransaction(
-        tx('purchase', account: 'card', date: DateTime(2026, 9, 20, 18)));
+        tx('purchase', account: 'card', date: DateTime(2026, 9, 19, 18)));
     expect(app.accountById('bank')!.balance, 1000);
     expect(app.totalBalanceAll, 900);
     await app.addTransfer(
@@ -594,7 +599,8 @@ void main() {
         id: 'b',
         categoryId: 'bills',
         amount: 100,
-        createdAt: now,
+        // An old budget: full month (one created today would be prorated).
+        createdAt: DateTime(now.year, now.month - 2),
         period: 'monthly');
     expect(app.budgetSpent(budget), 80);
     expect(app.budgetProgress(budget), .8);

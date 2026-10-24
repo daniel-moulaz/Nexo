@@ -224,7 +224,10 @@ class FinanceExportService {
         tx.amount.toStringAsFixed(2),
         _currencyFor(app, tx),
         app.accountById(tx.accountId)?.name ?? '',
-        app.categoryById(tx.categoryId)?.name ?? '',
+        app.categoryFor(tx)?.name ??
+            (app.categoryLabel(tx) == 'Sem categoria'
+                ? ''
+                : app.categoryLabel(tx)),
         meta.subcategory,
         tx.type == 'income'
             ? (meta.isPending ? 'Prevista' : 'Recebida')
@@ -233,7 +236,7 @@ class FinanceExportService {
             ? ''
             : DateFormat('dd/MM/yyyy').format(meta.dueDate!),
         meta.expenseClass == 'extraordinary' ? 'Extraordinária' : 'Normal',
-        neutral ? 'Não' : 'Sim',
+        !neutral && tx.type == 'expense' ? 'Sim' : 'Não',
         meta.installmentLabel,
         meta.source.startsWith('transfer:')
             ? 'Transferência'

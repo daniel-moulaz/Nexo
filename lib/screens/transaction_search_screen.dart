@@ -10,10 +10,15 @@ import 'add_transaction_screen.dart';
 import '../services/transaction_filter.dart';
 import '../utils/finance_input.dart';
 import '../widgets/desktop_transaction_table.dart';
+import '../services/finance_rules.dart';
+import '../widgets/nexo_ui.dart';
+import '../widgets/shared_widgets.dart' show CategoryDot;
 
 class TransactionSearchScreen extends StatefulWidget {
   final FocusNode? searchFocus;
-  const TransactionSearchScreen({super.key, this.searchFocus});
+  final bool autofocus;
+  const TransactionSearchScreen(
+      {super.key, this.searchFocus, this.autofocus = true});
 
   @override
   State<TransactionSearchScreen> createState() =>
@@ -220,7 +225,7 @@ class _TransactionSearchScreenState extends State<TransactionSearchScreen> {
             if (_query.trim().isEmpty) return true;
             final q = _query.toLowerCase().trim();
             final account = app.accountById(tx.accountId)?.name ?? '';
-            final category = app.categoryById(tx.categoryId)?.name ?? '';
+            final category = app.categoryLabel(tx);
             final subcategory = meta[tx.id]?.subcategory ?? '';
             return tx.description.toLowerCase().contains(q) ||
                 tx.note.toLowerCase().contains(q) ||
@@ -237,7 +242,7 @@ class _TransactionSearchScreenState extends State<TransactionSearchScreen> {
                 child: TextField(
                   controller: _controller,
                   focusNode: widget.searchFocus,
-                  autofocus: true,
+                  autofocus: widget.autofocus,
                   onChanged: (value) => setState(() => _query = value),
                   decoration: InputDecoration(
                     hintText: 'iFood, internet, Mercado Pago, 25/09...',
@@ -286,13 +291,15 @@ class _TransactionSearchScreenState extends State<TransactionSearchScreen> {
               ),
               Padding(
                 padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
-                child: Align(
-                  alignment: Alignment.centerLeft,
-                  child: Text(
+                child: Row(children: [
+                  Text(
                     '${filtered.length} resultado${filtered.length == 1 ? '' : 's'}',
                     style: Theme.of(context).textTheme.labelMedium,
                   ),
-                ),
+                  const SizedBox(width: 12),
+                  if (filtered.isNotEmpty)
+                    Expanded(child: _Totals(app: app, rows: filtered)),
+                ]),
               ),
               Expanded(
                 child: filtered.isEmpty
@@ -307,73 +314,19 @@ class _TransactionSearchScreenState extends State<TransactionSearchScreen> {
                       )
                     : MediaQuery.sizeOf(context).width >= 900
                         ? DesktopTransactionTable(app: app, rows: filtered)
-                        : ListView.builder(
-                            padding: const EdgeInsets.fromLTRB(12, 4, 12, 24),
-                            itemCount: filtered.length,
-                            itemBuilder: (context, index) {
-                              final tx = filtered[index];
-                              final account = app.accountById(tx.accountId);
-                              final category = app.categoryById(tx.categoryId);
-                              final txMeta = meta[tx.id];
-                              final currency = tx.currency.isNotEmpty
-                                  ? tx.currency
-                                  : (account?.currency ??
-                                      app.settings.currency);
-                              final status = tx.type == 'income' &&
-                                      txMeta?.isPending != true
-                                  ? 'Recebido'
-                                  : (txMeta?.isOverdue == true
-                                      ? 'Atrasado'
-                                      : txMeta?.status == 'pending'
-                                          ? 'Pendente'
-                                          : 'Pago');
-
-                              return Card(
-                                child: ListTile(
-                                  title: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        Text(
-                                          tx.description.trim().isEmpty
-                                              ? (category?.name ?? 'Lançamento')
-                                              : tx.description,
-                                          maxLines: 2,
-                                          overflow: TextOverflow.ellipsis,
-                                        ),
-                                        Text(
-                                            app.settings.hideBalance
-                                                ? '••••'
-                                                : '${tx.type == 'income' ? '+' : '-'}${formatAmount(tx.amount, currency)}',
-                                            style: const TextStyle(
-                                                fontWeight: FontWeight.w800))
-                                      ]),
-                                  subtitle: Text(
-                                    [
-                                      DateFormat('dd/MM/yyyy').format(tx.date),
-                                      if (account != null) account.name,
-                                      if (category != null) category.name,
-                                      if ((txMeta?.subcategory ?? '')
-                                          .isNotEmpty)
-                                        txMeta!.subcategory,
-                                      status,
-                                    ].join(' • '),
-                                    maxLines: 2,
-                                    overflow: TextOverflow.ellipsis,
+                        : _DayList(
+                            app: app,
+                            rows: filtered,
+                            onOpen: (tx) async {
+                              await Navigator.of(context).push(
+                                MaterialPageRoute(
+                                  builder: (_) => AddTransactionScreen(
+                                    existing: tx,
+                                    initialType: tx.type,
                                   ),
-                                  onTap: () async {
-                                    await Navigator.of(context).push(
-                                      MaterialPageRoute(
-                                        builder: (_) => AddTransactionScreen(
-                                          existing: tx,
-                                          initialType: tx.type,
-                                        ),
-                                      ),
-                                    );
-                                    if (mounted) setState(() {});
-                                  },
                                 ),
                               );
+                              if (mounted) setState(() {});
                             },
                           ),
               ),
@@ -407,6 +360,189 @@ class _TypeChip extends StatelessWidget {
         selected: current == value,
         onSelected: (_) => onTap(value),
       ),
+    );
+  }
+}
+
+double _main(AppProvider app, AppTransaction t) => app.convertToMain(
+    t.amount,
+    t.currency.isNotEmpty
+        ? t.currency
+        : app.accountById(t.accountId)?.currency ?? app.settings.currency);
+
+/// Counted income and spending of what is listed (neutral and pending out).
+class _Totals extends StatelessWidget {
+  final AppProvider app;
+  final List<AppTransaction> rows;
+  const _Totals({required this.app, required this.rows});
+  @override
+  Widget build(BuildContext context) {
+    if (app.settings.hideBalance) return const SizedBox.shrink();
+    var income = 0.0, expense = 0.0;
+    for (final t in rows) {
+      final m = app.transactionMetadata[t.id];
+      if (FinanceRules.isNeutral(t, m) || m?.isPending == true) continue;
+      if (t.type == 'income') income += _main(app, t);
+      if (t.type == 'expense') expense += _main(app, t);
+    }
+    final style = Theme.of(context).textTheme.labelMedium;
+    return FittedBox(
+        fit: BoxFit.scaleDown,
+        alignment: Alignment.centerRight,
+        child: Text.rich(TextSpan(style: style, children: [
+          TextSpan(
+              text: '+${formatAmount(income, app.settings.currency)}',
+              style: TextStyle(
+                  color: NexoTones.income(context),
+                  fontWeight: FontWeight.w800)),
+          const TextSpan(text: '   '),
+          TextSpan(
+              text: '−${formatAmount(expense, app.settings.currency)}',
+              style: TextStyle(
+                  color: NexoTones.expense(context),
+                  fontWeight: FontWeight.w800)),
+        ])));
+  }
+}
+
+/// Statement grouped by day, like a bank app: day header with the net of
+/// the day, then each movement with its category, account and status.
+class _DayList extends StatelessWidget {
+  final AppProvider app;
+  final List<AppTransaction> rows;
+  final void Function(AppTransaction) onOpen;
+  const _DayList({required this.app, required this.rows, required this.onOpen});
+
+  String _day(DateTime d) {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final day = DateTime(d.year, d.month, d.day);
+    if (day == today) return 'Hoje';
+    if (day == today.subtract(const Duration(days: 1))) return 'Ontem';
+    final label = DateFormat("EEE, d 'de' MMM", 'pt_BR').format(d);
+    return day.year == today.year ? label : '$label de ${day.year}';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final items = <Object>[];
+    DateTime? current;
+    final net = <DateTime, double>{};
+    for (final t in rows) {
+      final day = DateTime(t.date.year, t.date.month, t.date.day);
+      if (day != current) {
+        items.add(day);
+        current = day;
+      }
+      items.add(t);
+      final m = app.transactionMetadata[t.id];
+      if (!FinanceRules.isNeutral(t, m) && m?.isPending != true) {
+        net[day] = (net[day] ?? 0) +
+            (t.type == 'income' ? _main(app, t) : -_main(app, t));
+      }
+    }
+    final theme = Theme.of(context);
+    final hidden = app.settings.hideBalance;
+    return ListView.builder(
+      padding: const EdgeInsets.fromLTRB(12, 4, 12, 24),
+      itemCount: items.length,
+      itemBuilder: (context, index) {
+        final item = items[index];
+        if (item is DateTime) {
+          final value = net[item] ?? 0;
+          return Padding(
+            padding: const EdgeInsets.fromLTRB(8, 16, 8, 6),
+            child: Row(children: [
+              Expanded(
+                  child: Text(_day(item),
+                      style: theme.textTheme.titleSmall
+                          ?.copyWith(fontWeight: FontWeight.w800))),
+              if (!hidden && value != 0)
+                Text(
+                    '${value > 0 ? '+' : '−'}${formatAmount(value.abs(), app.settings.currency)}',
+                    style: theme.textTheme.labelMedium?.copyWith(
+                        color: theme.colorScheme.onSurfaceVariant,
+                        fontFeatures: NexoTones.figures)),
+            ]),
+          );
+        }
+        final tx = item as AppTransaction;
+        final account = app.accountById(tx.accountId);
+        final category = app.categoryFor(tx);
+        final m = app.transactionMetadata[tx.id];
+        final neutral = FinanceRules.isNeutral(tx, m);
+        final currency = tx.currency.isNotEmpty
+            ? tx.currency
+            : (account?.currency ?? app.settings.currency);
+        final income = tx.type == 'income';
+        final status = income && m?.isPending != true
+            ? 'Recebido'
+            : (m?.isOverdue == true
+                ? 'Atrasado'
+                : m?.status == 'pending'
+                    ? 'Pendente'
+                    : 'Pago');
+        final color = neutral
+            ? null
+            : m?.isOverdue == true
+                ? NexoTones.expense(context)
+                : m?.isPending == true
+                    ? NexoTones.warning(context)
+                    : income
+                        ? NexoTones.income(context)
+                        : null;
+        return Padding(
+          padding: const EdgeInsets.only(bottom: 4),
+          child: Material(
+            color: theme.colorScheme.surfaceContainerLow,
+            borderRadius: BorderRadius.circular(18),
+            child: ListTile(
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(18)),
+              leading: neutral
+                  ? CircleAvatar(
+                      radius: 20,
+                      backgroundColor: theme.colorScheme.surfaceContainerHigh,
+                      child: const Icon(Icons.swap_horiz, size: 20))
+                  : CategoryDot(category: category, size: 40),
+              title: Text(
+                tx.description.trim().isEmpty
+                    ? (category?.name ?? 'Lançamento')
+                    : tx.description,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(fontWeight: FontWeight.w600),
+              ),
+              subtitle: Text(
+                [
+                  if (account != null) account.name,
+                  if (category != null && !neutral) category.name,
+                  if ((m?.subcategory ?? '').isNotEmpty) m!.subcategory,
+                  status,
+                ].join(' · '),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+              trailing: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 130),
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: Alignment.centerRight,
+                  child: Text(
+                      hidden
+                          ? '••••'
+                          : '${income ? '+' : '-'}${formatAmount(tx.amount, currency)}',
+                      style: TextStyle(
+                          fontWeight: FontWeight.w800,
+                          color: color,
+                          fontFeatures: NexoTones.figures)),
+                ),
+              ),
+              onTap: () => onOpen(tx),
+            ),
+          ),
+        );
+      },
     );
   }
 }

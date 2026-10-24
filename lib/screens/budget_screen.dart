@@ -4,7 +4,9 @@ import '../l10n/app_localizations.dart';
 import 'package:provider/provider.dart';
 import '../providers/app_provider.dart';
 import '../models/models.dart';
+import '../services/budget_insights.dart';
 import '../theme/app_theme.dart';
+import '../widgets/nexo_ui.dart';
 import '../widgets/shared_widgets.dart';
 import '../widgets/savings_goal_sheet.dart';
 import 'savings_goal_detail_screen.dart';
@@ -15,13 +17,15 @@ import '../utils/snackbar.dart';
 class BudgetScreen extends StatefulWidget {
   const BudgetScreen({super.key});
 
-  static void _openSheet(BuildContext context, {Budget? existing}) {
+  static void _openSheet(BuildContext context,
+      {Budget? existing, String? categoryId, double? amount}) {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       shape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
-      builder: (_) => _BudgetSheet(existing: existing),
+      builder: (_) => _BudgetSheet(
+          existing: existing, categoryId: categoryId, amount: amount),
     );
   }
 
@@ -50,11 +54,26 @@ class _BudgetScreenState extends State<BudgetScreen>
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final app = context.watch<AppProvider>();
-    final cs = Theme.of(context).colorScheme;
-    final cur = app.settings.currency;
-
-    final overCount = app.budgets.where(app.budgetExceeded).length;
-
+    final hidden = app.settings.hideBalance;
+    String money(double v) =>
+        hidden ? '••••' : formatAmount(v, app.settings.currency);
+    final now = DateTime.now();
+    final suggestions = suggestBudgets(
+        transactions: app.transactions,
+        metadata: app.transactionMetadata,
+        categories: app.categories,
+        budgets: app.budgets,
+        toMain: (t) => app.convertToMain(
+            t.amount,
+            t.currency.isNotEmpty
+                ? t.currency
+                : app.accountById(t.accountId)?.currency ??
+                    app.settings.currency),
+        now: now);
+    double used(Budget b) => app.budgetProgressRaw(b);
+    // Closest to the limit first: that is what needs attention.
+    final budgets = [...app.budgets]
+      ..sort((a, b) => used(b).compareTo(used(a)));
     final goals = app.savingsGoals;
     return Scaffold(
       appBar: AppBar(
@@ -63,96 +82,179 @@ class _BudgetScreenState extends State<BudgetScreen>
             controller: _tabCtrl,
             tabs: const [Tab(text: 'Orçamentos'), Tab(text: 'Objetivos')],
           )),
+      floatingActionButton: FloatingActionButton.extended(
+          onPressed: () => _tabCtrl.index == 0
+              ? BudgetScreen._openSheet(context)
+              : showModalBottomSheet(
+                  context: context,
+                  isScrollControlled: true,
+                  builder: (_) => const SavingsGoalSheet()),
+          icon: const Icon(Icons.add),
+          label: Text(_tabCtrl.index == 0 ? 'Orçamento' : 'Objetivo')),
       body: TabBarView(controller: _tabCtrl, children: [
         ListView(
             padding: const EdgeInsets.fromLTRB(16, 16, 16, 100),
             children: [
-              const Text('Limites por categoria',
-                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700)),
-              const SizedBox(height: 8),
-              Text(overCount > 0
-                  ? '$overCount orçamento(s) acima do limite'
-                  : 'Acompanhe os gastos do mês ou da semana.'),
-              const SizedBox(height: 16),
-              if (app.budgets.isEmpty)
+              if (budgets.isNotEmpty) ...[
+                _BudgetSummary(app: app, money: money, now: now),
+                const SizedBox(height: 16),
+                const NexoSectionTitle('Limites por categoria',
+                    subtitle: 'Toque para alterar; segure para excluir'),
+                const SizedBox(height: 8),
+              ] else
                 EmptyState(
                     icon: Icons.pie_chart_outline,
                     message: l10n.budget_noBudgetsYet,
-                    subMessage: 'Toque em Adicionar orçamento para começar.'),
-              ...app.budgets.map((b) => _BudgetCard(budget: b, app: app)),
-              FilledButton.icon(
-                  onPressed: () => BudgetScreen._openSheet(context),
-                  icon: const Icon(Icons.add),
-                  label: const Text('Adicionar orçamento')),
+                    subMessage:
+                        'Defina quanto quer gastar por categoria e o Nexo mostra quanto ainda cabe por dia.'),
+              for (final b in budgets)
+                Padding(
+                    padding: const EdgeInsets.only(bottom: 12),
+                    child: _BudgetCard(
+                        budget: b, app: app, money: money, now: now)),
+              if (suggestions.isNotEmpty) ...[
+                const SizedBox(height: 8),
+                const NexoSectionTitle('Sugestões',
+                    subtitle: 'Pela média dos últimos 3 meses',
+                    icon: Icons.auto_awesome_outlined),
+                const SizedBox(height: 8),
+                NexoCard(
+                    padding: const EdgeInsets.symmetric(vertical: 4),
+                    child: Column(children: [
+                      for (final s in suggestions)
+                        ListTile(
+                            leading:
+                                CategoryDot(category: s.category, size: 36),
+                            title: Text(s.category.name,
+                                maxLines: 1, overflow: TextOverflow.ellipsis),
+                            subtitle: Text('Média de ${money(s.average)}/mês'),
+                            trailing: TextButton(
+                                onPressed: () => BudgetScreen._openSheet(
+                                    context,
+                                    categoryId: s.category.id,
+                                    amount: s.amount),
+                                child: Text(hidden
+                                    ? 'Criar'
+                                    : 'Limitar a ${_whole(s.amount, app.settings.currency)}'))),
+                    ])),
+              ],
             ]),
         ListView(
             padding: const EdgeInsets.fromLTRB(16, 16, 16, 100),
             children: [
-              _SumChip(
-                  label: 'Total guardado',
-                  value: formatAmount(app.totalSaved, cur),
-                  color: cs.primary),
-              const SizedBox(height: 16),
               if (goals.isEmpty)
                 const EmptyState(
                     icon: Icons.savings_outlined,
                     message: 'Qual é o seu próximo objetivo?',
-                    subMessage: 'Defina uma meta e acompanhe seus aportes.'),
-              ...goals.map((g) => _GoalCard(goal: g, app: app)),
-              FilledButton.icon(
-                  onPressed: () => showModalBottomSheet(
-                      context: context,
-                      isScrollControlled: true,
-                      builder: (_) => const SavingsGoalSheet()),
-                  icon: const Icon(Icons.add),
-                  label: const Text('Adicionar objetivo')),
+                    subMessage:
+                        'Defina uma meta e o Nexo diz quanto guardar por mês.')
+              else ...[
+                _GoalsSummary(app: app, money: money),
+                const SizedBox(height: 16),
+              ],
+              for (final g in goals)
+                Padding(
+                    padding: const EdgeInsets.only(bottom: 12),
+                    child:
+                        _GoalCard(goal: g, app: app, hidden: hidden, now: now)),
             ]),
       ]),
     );
   }
 }
 
-// ── Summary chip ──────────────────────────────────────────────────────────────
-class _SumChip extends StatelessWidget {
-  final String label, value;
-  final Color color;
-  const _SumChip(
-      {required this.label, required this.value, required this.color});
+/// R$ 300,00 → R$ 300: suggestions are round numbers.
+String _whole(double v, String currency) =>
+    formatAmount(v, currency).replaceAll(RegExp(r'[,.]00$'), '');
+
+// ── Month summary ─────────────────────────────────────────────────────────────
+class _BudgetSummary extends StatelessWidget {
+  const _BudgetSummary(
+      {required this.app, required this.money, required this.now});
+  final AppProvider app;
+  final String Function(double) money;
+  final DateTime now;
 
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    return Card(
-      elevation: 1,
-      margin: EdgeInsets.zero,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 14),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              label,
+    final monthly = app.budgets.where((b) => b.period != 'weekly').toList();
+    final over = app.budgets.where(app.budgetExceeded).length;
+    final limit = monthly.fold(0.0, (s, b) => s + app.budgetLimit(b));
+    final spent = monthly.fold(0.0, (s, b) => s + app.budgetSpent(b));
+    final pace = budgetPace(
+        Budget(
+            id: '',
+            categoryId: '',
+            amount: limit,
+            period: 'monthly',
+            createdAt: now),
+        spent,
+        now);
+    final onHero = cs.onPrimaryContainer;
+    return NexoCard(
+      gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [cs.primaryContainer, cs.tertiaryContainer]),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Text(limit > 0 ? 'Orçado no mês' : 'Orçamentos da semana',
+            style: TextStyle(
+                color: onHero.withValues(alpha: .75),
+                fontWeight: FontWeight.w600)),
+        const SizedBox(height: 4),
+        if (limit > 0) ...[
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: Alignment.centerLeft,
+            child: Text.rich(TextSpan(children: [
+              TextSpan(
+                  text: money(spent),
+                  style: TextStyle(
+                      fontSize: 28,
+                      fontWeight: FontWeight.w800,
+                      color: onHero,
+                      fontFeatures: NexoTones.figures)),
+              TextSpan(
+                  text: '  de ${money(limit)}',
+                  style: TextStyle(
+                      fontSize: 15, color: onHero.withValues(alpha: .75))),
+            ])),
+          ),
+          const SizedBox(height: 12),
+          NexoProgress(value: spent / limit, height: 10),
+          const SizedBox(height: 12),
+          Row(children: [
+            Expanded(
+                child: NexoStatPill(
+                    label: spent <= limit ? 'Ainda cabe' : 'Acima',
+                    value: money((limit - spent).abs()))),
+            const SizedBox(width: 8),
+            Expanded(
+                child:
+                    NexoStatPill(label: 'Por dia', value: money(pace.perDay))),
+            const SizedBox(width: 8),
+            Expanded(
+                child: NexoStatPill(
+                    label: 'Faltam', value: '${pace.daysLeft} dias')),
+          ]),
+        ] else
+          Text('${app.budgets.length} limite(s) semanal(is)',
               style: TextStyle(
-                fontSize: 10,
-                fontWeight: FontWeight.w600,
-                color: cs.onSurface.withValues(alpha: 0.5),
-              ),
-            ),
-            const SizedBox(height: 3),
-            Text(
-              value,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.bold,
-                color: color,
-              ),
-            ),
-          ],
-        ),
-      ),
+                  fontSize: 20, fontWeight: FontWeight.w700, color: onHero)),
+        if (over > 0) ...[
+          const SizedBox(height: 12),
+          Row(children: [
+            Icon(Icons.warning_amber_rounded,
+                size: 18, color: NexoTones.expense(context)),
+            const SizedBox(width: 6),
+            Expanded(
+                child: Text('$over categoria(s) passaram do limite',
+                    style:
+                        TextStyle(color: onHero, fontWeight: FontWeight.w600))),
+          ]),
+        ],
+      ]),
     );
   }
 }
@@ -161,27 +263,53 @@ class _SumChip extends StatelessWidget {
 class _BudgetCard extends StatelessWidget {
   final Budget budget;
   final AppProvider app;
-  const _BudgetCard({required this.budget, required this.app});
+  final String Function(double) money;
+  final DateTime now;
+  const _BudgetCard(
+      {required this.budget,
+      required this.app,
+      required this.money,
+      required this.now});
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     final spent = app.budgetSpent(budget);
-    final ratio = budget.amount <= 0 ? 0.0 : spent / budget.amount;
+    final window =
+        budgetWindow(budget, now, weekStart: app.settings.weekStart);
+    final limit = window.limit;
+    final ratio = limit <= 0 ? 0.0 : spent / limit;
     final color = ratio >= 1
-        ? cs.error
-        : ratio >= .75
-            ? Colors.orange.shade800
+        ? NexoTones.expense(context)
+        : ratio >= .8
+            ? NexoTones.warning(context)
             : cs.primary;
-    final remaining = budget.amount - spent;
-    final name = app.categoryById(budget.categoryId)?.name ?? 'Categoria';
-    return Card(
+    final remaining = limit - spent;
+    final category = app.categoryById(budget.categoryId);
+    final name = category?.name ?? 'Categoria';
+    final pace = budgetPace(budget, spent, now,
+        weekStart: app.settings.weekStart, limit: limit);
+    final projection = pace.projection;
+    final String status;
+    if (remaining < 0) {
+      status = 'Passou ${money(-remaining)} do limite';
+    } else if (projection != null &&
+        !window.partial &&
+        projection > limit * 1.05) {
+      status = 'No ritmo atual fecha o mês em ${money(projection)}';
+    } else {
+      status =
+          'Cabe ${money(pace.perDay)} por dia · ${pace.daysLeft} dia(s) restante(s)';
+    }
+    return NexoCard(
+        padding: EdgeInsets.zero,
         child: InkWell(
             onTap: () => BudgetScreen._openSheet(context, existing: budget),
             onLongPress: () async {
               if (await showDeleteConfirm(context, name) && context.mounted) {
                 final undo = await app.deleteBudgetWithUndo(budget.id);
-                if (context.mounted)
+                if (context.mounted) {
                   showAppSnackbar(context, 'Orçamento excluído', onUndo: undo);
+                }
               }
             },
             child: Padding(
@@ -189,47 +317,179 @@ class _BudgetCard extends StatelessWidget {
                 child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(name,
-                          style: const TextStyle(
-                              fontSize: 18, fontWeight: FontWeight.w700)),
-                      Text(budget.period == 'weekly'
-                          ? 'Esta semana'
-                          : 'Este mês'),
-                      const SizedBox(height: 12),
-                      Wrap(spacing: 16, runSpacing: 8, children: [
-                        Text(
-                            'Gasto: ${formatAmount(spent, app.settings.currency)}'),
-                        Text(
-                            'Limite: ${formatAmount(budget.amount, app.settings.currency)}'),
+                      Row(children: [
+                        CategoryDot(category: category, size: 40),
+                        const SizedBox(width: 12),
+                        Expanded(
+                            child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                              Text(name,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: const TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w700)),
+                              Text(
+                                  budget.period == 'weekly'
+                                      ? 'Esta semana'
+                                      : 'Este mês',
+                                  style: TextStyle(
+                                      fontSize: 12,
+                                      color: cs.onSurfaceVariant)),
+                            ])),
+                        _Amounts(
+                            top: money(spent),
+                            bottom: window.partial
+                                ? 'de ${money(limit)} (proporcional)'
+                                : 'de ${money(limit)}',
+                            color: color),
                       ]),
-                      const SizedBox(height: 10),
-                      LinearProgressIndicator(
-                          value: ratio.clamp(0, 1), color: color, minHeight: 7),
+                      const SizedBox(height: 12),
+                      NexoProgress(value: ratio),
                       const SizedBox(height: 8),
-                      Text(
-                          '${(ratio * 100).toStringAsFixed(0)}% usado • ${remaining < 0 ? 'Excedido em' : 'Restante'} ${formatAmount(remaining.abs(), app.settings.currency)}',
-                          style: TextStyle(
-                              color: color, fontWeight: FontWeight.w600)),
+                      Row(children: [
+                        Expanded(
+                            child: Text(status,
+                                maxLines: 2,
+                                style: TextStyle(
+                                    fontSize: 12.5,
+                                    color: remaining < 0
+                                        ? color
+                                        : cs.onSurfaceVariant,
+                                    fontWeight: remaining < 0
+                                        ? FontWeight.w700
+                                        : FontWeight.w500))),
+                        const SizedBox(width: 8),
+                        Text('${(ratio * 100).toStringAsFixed(0)}%',
+                            style: TextStyle(
+                                fontWeight: FontWeight.w700, color: color)),
+                      ]),
                     ]))));
+  }
+}
+
+/// Right-aligned amount pair that shrinks instead of overflowing.
+class _Amounts extends StatelessWidget {
+  const _Amounts({required this.top, required this.bottom, this.color});
+  final String top, bottom;
+  final Color? color;
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return ConstrainedBox(
+      constraints: const BoxConstraints(maxWidth: 150),
+      child: FittedBox(
+        fit: BoxFit.scaleDown,
+        alignment: Alignment.centerRight,
+        child: Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
+          Text(top,
+              style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w800,
+                  color: color ?? cs.onSurface,
+                  fontFeatures: NexoTones.figures)),
+          Text(bottom,
+              style: TextStyle(fontSize: 12, color: cs.onSurfaceVariant)),
+        ]),
+      ),
+    );
+  }
+}
+
+// ── Goals ─────────────────────────────────────────────────────────────────────
+class _GoalsSummary extends StatelessWidget {
+  const _GoalsSummary({required this.app, required this.money});
+  final AppProvider app;
+  final String Function(double) money;
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final open = app.savingsGoals.where((g) => !g.isCompleted).toList();
+    final target = open.fold(
+        0.0, (s, g) => s + app.convertToMain(g.targetAmount, g.currency));
+    final saved = open.fold(
+        0.0, (s, g) => s + app.convertToMain(g.currentAmount, g.currency));
+    final done = app.savingsGoals.length - open.length;
+    final onHero = cs.onPrimaryContainer;
+    return NexoCard(
+      gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [cs.primaryContainer, cs.tertiaryContainer]),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Text('Total guardado',
+            style: TextStyle(
+                color: onHero.withValues(alpha: .75),
+                fontWeight: FontWeight.w600)),
+        const SizedBox(height: 4),
+        FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: Alignment.centerLeft,
+            child: Text(money(app.totalSaved),
+                style: TextStyle(
+                    fontSize: 28,
+                    fontWeight: FontWeight.w800,
+                    color: onHero,
+                    fontFeatures: NexoTones.figures))),
+        if (target > 0) ...[
+          const SizedBox(height: 12),
+          NexoProgress(value: saved / target, height: 10),
+          const SizedBox(height: 8),
+          Text(
+              'Faltam ${money(target - saved < 0 ? 0 : target - saved)} para ${open.length} objetivo(s) em andamento',
+              style: TextStyle(color: onHero.withValues(alpha: .85))),
+        ],
+        if (done > 0) ...[
+          const SizedBox(height: 4),
+          Text('$done concluído(s)',
+              style: TextStyle(color: onHero.withValues(alpha: .75))),
+        ],
+      ]),
+    );
   }
 }
 
 class _GoalCard extends StatelessWidget {
   final SavingsGoal goal;
   final AppProvider app;
-  const _GoalCard({required this.goal, required this.app});
+  final bool hidden;
+  final DateTime now;
+  const _GoalCard(
+      {required this.goal,
+      required this.app,
+      required this.hidden,
+      required this.now});
 
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
+    String money(double v) => hidden ? '••••' : formatAmount(v, goal.currency);
     final progress = app.goalProgress(goal);
     final isCompleted = goal.isCompleted;
-    final barColor = isCompleted ? const Color(0xFF2E7D32) : cs.primary;
+    final done = NexoTones.income(context);
     final color = Color(goal.colorValue);
+    final monthly = goalMonthlyNeeded(goal, now);
+    final missing = goal.targetAmount - goal.currentAmount;
+    final late = !isCompleted &&
+        missing > 0 &&
+        goal.targetDate != null &&
+        goal.targetDate!.isBefore(DateTime(now.year, now.month, now.day));
+    final String line;
+    if (isCompleted || missing <= 0) {
+      line = 'Meta atingida';
+    } else if (late) {
+      line = 'O prazo passou · faltam ${money(missing)}';
+    } else if (monthly != null) {
+      line = 'Guarde ${money(monthly)}/mês até ${ptDate(goal.targetDate!)}';
+    } else {
+      line = 'Faltam ${money(missing)}';
+    }
 
-    return Card(
-      margin: const EdgeInsets.only(bottom: 12),
-      clipBehavior: Clip.antiAlias,
+    return NexoCard(
+      padding: EdgeInsets.zero,
       child: InkWell(
         onTap: () {
           Navigator.push(
@@ -239,9 +499,15 @@ class _GoalCard extends StatelessWidget {
         },
         onLongPress: () async {
           if (await showDeleteConfirm(context, goal.name) && context.mounted) {
-            final undo = await context
-                .read<AppProvider>()
-                .deleteSavingsGoalWithUndo(goal.id);
+            final VoidCallback undo;
+            try {
+              undo = await context
+                  .read<AppProvider>()
+                  .deleteSavingsGoalWithUndo(goal.id);
+            } on FormatException catch (e) {
+              if (context.mounted) showAppSnackbar(context, e.message);
+              return;
+            }
             if (context.mounted) {
               showAppSnackbar(
                 context,
@@ -263,55 +529,45 @@ class _GoalCard extends StatelessWidget {
                   color: color.withValues(alpha: 0.15),
                   borderRadius: BorderRadius.circular(10),
                 ),
-                child: Icon(Icons.savings_outlined, color: color, size: 19),
+                child: Icon(
+                    isCompleted
+                        ? Icons.emoji_events_outlined
+                        : Icons.savings_outlined,
+                    color: color,
+                    size: 20),
               ),
               const SizedBox(width: 12),
               Expanded(
-                child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(goal.name,
-                          style: const TextStyle(
-                              fontWeight: FontWeight.w700, fontSize: 15)),
-                      if (goal.targetDate != null)
-                        Text(
-                          'Prazo: ${ptDate(goal.targetDate!)}',
-                          style: TextStyle(
-                              fontSize: 11,
-                              color: cs.onSurface.withValues(alpha: 0.5)),
-                        ),
-                    ]),
+                child: Text(goal.name,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                        fontWeight: FontWeight.w700, fontSize: 16)),
               ),
-              Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
-                Text(
-                  formatAmount(goal.currentAmount, goal.currency),
-                  style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w800,
-                      color: barColor),
-                ),
-                Text(
-                  isCompleted
-                      ? 'Concluído'
-                      : 'de ${formatAmount(goal.targetAmount, goal.currency)}',
-                  style: TextStyle(
-                      fontSize: 10,
-                      color: isCompleted
-                          ? const Color(0xFF2E7D32)
-                          : cs.onSurface.withValues(alpha: 0.5)),
-                ),
-              ]),
+              _Amounts(
+                  top: money(goal.currentAmount),
+                  bottom: 'de ${money(goal.targetAmount)}',
+                  color: isCompleted ? done : null),
             ]),
-            const SizedBox(height: 10),
-            ClipRRect(
-              borderRadius: BorderRadius.circular(4),
-              child: LinearProgressIndicator(
-                value: progress,
-                minHeight: 6,
-                color: barColor,
-                backgroundColor: barColor.withValues(alpha: 0.15),
-              ),
-            ),
+            const SizedBox(height: 12),
+            NexoProgress(value: isCompleted ? 1 : progress),
+            const SizedBox(height: 8),
+            Row(children: [
+              Expanded(
+                  child: Text(line,
+                      maxLines: 2,
+                      style: TextStyle(
+                          fontSize: 12.5,
+                          color: late
+                              ? NexoTones.warning(context)
+                              : isCompleted
+                                  ? done
+                                  : cs.onSurfaceVariant,
+                          fontWeight: FontWeight.w600))),
+              const SizedBox(width: 8),
+              Text('${(progress * 100).clamp(0, 100).toStringAsFixed(0)}%',
+                  style: const TextStyle(fontWeight: FontWeight.w700)),
+            ]),
           ]),
         ),
       ),
@@ -322,7 +578,9 @@ class _GoalCard extends StatelessWidget {
 // ── Budget sheet ──────────────────────────────────────────────────────────────
 class _BudgetSheet extends StatefulWidget {
   final Budget? existing;
-  const _BudgetSheet({this.existing});
+  final String? categoryId;
+  final double? amount;
+  const _BudgetSheet({this.existing, this.categoryId, this.amount});
   @override
   State<_BudgetSheet> createState() => _BudgetSheetState();
 }
@@ -343,6 +601,9 @@ class _BudgetSheetState extends State<_BudgetSheet> {
       _amtCtrl.text = e.amount.toStringAsFixed(2);
       _categoryId = e.categoryId;
       _period = e.period;
+    } else if (widget.categoryId != null) {
+      _categoryId = widget.categoryId;
+      _amtCtrl.text = widget.amount?.toStringAsFixed(2) ?? '';
     } else {
       // Default to first expense category not yet budgeted
       final app = context.read<AppProvider>();

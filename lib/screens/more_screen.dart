@@ -4,9 +4,10 @@ import 'package:provider/provider.dart';
 import '../providers/app_provider.dart';
 import '../theme/app_theme.dart';
 import 'assets_screen.dart';
+import 'recurring_screen.dart';
+import 'budget_screen.dart';
 import 'backup_screen.dart';
 import 'categories_screen.dart';
-import 'currency_converter_screen.dart';
 import 'finance_export_screen.dart';
 import 'financial_planning_screen.dart';
 import 'analysis_screen.dart';
@@ -14,14 +15,17 @@ import 'lended_screen.dart';
 import 'loans_screen.dart';
 import 'settings_screen.dart';
 import 'statement_import_screen.dart';
+import 'sync_settings_screen.dart';
 
-import 'transaction_search_screen.dart';
 import 'wishlist_screen.dart';
 
 import 'agenda_screen.dart';
 import 'notification_inbox_screen.dart';
 import 'debt_overview_screen.dart';
 import 'financial_checkup_screen.dart';
+import 'investments_screen.dart';
+import 'month_review_screen.dart';
+import 'balance_check_screen.dart';
 
 class MoreScreen extends StatelessWidget {
   const MoreScreen({super.key});
@@ -37,6 +41,36 @@ class MoreScreen extends StatelessWidget {
     final loansLen = app.loans.where((l) => !l.isSettled).length;
 
     final items = <_Item>[
+      const _Item(
+          icon: Icons.repeat,
+          label: 'Recorrentes e assinaturas',
+          sub: 'Contas que se repetem e próximas cobranças',
+          color: Color(0xFF00897B),
+          screen: RecurringScreen()),
+      const _Item(
+          icon: Icons.pie_chart_outline,
+          label: 'Orçamentos e objetivos',
+          sub: 'Limites de gastos e metas para guardar dinheiro',
+          color: Color(0xFF00897B),
+          screen: BudgetScreen()),
+      const _Item(
+          icon: Icons.show_chart,
+          label: 'Investimentos',
+          sub: 'Carteira, proventos e comparação com o CDI',
+          color: Color(0xFF00897B),
+          screen: InvestmentsScreen()),
+      const _Item(
+          icon: Icons.fact_check_outlined,
+          label: 'Conferir com o banco',
+          sub: 'Saldo do Open Finance × saldo do Nexo, com ajuste neutro',
+          color: Color(0xFF00695C),
+          screen: BalanceCheckScreen()),
+      const _Item(
+          icon: Icons.auto_stories_outlined,
+          label: 'Mês em revisão',
+          sub: 'Destaques do mês e comparação com o anterior',
+          color: Color(0xFF00695C),
+          screen: MonthReviewScreen()),
       const _Item(
           icon: Icons.fact_check_outlined,
           label: 'Revisão financeira',
@@ -63,17 +97,10 @@ class MoreScreen extends StatelessWidget {
           screen: AgendaScreen()),
       const _Item(
         icon: Icons.auto_graph_rounded,
-        label: 'Planejamento',
+        label: 'Previsão detalhada',
         sub: 'Previsão de caixa, assinaturas, reserva e alertas',
         color: Color(0xFF6750A4),
         screen: FinancialPlanningScreen(),
-      ),
-      const _Item(
-        icon: Icons.search_rounded,
-        label: 'Buscar lançamentos',
-        sub: 'Encontre despesas e receitas por nome, conta ou categoria',
-        color: Color(0xFF0061A4),
-        screen: TransactionSearchScreen(),
       ),
       const _Item(
         icon: Icons.upload_file_rounded,
@@ -84,7 +111,7 @@ class MoreScreen extends StatelessWidget {
       ),
       const _Item(
         icon: Icons.table_view_rounded,
-        label: 'Relatório financeiro',
+        label: 'Exportar relatório',
         sub: 'Excel e CSV para análise e portabilidade',
         color: Color(0xFF2E7D32),
         screen: FinanceExportScreen(),
@@ -95,13 +122,6 @@ class MoreScreen extends StatelessWidget {
           sub: 'Categorias, comparações e fechamento mensal',
           color: Color(0xFF1565C0),
           screen: AnalysisScreen()),
-      const _Item(
-        icon: Icons.currency_exchange_rounded,
-        label: 'Conversor de moeda',
-        sub: 'Converta valores entre moedas',
-        color: Color(0xFF6750A4),
-        screen: CurrencyConverterScreen(),
-      ),
       _Item(
         icon: Icons.star_outline_rounded,
         label: 'Lista de desejos',
@@ -120,7 +140,7 @@ class MoreScreen extends StatelessWidget {
       ),
       _Item(
         icon: Icons.inventory_2_outlined,
-        label: 'Ativos',
+        label: 'Bens e patrimônio',
         sub:
             '$assetsLen ${assetsLen == 1 ? 'item cadastrado' : 'itens cadastrados'}',
         color: const Color(0xFF1565C0),
@@ -149,6 +169,13 @@ class MoreScreen extends StatelessWidget {
         screen: BackupScreen(),
       ),
       const _Item(
+        icon: Icons.devices_outlined,
+        label: 'Sincronizar dispositivos',
+        sub: 'Conta e teste do servidor; sincronização ainda inativa',
+        color: Color(0xFF00695C),
+        screen: SyncSettingsScreen(),
+      ),
+      const _Item(
         icon: Icons.settings_outlined,
         label: 'Configurações',
         sub: 'Tema, privacidade, moeda, alertas e preferências',
@@ -164,46 +191,52 @@ class MoreScreen extends StatelessWidget {
             const Text('Mais', style: TextStyle(fontWeight: FontWeight.w900)),
         backgroundColor: cs.primaryContainer,
         foregroundColor: cs.onPrimaryContainer,
+        actions: [
+          IconButton(
+              tooltip: 'Configurações',
+              icon: const Icon(Icons.settings_outlined),
+              onPressed: () => Navigator.push(context,
+                  ExpensyRoute(builder: (_) => const SettingsScreen())))
+        ],
       ),
       body: ListView(
           padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
           children: [
             for (final group in <String, List<String>>{
-              'Planejamento': [
-                'Revisão financeira',
-                'Dívidas e compromissos',
-                'Empréstimos',
+              'Planejar e acompanhar': [
                 'Agenda financeira',
-                'Planejamento',
-                'Buscar lançamentos'
+                'Investimentos',
+                'Recorrentes e assinaturas',
+                'Dívidas e compromissos',
+                'Análises',
+                'Mês em revisão',
+                'Revisão financeira',
               ],
-              'Relatórios e arquivos': [
-                'Relatório financeiro',
-                'Importar extrato',
-                'Análises'
-              ],
-              'Categorias e preferências': [
+              'Organizar e proteger': [
                 'Sugestões de lançamentos',
+                'Conferir com o banco',
+                'Importar extrato',
+                'Exportar relatório',
                 'Categorias',
-                'Backup',
                 'Backup e restauração',
+                'Sincronizar dispositivos',
                 'Configurações'
               ],
-              'Ferramentas avançadas': [
-                'Conversor de moeda',
-                'Lista de desejos',
+              'Outros controles': [
+                'Empréstimos',
                 'Dinheiro emprestado',
-                'Patrimônio',
-                'Ativos'
+                'Bens e patrimônio',
+                'Lista de desejos',
+                'Previsão detalhada',
               ],
             }.entries)
               Card(
                   child: ExpansionTile(
                       title: Text(group.key),
-                      initiallyExpanded: group.key == 'Planejamento',
+                      initiallyExpanded: group.key == 'Planejar e acompanhar',
                       children: [
-                    for (final item in items
-                        .where((item) => group.value.contains(item.label)))
+                    for (final item in group.value.map((label) =>
+                        items.singleWhere((item) => item.label == label)))
                       ListTile(
                           leading: Icon(item.icon, color: item.color),
                           title: Text(item.label),

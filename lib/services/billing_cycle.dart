@@ -1,9 +1,24 @@
-/// Closing day belongs to the invoice being closed, regardless of time of day.
+/// An invoice period of a credit card. [end] is the closing date and the key
+/// of the invoice (payments are recorded against it).
+///
+/// The closing day is the "melhor dia de compra" of Brazilian cards: a
+/// purchase made on it already belongs to the next invoice. So a cycle holds
+/// purchases from the previous closing day up to the day before [end]; use
+/// [contains] or [until] instead of comparing with [end] directly.
 class BillingCycle {
   final DateTime start;
   final DateTime end;
   final DateTime? due;
-  const BillingCycle(this.start, this.end, this.due);
+
+  /// First day that is no longer part of this invoice (exclusive bound).
+  final DateTime until;
+  const BillingCycle(this.start, this.end, this.due, {DateTime? until})
+      : until = until ?? end;
+
+  /// Last day with purchases in this invoice.
+  DateTime get lastDay => until.subtract(const Duration(days: 1));
+
+  bool contains(DateTime date) => !date.isBefore(start) && date.isBefore(until);
 
   static DateTime date(int year, int month, int day) {
     final base = DateTime(year, month);
@@ -11,19 +26,28 @@ class BillingCycle {
         day.clamp(1, DateTime(base.year, base.month + 1, 0).day));
   }
 
+  /// The invoice that closes on [end] (a closing date, e.g. a payment key).
+  static BillingCycle endingOn(DateTime end, int? closingDay, int? dueDay) =>
+      forDate(DateTime(end.year, end.month, end.day - 1), closingDay, dueDay);
+
   static BillingCycle forDate(DateTime purchase, int? closingDay, int? dueDay) {
     final day = DateTime(purchase.year, purchase.month, purchase.day);
-    final closing = closingDay ?? DateTime(day.year, day.month + 1, 0).day;
-    var end = date(day.year, day.month, closing);
-    if (day.isAfter(end)) end = date(day.year, day.month + 1, closing);
-    final start = closingDay == null
-        ? DateTime(end.year, end.month)
-        : date(end.year, end.month - 1, closing).add(const Duration(days: 1));
-    DateTime? due;
-    if (dueDay != null) {
-      due = date(end.year, end.month, dueDay);
-      if (!due.isAfter(end)) due = date(end.year, end.month + 1, dueDay);
+    DateTime? dueAfter(DateTime end) {
+      if (dueDay == null) return null;
+      final due = date(end.year, end.month, dueDay);
+      return due.isAfter(end) ? due : date(end.year, end.month + 1, dueDay);
     }
-    return BillingCycle(start, end, due);
+
+    // Without a closing day the invoice is the calendar month.
+    if (closingDay == null) {
+      final start = DateTime(day.year, day.month);
+      final end = DateTime(day.year, day.month + 1, 0);
+      return BillingCycle(start, end, dueAfter(end),
+          until: DateTime(day.year, day.month + 1));
+    }
+    var end = date(day.year, day.month, closingDay);
+    if (!day.isBefore(end)) end = date(day.year, day.month + 1, closingDay);
+    final start = date(end.year, end.month - 1, closingDay);
+    return BillingCycle(start, end, dueAfter(end));
   }
 }

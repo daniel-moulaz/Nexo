@@ -1,5 +1,60 @@
 # Changelog
 
+## [1.12.2] - 2026-10-23
+### Adicionado
+- **Conta principal com vários bancos:** contas do banco vinculadas à mesma conta do Nexo são somadas e comparadas de uma vez, com um único ajuste neutro.
+- Na fatura do cartão, botão para vincular ao cartão do banco quando ainda não há vínculo.
+
+### Corrigido
+- Depois de vincular, a fatura e o limite do banco aparecem na hora (antes esperavam até 10 minutos).
+
+## [1.12.1] - 2026-10-23
+### Adicionado
+- **Fatura do banco ao lado da fatura do Nexo** (Open Finance, hoje só o Nubank expõe): total oficial, vencimento, mínimo, encargos e a diferença para o Nexo. O banco é a referência final; a diferença indica compras a conferir. Nada é lançado ou pago a partir dela.
+
+### Servidor
+- Migration `202610230002_pluggy_bills.sql` e `pluggy-sync` guardando as faturas oficiais (só totais, datas e somas).
+
+## [1.12.0] - 2026-10-23
+Dados do banco (Meu Pluggy) usados para conferir, nunca para criar dinheiro sozinhos.
+
+### Adicionado
+- **Saldo do banco × saldo do Nexo:** por conta vinculada, com a diferença e um ajuste neutro em um toque (não vira receita nem gasto).
+- **"Dados do banco até…":** última movimentação recebida de cada banco, no app e para o assistente; aviso quando o dia ainda não chegou (o Open Finance atualiza uma vez por dia).
+- **Limite real do cartão** vindo do banco, com alerta perto do limite.
+- **Resumo do dia:** "como foi meu dia?" no assistente (`get_daily_digest`) e o dia anterior no início.
+- **Vencimento que o caixa não cobre:** aviso antes da data com opções reais, incluindo quanto dá para resgatar até lá (D+2 úteis em ações/FIIs/ETFs, D+0 em renda fixa, feriados de mercado).
+- **Navegação:** Hoje · Extrato · Orçamento · Contas · Mais (investimentos em Mais) e **"Mês em revisão"**.
+
+### Corrigido
+- Frescor do banco calculado pela movimentação mais recente: a data do espelho do Meu Pluggy fica parada na criação.
+
+### Servidor
+- Migrations `202610210006` e `202610230001` aplicadas; `nexo-mcp` e `pluggy-sync` republicados em 23/10.
+
+## [1.11.0] - 2026-10-23
+Evolução guiada pela sessão de conciliação de outubro (`docs/PLAN.md`). Apostas ficaram fora por decisão do dono.
+
+### Corrigido
+- **Fatura do cartão:** compra feita no dia do fechamento ("melhor dia de compra") entra na fatura seguinte, como no banco. As chaves de pagamento continuam as mesmas. Cenário real: outubro R$ 420,92, novembro R$ 213,59, total R$ 634,51.
+- **Transferências sem categoria de gasto:** as novas nascem sem categoria; as antigas aparecem como "Transferência" (e ajustes como "Ajuste de saldo") em listas, exportação e assistente, sem reescrever dados.
+- **Orçamento criado no meio do mês:** conta a partir da criação, com limite proporcional; os meses seguintes são cheios.
+
+### Adicionado
+- **"Para revisar":** conciliação automática das sugestões do banco (vincula ao lançamento existente, separa estorno, reserva, rendimento pequeno e Pix entre contas próprias; "Na dúvida" com "É o mesmo"; ações em lote com desfazer; regra "sempre usar esta categoria").
+- **"Quanto posso gastar"** no início: por dia e no mês (renda fixa − contas fixas − pendentes − metas − gasto variável).
+- **Ritmo do mês** só com gasto variável e linha pontilhada do ritmo ideal.
+- **Renda fixa × extra** no mês.
+- **Alertas de cobrança:** recorrente com valor diferente do previsto e cobrança repetida em poucos dias.
+- **"Não vou renovar":** lembrete para cancelar antes da próxima cobrança.
+- **Assistente (MCP):** faturas dos cartões (`get_card_invoices`), recusa clara quando o app instalado não conhece o pedido, tempo de espera no status e prévia antes de ignorar sugestões em lote. O app informa ao servidor o que sabe fazer.
+
+### Ficou para depois
+- Despesa dividida com reembolso abatendo o orçamento.
+- `billId` da Pluggy como fonte da verdade da fatura e webhooks em vez de leitura periódica.
+- Processar pedidos do assistente com o celular em segundo plano.
+- Rollover e orçamento Flex; navegação Hoje · Transações · Orçamento · Cartões · Mais; mês em revisão; onboarding guiado.
+
 ## [1.1.0] - 2026-08-10
 ### Added
 - Floating Material 3 Navigation Bar: Modern floating pill navigation bar (`extendBody: true`) with circular active tab selection indicator (`CircleBorder()`), 24px icon-only destinations (`alwaysHide` labels), and 48px horizontal margins.

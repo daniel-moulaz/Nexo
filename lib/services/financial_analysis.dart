@@ -32,8 +32,19 @@ class AnalysisFilter {
 class FinancialAnalysis {
   final List<AppTransaction> realized = [], pending = [];
   final Map<String, double> categories = {}, subcategories = {}, accounts = {};
+
+  /// Counted spending per calendar day (same rule as [expense]).
+  final Map<DateTime, double> dailyExpense = {};
+
+  /// Same, without recurring bills: the spending the person steers day by day.
+  final Map<DateTime, double> dailyVariable = {};
   double income = 0, expense = 0, refunds = 0, pendingExpense = 0;
   double extraordinary = 0, recurring = 0, transfers = 0;
+
+  /// Income from recurring items (salary, grant): the base of the month.
+  /// The rest (odd jobs, sales) is extra and should not be planned on.
+  double fixedIncome = 0;
+  double get extraIncome => income - fixedIncome;
   double get normal => expense - extraordinary;
   double get variable => expense - recurring;
   double get result => income + refunds - expense;
@@ -70,17 +81,28 @@ class FinancialAnalysis {
       }
       if (t.type == 'income') {
         income += value;
+        if (m.source == 'recurring' || t.id.startsWith('recurring:')) {
+          fixedIncome += value;
+        }
         continue;
       }
       if (t.type != 'expense') continue;
       expense += value;
+      dailyExpense.update(
+          DateTime(t.date.year, t.date.month, t.date.day), (v) => v + value,
+          ifAbsent: () => value);
       categories.update(t.categoryId, (v) => v + value, ifAbsent: () => value);
       subcategories.update(m.subcategory, (v) => v + value,
           ifAbsent: () => value);
       accounts.update(t.accountId, (v) => v + value, ifAbsent: () => value);
       if (m.expenseClass == 'extraordinary') extraordinary += value;
-      if (m.source == 'recurring' || t.id.startsWith('recurring:'))
+      if (m.source == 'recurring' || t.id.startsWith('recurring:')) {
         recurring += value;
+      } else {
+        dailyVariable.update(
+            DateTime(t.date.year, t.date.month, t.date.day), (v) => v + value,
+            ifAbsent: () => value);
+      }
     }
   }
   double? changeFrom(FinancialAnalysis previous) => previous.expense == 0
