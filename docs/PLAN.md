@@ -8,14 +8,14 @@ de bets). O resto segue em fases, cada uma com testes e commit próprio.
 
 | Fase | Situação |
 |---|---|
-| 1 Fundação | Feita (`413b637`): regra do fechamento, transferências sem categoria, renda fixa × extra. |
-| 2 Conciliação | Feita (`6cbd78c`): `reconciliation.dart`, `inbox_reconciler.dart`, caixa "Para revisar". |
-| 3 MCP | Feita (`191faec`); migration `202610210006` aplicada e `nexo-mcp` republicado em 23/10. |
-| 4 Orçamento vivo | Feita (`746eaae`): quanto posso gastar, ritmo ideal, orçamento proporcional. Rollover e Flex ficaram. |
-| 5 Recorrentes | Parcial (`539cbc7`): alertas de valor/duplicidade, "não vou renovar". Despesa dividida ficou. |
-| 6 Navegação | Feita (`ff73716`): Hoje · Extrato · Orçamento · Contas · Mais e "Mês em revisão". Onboarding ficou. |
+| 1 Fundação | Feita (`0dda9a6`): regra do fechamento, transferências sem categoria, renda fixa × extra. |
+| 2 Conciliação | Feita (`00f319d`): `reconciliation.dart`, `inbox_reconciler.dart`, caixa "Para revisar". |
+| 3 MCP | Feita (`3a26acf`); migration `202610210006` aplicada e `nexo-mcp` republicado em 23/10. |
+| 4 Orçamento vivo | Feita (`a92bee3`): quanto posso gastar, ritmo ideal, orçamento proporcional. Rollover e Flex ficaram. |
+| 5 Recorrentes | Parcial (`a7f47f1`): alertas de valor/duplicidade, "não vou renovar". Despesa dividida ficou. |
+| 6 Navegação | Feita (`66693e5`): Hoje · Extrato · Orçamento · Contas · Mais e "Mês em revisão". Onboarding ficou. |
 | 7 Extras | Não iniciada. |
-| Open Finance (1.12.0) | Saldo do banco × Nexo com ajuste neutro (`51e5156`), "dados do banco até…" (`ac68528`, `cadab59`), limite real do cartão (`c843eaa`), resumo do dia (`b471a66`), aviso de vencimento sem caixa com quanto dá para levantar (`90459d4`). Contagem de `/bills` no `pluggy-sync` (`e3cb3ca`) antes da fatura oficial. |
+| Open Finance (1.12.0) | Saldo do banco × Nexo com ajuste neutro (`05a8e19`), "dados do banco até…" (`4ea1136`, `47c0e49`), limite real do cartão (`6dffe7d`), resumo do dia (`81e1057`), aviso de vencimento sem caixa com quanto dá para levantar (`6264e94`). Contagem de `/bills` no `pluggy-sync` (`3e9dc67`) antes da fatura oficial. |
 
 ## Diagnóstico da arquitetura atual
 
