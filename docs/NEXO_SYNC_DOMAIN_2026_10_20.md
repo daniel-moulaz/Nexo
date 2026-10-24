@@ -6,7 +6,7 @@ Branch `codex/nexo-investments`. Versão **1.6.6+27**, schema SQLite **25** (sem
 
 ## O que mudou
 
-### 1. Laboratório publicado e transporte endurecido (`7be004c`)
+### 1. Laboratório publicado e transporte endurecido (`c52bf10`)
 
 Os arquivos que estavam só locais foram versionados: `lib/sync/supabase_sync_transport.dart`, `supabase/migrations/202610160001_sync_lab.sql`, `supabase/tests/sync_lab_smoke.sql`, `tool/validate_sync_sql.mjs`.
 
@@ -19,7 +19,7 @@ O transporte agora classifica o corpo de erro do PostgREST por uma lista fechada
 
 `test/supabase_sync_transport_test.dart` (14 testes, `MockClient`, sem rede): sessão ausente/anon/service_role não gera requisição; payload, hash e cabeçalhos exatos; 401/403/JWT expirado; 429/5xx/timeout/erro de rede com fechamento do cliente; redirecionamento recusado (token não sai do host); resposta gigante ou não JSON; recibo adulterado ou de outra operação; conflito incompleto; lacuna de cursor; limite de página.
 
-### 2. Toda gravação financeira é uma operação de domínio nomeada (`f09258b`)
+### 2. Toda gravação financeira é uma operação de domínio nomeada (`a411a2c`)
 
 `ledgerTransaction(db, 'tipo', corpo)` substitui `db.transaction` em todos os caminhos que gravam dados do usuário: `AppProvider`, helpers do `DBHelper`, `LoanLedger`, novo `LendedLedger`, `InvestmentRepository`, metadados, regras de importação, faturas, normalização de inicialização, importação GreenStash e restore.
 
@@ -55,18 +55,18 @@ Tabelas sincronizáveis: contas, categorias, lançamentos, metadados, pagamentos
 
 Mudança perceptível para o usuário: **excluir um registro em aberto de dinheiro emprestado vinculado a uma conta agora devolve o valor à conta** (e o desfazer volta a debitar). Antes o débito permanecia.
 
-### 4. Correção da suíte em checkout limpo (`d56fd91`)
+### 4. Correção da suíte em checkout limpo (`0273ae1`)
 
 O branch publicado tinha **27 testes falhando num checkout limpo** desde que `validateBackup` passou a rejeitar backups incompletos: o ajuste do `setUp` existia só na pasta local. Publicado apenas esse ajuste.
 
-Também publicada em commit próprio a extração já integrada de `TransactionMetadata` para `lib/models/` (`6695d91`, movimento idêntico).
+Também publicada em commit próprio a extração já integrada de `TransactionMetadata` para `lib/models/` (`c596f5e`, movimento idêntico).
 
 ## Evidências
 
 | Verificação | Resultado |
 |---|---|
 | Pasta integrada (inclui mudanças locais anteriores) | `flutter analyze` sem problemas; **309/309 testes** |
-| Worktree limpa no commit `d56fd91` (sem arquivos locais) | analyze limpo; **298/298 testes** |
+| Worktree limpa no commit `0273ae1` (sem arquivos locais) | analyze limpo; **298/298 testes** |
 | Mesmo checkout limpo antes deste lote (`8fff22a`) | 27 falhas — corrigidas |
 | Laboratório PostgreSQL/WASM | **22/22** (`node tool/validate_sync_sql.mjs`) |
 | Novos testes | 14 transporte, 9 captura/replay/convergência, 7 dinheiro emprestado |
@@ -101,7 +101,7 @@ Compilar não prova o comportamento no aparelho: a validação é a suíte acima
 
 Depende do usuário depois disso: aplicar a migration v2 no projeto `nexo-sync`, configurar login (e-mail/OTP), testar com dois usuários sintéticos por HTTP e, só então, decidir conscientemente o primeiro envio do acervo real.
 
-## Atualização: lote S2 executado no mesmo dia (`a8b6a1a`)
+## Atualização: lote S2 executado no mesmo dia (`e2ada77`)
 
 Os cinco itens acima foram implementados e testados **localmente, com dados sintéticos**. O app continua sem sincronizar: nada chama o motor fora dos testes e a migration v2 não foi aplicada em nenhum projeto remoto.
 
