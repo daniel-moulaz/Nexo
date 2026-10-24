@@ -1,5 +1,7 @@
 # Open Finance — proposta futura
 
+> **Atualização 24/10/2026:** o Open Finance foi implementado pelo **Meu Pluggy** (gratuito para uso pessoal, só leitura): sugestões em "Para revisar", saldo do banco × Nexo, limite real e fatura oficial do cartão. Ver [APIS_EXPLORACAO.md](APIS_EXPLORACAO.md) e [PLAN.md](PLAN.md). O texto abaixo é a proposta original.
+
 Não implementado nesta rodada. O Nexo funciona localmente e não pede senha bancária.
 
 O [Banco Central](https://www.bcb.gov.br/meubc/faqs/s/open-finance) informa que compartilhamento exige consentimento e identifica instituições participantes. Acesso real requer avaliar parceiro participante, contrato, custos, segurança e requisitos regulatórios; não basta chamar uma API pública do celular.

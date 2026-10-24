@@ -1,5 +1,7 @@
 # Expensy — Codebase Audit: UI/UX, Dead Code, Performance & Bugs
 
+> **Documento herdado do Expensy (antes do Nexo).** Descreve o código original; muitos pontos já foram resolvidos ou deixaram de existir. Estado atual: [README](../../README.md) e [docs/PLAN.md](../PLAN.md).
+
 > **Method:** This audit was produced by extracting and reading the actual uploaded source (`expensy.zip`), not by trusting `CLAUDE.md`/`AI_INSTRUCTIONS.md` claims — those files note their own history of drift, and this pass found *new* drift even against the more recent `AI_INSTRUCTIONS.md` (DB is v20, confirmed correct; several "known issues" have grown worse than documented, and some fixes claimed in prior planning conversations are not actually in this codebase snapshot).
 >
 > Nothing in this document has been implemented — it's an analysis only. Severity tags: 🔴 Critical · 🟠 High · 🟡 Medium · 🟢 Low/Polish.

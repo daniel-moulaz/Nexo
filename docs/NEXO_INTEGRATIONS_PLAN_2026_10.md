@@ -1,5 +1,7 @@
 # Integrações: Claude (MCP), Pluggy, ChatGPT e fechamento semanal — plano (20/10/2026)
 
+> **Atualização 24/10/2026:** este plano foi implementado. Claude (MCP) e Pluggy estão publicados e em uso desde 21/10; o estado atual está em [PLAN.md](PLAN.md) e no [CHANGELOG](../CHANGELOG.md). O texto abaixo é o registro da decisão.
+
 Documento de decisão, **não de funcionalidade pronta**. Nada aqui está implementado além da fronteira de domínio descrita em [NEXO_SYNC_DOMAIN_2026_10_20.md](NEXO_SYNC_DOMAIN_2026_10_20.md).
 
 ## Fatos verificados em 20/10/2026

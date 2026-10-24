@@ -55,6 +55,17 @@ Evolução guiada pela sessão de conciliação de outubro (`docs/PLAN.md`). Apo
 - Processar pedidos do assistente com o celular em segundo plano.
 - Rollover e orçamento Flex; navegação Hoje · Transações · Orçamento · Cartões · Mais; mês em revisão; onboarding guiado.
 
+## 1.2 a 1.10 — resumo (setembro e outubro de 2026)
+Versões do Nexo antes deste registro detalhado; os detalhes estão nos documentos de cada rodada e no histórico de commits.
+
+- **1.3:** previsão por período (hoje, 7, 15, 30 dias, fim do mês), regras locais para categorizar importações, busca combinada e CSV ([roadmap](docs/NEXO_ROADMAP.md)).
+- **1.5:** Home analítica, análises com filtros e fechamento mensal ([NEXO_EVOLUTION_2026](docs/NEXO_EVOLUTION_2026.md)); Windows nativo 1.5.1 ([NEXO_DESKTOP](docs/NEXO_DESKTOP.md)); Home 1.5.4 ([NEXO_HOME_2026_10](docs/NEXO_HOME_2026_10.md)).
+- **1.6:** investimentos ([NEXO_INVESTMENTS](docs/NEXO_INVESTMENTS.md)); 1.6.8 ativa a sincronização real entre celular e PC; 1.6.9 traz o Open Finance (Meu Pluggy) para o app.
+- **1.7:** conector do Claude (1.7.0, leitura) e pedidos de lançar, corrigir e apagar gravados pelo app (1.7.1).
+- **1.8:** nova Home.
+- **1.9:** extrato por dia, cartões com visual de cartão, calendário de gastos e assinaturas.
+- **1.10:** planejamento com limite diário e ritmo, comparação da carteira com o CDI, resumo da semana, formulário rápido e o assistente fazendo tudo o que o app faz.
+
 ## [1.1.0] - 2026-08-10
 ### Added
 - Floating Material 3 Navigation Bar: Modern floating pill navigation bar (`extendBody: true`) with circular active tab selection indicator (`CircleBorder()`), 24px icon-only destinations (`alwaysHide` labels), and 48px horizontal margins.

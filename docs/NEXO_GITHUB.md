@@ -32,3 +32,9 @@ O remoto adicional `nexo` aponta para o novo repositório; `origin` e `upstream`
 README em português, duas capturas sintéticas da Home, código commitado, testes e documentação. `android/local.properties` deixou de ser rastreado na versão atual, mas continua no computador para compilar. Histórico anterior público não foi reescrito.
 
 Banco pessoal, backups, exportações, logs, APKs, keystores e credenciais não devem entrar em novos commits. O `.gitignore` protege esses padrões. A licença original permanece intacta.
+
+## Atualização — 24/10/2026
+
+- O trabalho de 20 a 23/10 (1.6.8 a 1.12.2) foi integrado ao `main` pelo [pull request #1](https://github.com/daniel-moulaz/Nexo/pull/1), sem conflitos.
+- A pedido do dono, antes do merge as mensagens dos 93 commits do ramo `codex/nexo-investments` foram reescritas para remover a linha de coautoria automática ("Co-Authored-By"); conteúdo, autor e datas foram conferidos commit a commit e ficaram iguais. Foi o único envio forçado, feito com `--force-with-lease`, só nesse ramo; o `main` não foi reescrito. As referências a commits nos documentos foram atualizadas.
+- Daqui em diante: trabalhar em ramo, abrir pull request para o `main`, sem linhas de coautoria automática.

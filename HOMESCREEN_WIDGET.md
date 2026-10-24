@@ -1,5 +1,7 @@
 # Expensy — Home Screen Widgets Architecture
 
+> Documento do Expensy, mantido porque o código dos widgets Android o cita. Os nomes "Expensy" abaixo correspondem ao Nexo atual.
+
 This document describes the native Android App Widget integration for Expensy.
 
 ---
