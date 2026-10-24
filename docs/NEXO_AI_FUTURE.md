@@ -1,5 +1,7 @@
 # Inteligência no Nexo
 
+> **Atualização 24/10/2026:** existe um assistente opcional (Claude, via conector MCP próprio) que consulta e pede lançamentos; quem grava é o app, com as mesmas regras. Ver [NEXO_INTEGRATIONS_PLAN_2026_10.md](NEXO_INTEGRATIONS_PLAN_2026_10.md).
+
 A [Nimtech](https://minhasfinancas.app.br/) apresenta consultas, lançamentos e comparações por Mia; o [Copilot](https://www.copilot.money/faq) documenta categorização e assistência conversacional. Isso demonstra uma direção de produto, não uma necessidade de enviar os dados do Nexo para terceiros.
 
 Agora: regras determinísticas locais e editáveis. Uma regra sugere categoria/subcategoria na prévia, nunca movimenta dinheiro. Previsões usam lançamentos e agendas cadastrados; não são aconselhamento de investimento nem promessa de saldo.

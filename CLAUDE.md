@@ -6,7 +6,7 @@ Leia também `docs/NEXO_HANDOFF_WORKTREE_2026_10_20.md`: há mudanças locais le
 
 Atualização de 20/10/2026 (Claude, lote S1 de sync): leia também **`docs/NEXO_SYNC_DOMAIN_2026_10_20.md`** (fronteira de domínio, captura atômica, correções de dinheiro, evidências) e `docs/NEXO_INTEGRATIONS_PLAN_2026_10.md` (MCP/Pluggy/ChatGPT: plano, não funcionalidade). Toda gravação de dados do usuário deve usar `ledgerTransaction`/`DBHelper.operation`; `test/ledger_capture_test.dart` falha se um caminho escapar.
 
-Estado de referência em 20/10/2026 (fim do dia):
+Estado de referência em 24/10/2026 (`main` = `codex/nexo-investments` após o PR #1):
 
 - Pasta: `C:\Users\danie\projetos\Expensy`. Nome público: **Nexo**.
 - Branch: `codex/nexo-investments`. Commitados: sync S1 (domínio) e S2 (motor + protocolo 2), fechamento semanal e as mudanças locais antigas, publicadas em lotes revisados.

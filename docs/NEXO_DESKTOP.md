@@ -1,5 +1,7 @@
 # Nexo Windows nativo — 1.5.1+17
 
+> **Atualização 24/10/2026:** o Windows está em uso diário na mesma versão do Android (1.12.2), sincronizado com o celular. A homologação manual completa continua pendente.
+
 30/09/2026 · branch `feat/nexo-windows-native`, baseada em `d0ed659`.
 
 O runner Windows x64 funciona com SQLite local e plugins nativos. A contabilidade, o restore e o PIN foram exercitados em processos Release isolados. **A homologação manual completa ainda está pendente**, principalmente formulários, seletores de arquivos e janela. Evidências e limites: [NEXO_WINDOWS_VALIDATION.md](NEXO_WINDOWS_VALIDATION.md).
