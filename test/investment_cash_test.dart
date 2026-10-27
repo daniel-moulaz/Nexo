@@ -168,9 +168,16 @@ void main() {
     await db.execute(
         'ALTER TABLE investment_operations DROP COLUMN cash_account_id');
     await db.execute('ALTER TABLE investments DROP COLUMN archived');
+    await db.execute('ALTER TABLE categories DROP COLUMN envelope');
     await db.setVersion(24);
     await DBHelper.close();
-    expect(await (await DBHelper.database).getVersion(), 25);
+    expect(await (await DBHelper.database).getVersion(), 26);
+    // v26 adds the kind of spending to categories.
+    expect(
+        (await (await DBHelper.database)
+                .rawQuery('PRAGMA table_info(categories)'))
+            .any((c) => c['name'] == 'envelope'),
+        isTrue);
     expect(await balance(), 1000);
     expect((await repo.load()).single.operations.single.cashAccountId, isNull);
     expect((await repo.load()).single.investment.archived, false);
