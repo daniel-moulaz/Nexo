@@ -1,5 +1,18 @@
 # Changelog
 
+## [1.12.7] - 2026-10-27
+### Marca
+- **Ícone novo:** N dourado de traço único sobre fundo quase preto, no Android (adaptativo, com versão monocromática para ícones temáticos do Android 13+) e no Windows. Fonte em `docs/brand/nexo-mark.svg`.
+### Visual
+- **Passe pelo app inteiro:** as catorze telas que ainda tinham barra colorida (Categorias, Bens, Dinheiro emprestado, Empréstimos, Desejos, Patrimônio, Estatísticas, Análise anual, Transferir, Conversor, Backup, Configurações, pessoa e empréstimo) passam ao cabeçalho plano com título pesado.
+- **"+" no cabeçalho** em Categorias, Bens, Dinheiro emprestado, Empréstimos e Desejos; nenhum botão flutuante cobre as listas.
+- Resumos de Bens e Dinheiro emprestado em cartões planos com pills; cartão "Fluxo dos próximos 30 dias" sem tingimento; "Mês em revisão" plano com o seletor de mês no topo.
+- Títulos e headlines vêm do tema (pesados, números tabulares); as linhas de chips da Agenda e dos Recorrentes rolam na horizontal em vez de quebrar; estados vazios com margem e texto centralizado; o formulário de importação respira entre o botão de regras e o campo da conta.
+### Hoje
+- **"Revisar"** (cobranças para conferir) no lugar de "Transferir" nas ações rápidas; transferências continuam em Contas e no "+".
+### Segurança
+- **Biometria abre sozinha:** ao abrir o app bloqueado, o pedido de digital/senha do aparelho aparece sem toque; o botão continua para repetir.
+
 ## [1.12.6] - 2026-10-27
 ### Visual
 - **Extrato:** seletor de mês no topo (com "todos os meses"); a busca vale para todos os meses e diz isso; entradas, saídas e resultado do que está na tela em três pills planos.

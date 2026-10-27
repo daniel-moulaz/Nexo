@@ -1,7 +1,7 @@
 name: expensy
 description: Nexo — controle financeiro pessoal brasileiro com dados locais.
 publish_to: 'none'
-version: 1.12.6+43
+version: 1.12.7+44
 
 environment:
   sdk: '>=3.3.0 <4.0.0'
@@ -59,6 +59,7 @@ flutter_launcher_icons:
   image_path: "assets/brand/icon.png"
   min_sdk_android: 24
   adaptive_icon_background: "#0B1118"
+  adaptive_icon_foreground_inset: 0
   adaptive_icon_foreground: "assets/brand/foreground.png"
   adaptive_icon_monochrome: "assets/brand/monochrome.png"
   windows:
