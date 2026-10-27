@@ -257,102 +257,187 @@ class _FinanceHomeScreenState extends State<FinanceHomeScreen>
                   app.budgetProgressRaw(b).compareTo(app.budgetProgressRaw(a)));
 
             final hidden = app.settings.hideBalance;
-            final dark = Theme.of(context).brightness == Brightness.dark;
-            final hero = NexoCard(
-                gradient: LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    // Rich at night (deep container tone), crisp by day.
-                    colors: dark
-                        ? [
-                            Color.lerp(cs.primaryContainer, cs.primary, .22)!,
-                            Color.lerp(cs.primaryContainer, Colors.black, .45)!,
-                          ]
-                        : [
-                            cs.primary,
-                            Color.lerp(cs.primary, Colors.black, .38)!,
-                          ]),
-                padding: const EdgeInsets.fromLTRB(20, 12, 12, 18),
-                child: DefaultTextStyle.merge(
-                    style: const TextStyle(color: Colors.white),
-                    child: IconTheme.merge(
-                        data: const IconThemeData(color: Colors.white),
-                        child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Row(children: [
-                                const Icon(
-                                    Icons.account_balance_wallet_outlined,
-                                    size: 18),
-                                const SizedBox(width: 8),
-                                const Expanded(
-                                    child: Text('Saldo em contas · hoje',
-                                        style: TextStyle(
-                                            fontWeight: FontWeight.w600))),
-                                IconButton(
-                                    tooltip: 'Entender os valores',
-                                    visualDensity: VisualDensity.compact,
-                                    onPressed: _explain,
-                                    icon: const Icon(Icons.info_outline,
-                                        size: 20)),
-                              ]),
-                              Padding(
-                                  padding: const EdgeInsets.only(right: 8),
-                                  child: InkWell(
-                                      onTap: () =>
-                                          _open(const AccountsScreen()),
-                                      child: _Amount(money(commitment.cash),
-                                          size: 38))),
-                              const SizedBox(height: 14),
-                              LayoutBuilder(builder: (context, c) {
-                                final pills = [
-                                  NexoStatPill(
-                                      onDark: true,
-                                      label: 'Cartões',
-                                      value: money(commitment.outstanding),
-                                      onTap: () =>
-                                          _open(const DebtOverviewScreen())),
-                                  NexoStatPill(
-                                      onDark: true,
-                                      label: 'Após cartões',
-                                      value: money(commitment.available),
-                                      onTap: _explain),
-                                  NexoStatPill(
-                                      onDark: true,
-                                      label: 'Previsão',
-                                      value: monthEnd == null
-                                          ? '—'
-                                          : money(monthEnd.projected),
-                                      onTap: () => _open(
-                                          const AgendaScreen(initialDays: -1))),
-                                ];
-                                if (c.maxWidth /
-                                        MediaQuery.textScalerOf(context)
-                                            .scale(1) <
-                                    300) {
-                                  return Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.stretch,
-                                      children: [
-                                        for (final p in pills)
-                                          Padding(
-                                              padding: const EdgeInsets.only(
-                                                  bottom: 8, right: 8),
-                                              child: p)
-                                      ]);
-                                }
-                                return Padding(
-                                    padding: const EdgeInsets.only(right: 8),
-                                    child: Row(children: [
-                                      for (var i = 0;
-                                          i < pills.length;
-                                          i++) ...[
-                                        if (i > 0) const SizedBox(width: 8),
-                                        Expanded(child: pills[i]),
-                                      ]
-                                    ]));
-                              }),
-                            ]))));
+            // Month in view: one control on top, as in the period selectors
+            // of the reference apps; the cards below follow it.
+            final monthBar = Row(children: [
+              Expanded(
+                  child: Text(currentMonth ? 'Mês atual' : 'Mês escolhido',
+                      style: Theme.of(context)
+                          .textTheme
+                          .labelLarge
+                          ?.copyWith(color: cs.onSurfaceVariant))),
+              Flexible(
+                  child: FittedBox(
+                      fit: BoxFit.scaleDown,
+                      alignment: Alignment.centerRight,
+                      child: Material(
+                        color: cs.surfaceContainerLow,
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(14),
+                            side: BorderSide(
+                                color:
+                                    cs.outlineVariant.withValues(alpha: .6))),
+                        child: Row(mainAxisSize: MainAxisSize.min, children: [
+                          IconButton(
+                              tooltip: 'Mês anterior',
+                              visualDensity: VisualDensity.compact,
+                              onPressed: () => setState(() => _month =
+                                  DateTime(month.year, month.month - 1)),
+                              icon: const Icon(Icons.chevron_left, size: 20)),
+                          Text(ptMonthYear(month),
+                              style:
+                                  const TextStyle(fontWeight: FontWeight.w800)),
+                          IconButton(
+                              tooltip: 'Próximo mês',
+                              visualDensity: VisualDensity.compact,
+                              onPressed: currentMonth
+                                  ? null
+                                  : () => setState(() => _month =
+                                      DateTime(month.year, month.month + 1)),
+                              icon: const Icon(Icons.chevron_right, size: 20)),
+                        ]),
+                      ))),
+            ]);
+            final result = data.income - data.expense;
+            final kpis = Column(children: [
+              Row(children: [
+                Expanded(
+                    child: _Kpi(
+                        label: 'Saldo em contas',
+                        value: money(commitment.cash),
+                        hint: 'hoje',
+                        big: true,
+                        onInfo: _explain,
+                        onTap: () => _open(const AccountsScreen()))),
+                const SizedBox(width: 10),
+                Expanded(
+                    child: _Kpi(
+                        label: 'Resultado',
+                        value: money(result),
+                        hint: currentMonth ? 'até hoje' : 'no mês',
+                        big: true,
+                        color: hidden
+                            ? null
+                            : result >= 0
+                                ? NexoTones.income(context)
+                                : NexoTones.expense(context),
+                        onTap: () =>
+                            _open(AnalysisScreen(initialMonth: month)))),
+              ]),
+              const SizedBox(height: 10),
+              Row(children: [
+                Expanded(
+                    child: _Kpi(
+                        label: 'Receitas',
+                        value: money(data.income),
+                        color: hidden ? null : NexoTones.income(context),
+                        onTap: () =>
+                            _open(AnalysisScreen(initialMonth: month)))),
+                const SizedBox(width: 10),
+                Expanded(
+                    child: _Kpi(
+                        label: 'Despesas',
+                        value: money(data.expense),
+                        color: hidden ? null : NexoTones.expense(context),
+                        onTap: () =>
+                            _open(AnalysisScreen(initialMonth: month)))),
+              ]),
+              const SizedBox(height: 10),
+              NexoCard(
+                padding: const EdgeInsets.all(8),
+                child: Row(children: [
+                  Expanded(
+                      child: NexoStatPill(
+                          label: 'Cartões',
+                          value: money(commitment.outstanding),
+                          onTap: () => _open(const DebtOverviewScreen()))),
+                  const SizedBox(width: 8),
+                  Expanded(
+                      child: NexoStatPill(
+                          label: 'Após cartões',
+                          value: money(commitment.available),
+                          onTap: _explain)),
+                  const SizedBox(width: 8),
+                  Expanded(
+                      child: NexoStatPill(
+                          label: 'Previsão',
+                          value: monthEnd == null
+                              ? '—'
+                              : money(monthEnd.projected),
+                          onTap: () =>
+                              _open(const AgendaScreen(initialDays: -1)))),
+                ]),
+              ),
+            ]);
+            // "Saídas por dia": the month as a calendar, like the reference
+            // apps, with the three numbers that summarize it.
+            final daysWithSpending =
+                data.dailyExpense.values.where((v) => v > 0).length;
+            final daysElapsed = currentMonth
+                ? today.day
+                : DateTime(month.year, month.month + 1, 0).day;
+            final biggestDay = data.dailyExpense.entries.isEmpty
+                ? null
+                : data.dailyExpense.entries
+                    .reduce((a, b) => b.value > a.value ? b : a);
+            final dailyCard = _Panel(
+                child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                  NexoSectionTitle('Saídas por dia',
+                      subtitle:
+                          '${ptMonthYear(month)} · quanto saiu em cada dia'),
+                  const SizedBox(height: 6),
+                  Text.rich(TextSpan(children: [
+                    TextSpan(
+                        text: money(data.expense),
+                        style: TextStyle(
+                            fontSize: 24,
+                            fontWeight: FontWeight.w800,
+                            fontFeatures: NexoTones.figures)),
+                    TextSpan(
+                        text: '  em $daysWithSpending dia(s) com saída',
+                        style: Theme.of(context).textTheme.bodySmall),
+                  ])),
+                  const SizedBox(height: 10),
+                  if (hidden)
+                    const Text('Calendário oculto no modo privado.')
+                  else
+                    NexoSpendingCalendar(
+                        month: month,
+                        daily: data.dailyExpense,
+                        compact: (v) =>
+                            NumberFormat.compact(locale: 'pt_BR').format(v),
+                        onDay: (day) => openAnalysisEntries(
+                            context,
+                            data.realized.where((t) =>
+                                t.type == 'expense' &&
+                                DateTime(t.date.year, t.date.month,
+                                        t.date.day) ==
+                                    day),
+                            'Gastos de ${DateFormat('d/MM', 'pt_BR').format(day)}')),
+                  const SizedBox(height: 10),
+                  Row(children: [
+                    Expanded(
+                        child: NexoStatPill(
+                            label: 'Média por dia',
+                            value: money(daysElapsed == 0
+                                ? 0
+                                : data.expense / daysElapsed))),
+                    const SizedBox(width: 8),
+                    Expanded(
+                        child: NexoStatPill(
+                            label: 'Maior dia',
+                            value: biggestDay == null || biggestDay.value <= 0
+                                ? '—'
+                                : '${biggestDay.key.day} · ${money(biggestDay.value)}')),
+                    const SizedBox(width: 8),
+                    Expanded(
+                        child: NexoStatPill(
+                            label: 'Dias sem saída',
+                            value: '${daysElapsed - daysWithSpending}')),
+                  ]),
+                ]));
 
             final daysInMonth = DateTime(month.year, month.month + 1, 0).day;
             final previousMonth = DateTime(month.year, month.month - 1);
@@ -404,28 +489,8 @@ class _FinanceHomeScreenState extends State<FinanceHomeScreen>
                 child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                  Row(children: [
-                    IconButton(
-                        tooltip: 'Mês anterior',
-                        onPressed: () => setState(() =>
-                            _month = DateTime(month.year, month.month - 1)),
-                        icon: const Icon(Icons.chevron_left)),
-                    Expanded(
-                        child: Column(children: [
-                      Text(ptMonthYear(month),
-                          style: const TextStyle(
-                              fontWeight: FontWeight.w800, fontSize: 16)),
-                      Text(currentMonth ? 'Até hoje' : 'Mês completo',
-                          style: Theme.of(context).textTheme.labelSmall),
-                    ])),
-                    IconButton(
-                        tooltip: 'Próximo mês',
-                        onPressed: currentMonth
-                            ? null
-                            : () => setState(() =>
-                                _month = DateTime(month.year, month.month + 1)),
-                        icon: const Icon(Icons.chevron_right)),
-                  ]),
+                  NexoSectionTitle('Resumo de ${ptMonthYear(month)}',
+                      subtitle: currentMonth ? 'Até hoje' : 'Mês completo'),
                   const SizedBox(height: 6),
                   LayoutBuilder(builder: (context, c) {
                     final flows = Column(
@@ -1220,7 +1285,7 @@ class _FinanceHomeScreenState extends State<FinanceHomeScreen>
                                             crossAxisAlignment:
                                                 CrossAxisAlignment.stretch,
                                             children: [
-                                              hero,
+                                              kpis,
                                               const SizedBox(height: 12),
                                               spendCard,
                                               const SizedBox(height: 12),
@@ -1239,13 +1304,17 @@ class _FinanceHomeScreenState extends State<FinanceHomeScreen>
                                             children: [
                                               weekCard,
                                               gap,
+                                              dailyCard,
+                                              gap,
                                               netWorthCard,
                                               gap,
                                               budgetCard
                                             ]),
                                         cards),
                                   ] else ...[
-                                    hero,
+                                    monthBar,
+                                    const SizedBox(height: 8),
+                                    kpis,
                                     const SizedBox(height: 12),
                                     spendCard,
                                     const SizedBox(height: 12),
@@ -1254,6 +1323,8 @@ class _FinanceHomeScreenState extends State<FinanceHomeScreen>
                                     links,
                                     const SizedBox(height: 12),
                                     if (attention != null) ...[attention, gap],
+                                    dailyCard,
+                                    gap,
                                     monthCard,
                                     gap,
                                     weekCard,
@@ -1620,6 +1691,70 @@ String _changeText(
           ? 'a menos'
           : 'de variação';
   return '$pct% $dir em gastos $period$oneOffs';
+}
+
+/// One number with its label, flat, as the four on top of the home.
+class _Kpi extends StatelessWidget {
+  const _Kpi(
+      {required this.label,
+      required this.value,
+      this.hint,
+      this.color,
+      this.big = false,
+      this.onTap,
+      this.onInfo});
+  final String label, value;
+  final String? hint;
+  final Color? color;
+  final bool big;
+  final VoidCallback? onTap, onInfo;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final cs = theme.colorScheme;
+    return NexoCard(
+      padding: const EdgeInsets.fromLTRB(14, 10, 8, 12),
+      child: InkWell(
+        onTap: onTap,
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Row(children: [
+            Expanded(
+                child: Text(label,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: theme.textTheme.labelLarge
+                        ?.copyWith(color: cs.onSurfaceVariant))),
+            if (onInfo != null)
+              IconButton(
+                  tooltip: 'Entender os valores',
+                  visualDensity: VisualDensity.compact,
+                  padding: EdgeInsets.zero,
+                  constraints:
+                      const BoxConstraints(minWidth: 28, minHeight: 28),
+                  onPressed: onInfo,
+                  icon: Icon(Icons.info_outline,
+                      size: 18, color: cs.onSurfaceVariant))
+            else
+              const SizedBox(height: 28),
+          ]),
+          FittedBox(
+              fit: BoxFit.scaleDown,
+              alignment: Alignment.centerLeft,
+              child: Text(value,
+                  style: TextStyle(
+                      fontSize: big ? 24 : 20,
+                      fontWeight: FontWeight.w900,
+                      color: color,
+                      fontFeatures: NexoTones.figures))),
+          if (hint != null)
+            Text(hint!,
+                style: theme.textTheme.labelSmall
+                    ?.copyWith(color: cs.onSurfaceVariant)),
+        ]),
+      ),
+    );
+  }
 }
 
 class _Panel extends StatelessWidget {

@@ -27,7 +27,7 @@ class NexoCard extends StatelessWidget {
   const NexoCard(
       {super.key,
       required this.child,
-      this.padding = const EdgeInsets.all(18),
+      this.padding = const EdgeInsets.all(16),
       this.gradient,
       this.color});
   final Widget child;
@@ -38,10 +38,11 @@ class NexoCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
+    // Flat: a hairline border does the separating, not a tinted fill.
     final shape = RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(24),
+        borderRadius: BorderRadius.circular(20),
         side: gradient == null
-            ? BorderSide(color: cs.outlineVariant.withValues(alpha: .35))
+            ? BorderSide(color: cs.outlineVariant.withValues(alpha: .6))
             : BorderSide.none);
     final content = Padding(padding: padding, child: child);
     // A Material surface keeps ink splashes of lists and buttons visible.
