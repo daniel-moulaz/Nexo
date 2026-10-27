@@ -270,33 +270,14 @@ class _FinanceHomeScreenState extends State<FinanceHomeScreen>
                   child: FittedBox(
                       fit: BoxFit.scaleDown,
                       alignment: Alignment.centerRight,
-                      child: Material(
-                        color: cs.surfaceContainerLow,
-                        shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(14),
-                            side: BorderSide(
-                                color:
-                                    cs.outlineVariant.withValues(alpha: .6))),
-                        child: Row(mainAxisSize: MainAxisSize.min, children: [
-                          IconButton(
-                              tooltip: 'Mês anterior',
-                              visualDensity: VisualDensity.compact,
-                              onPressed: () => setState(() => _month =
-                                  DateTime(month.year, month.month - 1)),
-                              icon: const Icon(Icons.chevron_left, size: 20)),
-                          Text(ptMonthYear(month),
-                              style:
-                                  const TextStyle(fontWeight: FontWeight.w800)),
-                          IconButton(
-                              tooltip: 'Próximo mês',
-                              visualDensity: VisualDensity.compact,
-                              onPressed: currentMonth
-                                  ? null
-                                  : () => setState(() => _month =
-                                      DateTime(month.year, month.month + 1)),
-                              icon: const Icon(Icons.chevron_right, size: 20)),
-                        ]),
-                      ))),
+                      child: NexoMonthPill(
+                          label: ptMonthYear(month),
+                          onPrevious: () => setState(() =>
+                              _month = DateTime(month.year, month.month - 1)),
+                          onNext: currentMonth
+                              ? null
+                              : () => setState(() => _month =
+                                  DateTime(month.year, month.month + 1))))),
             ]);
             final result = data.income - data.expense;
             final kpis = Column(children: [
@@ -638,7 +619,13 @@ class _FinanceHomeScreenState extends State<FinanceHomeScreen>
                   Icons.south_west,
                   const AddTransactionScreen(initialType: 'income')
                 ),
-                ('Transferir', Icons.swap_horiz, const TransferScreen()),
+                // Transfers live in Contas e cartões; the bank's suggestions
+                // are what asks for a daily look.
+                (
+                  'Revisar',
+                  Icons.inbox_outlined,
+                  const NotificationInboxScreen()
+                ),
                 (
                   'Dívidas',
                   Icons.account_balance_outlined,

@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="ic_launcher_background">#FFFFFF</color>
+    <color name="ic_launcher_background">#0B1118</color>
     <color name="budget_primary">#6750A4</color>
     <color name="budget_orange">#E65100</color>
     <color name="budget_red">#B3261E</color>

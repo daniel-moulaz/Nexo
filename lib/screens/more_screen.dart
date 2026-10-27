@@ -237,6 +237,8 @@ class MoreScreen extends StatelessWidget {
             }.entries)
               Card(
                   child: ExpansionTile(
+                      shape: const Border(),
+                      collapsedShape: const Border(),
                       title: Text(group.key),
                       initiallyExpanded: group.key == 'Planejar e acompanhar',
                       children: [

@@ -197,12 +197,8 @@ class _BudgetSummary extends StatelessWidget {
             createdAt: now),
         spent,
         now);
-    final onHero = cs.onPrimaryContainer;
+    final onHero = cs.onSurface;
     return NexoCard(
-      gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [cs.primaryContainer, cs.tertiaryContainer]),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Text(limit > 0 ? 'Orçado no mês' : 'Orçamentos da semana',
             style: TextStyle(
@@ -418,12 +414,8 @@ class _GoalsSummary extends StatelessWidget {
     final saved = open.fold(
         0.0, (s, g) => s + app.convertToMain(g.currentAmount, g.currency));
     final done = app.savingsGoals.length - open.length;
-    final onHero = cs.onPrimaryContainer;
+    final onHero = cs.onSurface;
     return NexoCard(
-      gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [cs.primaryContainer, cs.tertiaryContainer]),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Text('Total guardado',
             style: TextStyle(

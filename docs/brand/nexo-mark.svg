@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Nexo mark: gold N on near-black. Source of assets/brand/*. -->
+<svg width="512" height="512" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
+  <rect width="512" height="512" rx="112" fill="#0B1118"/>
+  <path d="M160 352 V168 l192 184 V168" fill="none" stroke="#F2C14E" stroke-width="46" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="352" cy="168" r="34" fill="#F2C14E"/>
+</svg>
