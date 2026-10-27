@@ -190,13 +190,17 @@ class AppCategory {
   /// The order in which the category should appear in lists.
   int orderIndex;
 
+  /// Kind of spending (envelope id, see services/envelopes.dart) or null.
+  String? envelope;
+
   AppCategory(
       {required this.id,
       required this.name,
       required this.type,
       required this.colorValue,
       this.iconCodePoint = 0,
-      this.orderIndex = 0});
+      this.orderIndex = 0,
+      this.envelope});
 
   Map<String, dynamic> toMap() => {
         'id': id,
@@ -205,6 +209,7 @@ class AppCategory {
         'color_value': colorValue,
         'icon_code_point': iconCodePoint,
         'order_index': orderIndex,
+        'envelope': envelope,
       };
 
   static AppCategory fromMap(Map<String, dynamic> m) => AppCategory(
@@ -214,20 +219,24 @@ class AppCategory {
         colorValue: (m['color_value'] as int?) ?? 0xFF6750A4,
         iconCodePoint: m['icon_code_point'] as int? ?? 0,
         orderIndex: m['order_index'] as int? ?? 0,
+        envelope: m['envelope'] as String?,
       );
 
   AppCategory copyWith(
           {String? name,
           int? colorValue,
           int? iconCodePoint,
-          int? orderIndex}) =>
+          int? orderIndex,
+          String? envelope,
+          bool clearEnvelope = false}) =>
       AppCategory(
           id: id,
           name: name ?? this.name,
           type: type,
           colorValue: colorValue ?? this.colorValue,
           iconCodePoint: iconCodePoint ?? this.iconCodePoint,
-          orderIndex: orderIndex ?? this.orderIndex);
+          orderIndex: orderIndex ?? this.orderIndex,
+          envelope: clearEnvelope ? null : envelope ?? this.envelope);
 }
 
 class AppTransaction {
@@ -327,11 +336,12 @@ class RecurringPayment {
       hasSkippedInstallments ? skippedOccurrences.first.date : nextDate;
   double get nextActionAmount =>
       hasSkippedInstallments ? skippedOccurrences.first.amount : amount;
-  bool get canComplete => hasSkippedInstallments ||
-      endDate == null || !nextDate.isAfter(endDate!);
+  bool get canComplete =>
+      hasSkippedInstallments || endDate == null || !nextDate.isAfter(endDate!);
   int get progressPayments => canSkip ? completedOccurrences : paidPayments;
   double get progress => totalPayments == null || totalPayments == 0
-      ? 0 : (progressPayments / totalPayments!).clamp(0.0, 1.0);
+      ? 0
+      : (progressPayments / totalPayments!).clamp(0.0, 1.0);
   int installmentNumberAt(DateTime date) => _countPayments(startDate, date);
   bool reminderEnabled;
 
@@ -455,7 +465,8 @@ class RecurringPayment {
       };
 
   static RecurringPayment fromMap(Map<String, dynamic> m,
-          {List<RecurringHistoryEntry> skippedOccurrences = const []}) => RecurringPayment(
+          {List<RecurringHistoryEntry> skippedOccurrences = const []}) =>
+      RecurringPayment(
         id: (m['id'] as String?) ?? '',
         name: (m['name'] as String?) ?? '',
         accountId: (m['account_id'] as String?) ?? '',
@@ -473,7 +484,9 @@ class RecurringPayment {
         endDate: m['end_date'] != null
             ? DateTime.parse(m['end_date'] as String)
             : null,
-        paidPayments: ((m['paid_payments'] as int? ?? 0) - skippedOccurrences.length).clamp(0, 2147483647),
+        paidPayments:
+            ((m['paid_payments'] as int? ?? 0) - skippedOccurrences.length)
+                .clamp(0, 2147483647),
         skippedOccurrences: List.unmodifiable(
             [...skippedOccurrences]..sort((a, b) => a.date.compareTo(b.date))),
         reminderEnabled: (m['reminder_enabled'] as int? ?? 0) == 1,
@@ -1007,17 +1020,19 @@ class SavingsContribution {
 class Loan {
   final String id;
   String name;
-  double principal;          // original loan amount
+  double principal; // original loan amount
   String currency;
   DateTime startDate;
-  DateTime endDate;           // duration is derived: endDate - startDate
-  double? interestRate;       // annual %, nullable — optional field
-  String? accountId;          // account the loan is tied to (nullable — "not linked")
-  String? transferAccountId;  // account the loan principal is transferred to (nullable)
+  DateTime endDate; // duration is derived: endDate - startDate
+  double? interestRate; // annual %, nullable — optional field
+  String? accountId; // account the loan is tied to (nullable — "not linked")
+  String?
+      transferAccountId; // account the loan principal is transferred to (nullable)
   bool reminderEnabled;
-  int reminderDay;            // day-of-month (1-31) the payment is due
-  String reminderTime;        // 'HH:mm'
-  bool isSettled;             // manually markable "paid off" / or auto when totalPaid >= totalOwed
+  int reminderDay; // day-of-month (1-31) the payment is due
+  String reminderTime; // 'HH:mm'
+  bool
+      isSettled; // manually markable "paid off" / or auto when totalPaid >= totalOwed
   String notes;
   DateTime createdAt;
 
@@ -1042,8 +1057,8 @@ class Loan {
   /// Whole months between start and end, minimum 1, so a same-month
   /// loan never divides by zero.
   int get durationMonths {
-    final months =
-        (endDate.year - startDate.year) * 12 + (endDate.month - startDate.month);
+    final months = (endDate.year - startDate.year) * 12 +
+        (endDate.month - startDate.month);
     return months < 1 ? 1 : months;
   }
 
@@ -1117,16 +1132,20 @@ class Loan {
     bool clearInterestRate = false,
     bool clearAccount = false,
     bool clearTransferAccount = false,
-  }) => Loan(
+  }) =>
+      Loan(
         id: id,
         name: name ?? this.name,
         principal: principal ?? this.principal,
         currency: currency ?? this.currency,
         startDate: startDate ?? this.startDate,
         endDate: endDate ?? this.endDate,
-        interestRate: clearInterestRate ? null : (interestRate ?? this.interestRate),
+        interestRate:
+            clearInterestRate ? null : (interestRate ?? this.interestRate),
         accountId: clearAccount ? null : (accountId ?? this.accountId),
-        transferAccountId: clearTransferAccount ? null : (transferAccountId ?? this.transferAccountId),
+        transferAccountId: clearTransferAccount
+            ? null
+            : (transferAccountId ?? this.transferAccountId),
         reminderEnabled: reminderEnabled ?? this.reminderEnabled,
         reminderDay: reminderDay ?? this.reminderDay,
         reminderTime: reminderTime ?? this.reminderTime,
@@ -1142,7 +1161,7 @@ class LoanPayment {
   final DateTime date;
   final double amount;
   final String currency;
-  final String? accountId;   // account debited for this payment, if any
+  final String? accountId; // account debited for this payment, if any
   final String notes;
 
   const LoanPayment({

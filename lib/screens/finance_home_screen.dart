@@ -727,16 +727,25 @@ class _FinanceHomeScreenState extends State<FinanceHomeScreen>
                     .take(3)) {
               final first = alert.charges.first;
               insights.add(NexoInsight(
-                  icon: alert.kind == 'duplicate'
-                      ? Icons.content_copy_outlined
-                      : Icons.price_change_outlined,
+                  icon: switch (alert.kind) {
+                    'duplicate' => Icons.content_copy_outlined,
+                    'review' => Icons.policy_outlined,
+                    _ => Icons.price_change_outlined,
+                  },
                   color: NexoTones.warning(context),
-                  title: alert.kind == 'duplicate'
-                      ? 'Cobrança repetida: ${first.description}'
-                      : '${alert.recurring!.name} veio ${money(alert.charges.last.amount)}',
-                  subtitle: alert.kind == 'duplicate'
-                      ? '${alert.charges.length}× ${money(first.amount)} em ${alert.charges.last.date.difference(first.date).inDays + 1} dia(s). Confira se é isso mesmo.'
-                      : 'Previsto: ${money(alert.expected!)}. Mudou o preço?',
+                  title: switch (alert.kind) {
+                    'duplicate' => 'Cobrança repetida: ${first.description}',
+                    'review' => 'Cobrança para conferir: ${first.description}',
+                    _ =>
+                      '${alert.recurring!.name} veio ${money(alert.charges.last.amount)}',
+                  },
+                  subtitle: switch (alert.kind) {
+                    'duplicate' =>
+                      '${alert.charges.length}× ${money(first.amount)} em ${alert.charges.last.date.difference(first.date).inDays + 1} dia(s). Confira se é isso mesmo.',
+                    'review' =>
+                      '${money(first.amount)} em ${ptShortDate(first.date)}. Parece tarifa, seguro ou serviço do banco. Você contratou?',
+                    _ => 'Previsto: ${money(alert.expected!)}. Mudou o preço?',
+                  },
                   action: 'Ver',
                   onTap: () => _chargeAlert(app, alert)));
             }
@@ -1280,9 +1289,11 @@ class _FinanceHomeScreenState extends State<FinanceHomeScreen>
     final action = await showDialog<String>(
         context: context,
         builder: (c) => AlertDialog(
-                title: Text(alert.kind == 'duplicate'
-                    ? 'Cobrança repetida'
-                    : 'Valor diferente do previsto'),
+                title: Text(switch (alert.kind) {
+                  'duplicate' => 'Cobrança repetida',
+                  'review' => 'Cobrança para conferir',
+                  _ => 'Valor diferente do previsto',
+                }),
                 content: Column(mainAxisSize: MainAxisSize.min, children: [
                   for (final t in alert.charges)
                     ListTile(
@@ -1294,11 +1305,15 @@ class _FinanceHomeScreenState extends State<FinanceHomeScreen>
                   if (alert.kind == 'price')
                     Text(
                         'A recorrente prevê ${analysisMoney(app, alert.expected!)}.'),
+                  if (alert.kind == 'review')
+                    const Text(
+                        'O aviso olha só a descrição. Se você não reconhece, peça ao banco o detalhamento; o Nexo não contesta nem cancela nada.'),
                 ]),
                 actions: [
                   TextButton(
                       onPressed: () => Navigator.pop(c, 'ok'),
-                      child: const Text('Está certo')),
+                      child: Text(
+                          alert.kind == 'review' ? 'Reconheço' : 'Está certo')),
                   if (alert.kind == 'price')
                     TextButton(
                         onPressed: () => Navigator.pop(c, 'update'),
@@ -1313,9 +1328,11 @@ class _FinanceHomeScreenState extends State<FinanceHomeScreen>
       openAnalysisEntries(
           context,
           alert.charges,
-          alert.kind == 'duplicate'
-              ? 'Cobrança repetida'
-              : alert.recurring!.name);
+          switch (alert.kind) {
+            'duplicate' => 'Cobrança repetida',
+            'review' => 'Cobrança para conferir',
+            _ => alert.recurring!.name,
+          });
       return;
     }
     if (action == 'update') {

@@ -4,12 +4,18 @@ import 'finance_rules.dart';
 import 'reconciliation.dart' show normalizeMerchant, textSimilarity;
 
 /// A charge that deserves a look: a subscription that came with a different
-/// price, or the same charge more than once in a few days.
+/// price, the same charge more than once in a few days, or a description
+/// that reads like a fee, insurance or service the person may not have asked
+/// for. The alert only points; it never concludes nor changes anything.
 class ChargeAlert {
   const ChargeAlert.priceChange(this.recurring, this.charges, this.expected)
       : kind = 'price';
   const ChargeAlert.duplicate(this.charges)
       : kind = 'duplicate',
+        recurring = null,
+        expected = null;
+  const ChargeAlert.review(this.charges)
+      : kind = 'review',
         recurring = null,
         expected = null;
   final String kind;
@@ -78,9 +84,47 @@ List<ChargeAlert> chargeAlerts({
       out.add(ChargeAlert.priceChange(r, charges, r.amount));
     }
   }
+  // Fees, insurance and services banks add on their own (as the AUVP app
+  // does for Itaú, here for any bank), by the description only.
+  for (final t in recent) {
+    if (!looksLikeBankCharge(t.description)) continue;
+    if (!dismissed.contains('review:${t.id}')) out.add(ChargeAlert.review([t]));
+  }
   return out;
 }
 
-String chargeAlertKey(ChargeAlert a) => a.kind == 'duplicate'
-    ? 'dup:${a.charges.map((g) => g.id).join(',')}'
-    : 'price:${a.recurring!.id}:${a.charges.last.id}';
+const _bankChargeWords = [
+  'seguro',
+  'tarifa',
+  'anuidade',
+  'proteção',
+  'protecao',
+  'capitalização',
+  'capitalizacao',
+  'assistência',
+  'assistencia',
+  'cesta de serviços',
+  'cesta de servicos',
+  'pacote de serviços',
+  'pacote de servicos',
+  'encargo',
+  'multa',
+  'juros',
+  'iof',
+  'manutenção de conta',
+  'manutencao de conta',
+  'título de capitalização',
+  'titulo de capitalizacao',
+];
+
+/// A description that reads like something the bank charged on its own.
+bool looksLikeBankCharge(String description) {
+  final d = description.toLowerCase();
+  return _bankChargeWords.any(d.contains);
+}
+
+String chargeAlertKey(ChargeAlert a) => switch (a.kind) {
+      'duplicate' => 'dup:${a.charges.map((g) => g.id).join(',')}',
+      'review' => 'review:${a.charges.first.id}',
+      _ => 'price:${a.recurring!.id}:${a.charges.last.id}',
+    };

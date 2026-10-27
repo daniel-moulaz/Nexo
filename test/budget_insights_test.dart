@@ -231,6 +231,13 @@ void main() {
       expect(tester.takeException(), isNull);
       expect(find.text('Orçado no mês'), findsOneWidget);
       expect(find.textContaining('do limite'), findsWidgets);
+      // Suggestions sit below the envelopes and the budgets: scroll to them.
+      await tester.scrollUntilVisible(find.text('Lazer e passeios'), 300,
+          scrollable: find
+              .descendant(
+                  of: find.byType(ListView).first,
+                  matching: find.byType(Scrollable))
+              .first);
       expect(find.text('Lazer e passeios'), findsOneWidget);
       expect(find.textContaining('Limitar a'), findsOneWidget);
 

@@ -239,7 +239,7 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
     return result == true;
   }
 
-  Future<void> _save() async {
+  Future<void> _save({bool another = false}) async {
     if (_saving) return;
     setState(() => _submitted = true);
     final amount = parseMoney(_amountCtrl.text);
@@ -333,6 +333,20 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
     }
 
     if (!mounted) return;
+    if (another) {
+      // Same account, category and date; only what changes per entry clears.
+      _amountCtrl.clear();
+      _descriptionCtrl.clear();
+      _noteCtrl.clear();
+      setState(() {
+        _submitted = false;
+        _saving = false;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text('Lançamento salvo. Pode registrar o próximo.'),
+          duration: Duration(seconds: 2)));
+      return;
+    }
     Navigator.pop(context);
   }
 
@@ -441,24 +455,41 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
               ),
               bottomNavigationBar: SafeArea(
                 minimum: EdgeInsets.fromLTRB(horizontal, 8, horizontal, 12),
-                child: FilledButton.icon(
-                  onPressed: _saving ? null : _save,
-                  icon: _saving
-                      ? const SizedBox(
-                          width: 18,
-                          height: 18,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        )
-                      : const Icon(Icons.check_rounded),
-                  label:
-                      Text(isEdit ? 'Salvar alterações' : 'Salvar lançamento'),
-                  style: FilledButton.styleFrom(
-                    minimumSize: const Size.fromHeight(54),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(18),
+                child: Column(mainAxisSize: MainAxisSize.min, children: [
+                  if (!isEdit)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 8),
+                      child: OutlinedButton.icon(
+                        onPressed: _saving ? null : () => _save(another: true),
+                        icon: const Icon(Icons.playlist_add_rounded),
+                        label: const Text('Salvar e adicionar outro'),
+                        style: OutlinedButton.styleFrom(
+                          minimumSize: const Size.fromHeight(48),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(18),
+                          ),
+                        ),
+                      ),
+                    ),
+                  FilledButton.icon(
+                    onPressed: _saving ? null : _save,
+                    icon: _saving
+                        ? const SizedBox(
+                            width: 18,
+                            height: 18,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : const Icon(Icons.check_rounded),
+                    label: Text(
+                        isEdit ? 'Salvar alterações' : 'Salvar lançamento'),
+                    style: FilledButton.styleFrom(
+                      minimumSize: const Size.fromHeight(54),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(18),
+                      ),
                     ),
                   ),
-                ),
+                ]),
               ),
               body: ListView(
                 padding: EdgeInsets.fromLTRB(horizontal, 8, horizontal, 32),
