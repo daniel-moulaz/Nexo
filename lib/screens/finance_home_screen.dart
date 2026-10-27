@@ -1411,13 +1411,17 @@ class _SpendableBodyState extends State<_SpendableBody> {
             onPressed: () => setState(() => _open = !_open),
             child: Text(_open ? 'Ocultar conta' : 'Como chego nisso')),
       ]),
-      if (over)
-        Text('Passou ${money(-s.free)} do que a renda fixa cobre neste mês',
+      if (over) ...[
+        // Said once, without shouting: the number and what is left out.
+        Text('Renda fixa do mês já usada',
             style: TextStyle(
-                color: NexoTones.expense(context),
+                color: NexoTones.warning(context),
                 fontWeight: FontWeight.w800,
-                fontSize: 16))
-      else ...[
+                fontSize: 16)),
+        Text(
+            '${money(-s.free)} além dela, com ${s.daysLeft} dia(s) pela frente. Renda extra e reserva não entram nesta conta.',
+            style: small),
+      ] else ...[
         FittedBox(
             fit: BoxFit.scaleDown,
             alignment: Alignment.centerLeft,

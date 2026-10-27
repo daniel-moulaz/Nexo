@@ -123,18 +123,22 @@ class EnvelopesView extends StatelessWidget {
           action: 'Ajustar',
           onAction: onAdjust),
       const SizedBox(height: 8),
-      GridView.count(
-        crossAxisCount: 2,
+      GridView.builder(
         shrinkWrap: true,
         physics: const NeverScrollableScrollPhysics(),
-        mainAxisSpacing: 10,
-        crossAxisSpacing: 10,
-        childAspectRatio: 1.35,
-        children: [
-          for (final line in report.lines)
-            _EnvelopeTile(
-                line: line, money: money, hidden: hidden, onTap: onClassify),
-        ],
+        // A fixed height that follows the text size: no empty space, no
+        // overflow on narrow phones.
+        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: 2,
+            mainAxisSpacing: 10,
+            crossAxisSpacing: 10,
+            mainAxisExtent: 112 * MediaQuery.textScalerOf(context).scale(1)),
+        itemCount: report.lines.length,
+        itemBuilder: (context, i) => _EnvelopeTile(
+            line: report.lines[i],
+            money: money,
+            hidden: hidden,
+            onTap: onClassify),
       ),
       if (report.unassigned.isNotEmpty)
         Padding(

@@ -26,6 +26,7 @@ import 'financial_checkup_screen.dart';
 import 'accounts_screen.dart';
 import 'month_review_screen.dart';
 import 'balance_check_screen.dart';
+import 'help_screen.dart';
 
 class MoreScreen extends StatelessWidget {
   const MoreScreen({super.key});
@@ -58,6 +59,12 @@ class MoreScreen extends StatelessWidget {
           sub: 'Saldos, cartões, faturas e vínculo com o banco',
           color: Color(0xFF00897B),
           screen: AccountsScreen()),
+      const _Item(
+          icon: Icons.help_outline_rounded,
+          label: 'Ajuda',
+          sub: 'Como o Nexo conta o dinheiro e o que cada parte faz',
+          color: Color(0xFF00695C),
+          screen: HelpScreen()),
       const _Item(
           icon: Icons.fact_check_outlined,
           label: 'Conferir com o banco',
@@ -217,7 +224,8 @@ class MoreScreen extends StatelessWidget {
                 'Categorias',
                 'Backup e restauração',
                 'Sincronizar dispositivos',
-                'Configurações'
+                'Configurações',
+                'Ajuda',
               ],
               'Outros controles': [
                 'Empréstimos',
