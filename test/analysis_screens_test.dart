@@ -265,13 +265,13 @@ void main() {
     await chord(LogicalKeyboardKey.keyF);
     await tester.enterText(find.byType(TextField), 'Compra demonstrativa 8');
     await tester.pumpAndSettle();
-    expect(find.text('1 resultado'), findsOneWidget);
+    expect(find.text('1 lançamento'), findsOneWidget);
     expect(find.byType(DataTable), findsOneWidget);
     await tester.tap(find.widgetWithText(ListTile, 'Hoje'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Transações'));
     await tester.pumpAndSettle();
-    expect(find.text('1 resultado'), findsOneWidget);
+    expect(find.text('1 lançamento'), findsOneWidget);
     for (final size in [
       const Size(960, 640),
       const Size(1366, 768),
@@ -295,7 +295,7 @@ void main() {
     await tester.sendKeyEvent(LogicalKeyboardKey.escape);
     await tester.pumpAndSettle();
     expect(find.byType(AddTransactionScreen), findsNothing);
-    expect(find.text('1 resultado'), findsOneWidget);
+    expect(find.text('1 lançamento'), findsOneWidget);
     await tester.pumpWidget(const SizedBox());
     security.ready = false;
     debugDefaultTargetPlatformOverride = null;

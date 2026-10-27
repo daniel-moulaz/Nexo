@@ -637,6 +637,41 @@ class _NexoInsightCarouselState extends State<NexoInsightCarousel> {
   }
 }
 
+/// Month selector pill ("‹ Outubro 2026 ›"), the same on every tab.
+class NexoMonthPill extends StatelessWidget {
+  const NexoMonthPill(
+      {super.key,
+      required this.label,
+      required this.onPrevious,
+      required this.onNext});
+  final String label;
+  final VoidCallback? onPrevious, onNext;
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return Material(
+      color: cs.surfaceContainerLow,
+      shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(14),
+          side: BorderSide(color: cs.outlineVariant.withValues(alpha: .6))),
+      child: Row(mainAxisSize: MainAxisSize.min, children: [
+        IconButton(
+            tooltip: 'Mês anterior',
+            visualDensity: VisualDensity.compact,
+            onPressed: onPrevious,
+            icon: const Icon(Icons.chevron_left, size: 20)),
+        Text(label, style: const TextStyle(fontWeight: FontWeight.w800)),
+        IconButton(
+            tooltip: 'Próximo mês',
+            visualDensity: VisualDensity.compact,
+            onPressed: onNext,
+            icon: const Icon(Icons.chevron_right, size: 20)),
+      ]),
+    );
+  }
+}
+
 /// Thin rounded progress bar that turns warm as it fills.
 class NexoProgress extends StatelessWidget {
   const NexoProgress(

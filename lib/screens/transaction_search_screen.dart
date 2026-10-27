@@ -29,6 +29,9 @@ class _TransactionSearchScreenState extends State<TransactionSearchScreen> {
   final _controller = TextEditingController();
   String _query = '';
   String _type = 'all';
+
+  /// Month in view; null shows every month. A search always looks at all.
+  DateTime? _month = DateTime(DateTime.now().year, DateTime.now().month);
   TransactionFilter _filter = TransactionFilter();
 
   Future<void> _filters() async {
@@ -218,7 +221,14 @@ class _TransactionSearchScreenState extends State<TransactionSearchScreen> {
       body: Builder(
         builder: (context) {
           final meta = app.transactionMetadata;
+          final searching = _query.trim().isNotEmpty;
+          final month = _month;
           final filtered = transactions.where((tx) {
+            if (!searching &&
+                month != null &&
+                (tx.date.year != month.year || tx.date.month != month.month)) {
+              return false;
+            }
             final m = meta[tx.id] ?? TransactionMetadata(transactionId: tx.id);
             if (!TransactionFilter.matchesType(tx, m, _type) ||
                 !_filter.matches(tx, m)) return false;
@@ -259,6 +269,62 @@ class _TransactionSearchScreenState extends State<TransactionSearchScreen> {
                   ),
                 ),
               ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+                child: Row(children: [
+                  Expanded(
+                      child: Text(
+                          searching
+                              ? 'Busca em todos os meses'
+                              : month == null
+                                  ? 'Todos os meses'
+                                  : 'Mês em vista',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: Theme.of(context)
+                              .textTheme
+                              .labelLarge
+                              ?.copyWith(
+                                  color: Theme.of(context)
+                                      .colorScheme
+                                      .onSurfaceVariant))),
+                  Flexible(
+                    child: FittedBox(
+                      fit: BoxFit.scaleDown,
+                      alignment: Alignment.centerRight,
+                      child: Row(mainAxisSize: MainAxisSize.min, children: [
+                        NexoMonthPill(
+                            label: month == null ? 'Todos' : ptMonthYear(month),
+                            onPrevious: () => setState(() => _month = month ==
+                                    null
+                                ? DateTime(
+                                    DateTime.now().year, DateTime.now().month)
+                                : DateTime(month.year, month.month - 1)),
+                            onNext: month == null ||
+                                    (month.year == DateTime.now().year &&
+                                        month.month == DateTime.now().month)
+                                ? null
+                                : () => setState(() => _month =
+                                    DateTime(month.year, month.month + 1))),
+                        const SizedBox(width: 6),
+                        IconButton(
+                            tooltip: month == null
+                                ? 'Só este mês'
+                                : 'Todos os meses',
+                            visualDensity: VisualDensity.compact,
+                            onPressed: () => setState(() => _month = month ==
+                                    null
+                                ? DateTime(
+                                    DateTime.now().year, DateTime.now().month)
+                                : null),
+                            icon: Icon(month == null
+                                ? Icons.calendar_month_outlined
+                                : Icons.all_inclusive)),
+                      ]),
+                    ),
+                  ),
+                ]),
+              ),
               SingleChildScrollView(
                 scrollDirection: Axis.horizontal,
                 padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -292,15 +358,18 @@ class _TransactionSearchScreenState extends State<TransactionSearchScreen> {
               ),
               Padding(
                 padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
-                child: Row(children: [
-                  Text(
-                    '${filtered.length} resultado${filtered.length == 1 ? '' : 's'}',
-                    style: Theme.of(context).textTheme.labelMedium,
-                  ),
-                  const SizedBox(width: 12),
-                  if (filtered.isNotEmpty)
-                    Expanded(child: _Totals(app: app, rows: filtered)),
-                ]),
+                child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        '${filtered.length} lançamento${filtered.length == 1 ? '' : 's'}',
+                        style: Theme.of(context).textTheme.labelMedium,
+                      ),
+                      if (filtered.isNotEmpty) ...[
+                        const SizedBox(height: 6),
+                        _Totals(app: app, rows: filtered),
+                      ],
+                    ]),
               ),
               Expanded(
                 child: filtered.isEmpty
@@ -386,23 +455,33 @@ class _Totals extends StatelessWidget {
       if (t.type == 'income') income += _main(app, t);
       if (t.type == 'expense') expense += _main(app, t);
     }
-    final style = Theme.of(context).textTheme.labelMedium;
-    return FittedBox(
-        fit: BoxFit.scaleDown,
-        alignment: Alignment.centerRight,
-        child: Text.rich(TextSpan(style: style, children: [
-          TextSpan(
-              text: '+${formatAmount(income, app.settings.currency)}',
-              style: TextStyle(
-                  color: NexoTones.income(context),
-                  fontWeight: FontWeight.w800)),
-          const TextSpan(text: '   '),
-          TextSpan(
-              text: '−${formatAmount(expense, app.settings.currency)}',
-              style: TextStyle(
-                  color: NexoTones.expense(context),
-                  fontWeight: FontWeight.w800)),
-        ])));
+    final result = income - expense;
+    String money(double v) => formatAmount(v, app.settings.currency);
+    // Three flat pills: what came in, what went out, what was left.
+    return NexoCard(
+      padding: const EdgeInsets.all(8),
+      child: Row(children: [
+        Expanded(
+            child: NexoStatPill(
+                label: 'Entradas',
+                value: money(income),
+                valueColor: NexoTones.income(context))),
+        const SizedBox(width: 8),
+        Expanded(
+            child: NexoStatPill(
+                label: 'Saídas',
+                value: money(expense),
+                valueColor: NexoTones.expense(context))),
+        const SizedBox(width: 8),
+        Expanded(
+            child: NexoStatPill(
+                label: 'Resultado',
+                value: money(result),
+                valueColor: result >= 0
+                    ? NexoTones.income(context)
+                    : NexoTones.expense(context))),
+      ]),
+    );
   }
 }
 
