@@ -40,7 +40,6 @@ import 'recurring_screen.dart';
 import 'transaction_search_screen.dart';
 import 'transfer_screen.dart';
 import 'statement_import_screen.dart';
-import 'investments_screen.dart';
 import 'month_review_screen.dart';
 import 'net_worth_screen.dart';
 
@@ -192,18 +191,17 @@ class _FinanceHomeScreenState extends State<FinanceHomeScreen>
           toolbarHeight: math.max(
               kToolbarHeight, 42 * MediaQuery.textScalerOf(context).scale(1)),
           automaticallyImplyLeading: false,
-          title: const Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('Nexo',
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(fontWeight: FontWeight.w900)),
-                Text('Seu dinheiro, com clareza',
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(fontSize: 12)),
-              ]),
+          title:
+              Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text(_greeting(app.settings.userName),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(fontWeight: FontWeight.w900)),
+            Text(_todayLabel(),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(fontSize: 12)),
+          ]),
           actions: [
             IconButton(
                 tooltip: 'Buscar lançamentos',
@@ -310,21 +308,18 @@ class _FinanceHomeScreenState extends State<FinanceHomeScreen>
                                 final pills = [
                                   NexoStatPill(
                                       onDark: true,
-                                      icon: Icons.credit_card,
-                                      label: 'Cartões em aberto',
+                                      label: 'Cartões',
                                       value: money(commitment.outstanding),
                                       onTap: () =>
                                           _open(const DebtOverviewScreen())),
                                   NexoStatPill(
                                       onDark: true,
-                                      icon: Icons.account_balance_outlined,
                                       label: 'Após cartões',
                                       value: money(commitment.available),
                                       onTap: _explain),
                                   NexoStatPill(
                                       onDark: true,
-                                      icon: Icons.trending_up,
-                                      label: 'Previsão fim do mês',
+                                      label: 'Previsão',
                                       value: monthEnd == null
                                           ? '—'
                                           : money(monthEnd.projected),
@@ -535,9 +530,12 @@ class _FinanceHomeScreenState extends State<FinanceHomeScreen>
                     Padding(
                         padding: const EdgeInsets.only(top: 8),
                         child: Text(
-                            data.changeFrom(previous) == null
-                                ? 'Sem gastos no período anterior para comparar'
-                                : '${data.changeFrom(previous)!.abs().toStringAsFixed(1).replaceAll('.', ',')}% ${data.normal > previous.normal ? 'a mais' : data.normal < previous.normal ? 'a menos' : 'de variação'} em gastos ${currentMonth ? 'até o dia ${today.day}' : 'no mês'}${data.extraordinary > 0 || previous.extraordinary > 0 ? ', sem os pontuais' : ''}',
+                            _changeText(
+                                data,
+                                previous,
+                                currentMonth
+                                    ? 'até o dia ${today.day}'
+                                    : 'no mês'),
                             style: Theme.of(context).textTheme.bodySmall)),
                   if (data.pendingExpense > 0 || data.refunds > 0)
                     Padding(
@@ -771,8 +769,10 @@ class _FinanceHomeScreenState extends State<FinanceHomeScreen>
                   onTap: () => _open(RecurringDetailScreen(
                       recurring: r, fmt: (v) => analysisMoney(app, v)))));
             }
-            final attention =
-                insights.isEmpty ? null : NexoInsightCarousel(items: insights);
+            // The carousel is for what matters now; the rest waits.
+            final attention = insights.isEmpty
+                ? null
+                : NexoInsightCarousel(items: insights.take(4).toList());
 
             final futureCard = _Panel(
                 child: Column(
@@ -1136,27 +1136,35 @@ class _FinanceHomeScreenState extends State<FinanceHomeScreen>
                     }),
                 ]));
 
-            final links = Wrap(spacing: 8, runSpacing: 4, children: [
-              for (final link in <(String, IconData, Widget)>[
-                (
-                  'Análises',
-                  Icons.bar_chart,
-                  AnalysisScreen(initialMonth: month)
-                ),
-                ('Agenda', Icons.event_note, const AgendaScreen()),
-                (
-                  'Revisão de 3 ou 7 dias',
-                  Icons.fact_check_outlined,
-                  const FinancialCheckupScreen()
-                ),
-                ('Investimentos', Icons.show_chart, const InvestmentsScreen()),
-              ])
-                ActionChip(
-                  avatar: Icon(link.$2, size: 18),
-                  label: Text(link.$1),
-                  onPressed: () => _open(link.$3),
-                ),
-            ]);
+            // One row that scrolls: wrapping made three uneven lines.
+            final links = SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                clipBehavior: Clip.none,
+                child: Row(spacing: 8, children: [
+                  for (final link in <(String, IconData, Widget)>[
+                    (
+                      'Análises',
+                      Icons.bar_chart,
+                      AnalysisScreen(initialMonth: month)
+                    ),
+                    ('Agenda', Icons.event_note, const AgendaScreen()),
+                    (
+                      'Revisão de 3 ou 7 dias',
+                      Icons.fact_check_outlined,
+                      const FinancialCheckupScreen()
+                    ),
+                    (
+                      'Contas e cartões',
+                      Icons.account_balance_wallet_outlined,
+                      const AccountsScreen()
+                    ),
+                  ])
+                    ActionChip(
+                      avatar: Icon(link.$2, size: 18),
+                      label: Text(link.$1),
+                      onPressed: () => _open(link.$3),
+                    ),
+                ]));
 
             return LayoutBuilder(builder: (context, constraints) {
               final wide = constraints.maxWidth >= 1050;
@@ -1543,6 +1551,54 @@ class _WeekFact extends StatelessWidget {
                 overflow: TextOverflow.ellipsis,
                 style: const TextStyle(fontSize: 12.5))),
       ]));
+}
+
+/// "Boa tarde, Daniel": the first name, or nothing.
+String _greeting(String userName, {DateTime? now}) {
+  final h = (now ?? DateTime.now()).hour;
+  final part = h < 6
+      ? 'Boa noite'
+      : h < 12
+          ? 'Bom dia'
+          : h < 18
+              ? 'Boa tarde'
+              : 'Boa noite';
+  final first = userName.trim().split(RegExp(r'\s+')).first;
+  return first.isEmpty ? part : '$part, $first';
+}
+
+String _todayLabel({DateTime? now}) {
+  final d = now ?? DateTime.now();
+  final s = DateFormat("EEEE, d 'de' MMMM", 'pt_BR').format(d);
+  return s[0].toUpperCase() + s.substring(1);
+}
+
+/// Change in usual spending against the previous period. The first weeks of
+/// use have almost nothing behind them: a few entries would read as
+/// thousands of percent, so the text says there is no base instead.
+String _changeText(
+    FinancialAnalysis data, FinancialAnalysis previous, String period) {
+  final previousEntries =
+      previous.realized.where((t) => t.type == 'expense').length;
+  final change = data.changeFrom(previous);
+  if (change == null || previousEntries < 3) {
+    return 'Sem base no período anterior para comparar';
+  }
+  final oneOffs = data.extraordinary > 0 || previous.extraordinary > 0
+      ? ', sem os pontuais'
+      : '';
+  if (change.abs() >= 200) {
+    final times =
+        (data.normal / previous.normal).toStringAsFixed(1).replaceAll('.', ',');
+    return '$times× os gastos do período anterior $period$oneOffs';
+  }
+  final pct = change.abs().toStringAsFixed(1).replaceAll('.', ',');
+  final dir = data.normal > previous.normal
+      ? 'a mais'
+      : data.normal < previous.normal
+          ? 'a menos'
+          : 'de variação';
+  return '$pct% $dir em gastos $period$oneOffs';
 }
 
 class _Panel extends StatelessWidget {

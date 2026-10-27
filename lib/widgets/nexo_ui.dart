@@ -135,10 +135,12 @@ class NexoStatPill extends StatelessWidget {
               ],
               Flexible(
                 child: Text(label,
-                    maxLines: 1,
+                    maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
-                        fontSize: 11.5, color: fg.withValues(alpha: .8))),
+                        fontSize: 11.5,
+                        height: 1.15,
+                        color: fg.withValues(alpha: .8))),
               ),
             ]),
             const SizedBox(height: 2),

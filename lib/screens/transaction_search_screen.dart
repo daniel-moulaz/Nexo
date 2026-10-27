@@ -212,7 +212,7 @@ class _TransactionSearchScreenState extends State<TransactionSearchScreen> {
               onPressed: _filters,
               icon: const Icon(Icons.filter_alt_outlined))
         ],
-        title: const Text('Transações',
+        title: const Text('Extrato',
             style: TextStyle(fontWeight: FontWeight.w900)),
       ),
       body: Builder(
@@ -245,7 +245,7 @@ class _TransactionSearchScreenState extends State<TransactionSearchScreen> {
                   autofocus: widget.autofocus,
                   onChanged: (value) => setState(() => _query = value),
                   decoration: InputDecoration(
-                    hintText: 'iFood, internet, Mercado Pago, 25/09...',
+                    hintText: 'Buscar por descrição, valor ou data',
                     prefixIcon: const Icon(Icons.search_rounded),
                     suffixIcon: _query.isEmpty
                         ? null
@@ -259,9 +259,10 @@ class _TransactionSearchScreenState extends State<TransactionSearchScreen> {
                   ),
                 ),
               ),
-              Padding(
+              SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
                 padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: Wrap(
+                child: Row(
                   children: [
                     _TypeChip(
                       label: 'Todos',
@@ -518,7 +519,8 @@ class _DayList extends StatelessWidget {
                   if (account != null) account.name,
                   if (category != null && !neutral) category.name,
                   if ((m?.subcategory ?? '').isNotEmpty) m!.subcategory,
-                  status,
+                  // Paid is the normal case; only the exceptions are said.
+                  if (status != 'Pago' && status != 'Recebido') status,
                 ].join(' · '),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,

@@ -9,6 +9,7 @@ import 'package:expensy/database/db_helper.dart';
 import 'package:expensy/providers/app_provider.dart';
 import 'package:expensy/l10n/app_localizations.dart';
 import 'package:expensy/screens/main_shell.dart';
+import 'package:expensy/screens/accounts_screen.dart';
 import 'package:expensy/screens/investments_screen.dart';
 import 'package:expensy/screens/transaction_search_screen.dart';
 import 'package:expensy/screens/recurring_screen.dart';
@@ -54,7 +55,7 @@ void main() {
       expect(bar.destinations.length, 5);
       expect(bar.labelBehavior, NavigationDestinationLabelBehavior.alwaysShow);
       expect(bar.destinations.map((d) => (d as NavigationDestination).label),
-          ['Hoje', 'Extrato', 'Orçamento', 'Contas', 'Mais']);
+          ['Hoje', 'Extrato', 'Orçamento', 'Investir', 'Mais']);
       await tester.tap(find.text('Orçamento'));
       await tester.pump();
       await tester.runAsync(
@@ -70,17 +71,27 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.text('Planejar e acompanhar'), findsOneWidget);
       expect(find.text('Mês em revisão'), findsOneWidget);
-      await tester.tap(find.text('Investimentos'));
+      await tester.tap(find.text('Contas e cartões'));
+      await tester.pump();
+      await tester.runAsync(
+          () => Future<void>.delayed(const Duration(milliseconds: 180)));
+      await tester.pumpAndSettle();
+      expect(find.byType(AccountsScreen), findsOneWidget);
+      Navigator.of(tester.element(find.byType(AccountsScreen))).pop();
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Recorrentes e assinaturas'));
+      await tester.pumpAndSettle();
+      expect(find.byType(RecurringScreen), findsOneWidget);
+      Navigator.of(tester.element(find.byType(RecurringScreen))).pop();
+      await tester.pumpAndSettle();
+      // Investments have their own tab now.
+      await tester.tap(find.text('Investir'));
       await tester.pump();
       await tester.runAsync(
           () => Future<void>.delayed(const Duration(milliseconds: 180)));
       await tester.pumpAndSettle();
       expect(find.byType(InvestmentsScreen), findsOneWidget);
-      Navigator.of(tester.element(find.byType(InvestmentsScreen))).pop();
-      await tester.pumpAndSettle();
-      await tester.tap(find.text('Recorrentes e assinaturas'));
-      await tester.pumpAndSettle();
-      expect(find.byType(RecurringScreen), findsOneWidget);
+      expect(app.tabIndexNotifier.value, 11);
       expect(tester.takeException(), isNull);
       await tester.pumpWidget(const SizedBox());
     });
