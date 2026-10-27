@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../widgets/nexo_ui.dart';
 import 'package:provider/provider.dart';
 import '../database/db_helper.dart';
 import '../models/models.dart';
@@ -174,7 +175,7 @@ class _RecurringScreenState extends State<RecurringScreen>
       body: ListView(
           padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
           children: [
-            Wrap(spacing: 8, children: [
+            NexoChipRow(children: [
               for (final e in const {
                 'active': 'Em aberto',
                 'future': 'Próximos meses',
@@ -257,7 +258,7 @@ class _RecurringScreenState extends State<RecurringScreen>
                           ]))),
             ],
             if (_view == 'active') ...[
-              Wrap(spacing: 8, children: [
+              NexoChipRow(children: [
                 TextButton.icon(
                     onPressed: () => Navigator.push(
                         context,

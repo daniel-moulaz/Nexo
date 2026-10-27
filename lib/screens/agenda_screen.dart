@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../widgets/nexo_ui.dart';
 import 'package:provider/provider.dart';
 import '../database/db_helper.dart';
 import '../providers/app_provider.dart';
@@ -127,7 +128,7 @@ class _AgendaScreenState extends State<AgendaScreen> {
               return ListView(
                   padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
                   children: [
-                    Wrap(spacing: 8, children: [
+                    NexoChipRow(children: [
                       for (final e in {
                         0: 'Hoje',
                         7: '7 dias',

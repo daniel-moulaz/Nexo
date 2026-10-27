@@ -89,33 +89,23 @@ class _MonthReviewScreenState extends State<MonthReviewScreen> {
         padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
         children: [
           Row(children: [
-            IconButton(
-                tooltip: 'Mês anterior',
-                onPressed: () => setState(
-                    () => _month = DateTime(_month.year, _month.month - 1)),
-                icon: const Icon(Icons.chevron_left)),
             Expanded(
-                child: Text(
-                    '${ptMonthYear(_month)}${isCurrent ? ' (até hoje)' : ''}',
-                    textAlign: TextAlign.center,
+                child: Text(isCurrent ? 'Até hoje' : 'Mês completo',
                     style: Theme.of(context)
                         .textTheme
-                        .titleMedium
-                        ?.copyWith(fontWeight: FontWeight.w800))),
-            IconButton(
-                tooltip: 'Próximo mês',
-                onPressed: canGoNext
+                        .labelLarge
+                        ?.copyWith(color: cs.onSurfaceVariant))),
+            NexoMonthPill(
+                label: ptMonthYear(_month),
+                onPrevious: () => setState(
+                    () => _month = DateTime(_month.year, _month.month - 1)),
+                onNext: canGoNext
                     ? () => setState(
                         () => _month = DateTime(_month.year, _month.month + 1))
-                    : null,
-                icon: const Icon(Icons.chevron_right)),
+                    : null),
           ]),
           const SizedBox(height: 8),
           NexoCard(
-            gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [cs.primaryContainer, cs.tertiaryContainer]),
             child:
                 Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
               Text('Você gastou',

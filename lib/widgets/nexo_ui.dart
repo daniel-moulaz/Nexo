@@ -637,6 +637,20 @@ class _NexoInsightCarouselState extends State<NexoInsightCarousel> {
   }
 }
 
+/// One row of chips that scrolls sideways instead of wrapping into uneven
+/// lines. Same shape as `Wrap(children: [...])`, so it drops in.
+class NexoChipRow extends StatelessWidget {
+  const NexoChipRow({super.key, required this.children, this.spacing = 8});
+  final List<Widget> children;
+  final double spacing;
+
+  @override
+  Widget build(BuildContext context) => SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      clipBehavior: Clip.none,
+      child: Row(spacing: spacing, children: children));
+}
+
 /// Month selector pill ("‹ Outubro 2026 ›"), the same on every tab.
 class NexoMonthPill extends StatelessWidget {
   const NexoMonthPill(

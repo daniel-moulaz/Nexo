@@ -202,7 +202,10 @@ ThemeData _base(ColorScheme cs, String appFont) {
         elevation: 0,
         scrolledUnderElevation: 0,
         backgroundColor: cs.surface,
-        surfaceTintColor: Colors.transparent),
+        surfaceTintColor: Colors.transparent,
+        // Every screen title in the same heavy weight.
+        titleTextStyle: fontTextTheme.titleLarge
+            ?.copyWith(fontWeight: FontWeight.w900, color: cs.onSurface)),
     navigationRailTheme: NavigationRailThemeData(
       backgroundColor: cs.surface,
       indicatorColor: cs.primaryContainer,
