@@ -16,15 +16,38 @@ class _SecurityGateState extends State<SecurityGate>
   final pin = TextEditingController();
   bool away = false, busy = false;
   String? message;
+
+  /// The device prompt opens by itself once per lock; cancelling it leaves
+  /// the PIN field, and the next lock asks again.
+  bool _prompted = false;
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     security.addListener(refresh);
+    WidgetsBinding.instance.addPostFrameCallback((_) => _autoUnlock());
   }
 
   void refresh() {
-    if (mounted) setState(() {});
+    if (!mounted) return;
+    setState(() {});
+    WidgetsBinding.instance.addPostFrameCallback((_) => _autoUnlock());
+  }
+
+  void _autoUnlock() {
+    if (!mounted ||
+        _prompted ||
+        away ||
+        busy ||
+        !PlatformCapabilities.deviceAuthentication ||
+        !security.ready ||
+        !security.locked ||
+        security.storageError ||
+        security.authenticating) {
+      return;
+    }
+    _prompted = true;
+    unlock(true);
   }
 
   @override
@@ -42,6 +65,7 @@ class _SecurityGateState extends State<SecurityGate>
       away = false;
     } else {
       away = true;
+      _prompted = false;
       security.background();
       pin.clear();
     }
