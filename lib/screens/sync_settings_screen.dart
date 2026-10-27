@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 
 import '../providers/app_provider.dart';
 import '../services/file_output.dart';
+import '../services/mcp_recipes.dart';
 import '../services/pluggy_inbox.dart';
 import '../sync/mcp_connectors.dart';
 import '../sync/supabase_auth.dart';
@@ -114,6 +115,32 @@ class _SyncSettingsScreenState extends State<SyncSettingsScreen> {
                       const SizedBox(height: 12),
                       const Text(
                           'No Claude: Configurações → Conectores → Adicionar conector personalizado. Nome: Nexo. URL: cole este endereço. Depois, numa conversa, ative o conector Nexo.'),
+                      const SizedBox(height: 8),
+                      // The server is plain MCP over HTTP: any client works.
+                      ExpansionTile(
+                          tilePadding: EdgeInsets.zero,
+                          title: const Text('Outros assistentes'),
+                          children: [
+                            for (final r in mcpClientRecipes(address!).skip(1))
+                              ListTile(
+                                  contentPadding: EdgeInsets.zero,
+                                  title: Text(r.client),
+                                  subtitle: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Text(r.steps),
+                                        SelectableText(r.snippet,
+                                            style: const TextStyle(
+                                                fontFamily: 'monospace',
+                                                fontSize: 12)),
+                                      ]),
+                                  trailing: IconButton(
+                                      tooltip: 'Copiar',
+                                      icon: const Icon(Icons.copy, size: 18),
+                                      onPressed: () => Clipboard.setData(
+                                          ClipboardData(text: r.snippet)))),
+                          ]),
                     ]),
               ),
               actions: [

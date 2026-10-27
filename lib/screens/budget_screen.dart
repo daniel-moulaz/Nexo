@@ -1,5 +1,6 @@
 // lib/screens/budget_screen.dart
 import 'package:flutter/material.dart';
+import 'envelopes_sheet.dart';
 import '../l10n/app_localizations.dart';
 import 'package:provider/provider.dart';
 import '../providers/app_provider.dart';
@@ -101,6 +102,8 @@ class _BudgetScreenState extends State<BudgetScreen>
           )),
       body: TabBarView(controller: _tabCtrl, children: [
         ListView(padding: const EdgeInsets.fromLTRB(16, 16, 16, 32), children: [
+          EnvelopesSection(app: app, money: money, now: now),
+          const SizedBox(height: 16),
           if (budgets.isNotEmpty) ...[
             _BudgetSummary(app: app, money: money, now: now),
             const SizedBox(height: 16),

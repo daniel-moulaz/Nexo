@@ -42,6 +42,7 @@ class AnalysisScreen extends StatefulWidget {
 }
 
 class _AnalysisScreenState extends State<AnalysisScreen> {
+  int _historyMonths = 6;
   late DateTime month;
   DateTimeRange? custom;
   String? account, category, subcategory, type;
@@ -160,8 +161,8 @@ class _AnalysisScreenState extends State<AnalysisScreen> {
     String money(double v) => analysisMoney(app, v);
     String period(AnalysisFilter v) =>
         '${DateFormat('dd/MM/yy').format(v.from)} – ${DateFormat('dd/MM/yy').format(v.to)}';
-    final months =
-        List.generate(6, (i) => DateTime(f.to.year, f.to.month - 5 + i));
+    final months = List.generate(_historyMonths,
+        (i) => DateTime(f.to.year, f.to.month - _historyMonths + 1 + i));
     final history = [
       for (final m in months)
         analyzePeriod(
@@ -247,10 +248,22 @@ class _AnalysisScreenState extends State<AnalysisScreen> {
                                 'Gastos de ${DateFormat('d/MM', 'pt_BR').format(day)}')),
                       ])),
       AnalysisCard(
-          title: 'Receitas × despesas • 6 meses',
+          title: 'Receitas × despesas • $_historyMonths meses',
           child: app.settings.hideBalance
               ? const Text('Gráfico oculto no modo privado.')
               : Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  SegmentedButton<int>(
+                      showSelectedIcon: false,
+                      style: const ButtonStyle(
+                          visualDensity: VisualDensity.compact),
+                      segments: const [
+                        ButtonSegment(value: 6, label: Text('6 meses')),
+                        ButtonSegment(value: 12, label: Text('1 ano')),
+                      ],
+                      selected: {_historyMonths},
+                      onSelectionChanged: (s) =>
+                          setState(() => _historyMonths = s.first)),
+                  const SizedBox(height: 8),
                   const Text(
                       'Azul: receitas • laranja: despesas. Toque em um mês para abrir os lançamentos.'),
                   const SizedBox(height: 16),
@@ -308,7 +321,7 @@ class _AnalysisScreenState extends State<AnalysisScreen> {
                             history[i].realized,
                             DateFormat('MM/yyyy').format(months[i]))),
                   Text(
-                      'Média de despesas nos 5 meses anteriores: ${money(history.take(5).fold<double>(0, (s, d) => s + d.expense) / 5)}. Meses sem registros contam como zero.'),
+                      'Média de despesas nos ${_historyMonths - 1} meses anteriores: ${money(history.take(_historyMonths - 1).fold<double>(0, (s, d) => s + d.expense) / (_historyMonths - 1))}. Meses sem registros contam como zero.'),
                 ])),
       AnalysisCard(
           title: 'Composição das despesas',

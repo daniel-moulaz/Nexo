@@ -27,6 +27,7 @@ import '../services/credit_reminder_service.dart';
 import '../services/loan_reminder_service.dart';
 import '../services/loan_ledger.dart';
 import '../investments/investment_repository.dart';
+import '../services/envelopes.dart';
 import '../services/lended_ledger.dart';
 import '../sync/ledger_capture.dart';
 import '../theme/app_theme.dart';
@@ -45,6 +46,12 @@ class AppSettings {
       dynamicColorEnabled; // pure-black surfaces when dark — decoupled from themeMode
   String languageCode; // 'system'|'en'|'ar'|'fr'|'de'|'hi'
   bool budgetAlertsEnabled;
+
+  /// Share of the reference income per kind of spending (envelope id → %).
+  Map<String, int> envelopeShares;
+
+  /// Income the shares are taken from; 0 means the month's fixed income.
+  double referenceIncome;
   bool dailyReminderEnabled;
   String dailyReminderTime;
   bool hapticsEnabled;
@@ -63,11 +70,13 @@ class AppSettings {
     this.dynamicColorEnabled = false,
     this.languageCode = 'pt',
     this.budgetAlertsEnabled = true,
+    Map<String, int>? envelopeShares,
+    this.referenceIncome = 0,
     this.dailyReminderEnabled = false,
     this.dailyReminderTime = '22:00',
     this.hapticsEnabled = true,
     this.pinnedWidgetAccountIds = const [],
-  });
+  }) : envelopeShares = envelopeShares ?? defaultEnvelopeShares;
 
   Map<String, dynamic> toJson() => {
         'currency': currency,
@@ -82,6 +91,8 @@ class AppSettings {
         'dynamicColorEnabled': dynamicColorEnabled,
         'languageCode': languageCode,
         'budgetAlertsEnabled': budgetAlertsEnabled,
+        'envelopeShares': envelopeShares,
+        'referenceIncome': referenceIncome,
         'dailyReminderEnabled': dailyReminderEnabled,
         'dailyReminderTime': dailyReminderTime,
         'hapticsEnabled': hapticsEnabled,
@@ -181,6 +192,9 @@ class AppSettings {
       dynamicColorEnabled: (j['dynamicColorEnabled'] as bool?) ?? false,
       languageCode: lang,
       budgetAlertsEnabled: (j['budgetAlertsEnabled'] as bool?) ?? true,
+      envelopeShares: (j['envelopeShares'] as Map?)
+          ?.map((k, v) => MapEntry(k.toString(), (v as num).toInt())),
+      referenceIncome: (j['referenceIncome'] as num?)?.toDouble() ?? 0,
       dailyReminderEnabled: (j['dailyReminderEnabled'] as bool?) ?? false,
       dailyReminderTime: (j['dailyReminderTime'] as String?) ?? '22:00',
       hapticsEnabled: (j['hapticsEnabled'] as bool?) ?? true,
@@ -487,7 +501,7 @@ class AppProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  void updateSetting(String key, dynamic value) async {
+  Future<void> updateSetting(String key, dynamic value) async {
     final oldDailyEnabled = settings.dailyReminderEnabled;
     final oldDailyTime = settings.dailyReminderTime;
     final oldLang = settings.languageCode;
@@ -525,6 +539,12 @@ class AppProvider extends ChangeNotifier {
         break;
       case 'budgetAlertsEnabled':
         settings.budgetAlertsEnabled = value as bool;
+        break;
+      case 'envelopeShares':
+        settings.envelopeShares = Map<String, int>.from(value as Map);
+        break;
+      case 'referenceIncome':
+        settings.referenceIncome = (value as num).toDouble();
         break;
       case 'dailyReminderEnabled':
         settings.dailyReminderEnabled = value as bool;
@@ -1407,8 +1427,8 @@ class AppProvider extends ChangeNotifier {
   /// converted to the main currency.
   double budgetSpent(Budget budget) {
     // From the creation day in the period the budget was created.
-    final window = budgetWindow(budget, DateTime.now(),
-        weekStart: settings.weekStart);
+    final window =
+        budgetWindow(budget, DateTime.now(), weekStart: settings.weekStart);
     return transactions
         .where((t) =>
             t.type == 'expense' &&

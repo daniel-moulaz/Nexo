@@ -10,7 +10,7 @@ import '../services/notification_inbox.dart' show NotificationInbox;
 
 class DBHelper {
   static Database? _db;
-  static const int _version = 25;
+  static const int _version = 26;
 
   /// Public accessor for the current DB/backup schema version, so UI code
   /// (e.g. the Backup screen) never has to hardcode a copy that can drift
@@ -486,6 +486,14 @@ class DBHelper {
     if (oldV < 22) await _createImportRules(db);
     if (oldV < 23) await _createSuggestions(db);
     if (oldV < 24) await InvestmentRepository.createSchema(db);
+    if (oldV < 26) {
+      // Kind of spending of a category (envelopes by share of income).
+      try {
+        await db.execute('ALTER TABLE categories ADD COLUMN envelope TEXT');
+      } catch (e) {
+        debugPrint('Migration v$oldV envelope step failed');
+      }
+    }
     if (oldV >= 24 && oldV < 25) {
       await db.execute(
           'ALTER TABLE investments ADD COLUMN archived INTEGER NOT NULL DEFAULT 0');
@@ -619,7 +627,8 @@ class DBHelper {
         id TEXT PRIMARY KEY, name TEXT NOT NULL,
         type TEXT NOT NULL, color_value INTEGER NOT NULL,
         icon_code_point INTEGER NOT NULL DEFAULT 0,
-        order_index INTEGER NOT NULL DEFAULT 0
+        order_index INTEGER NOT NULL DEFAULT 0,
+        envelope TEXT
       )''');
     await db.execute('''
       CREATE TABLE transactions (

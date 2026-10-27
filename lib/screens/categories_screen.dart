@@ -4,6 +4,7 @@ import '../utils/snackbar.dart';
 import '../l10n/app_localizations.dart';
 import 'package:provider/provider.dart';
 import '../providers/app_provider.dart';
+import '../services/envelopes.dart';
 import '../models/models.dart';
 import '../widgets/shared_widgets.dart';
 import '../utils/haptics.dart';
@@ -159,6 +160,7 @@ class _CategorySheet extends StatefulWidget {
 class _CategorySheetState extends State<_CategorySheet> {
   final _nameCtrl = TextEditingController();
   String _type = 'expense';
+  String? _envelope;
   int _color = 0xFF6750A4;
   // Stores a 1-based index into kCategoryIconOptions.
   // 0 = auto (name-based heuristic). Never store a raw IconData.codePoint here
@@ -177,6 +179,7 @@ class _CategorySheetState extends State<_CategorySheet> {
       _type = e.type;
       _color = e.colorValue;
       _iconIndex = e.iconCodePoint; // field repurposed as 1-based index
+      _envelope = e.envelope;
     }
   }
 
@@ -204,6 +207,8 @@ class _CategorySheetState extends State<_CategorySheet> {
         name: _nameCtrl.text.trim(),
         colorValue: _color,
         iconCodePoint: _iconIndex, // 1-based index stored as iconCodePoint
+        envelope: _type == 'expense' ? _envelope : null,
+        clearEnvelope: _type != 'expense' || _envelope == null,
       ));
     } else {
       await app.addCategory(AppCategory(
@@ -212,6 +217,7 @@ class _CategorySheetState extends State<_CategorySheet> {
         type: _type,
         colorValue: _color,
         iconCodePoint: _iconIndex,
+        envelope: _type == 'expense' ? _envelope : null,
       ));
     }
     if (mounted) Navigator.pop(context);
@@ -223,11 +229,7 @@ class _CategorySheetState extends State<_CategorySheet> {
     final cs = Theme.of(context).colorScheme;
 
     return Padding(
-      padding: const EdgeInsets.only(
-          bottom: 16,
-          left: 20,
-          right: 20,
-          top: 20),
+      padding: const EdgeInsets.only(bottom: 16, left: 20, right: 20, top: 20),
       child: SingleChildScrollView(
         child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -283,6 +285,26 @@ class _CategorySheetState extends State<_CategorySheet> {
                 ),
               ),
               const SizedBox(height: 14),
+
+              // ── Kind of spending (envelopes) ────────────────────────────
+              if (_type == 'expense') ...[
+                Text('Tipo de gasto',
+                    style: Theme.of(context).textTheme.labelLarge),
+                const SizedBox(height: 6),
+                Wrap(spacing: 6, runSpacing: 4, children: [
+                  ChoiceChip(
+                      label: const Text('Sem tipo'),
+                      selected: _envelope == null,
+                      onSelected: (_) => setState(() => _envelope = null)),
+                  for (final e in envelopeDefs)
+                    ChoiceChip(
+                        label: Text(e.name),
+                        avatar: Icon(e.icon, size: 16, color: e.color),
+                        selected: _envelope == e.id,
+                        onSelected: (_) => setState(() => _envelope = e.id)),
+                ]),
+                const SizedBox(height: 14),
+              ],
 
               // ── Type (add only) ─────────────────────────────────────────
               if (!isEdit)
@@ -472,5 +494,3 @@ class _CategorySheetState extends State<_CategorySheet> {
     );
   }
 }
-
-

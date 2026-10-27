@@ -86,4 +86,26 @@ void main() {
             now: now),
         isEmpty);
   });
+
+  test('a fee, insurance or service by its description is "para conferir"', () {
+    final alerts = chargeAlerts(transactions: [
+      tx('fee', 12.9, 'Tarifa pacote de serviços', 3),
+      tx('ins', 29.9, 'SEGURO CARTAO PROTEGIDO', 5),
+      tx('food', 23, 'Mercado da esquina', 6),
+    ], metadata: const {}, recurring: const [], now: now);
+    expect(alerts.map((a) => a.kind), ['review', 'review']);
+    expect(alerts.map((a) => a.charges.single.id), ['fee', 'ins']);
+    expect(chargeAlertKey(alerts.first), 'review:fee');
+    final later = chargeAlerts(
+        transactions: [
+          tx('fee', 12.9, 'Tarifa pacote de serviços', 3),
+        ],
+        metadata: const {},
+        recurring: const [],
+        now: now,
+        dismissed: {'review:fee'});
+    expect(later, isEmpty, reason: 'recognized once, never asked again');
+    expect(looksLikeBankCharge('Anuidade diferencial'), isTrue);
+    expect(looksLikeBankCharge('Almoço'), isFalse);
+  });
 }

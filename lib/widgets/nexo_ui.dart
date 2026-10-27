@@ -638,19 +638,24 @@ class _NexoInsightCarouselState extends State<NexoInsightCarousel> {
 
 /// Thin rounded progress bar that turns warm as it fills.
 class NexoProgress extends StatelessWidget {
-  const NexoProgress({super.key, required this.value, this.height = 8});
+  const NexoProgress(
+      {super.key, required this.value, this.height = 8, this.color});
   final double value;
   final double height;
+
+  /// Fixed color (e.g. an envelope's); otherwise warm as it fills.
+  final Color? color;
 
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     final v = value.clamp(0.0, 1.0);
-    final color = value >= 1
-        ? NexoTones.expense(context)
-        : value >= .8
-            ? NexoTones.warning(context)
-            : cs.primary;
+    final color = this.color ??
+        (value >= 1
+            ? NexoTones.expense(context)
+            : value >= .8
+                ? NexoTones.warning(context)
+                : cs.primary);
     return ClipRRect(
       borderRadius: BorderRadius.circular(height),
       child: SizedBox(
