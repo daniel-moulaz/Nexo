@@ -8,21 +8,29 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter/material.dart';
 import 'package:expensy/widgets/security_gate.dart';
 import 'package:expensy/services/nexo_security.dart';
+import 'package:local_auth/local_auth.dart';
 
 void main() {
-  testWidgets('Lock hides finance content and keeps PIN action above keyboard', (tester) async {
+  testWidgets('Lock hides finance content and keeps PIN action above keyboard',
+      (tester) async {
     tester.view.physicalSize = const Size(360, 800);
     tester.view.devicePixelRatio = 1;
     tester.view.viewInsets = const FakeViewPadding(bottom: 300);
     addTearDown(tester.view.reset);
-    final security = NexoSecurity.instance;
+    final auth = _DecliningAuth();
+    final security = NexoSecurity(auth: auth);
     security.ready = true;
     security.locked = true;
     await tester.pumpWidget(MaterialApp(
-      builder: (context, child) => SecurityGate(child: child!),
+      builder: (context, child) =>
+          SecurityGate(security: security, child: child!),
       home: const Scaffold(body: Text('Dados financeiros privados')),
     ));
     await tester.pumpAndSettle();
+    // The device prompt opened by itself, once; declining it leaves the PIN
+    // field without an error line, and the content stays hidden.
+    expect(auth.calls, 1);
+    expect(find.textContaining('Não foi possível'), findsNothing);
     expect(find.text('Dados financeiros privados'), findsNothing);
     final action = find.text('Desbloquear com PIN');
     await tester.ensureVisible(action);
@@ -30,7 +38,7 @@ void main() {
     expect(tester.getBottomLeft(action).dy, lessThanOrEqualTo(500));
     expect(tester.takeException(), isNull);
     await tester.pumpWidget(const SizedBox());
-    security.ready = false;
+    expect(auth.calls, 1);
   });
   testWidgets('App launches smoke test', (WidgetTester tester) async {
     // Build and trigger a frame.
@@ -40,4 +48,20 @@ void main() {
         create: (_) => AppProvider(), child: const ExpensyApp()));
     expect(find.byType(ExpensyApp), findsOneWidget);
   });
+}
+
+/// Stands in for the system prompt: counts calls and always declines.
+class _DecliningAuth extends LocalAuthentication {
+  int calls = 0;
+  @override
+  Future<bool> authenticate({
+    required String localizedReason,
+    Iterable<Object> authMessages = const <Object>[],
+    bool biometricOnly = false,
+    bool sensitiveTransaction = true,
+    bool persistAcrossBackgrounding = false,
+  }) async {
+    calls++;
+    return false;
+  }
 }

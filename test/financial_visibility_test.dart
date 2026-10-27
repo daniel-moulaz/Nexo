@@ -183,18 +183,22 @@ void main() {
     await tester.tap(find.text('Próximos meses'));
     await tester.pumpAndSettle();
     expect(find.textContaining('não registra pagamentos'), findsOneWidget);
+    await tester.ensureVisible(find.text('Histórico'));
     await tester.tap(find.text('Histórico'));
     await tester.pump();
     await tester.runAsync(
         () => Future<void>.delayed(const Duration(milliseconds: 200)));
     await tester.pumpAndSettle();
     expect(find.textContaining('75,00'), findsWidgets);
+    await tester.ensureVisible(find.text('Encerradas'));
     await tester.tap(find.text('Encerradas'));
     await tester.pumpAndSettle();
     expect(find.text('Cronograma antigo'), findsOneWidget);
+    await tester.ensureVisible(find.text('Em aberto'));
     await tester.tap(find.text('Em aberto'));
     await tester.pumpAndSettle();
-    await tester.scrollUntilVisible(find.text('Registrar pagamento'), 300);
+    await tester.scrollUntilVisible(find.text('Registrar pagamento'), 300,
+        scrollable: find.byType(Scrollable).first);
     await tester.pumpAndSettle();
     await tester.ensureVisible(find.text('Registrar pagamento'));
     await tester.pumpAndSettle();

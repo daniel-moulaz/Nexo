@@ -5,14 +5,17 @@ import '../services/platform_capabilities.dart';
 
 class SecurityGate extends StatefulWidget {
   final Widget child;
-  const SecurityGate({super.key, required this.child});
+
+  /// Defaults to [NexoSecurity.instance]; tests pass their own.
+  final NexoSecurity? security;
+  const SecurityGate({super.key, required this.child, this.security});
   @override
   State<SecurityGate> createState() => _SecurityGateState();
 }
 
 class _SecurityGateState extends State<SecurityGate>
     with WidgetsBindingObserver {
-  final security = NexoSecurity.instance;
+  late final NexoSecurity security = widget.security ?? NexoSecurity.instance;
   final pin = TextEditingController();
   bool away = false, busy = false;
   String? message;
@@ -83,7 +86,9 @@ class _SecurityGateState extends State<SecurityGate>
           ? await security.deviceAuth()
           : await security.verify(pin.text);
       pin.clear();
-      if (!ok)
+      // A cancelled or failed device prompt already showed its own feedback;
+      // the PIN field stays right there. Only a wrong PIN gets a line.
+      if (!ok && !device)
         message = security.retrySeconds > 0
             ? 'Aguarde ${security.retrySeconds}s ou use o desbloqueio do aparelho.'
             : 'Não foi possível desbloquear. Confira o PIN ou use o aparelho.';

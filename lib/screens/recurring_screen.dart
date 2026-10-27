@@ -498,24 +498,40 @@ class _RecurringTile extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(width: 8),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.end,
-                    children: [
-                      Text(
-                        app.settings.hideBalance
-                            ? '••••'
-                            : formatAmount(
-                                recurring.nextActionAmount, currency),
-                        style: const TextStyle(fontWeight: FontWeight.w900),
-                      ),
-                      Text(
-                        dueLabel,
-                        style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                              color: overdue ? cs.error : cs.onSurfaceVariant,
-                              fontWeight: FontWeight.w700,
-                            ),
-                      ),
-                    ],
+                  // Capped so large text never pushes the amount off the
+                  // card: the amount scales down, the status wraps.
+                  ConstrainedBox(
+                    constraints: BoxConstraints(
+                        maxWidth: MediaQuery.sizeOf(context).width * .4),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        FittedBox(
+                          fit: BoxFit.scaleDown,
+                          alignment: Alignment.centerRight,
+                          child: Text(
+                            app.settings.hideBalance
+                                ? '••••'
+                                : formatAmount(
+                                    recurring.nextActionAmount, currency),
+                            style: const TextStyle(fontWeight: FontWeight.w900),
+                          ),
+                        ),
+                        Text(
+                          dueLabel,
+                          maxLines: 2,
+                          textAlign: TextAlign.end,
+                          overflow: TextOverflow.ellipsis,
+                          style: Theme.of(context)
+                              .textTheme
+                              .labelSmall
+                              ?.copyWith(
+                                color: overdue ? cs.error : cs.onSurfaceVariant,
+                                fontWeight: FontWeight.w700,
+                              ),
+                        ),
+                      ],
+                    ),
                   ),
                 ],
               ),
