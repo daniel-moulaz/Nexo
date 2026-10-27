@@ -1,5 +1,25 @@
 # Changelog
 
+## [1.12.4] - 2026-10-27
+Referências: AUVP Minhas Finanças ([comparação](docs/REFERENCIA_AUVP_FINANCAS_2026_10.md)), Copilot, Monarch, Material 3. Direção visual em `docs/DESIGN_2026_10.md`; o que vem depois em `docs/ROADMAP_2026_11.md`.
+
+### Adicionado
+- **Barra inferior:** Hoje · Extrato · Orçamento · **Investir** · Mais. Contas e cartões abrem pelo cartão de saldo do Hoje e por Mais.
+- **Tipos de gasto (envelopes) por % da renda**, no modelo dos 6 orçamentos da AUVP (Custos fixos 30, Conforto 15, Metas 15, Prazeres 10, Conhecimento 5, Liberdade financeira 25), editáveis; renda de referência = renda fixa do mês, ajustável. Cada categoria de despesa tem um tipo (sugestão pelo nome); aportes contam em Liberdade financeira e depósitos em objetivos contam em Metas. Só planejamento.
+- **Cobrança para conferir:** descrições que parecem tarifa, seguro, anuidade, proteção, capitalização ou serviço do banco viram aviso no Hoje, para reconhecer ou conferir com o banco.
+- **Ajuda** dentro do app (Mais → Ajuda), pesquisável no texto inteiro, com as regras do Nexo.
+- Formulário: **"Salvar e adicionar outro"**. Análises: receitas × despesas em **6 meses ou 1 ano**.
+- Conector do assistente: receitas para Claude Code, Cursor, VS Code, Gemini CLI e Codex.
+
+### Visual
+- Hoje: saudação com o dia no lugar do slogan; pills do saldo sem cortes; uma linha rolável de atalhos; no máximo 4 avisos; comparação com o mês anterior diz "sem base" em vez de milhares de por cento.
+- Extrato: título igual ao da aba, filtros numa linha, busca com dica curta, "Pago" omitido nas linhas.
+- Orçamento, Investir e Mais: cabeçalhos no mesmo padrão; o botão flutuante do Orçamento virou ação do cabeçalho.
+- "R$ 1.234,56" com um espaço em todo o app.
+
+### Banco de dados
+- Schema **26**: coluna `envelope` em `categories`.
+
 ## [1.12.3] - 2026-10-27
 ### Adicionado
 - **Gasto pontual:** marque uma despesa como "Pontual" (antes "Extraordinária") e ela fica fora do ritmo do mês, das comparações com o mês anterior, das sugestões de orçamento e da média que diz quantos meses a reserva cobre. Continua no saldo, no total do mês e no "quanto posso gastar". As telas avisam quando pontuais ficaram fora de uma comparação.
