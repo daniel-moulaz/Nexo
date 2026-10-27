@@ -97,7 +97,7 @@ class _TransactionSearchScreenState extends State<TransactionSearchScreen> {
                     choice(
                         'Classe',
                         _filter.expenseClass,
-                        {'normal': 'Normal', 'extraordinary': 'Extraordinária'},
+                        {'normal': 'Normal', 'extraordinary': 'Pontual'},
                         (v) => _filter.expenseClass = v),
                     CheckboxListTile(
                         contentPadding: EdgeInsets.zero,

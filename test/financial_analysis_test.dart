@@ -217,4 +217,26 @@ void main() {
     expect(a.fixedIncome, 1750);
     expect(a.extraIncome, 100);
   });
+
+  test('a one-off expense counts in the totals, not in the pace or the trend',
+      () {
+    final september = analyze([
+      tx('market', amount: 100),
+      tx('pix-family', amount: 500, date: DateTime(2026, 9, 16)),
+    ], {
+      'market': meta('market'),
+      'pix-family': meta('pix-family', expenseClass: 'extraordinary'),
+    });
+    expect(september.expense, 600, reason: 'the money did leave');
+    expect(september.extraordinary, 500);
+    expect(september.normal, 100);
+    expect(
+        september.dailyVariable.values.fold<double>(0, (s, v) => s + v), 100);
+    final august = analyze([tx('market-aug', date: DateTime(2026, 8, 15))],
+        {'market-aug': meta('market-aug')},
+        filter:
+            AnalysisFilter(from: DateTime(2026, 8), to: DateTime(2026, 8, 31)));
+    expect(september.changeFrom(august), 0,
+        reason: 'usual spending did not change');
+  });
 }

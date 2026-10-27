@@ -537,7 +537,7 @@ class _FinanceHomeScreenState extends State<FinanceHomeScreen>
                         child: Text(
                             data.changeFrom(previous) == null
                                 ? 'Sem gastos no período anterior para comparar'
-                                : '${data.changeFrom(previous)!.abs().toStringAsFixed(1).replaceAll('.', ',')}% ${data.expense > previous.expense ? 'a mais' : data.expense < previous.expense ? 'a menos' : 'de variação'} em gastos ${currentMonth ? 'até o dia ${today.day}' : 'no mês'}',
+                                : '${data.changeFrom(previous)!.abs().toStringAsFixed(1).replaceAll('.', ',')}% ${data.normal > previous.normal ? 'a mais' : data.normal < previous.normal ? 'a menos' : 'de variação'} em gastos ${currentMonth ? 'até o dia ${today.day}' : 'no mês'}${data.extraordinary > 0 || previous.extraordinary > 0 ? ', sem os pontuais' : ''}',
                             style: Theme.of(context).textTheme.bodySmall)),
                   if (data.pendingExpense > 0 || data.refunds > 0)
                     Padding(

@@ -62,11 +62,14 @@ class _PlanningBody extends StatelessWidget {
   bool _inMonth(DateTime date, DateTime month) =>
       date.year == month.year && date.month == month.month;
 
+  /// Usual spending of a month: one-off expenses ("pontual") do not shift
+  /// the trend nor how many months the reserve covers.
   double _expenseForMonth(DateTime month) {
     double total = 0;
     for (final tx in app.transactions) {
       if (tx.type != 'expense' || !_inMonth(tx.date, month)) continue;
       if (FinanceRules.isNeutral(tx, metadata[tx.id])) continue;
+      if (metadata[tx.id]?.expenseClass == 'extraordinary') continue;
       total += _mainAmount(tx);
     }
     return total;

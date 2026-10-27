@@ -771,15 +771,14 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
                       icon: Icons.tune_rounded,
                       title: 'Classificação',
                       subtitle:
-                          'Separe o custo normal dos gastos fora da rotina',
+                          'Pontual fica fora das médias, do ritmo e das comparações; continua no saldo e no total do mês',
                     ),
                     const SizedBox(height: 8),
                     SegmentedButton<String>(
                       segments: const [
                         ButtonSegment(value: 'normal', label: Text('Normal')),
                         ButtonSegment(
-                            value: 'extraordinary',
-                            label: Text('Extraordinária')),
+                            value: 'extraordinary', label: Text('Pontual')),
                       ],
                       selected: {_expenseClass},
                       onSelectionChanged: (selection) {

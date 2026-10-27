@@ -343,7 +343,7 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
                 _filterChip('Todos', 'all'),
                 _filterChip('Pendentes', 'pending'),
                 _filterChip('Atrasados', 'overdue'),
-                _filterChip('Extraordinários', 'extra'),
+                _filterChip('Pontuais', 'extra'),
                 _filterChip('Transfer./Reserva', 'neutral'),
               ],
             ),

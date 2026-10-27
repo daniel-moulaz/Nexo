@@ -140,7 +140,7 @@ class FinanceExportService {
       ['Receitas reais', income.toStringAsFixed(2)],
       ['Despesas pagas', paid.toStringAsFixed(2)],
       ['Despesas pendentes', pending.toStringAsFixed(2)],
-      ['Despesas extraordinárias', extraordinary.toStringAsFixed(2)],
+      ['Despesas pontuais', extraordinary.toStringAsFixed(2)],
       [
         'Movimentos neutros (transferência/reserva)',
         neutralMovements.toStringAsFixed(2)
@@ -235,7 +235,7 @@ class FinanceExportService {
         meta.dueDate == null
             ? ''
             : DateFormat('dd/MM/yyyy').format(meta.dueDate!),
-        meta.expenseClass == 'extraordinary' ? 'Extraordinária' : 'Normal',
+        meta.expenseClass == 'extraordinary' ? 'Pontual' : 'Normal',
         !neutral && tx.type == 'expense' ? 'Sim' : 'Não',
         meta.installmentLabel,
         meta.source.startsWith('transfer:')

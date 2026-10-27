@@ -95,7 +95,12 @@ class FinancialAnalysis {
       subcategories.update(m.subcategory, (v) => v + value,
           ifAbsent: () => value);
       accounts.update(t.accountId, (v) => v + value, ifAbsent: () => value);
-      if (m.expenseClass == 'extraordinary') extraordinary += value;
+      if (m.expenseClass == 'extraordinary') {
+        // One-off ("pontual"): real money, but not a habit. It stays in the
+        // totals and out of the pace and the comparisons.
+        extraordinary += value;
+        continue;
+      }
       if (m.source == 'recurring' || t.id.startsWith('recurring:')) {
         recurring += value;
       } else {
@@ -105,9 +110,12 @@ class FinancialAnalysis {
       }
     }
   }
-  double? changeFrom(FinancialAnalysis previous) => previous.expense == 0
+
+  /// Change in usual spending: one-off expenses on either side are left out
+  /// so a single big purchase does not read as a trend.
+  double? changeFrom(FinancialAnalysis previous) => previous.normal == 0
       ? null
-      : (expense - previous.expense) / previous.expense * 100;
+      : (normal - previous.normal) / previous.normal * 100;
   static AnalysisFilter month(DateTime month, DateTime now) => AnalysisFilter(
       from: DateTime(month.year, month.month),
       to: month.year == now.year && month.month == now.month
