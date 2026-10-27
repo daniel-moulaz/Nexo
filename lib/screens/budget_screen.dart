@@ -77,7 +77,8 @@ class _BudgetScreenState extends State<BudgetScreen>
     final goals = app.savingsGoals;
     return Scaffold(
       appBar: AppBar(
-          title: const Text('Planejamento'),
+          title: const Text('Orçamento',
+              style: TextStyle(fontWeight: FontWeight.w900)),
           bottom: TabBar(
             controller: _tabCtrl,
             tabs: const [Tab(text: 'Orçamentos'), Tab(text: 'Objetivos')],
@@ -274,8 +275,7 @@ class _BudgetCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     final spent = app.budgetSpent(budget);
-    final window =
-        budgetWindow(budget, now, weekStart: app.settings.weekStart);
+    final window = budgetWindow(budget, now, weekStart: app.settings.weekStart);
     final limit = window.limit;
     final ratio = limit <= 0 ? 0.0 : spent / limit;
     final color = ratio >= 1

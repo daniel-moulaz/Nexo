@@ -117,7 +117,7 @@ void main() {
     app.transactions.removeWhere((t) => t.id == 'past');
     await mount(tester, app);
     expect(find.text('Anterior'), findsNothing);
-    expect(find.text('Sem gastos no período anterior para comparar'),
+    expect(find.text('Sem base no período anterior para comparar'),
         findsOneWidget);
     expect(find.widgetWithText(ActionChip, 'Análises'), findsOneWidget);
     expect(find.widgetWithText(ActionChip, 'Revisão de 3 ou 7 dias'),

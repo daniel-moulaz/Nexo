@@ -390,7 +390,8 @@ String formatAmount(double amount, String code) {
     cacheKey,
     () => NumberFormat.currency(
       locale: code == 'BRL' ? 'pt_BR' : null,
-      symbol: '${info.symbol} ',
+      // pt_BR already separates the symbol with a space; other locales don't.
+      symbol: code == 'BRL' ? info.symbol : '${info.symbol} ',
       decimalDigits: 2,
     ),
   );

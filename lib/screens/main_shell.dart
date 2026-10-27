@@ -29,8 +29,9 @@ class MainShell extends StatefulWidget {
 
 class _MainShellState extends State<MainShell> with WidgetsBindingObserver {
   // Keep internal route IDs stable for Home shortcuts and desktop navigation.
-  // Hoje · Extrato · Orçamento · Contas · Mais (investments live in Mais).
-  static const _mobileTabs = [0, 8, 4, 3, 5];
+  // Hoje · Extrato · Orçamento · Investir · Mais. Accounts and cards open
+  // from the balance card on Hoje and from Mais.
+  static const _mobileTabs = [0, 8, 4, 11, 5];
   int _index = 0;
   final searchFocus = FocusNode();
   AppProvider? _app;
@@ -246,9 +247,9 @@ class _MainShellState extends State<MainShell> with WidgetsBindingObserver {
                         selectedIcon: Icon(Icons.pie_chart),
                         label: 'Orçamento'),
                     const NavigationDestination(
-                        icon: Icon(Icons.account_balance_wallet_outlined),
-                        selectedIcon: Icon(Icons.account_balance_wallet),
-                        label: 'Contas'),
+                        icon: Icon(Icons.show_chart),
+                        selectedIcon: Icon(Icons.insights),
+                        label: 'Investir'),
                     NavigationDestination(
                         icon: const Icon(Icons.more_horiz_outlined),
                         selectedIcon: const Icon(Icons.more_horiz),

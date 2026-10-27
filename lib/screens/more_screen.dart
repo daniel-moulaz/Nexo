@@ -23,7 +23,7 @@ import 'agenda_screen.dart';
 import 'notification_inbox_screen.dart';
 import 'debt_overview_screen.dart';
 import 'financial_checkup_screen.dart';
-import 'investments_screen.dart';
+import 'accounts_screen.dart';
 import 'month_review_screen.dart';
 import 'balance_check_screen.dart';
 
@@ -54,11 +54,11 @@ class MoreScreen extends StatelessWidget {
           color: Color(0xFF00897B),
           screen: BudgetScreen()),
       const _Item(
-          icon: Icons.show_chart,
-          label: 'Investimentos',
-          sub: 'Carteira, proventos e comparação com o CDI',
+          icon: Icons.account_balance_wallet_outlined,
+          label: 'Contas e cartões',
+          sub: 'Saldos, cartões, faturas e vínculo com o banco',
           color: Color(0xFF00897B),
-          screen: InvestmentsScreen()),
+          screen: AccountsScreen()),
       const _Item(
           icon: Icons.fact_check_outlined,
           label: 'Conferir com o banco',
@@ -205,7 +205,7 @@ class MoreScreen extends StatelessWidget {
             for (final group in <String, List<String>>{
               'Planejar e acompanhar': [
                 'Agenda financeira',
-                'Investimentos',
+                'Contas e cartões',
                 'Recorrentes e assinaturas',
                 'Dívidas e compromissos',
                 'Análises',
