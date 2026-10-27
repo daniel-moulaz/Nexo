@@ -1,5 +1,10 @@
 # Changelog
 
+## [1.12.5] - 2026-10-27
+### Visual
+- **Hoje redesenhada:** seletor de mês no topo; quatro números em cartões planos (saldo em contas, resultado, receitas, despesas); cartões, "após cartões" e previsão numa linha; **"Saídas por dia"** com o mês em calendário, média por dia, maior dia e dias sem saída. O cartão de resumo do mês perdeu as setas (o seletor do topo manda).
+- **Cartões planos** com borda fina em todo o app, no lugar do preenchimento tingido.
+
 ## [1.12.4] - 2026-10-27
 Referências: AUVP Minhas Finanças ([comparação](docs/REFERENCIA_AUVP_FINANCAS_2026_10.md)), Copilot, Monarch, Material 3. Direção visual em `docs/DESIGN_2026_10.md`; o que vem depois em `docs/ROADMAP_2026_11.md`.
 
