@@ -1,5 +1,10 @@
 # Changelog
 
+## [1.12.3] - 2026-10-27
+### Adicionado
+- **Gasto pontual:** marque uma despesa como "Pontual" (antes "Extraordinária") e ela fica fora do ritmo do mês, das comparações com o mês anterior, das sugestões de orçamento e da média que diz quantos meses a reserva cobre. Continua no saldo, no total do mês e no "quanto posso gastar". As telas avisam quando pontuais ficaram fora de uma comparação.
+- **Dados do banco ao abrir o app:** o Nexo busca o que os bancos enviaram ao abrir ou voltar ao app (no máximo a cada 15 minutos), sem esperar "Para revisar". Só chegam sugestões; nada vira lançamento sozinho.
+
 ## [1.12.2] - 2026-10-23
 ### Adicionado
 - **Conta principal com vários bancos:** contas do banco vinculadas à mesma conta do Nexo são somadas e comparadas de uma vez, com um único ajuste neutro.
