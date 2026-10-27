@@ -98,6 +98,17 @@ void main() {
       expect(s.last.amount, 100); // 300 / 3
     });
 
+    test('a purchase marked as one-off does not raise the average', () {
+      final s = run([
+        for (final m in [7, 8, 9]) _tx('f$m', 600, DateTime(2026, m, 10)),
+        _tx('party', 1500, DateTime(2026, 9, 20)),
+      ], metadata: {
+        'party': const TransactionMetadata(
+            transactionId: 'party', expenseClass: 'extraordinary'),
+      });
+      expect(s.single.average, closeTo(600, 1e-9));
+    });
+
     test('one-off, budgeted and neutral spending are not suggested', () {
       final s = run([
         _tx('trip', 3000, DateTime(2026, 8, 1), category: 'trip'),

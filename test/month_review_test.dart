@@ -76,6 +76,28 @@ void main() {
     expect(r.budgetsKept, 1); // food went over (350 of 300)
   });
 
+  test('a one-off purchase is spent, but stays out of the comparison', () {
+    final r = MonthReview.build(
+        transactions: [
+          ...txs,
+          tx('tv', 2000, DateTime(2026, 10, 20)),
+        ],
+        metadata: {
+          ...metadata,
+          'tv': const TransactionMetadata(
+              transactionId: 'tv', expenseClass: 'extraordinary'),
+        },
+        amount: (t) => t.amount,
+        month: DateTime(2026, 10),
+        now: DateTime(2026, 11, 2),
+        budgetList: const []);
+    expect(r.spent, 2400);
+    expect(r.oneOff, 2000);
+    expect(r.change, 0, reason: 'usual spending: 400 against 400');
+    expect(r.previousUsual, 400);
+    expect(r.comparesWithoutOneOffs, isTrue);
+  });
+
   test('the current month counts only the days lived', () {
     final r = MonthReview.build(
         transactions: txs,

@@ -108,7 +108,8 @@ List<BudgetSuggestion> suggestBudgets({
         budgeted.contains(t.categoryId) ||
         t.date.isBefore(from) ||
         !t.date.isBefore(to) ||
-        FinanceRules.isNeutral(t, metadata[t.id])) {
+        FinanceRules.isNeutral(t, metadata[t.id]) ||
+        metadata[t.id]?.expenseClass == 'extraordinary') {
       continue;
     }
     totals[t.categoryId] = (totals[t.categoryId] ?? 0) + toMain(t);

@@ -136,7 +136,7 @@ class _MonthReviewScreenState extends State<MonthReviewScreen> {
                         ? 'Sem gastos no mês anterior para comparar'
                         : change.abs() < 1
                             ? 'Igual ao mês anterior'
-                            : '${change > 0 ? '▲' : '▼'} ${change.abs().toStringAsFixed(0)}% em relação a ${money(r.previousSpent)} no mês anterior',
+                            : '${change > 0 ? '▲' : '▼'} ${change.abs().toStringAsFixed(0)}% em relação a ${money(r.previousUsual)} no mês anterior',
                     style: TextStyle(
                         fontWeight: FontWeight.w700,
                         color: change == null || change.abs() < 1
@@ -144,6 +144,14 @@ class _MonthReviewScreenState extends State<MonthReviewScreen> {
                             : change > 0
                                 ? NexoTones.expense(context)
                                 : NexoTones.income(context))),
+              if (!hidden && r.comparesWithoutOneOffs)
+                Text(
+                    r.oneOff > 0
+                        ? '${money(r.oneOff)} em gastos pontuais ficam fora da comparação.'
+                        : 'Gastos pontuais do mês anterior ficam fora da comparação.',
+                    style: TextStyle(
+                        fontSize: 12,
+                        color: cs.onPrimaryContainer.withValues(alpha: .75))),
               const SizedBox(height: 12),
               Row(children: [
                 Expanded(

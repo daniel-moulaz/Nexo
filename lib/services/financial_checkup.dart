@@ -89,7 +89,7 @@ class FinancialCheckup {
       for (final (index, entry) in current.topCategories.indexed)
         '${label(app.categoryById(entry.key)?.name ?? 'Sem categoria', 'Categoria ${index + 1}')}: ${money(entry.value)} (${(entry.value / current.expense * 100).toStringAsFixed(1).replaceAll('.', ',')}%)',
       'Recorrentes realizadas: ${money(current.recurring)}',
-      'Extraordinárias realizadas: ${money(current.extraordinary)}',
+      'Pontuais (fora das comparações): ${money(current.extraordinary)}',
       'Recorrente e extraordinária podem se sobrepor; não some esses grupos.',
     ];
     sections['Situação de hoje'] = [

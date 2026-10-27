@@ -316,7 +316,7 @@ class _AnalysisScreenState extends State<AnalysisScreen> {
               Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             AnalysisMetrics(values: [
               ('Normal', money(data.normal)),
-              ('Extraordinário', money(data.extraordinary)),
+              ('Pontuais', money(data.extraordinary)),
               ('Origem recorrente', money(data.recurring)),
               ('Demais despesas', money(data.variable))
             ]),

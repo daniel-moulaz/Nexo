@@ -60,10 +60,19 @@ class MonthReview {
   double get spent => current.expense;
   double get previousSpent => previous.expense;
 
-  /// Percent change against the whole previous month; null without a base.
-  double? get change => previous.expense == 0
-      ? null
-      : (spent - previous.expense) / previous.expense * 100;
+  /// Percent change in usual spending against the whole previous month
+  /// (one-off expenses left out); null without a base.
+  double? get change => current.changeFrom(previous);
+
+  /// One-off expenses of the month, outside the comparison.
+  double get oneOff => current.extraordinary;
+
+  /// What the comparison is made against: last month without its one-offs.
+  double get previousUsual => previous.normal;
+
+  /// Whether one-off expenses were left out on either side.
+  bool get comparesWithoutOneOffs =>
+      current.extraordinary > 0 || previous.extraordinary > 0;
 
   double get result => current.result;
   double get fixedIncome => current.fixedIncome;
