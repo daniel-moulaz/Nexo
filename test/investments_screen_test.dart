@@ -160,7 +160,7 @@ void main() {
           image.dispose();
         });
       }
-      await tester.tap(find.byType(FloatingActionButton));
+      await tester.tap(find.byTooltip('Adicionar investimento'));
       await tester.pumpAndSettle();
       expect(tester.takeException(), isNull);
       await tester.tap(find.text('Cancelar'));
@@ -249,7 +249,7 @@ void main() {
       'create, sell and update price through UI persist without ledger changes',
       (tester) async {
     await mount(tester, const Size(1280, 900));
-    await tester.tap(find.byType(FloatingActionButton));
+    await tester.tap(find.byTooltip('Adicionar investimento'));
     await tester.pumpAndSettle();
     final fields = find.byType(TextField);
     await tester.enterText(fields.at(0), 'Carteira sintética');

@@ -1,6 +1,7 @@
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import '../providers/app_provider.dart';
+import 'nexo_ui.dart';
 import '../services/financial_analysis.dart';
 import '../theme/app_theme.dart';
 
@@ -15,25 +16,21 @@ class AnalysisCard extends StatelessWidget {
   const AnalysisCard(
       {super.key, required this.title, required this.child, this.action});
   @override
-  Widget build(BuildContext context) => Card(
-      elevation: 0,
-      margin: EdgeInsets.zero,
-      child: Padding(
-          padding: const EdgeInsets.all(16),
+  Widget build(BuildContext context) => NexoCard(
           child:
               Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Row(children: [
-              Expanded(
-                  child: Text(title,
-                      style: Theme.of(context)
-                          .textTheme
-                          .titleMedium
-                          ?.copyWith(fontWeight: FontWeight.bold))),
-              if (action != null) action!
-            ]),
-            const SizedBox(height: 12),
-            child
-          ])));
+        Row(children: [
+          Expanded(
+              child: Text(title,
+                  style: Theme.of(context)
+                      .textTheme
+                      .titleMedium
+                      ?.copyWith(fontWeight: FontWeight.w800))),
+          if (action != null) action!
+        ]),
+        const SizedBox(height: 12),
+        child
+      ]));
 }
 
 class AnalysisMetrics extends StatelessWidget {

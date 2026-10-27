@@ -157,6 +157,10 @@ class _InvestmentsScreenState extends State<InvestmentsScreen> {
               style: TextStyle(fontWeight: FontWeight.w900)),
           actions: [
             IconButton(
+                tooltip: 'Adicionar investimento',
+                onPressed: _create,
+                icon: const Icon(Icons.add)),
+            IconButton(
                 tooltip: 'Configurar cotações',
                 onPressed: _settings,
                 icon: const Icon(Icons.settings_outlined)),
@@ -170,15 +174,6 @@ class _InvestmentsScreenState extends State<InvestmentsScreen> {
                         child: CircularProgressIndicator(strokeWidth: 2))
                     : const Icon(Icons.refresh)),
           ]),
-      floatingActionButton: MediaQuery.sizeOf(context).width < 900
-          ? FloatingActionButton(
-              tooltip: 'Adicionar investimento',
-              onPressed: _create,
-              child: const Icon(Icons.add))
-          : FloatingActionButton.extended(
-              onPressed: _create,
-              icon: const Icon(Icons.add),
-              label: const Text('Adicionar investimento')),
       body: FutureBuilder<List<InvestmentPosition>>(
           future: _data,
           builder: (context, snapshot) {

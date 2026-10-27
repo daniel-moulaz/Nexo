@@ -50,6 +50,10 @@ class AccountsScreen extends StatelessWidget {
           title: const Text('Contas e cartões',
               style: TextStyle(fontWeight: FontWeight.w900)),
           actions: [
+            IconButton(
+                tooltip: 'Adicionar conta ou cartão',
+                icon: const Icon(Icons.add),
+                onPressed: () => _chooseAddType(context)),
             if (PluggyInbox.instance != null)
               IconButton(
                   tooltip: 'Conferir com o banco',
@@ -82,14 +86,6 @@ class AccountsScreen extends StatelessWidget {
               Tab(text: 'Contas'),
               Tab(text: 'Cartões'),
             ],
-          ),
-        ),
-        floatingActionButton: Padding(
-          padding: const EdgeInsets.only(bottom: 76),
-          child: FloatingActionButton.extended(
-            onPressed: () => _chooseAddType(context),
-            icon: const Icon(Icons.add_rounded),
-            label: const Text('Adicionar'),
           ),
         ),
         body: TabBarView(
