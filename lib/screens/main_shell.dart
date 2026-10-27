@@ -17,6 +17,8 @@ import 'statement_import_screen.dart';
 import 'investments_screen.dart';
 import 'add_transaction_screen.dart';
 import '../services/nexo_security.dart';
+import '../services/bank_snapshots.dart';
+import '../services/pluggy_inbox.dart';
 import 'package:flutter/services.dart';
 
 class MainShell extends StatefulWidget {
@@ -25,7 +27,7 @@ class MainShell extends StatefulWidget {
   State<MainShell> createState() => _MainShellState();
 }
 
-class _MainShellState extends State<MainShell> {
+class _MainShellState extends State<MainShell> with WidgetsBindingObserver {
   // Keep internal route IDs stable for Home shortcuts and desktop navigation.
   // Hoje · Extrato · Orçamento · Contas · Mais (investments live in Mais).
   static const _mobileTabs = [0, 8, 4, 3, 5];
@@ -60,6 +62,20 @@ class _MainShellState extends State<MainShell> {
   void initState() {
     super.initState();
     HardwareKeyboard.instance.addHandler(_handleDesktopKey);
+    WidgetsBinding.instance.addObserver(this);
+    _refreshBank();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) _refreshBank();
+  }
+
+  /// Bank data arrives on opening the app, not only in "Para revisar".
+  Future<void> _refreshBank() async {
+    final pluggy = PluggyInbox.instance;
+    if (pluggy == null || !await pluggy.refreshInBackground()) return;
+    await BankSnapshots.load(force: true);
   }
 
   bool _handleDesktopKey(KeyEvent event) {
@@ -105,6 +121,7 @@ class _MainShellState extends State<MainShell> {
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     HardwareKeyboard.instance.removeHandler(_handleDesktopKey);
     searchFocus.dispose();
     _app?.tabIndexNotifier.removeListener(_onTabChange);

@@ -201,6 +201,23 @@ void main() {
     expect(remote.refreshes, 3);
   });
 
+  test('opening the app brings bank data at most every 15 minutes, silently',
+      () async {
+    remote.add('o', 900, now.subtract(const Duration(hours: 2)));
+    expect(await inbox.refreshInBackground(), isTrue);
+    expect(await pendingIds(), ['pluggy:o']);
+    expect(remote.refreshes, 1);
+    remote.add('p', 400, now.subtract(const Duration(hours: 1)));
+    expect(await inbox.refreshInBackground(), isFalse,
+        reason: 'returning to the app right away does not read again');
+    expect(await pendingIds(), ['pluggy:o']);
+    now = now.add(const Duration(minutes: 16));
+    remote.refreshFails = 'Servidor fora do ar.';
+    expect(await inbox.refreshInBackground(), isTrue,
+        reason: 'a server problem never reaches the person from here');
+    expect(await pendingIds(), unorderedEquals(['pluggy:o', 'pluggy:p']));
+  });
+
   test('bank notifications keep their 7-day expiry', () async {
     await NotificationInbox.ingest([
       {

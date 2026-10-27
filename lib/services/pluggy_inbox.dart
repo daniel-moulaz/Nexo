@@ -219,6 +219,27 @@ class PluggyInbox {
   Future<String?> sync({bool force = false}) =>
       _running ??= _sync(force).whenComplete(() => _running = null);
 
+  static const backgroundEvery = Duration(minutes: 15);
+  DateTime? _lastBackground;
+
+  /// On opening or returning to the app: brings what the banks sent without
+  /// waiting for "Para revisar". At most every [backgroundEvery], silent
+  /// (the inbox shows problems), and only suggestions: nothing becomes an
+  /// entry here.
+  Future<bool> refreshInBackground() async {
+    final last = _lastBackground;
+    if (last != null && _now().difference(last) < backgroundEvery) {
+      return false;
+    }
+    _lastBackground = _now();
+    try {
+      await sync();
+    } catch (_) {
+      // Offline or server down: the next opening tries again.
+    }
+    return true;
+  }
+
   Future<String?> _sync(bool force) async {
     final db = await DBHelper.database;
     final since = _now().subtract(window).millisecondsSinceEpoch;
