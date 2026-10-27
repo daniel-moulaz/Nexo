@@ -32,7 +32,6 @@ class MoreScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
     final app = context.watch<AppProvider>();
     final wishlistLen = app.wishlist.where((w) => !w.isPurchased).length;
     final lendedLen = app.lended.where((l) => !l.isSettled).length;
@@ -189,8 +188,6 @@ class MoreScreen extends StatelessWidget {
         automaticallyImplyLeading: false,
         title:
             const Text('Mais', style: TextStyle(fontWeight: FontWeight.w900)),
-        backgroundColor: cs.primaryContainer,
-        foregroundColor: cs.onPrimaryContainer,
         actions: [
           IconButton(
               tooltip: 'Configurações',

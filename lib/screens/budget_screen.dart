@@ -79,67 +79,69 @@ class _BudgetScreenState extends State<BudgetScreen>
       appBar: AppBar(
           title: const Text('Orçamento',
               style: TextStyle(fontWeight: FontWeight.w900)),
+          actions: [
+            // In the header, so no button floats over the list.
+            AnimatedBuilder(
+                animation: _tabCtrl,
+                builder: (context, _) => IconButton(
+                    tooltip: _tabCtrl.index == 0
+                        ? 'Novo orçamento'
+                        : 'Novo objetivo',
+                    onPressed: () => _tabCtrl.index == 0
+                        ? BudgetScreen._openSheet(context)
+                        : showModalBottomSheet(
+                            context: context,
+                            isScrollControlled: true,
+                            builder: (_) => const SavingsGoalSheet()),
+                    icon: const Icon(Icons.add))),
+          ],
           bottom: TabBar(
             controller: _tabCtrl,
             tabs: const [Tab(text: 'Orçamentos'), Tab(text: 'Objetivos')],
           )),
-      floatingActionButton: FloatingActionButton.extended(
-          onPressed: () => _tabCtrl.index == 0
-              ? BudgetScreen._openSheet(context)
-              : showModalBottomSheet(
-                  context: context,
-                  isScrollControlled: true,
-                  builder: (_) => const SavingsGoalSheet()),
-          icon: const Icon(Icons.add),
-          label: Text(_tabCtrl.index == 0 ? 'Orçamento' : 'Objetivo')),
       body: TabBarView(controller: _tabCtrl, children: [
-        ListView(
-            padding: const EdgeInsets.fromLTRB(16, 16, 16, 100),
-            children: [
-              if (budgets.isNotEmpty) ...[
-                _BudgetSummary(app: app, money: money, now: now),
-                const SizedBox(height: 16),
-                const NexoSectionTitle('Limites por categoria',
-                    subtitle: 'Toque para alterar; segure para excluir'),
-                const SizedBox(height: 8),
-              ] else
-                EmptyState(
-                    icon: Icons.pie_chart_outline,
-                    message: l10n.budget_noBudgetsYet,
-                    subMessage:
-                        'Defina quanto quer gastar por categoria e o Nexo mostra quanto ainda cabe por dia.'),
-              for (final b in budgets)
-                Padding(
-                    padding: const EdgeInsets.only(bottom: 12),
-                    child: _BudgetCard(
-                        budget: b, app: app, money: money, now: now)),
-              if (suggestions.isNotEmpty) ...[
-                const SizedBox(height: 8),
-                const NexoSectionTitle('Sugestões',
-                    subtitle: 'Pela média dos últimos 3 meses',
-                    icon: Icons.auto_awesome_outlined),
-                const SizedBox(height: 8),
-                NexoCard(
-                    padding: const EdgeInsets.symmetric(vertical: 4),
-                    child: Column(children: [
-                      for (final s in suggestions)
-                        ListTile(
-                            leading:
-                                CategoryDot(category: s.category, size: 36),
-                            title: Text(s.category.name,
-                                maxLines: 1, overflow: TextOverflow.ellipsis),
-                            subtitle: Text('Média de ${money(s.average)}/mês'),
-                            trailing: TextButton(
-                                onPressed: () => BudgetScreen._openSheet(
-                                    context,
-                                    categoryId: s.category.id,
-                                    amount: s.amount),
-                                child: Text(hidden
-                                    ? 'Criar'
-                                    : 'Limitar a ${_whole(s.amount, app.settings.currency)}'))),
-                    ])),
-              ],
-            ]),
+        ListView(padding: const EdgeInsets.fromLTRB(16, 16, 16, 32), children: [
+          if (budgets.isNotEmpty) ...[
+            _BudgetSummary(app: app, money: money, now: now),
+            const SizedBox(height: 16),
+            const NexoSectionTitle('Limites por categoria',
+                subtitle: 'Toque para alterar; segure para excluir'),
+            const SizedBox(height: 8),
+          ] else
+            EmptyState(
+                icon: Icons.pie_chart_outline,
+                message: l10n.budget_noBudgetsYet,
+                subMessage:
+                    'Defina quanto quer gastar por categoria e o Nexo mostra quanto ainda cabe por dia.'),
+          for (final b in budgets)
+            Padding(
+                padding: const EdgeInsets.only(bottom: 12),
+                child:
+                    _BudgetCard(budget: b, app: app, money: money, now: now)),
+          if (suggestions.isNotEmpty) ...[
+            const SizedBox(height: 8),
+            const NexoSectionTitle('Sugestões',
+                subtitle: 'Pela média dos últimos 3 meses',
+                icon: Icons.auto_awesome_outlined),
+            const SizedBox(height: 8),
+            NexoCard(
+                padding: const EdgeInsets.symmetric(vertical: 4),
+                child: Column(children: [
+                  for (final s in suggestions)
+                    ListTile(
+                        leading: CategoryDot(category: s.category, size: 36),
+                        title: Text(s.category.name,
+                            maxLines: 1, overflow: TextOverflow.ellipsis),
+                        subtitle: Text('Média de ${money(s.average)}/mês'),
+                        trailing: TextButton(
+                            onPressed: () => BudgetScreen._openSheet(context,
+                                categoryId: s.category.id, amount: s.amount),
+                            child: Text(hidden
+                                ? 'Criar'
+                                : 'Limitar a ${_whole(s.amount, app.settings.currency)}'))),
+                ])),
+          ],
+        ]),
         ListView(
             padding: const EdgeInsets.fromLTRB(16, 16, 16, 100),
             children: [
