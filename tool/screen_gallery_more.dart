@@ -223,6 +223,15 @@ void main() {
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
         .setMockMethodCallHandler(
             const MethodChannel('home_widget'), (call) async => true);
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(
+            const MethodChannel('dev.fluttercommunity.plus/package_info'),
+            (call) async => {
+                  'appName': 'Nexo',
+                  'packageName': 'com.ma.expensy',
+                  'version': '1.12.6',
+                  'buildNumber': '43',
+                });
   });
 
   final screens = <String, Widget>{

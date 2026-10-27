@@ -70,8 +70,6 @@ class _CurrencyConverterScreenState extends State<CurrencyConverterScreen> {
       appBar: AppBar(
         title: Text(l10n.currency_converter_currencyConverter,
             style: const TextStyle(fontWeight: FontWeight.w800)),
-        backgroundColor: cs.primary,
-        foregroundColor: cs.onPrimary,
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.only(

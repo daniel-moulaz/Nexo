@@ -51,14 +51,17 @@ class _TransferScreenState extends State<TransferScreen> {
     if (amount == null || amount <= 0) return;
     setState(() => _saving = true);
     try {
-    await context.read<AppProvider>().addTransfer(
-          fromId: _fromId!,
-          toId: _toId!,
-          fromAmount: amount,
-          note: _noteCtrl.text.trim(),
-        );
+      await context.read<AppProvider>().addTransfer(
+            fromId: _fromId!,
+            toId: _toId!,
+            fromAmount: amount,
+            note: _noteCtrl.text.trim(),
+          );
     } catch (_) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Não foi possível concluir. Confira a conta e o valor e tente novamente.')));
+      if (mounted)
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+            content: Text(
+                'Não foi possível concluir. Confira a conta e o valor e tente novamente.')));
       return;
     } finally {
       if (mounted) setState(() => _saving = false);
@@ -94,8 +97,6 @@ class _TransferScreenState extends State<TransferScreen> {
       appBar: AppBar(
         title: Text(l10n.transfer_transfer,
             style: const TextStyle(fontWeight: FontWeight.w800)),
-        backgroundColor: cs.primary,
-        foregroundColor: cs.onPrimary,
       ),
       body: SafeArea(
           bottom: true,
@@ -289,10 +290,9 @@ class _TransferScreenState extends State<TransferScreen> {
                   labelText: l10n.transfer_amount,
                   prefixText: '$sym ',
                   suffixText: fromCurrency,
-                  errorText:
-                      _submitted && (parseMoney(_amtCtrl.text) ?? 0) <= 0
-                          ? l10n.error_required
-                          : null,
+                  errorText: _submitted && (parseMoney(_amtCtrl.text) ?? 0) <= 0
+                      ? l10n.error_required
+                      : null,
                 ),
                 style:
                     const TextStyle(fontSize: 18, fontWeight: FontWeight.w700),

@@ -21,21 +21,26 @@ class EmptyState extends StatelessWidget {
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     return Center(
-        child: Column(mainAxisSize: MainAxisSize.min, children: [
-      Icon(icon, size: 64, color: cs.onSurface.withValues(alpha: 0.2)),
-      const SizedBox(height: 16),
-      Text(message,
-          style: TextStyle(
-              fontSize: 17,
-              fontWeight: FontWeight.w600,
-              color: cs.onSurface.withValues(alpha: 0.5))),
-      if (subMessage != null) ...[
-        const SizedBox(height: 6),
-        Text(subMessage!,
+        child: Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 32),
+      child: Column(mainAxisSize: MainAxisSize.min, children: [
+        Icon(icon, size: 64, color: cs.onSurface.withValues(alpha: 0.2)),
+        const SizedBox(height: 16),
+        Text(message,
+            textAlign: TextAlign.center,
             style: TextStyle(
-                fontSize: 13, color: cs.onSurface.withValues(alpha: 0.35))),
-      ],
-    ]));
+                fontSize: 17,
+                fontWeight: FontWeight.w600,
+                color: cs.onSurface.withValues(alpha: 0.5))),
+        if (subMessage != null) ...[
+          const SizedBox(height: 6),
+          Text(subMessage!,
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                  fontSize: 13, color: cs.onSurface.withValues(alpha: 0.35))),
+        ],
+      ]),
+    ));
   }
 }
 
@@ -785,20 +790,21 @@ class _ExpandableFabState extends State<ExpandableFab>
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    final List<ExpandableFabItem> actions = widget.items ?? [
-      ExpandableFabItem(
-        label: l10n.add_transaction_expense,
-        icon: Icons.arrow_upward_rounded,
-        color: const Color(0xFFC62828),
-        onTap: widget.onExpense ?? () {},
-      ),
-      ExpandableFabItem(
-        label: l10n.add_transaction_income,
-        icon: Icons.arrow_downward_rounded,
-        color: const Color(0xFF2E7D32),
-        onTap: widget.onIncome ?? () {},
-      ),
-    ];
+    final List<ExpandableFabItem> actions = widget.items ??
+        [
+          ExpandableFabItem(
+            label: l10n.add_transaction_expense,
+            icon: Icons.arrow_upward_rounded,
+            color: const Color(0xFFC62828),
+            onTap: widget.onExpense ?? () {},
+          ),
+          ExpandableFabItem(
+            label: l10n.add_transaction_income,
+            icon: Icons.arrow_downward_rounded,
+            color: const Color(0xFF2E7D32),
+            onTap: widget.onIncome ?? () {},
+          ),
+        ];
 
     return Column(
       mainAxisSize: MainAxisSize.min,

@@ -51,8 +51,6 @@ class LendedPersonScreen extends StatelessWidget {
       appBar: AppBar(
         title: Text(current.name,
             style: const TextStyle(fontWeight: FontWeight.w800)),
-        backgroundColor: cs.primary,
-        foregroundColor: cs.onPrimary,
         actions: [
           IconButton(
             icon: const Icon(Icons.edit_outlined),
@@ -229,11 +227,7 @@ class _EditPersonInlineSheetState extends State<_EditPersonInlineSheet> {
     final l10n = AppLocalizations.of(context)!;
     final cs = Theme.of(context).colorScheme;
     return Padding(
-      padding: const EdgeInsets.only(
-          bottom: 16,
-          left: 20,
-          right: 20,
-          top: 20),
+      padding: const EdgeInsets.only(bottom: 16, left: 20, right: 20, top: 20),
       child: SingleChildScrollView(
           child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -547,7 +541,8 @@ class _EntrySheetState extends State<_EntrySheet> {
       final granted = await LendedNotificationService().requestPermissions();
       if (!granted) {
         if (mounted) {
-          showAppSnackbar(context, l10n.lended_person_notificationPermissionDenied);
+          showAppSnackbar(
+              context, l10n.lended_person_notificationPermissionDenied);
         }
         return;
       }
@@ -611,11 +606,7 @@ class _EntrySheetState extends State<_EntrySheet> {
     final sym = currencyInfo(app.settings.currency).symbol;
 
     return Padding(
-      padding: const EdgeInsets.only(
-          bottom: 16,
-          left: 20,
-          right: 20,
-          top: 20),
+      padding: const EdgeInsets.only(bottom: 16, left: 20, right: 20, top: 20),
       child: SingleChildScrollView(
           child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -690,10 +681,9 @@ class _EntrySheetState extends State<_EntrySheet> {
             decoration: InputDecoration(
               labelText: l10n.lended_person_amount,
               prefixText: '$sym ',
-              errorText:
-                  _submitted && (parseMoney(_amtCtrl.text) ?? 0) <= 0
-                      ? l10n.error_required
-                      : null,
+              errorText: _submitted && (parseMoney(_amtCtrl.text) ?? 0) <= 0
+                  ? l10n.error_required
+                  : null,
             ),
           ),
           const SizedBox(height: 14),

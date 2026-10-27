@@ -191,7 +191,18 @@ ThemeData _base(ColorScheme cs, String appFont) {
   return ThemeData(
     colorScheme: cs,
     useMaterial3: true,
-    textTheme: fontTextTheme,
+    // Headlines carry money: heavy and with tabular figures, everywhere.
+    textTheme: fontTextTheme.copyWith(
+      headlineSmall: fontTextTheme.headlineSmall?.copyWith(
+          fontWeight: FontWeight.w800,
+          fontFeatures: const [FontFeature.tabularFigures()]),
+      headlineMedium: fontTextTheme.headlineMedium?.copyWith(
+          fontWeight: FontWeight.w800,
+          fontFeatures: const [FontFeature.tabularFigures()]),
+      headlineLarge: fontTextTheme.headlineLarge?.copyWith(
+          fontWeight: FontWeight.w900,
+          fontFeatures: const [FontFeature.tabularFigures()]),
+    ),
     pageTransitionsTheme: const PageTransitionsTheme(builders: {
       TargetPlatform.android: CupertinoPageTransitionsBuilder(),
       TargetPlatform.iOS: CupertinoPageTransitionsBuilder(),

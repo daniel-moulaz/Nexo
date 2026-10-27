@@ -16,16 +16,22 @@ class CategoriesScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final app = context.watch<AppProvider>();
-    final cs = Theme.of(context).colorScheme;
     final expenses = app.categories.where((c) => c.type == 'expense').toList();
     final incomes = app.categories.where((c) => c.type == 'income').toList();
 
     return Scaffold(
       appBar: AppBar(
+        actions: [
+          IconButton(
+              tooltip: 'Nova categoria',
+              icon: const Icon(Icons.add),
+              onPressed: () {
+                AppHaptics.tap(context, HapticStrength.light);
+                _openSheet(context);
+              }),
+        ],
         title: Text(l10n.categories_categories,
             style: const TextStyle(fontWeight: FontWeight.w800)),
-        backgroundColor: cs.primary,
-        foregroundColor: cs.onPrimary,
       ),
       body: ListView(
         padding: const EdgeInsets.fromLTRB(14, 14, 14, 140),
@@ -64,14 +70,6 @@ class CategoriesScreen extends StatelessWidget {
             ),
           ),
         ],
-      ),
-      floatingActionButton: FloatingActionButton(
-        heroTag: null,
-        onPressed: () {
-          AppHaptics.tap(context, HapticStrength.light);
-          _openSheet(context);
-        },
-        child: const Icon(Icons.add),
       ),
     );
   }

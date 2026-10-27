@@ -16,16 +16,22 @@ class WishlistScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final app = context.watch<AppProvider>();
-    final cs = Theme.of(context).colorScheme;
     final l10n = AppLocalizations.of(context)!;
     String fmt(double v) => formatAmount(v, app.settings.currency);
 
     return Scaffold(
       appBar: AppBar(
+        actions: [
+          IconButton(
+              tooltip: 'Novo desejo',
+              icon: const Icon(Icons.add),
+              onPressed: () {
+                AppHaptics.tap(context, HapticStrength.light);
+                _openSheet(context);
+              }),
+        ],
         title: Text(l10n.wishlist_wishlist,
             style: const TextStyle(fontWeight: FontWeight.w800)),
-        backgroundColor: cs.primary,
-        foregroundColor: cs.onPrimary,
       ),
       body: app.wishlist.isEmpty
           ? EmptyState(
@@ -37,14 +43,6 @@ class WishlistScreen extends StatelessWidget {
               itemCount: app.wishlist.length,
               itemBuilder: (_, i) => _WishCard(item: app.wishlist[i], fmt: fmt),
             ),
-      floatingActionButton: FloatingActionButton(
-        heroTag: null,
-        onPressed: () {
-          AppHaptics.tap(context, HapticStrength.light);
-          _openSheet(context);
-        },
-        child: const Icon(Icons.add),
-      ),
     );
   }
 
@@ -223,116 +221,109 @@ class _WishSheetState extends State<_WishSheet> {
     final l10n = AppLocalizations.of(context)!;
     final sym = currencyInfo(app.settings.currency).symbol;
     return Padding(
-      padding: const EdgeInsets.only(
-          bottom: 16,
-          left: 20,
-          right: 20,
-          top: 20),
+      padding: const EdgeInsets.only(bottom: 16, left: 20, right: 20, top: 20),
       child: SingleChildScrollView(
-          child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                    isEdit
-                        ? l10n.wishlist_editItem
-                        : l10n.wishlist_addWishlistItem,
-                    style: Theme.of(context)
-                        .textTheme
-                        .titleLarge
-                        ?.copyWith(fontWeight: FontWeight.w800)),
-                const SizedBox(height: 16),
-                TextField(
-                  controller: _nameCtrl,
-                  textInputAction: TextInputAction.next,
-                 
-                  decoration: InputDecoration(
-                    labelText: l10n.wishlist_itemName,
-                    prefixIcon: const Icon(Icons.star_outline_rounded),
-                    errorText: _submitted && _nameCtrl.text.trim().isEmpty
-                        ? l10n.error_required
-                        : null,
-                  ),
+        child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                  isEdit
+                      ? l10n.wishlist_editItem
+                      : l10n.wishlist_addWishlistItem,
+                  style: Theme.of(context)
+                      .textTheme
+                      .titleLarge
+                      ?.copyWith(fontWeight: FontWeight.w800)),
+              const SizedBox(height: 16),
+              TextField(
+                controller: _nameCtrl,
+                textInputAction: TextInputAction.next,
+                decoration: InputDecoration(
+                  labelText: l10n.wishlist_itemName,
+                  prefixIcon: const Icon(Icons.star_outline_rounded),
+                  errorText: _submitted && _nameCtrl.text.trim().isEmpty
+                      ? l10n.error_required
+                      : null,
                 ),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: _priceCtrl,
-                  textInputAction: TextInputAction.next,
-                 
-                  keyboardType:
-                      const TextInputType.numberWithOptions(decimal: true),
-                  decoration: InputDecoration(
-                    labelText: l10n.wishlist_targetPrice,
-                    prefixText: '$sym ',
-                    errorText: _submitted &&
-                            (parseMoney(_priceCtrl.text) ?? 0) <= 0
-                        ? l10n.error_required
-                        : null,
-                  ),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: _priceCtrl,
+                textInputAction: TextInputAction.next,
+                keyboardType:
+                    const TextInputType.numberWithOptions(decimal: true),
+                decoration: InputDecoration(
+                  labelText: l10n.wishlist_targetPrice,
+                  prefixText: '$sym ',
+                  errorText:
+                      _submitted && (parseMoney(_priceCtrl.text) ?? 0) <= 0
+                          ? l10n.error_required
+                          : null,
                 ),
-                const SizedBox(height: 14),
-                Text(l10n.wishlist_priority,
-                    style: Theme.of(context)
-                        .textTheme
-                        .labelMedium
-                        ?.copyWith(letterSpacing: 1)),
-                const SizedBox(height: 8),
-                Row(children: [
-                  for (final p in [
-                    ('low', l10n.wishlist_priorityLow, 0xFF2E7D32),
-                    ('medium', l10n.wishlist_priorityMedium, 0xFFE65100),
-                    ('high', l10n.wishlist_priorityHigh, 0xFFC62828)
-                  ])
-                    Expanded(
-                        child: Padding(
-                      padding: const EdgeInsets.only(right: 8),
-                      child: GestureDetector(
-                        onTap: () => setState(() => _priority = p.$1),
-                        child: AnimatedContainer(
-                          duration: const Duration(milliseconds: 100),
-                          padding: const EdgeInsets.symmetric(vertical: 9),
-                          decoration: BoxDecoration(
-                              color: _priority == p.$1
-                                  ? Color(p.$3)
-                                  : Color(p.$3).withValues(alpha: 0.1),
-                              borderRadius: BorderRadius.circular(10)),
-                          child: Center(
-                              child: Text(p.$2,
-                                  style: TextStyle(
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.w700,
-                                      color: _priority == p.$1
-                                          ? Colors.white
-                                          : Color(p.$3)))),
-                        ),
+              ),
+              const SizedBox(height: 14),
+              Text(l10n.wishlist_priority,
+                  style: Theme.of(context)
+                      .textTheme
+                      .labelMedium
+                      ?.copyWith(letterSpacing: 1)),
+              const SizedBox(height: 8),
+              Row(children: [
+                for (final p in [
+                  ('low', l10n.wishlist_priorityLow, 0xFF2E7D32),
+                  ('medium', l10n.wishlist_priorityMedium, 0xFFE65100),
+                  ('high', l10n.wishlist_priorityHigh, 0xFFC62828)
+                ])
+                  Expanded(
+                      child: Padding(
+                    padding: const EdgeInsets.only(right: 8),
+                    child: GestureDetector(
+                      onTap: () => setState(() => _priority = p.$1),
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 100),
+                        padding: const EdgeInsets.symmetric(vertical: 9),
+                        decoration: BoxDecoration(
+                            color: _priority == p.$1
+                                ? Color(p.$3)
+                                : Color(p.$3).withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(10)),
+                        child: Center(
+                            child: Text(p.$2,
+                                style: TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w700,
+                                    color: _priority == p.$1
+                                        ? Colors.white
+                                        : Color(p.$3)))),
                       ),
-                    )),
-                ]),
-                const SizedBox(height: 12),
-                TextField(
-                    controller: _notesCtrl,
-                    maxLines: 2,
-                    textInputAction: TextInputAction.done,
-                    onSubmitted: (_) => _submit(),
-                    decoration: InputDecoration(
-                        labelText: l10n.wishlist_notesOptional,
-                        prefixIcon: const Icon(Icons.sticky_note_2_outlined))),
-                const SizedBox(height: 20),
-                FilledButton(
-                  onPressed: () {
-                    AppHaptics.tap(context, HapticStrength.light);
-                    _submit();
-                  },
-                  style: FilledButton.styleFrom(
-                      minimumSize: const Size.fromHeight(50),
-                      shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(28))),
-                  child: Text(isEdit
-                      ? l10n.wishlist_saveChanges
-                      : l10n.wishlist_addItem),
-                ),
+                    ),
+                  )),
               ]),
-        ),
+              const SizedBox(height: 12),
+              TextField(
+                  controller: _notesCtrl,
+                  maxLines: 2,
+                  textInputAction: TextInputAction.done,
+                  onSubmitted: (_) => _submit(),
+                  decoration: InputDecoration(
+                      labelText: l10n.wishlist_notesOptional,
+                      prefixIcon: const Icon(Icons.sticky_note_2_outlined))),
+              const SizedBox(height: 20),
+              FilledButton(
+                onPressed: () {
+                  AppHaptics.tap(context, HapticStrength.light);
+                  _submit();
+                },
+                style: FilledButton.styleFrom(
+                    minimumSize: const Size.fromHeight(50),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(28))),
+                child: Text(
+                    isEdit ? l10n.wishlist_saveChanges : l10n.wishlist_addItem),
+              ),
+            ]),
+      ),
     );
   }
 }

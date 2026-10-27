@@ -504,6 +504,7 @@ class _StatementImportScreenState extends State<StatementImportScreen> {
                           builder: (_) => const ImportRulesScreen())),
               icon: const Icon(Icons.rule),
               label: const Text('Regras de categorização')),
+          const SizedBox(height: 14),
           DropdownButtonFormField<String>(
             isExpanded: true,
             initialValue: _accountId,

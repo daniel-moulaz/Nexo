@@ -56,8 +56,6 @@ class _LoanDetailScreenState extends State<LoanDetailScreen> {
     return Scaffold(
       appBar: AppBar(
         title: Text(_loan.name),
-        backgroundColor: cs.primary,
-        foregroundColor: cs.onPrimary,
         actions: [
           IconButton(
             icon: const Icon(Icons.edit_outlined),
@@ -84,7 +82,8 @@ class _LoanDetailScreenState extends State<LoanDetailScreen> {
                       child: Text(l10n.shared_widgets_cancel),
                     ),
                     TextButton(
-                      style: TextButton.styleFrom(foregroundColor: const Color(0xFFC62828)),
+                      style: TextButton.styleFrom(
+                          foregroundColor: const Color(0xFFC62828)),
                       onPressed: () async {
                         Navigator.pop(c); // close dialog
                         Navigator.pop(context); // go back to loans screen
@@ -114,7 +113,8 @@ class _LoanDetailScreenState extends State<LoanDetailScreen> {
             padding: const EdgeInsets.fromLTRB(16, 8, 16, 20),
             child: Card(
               elevation: 4,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(15)),
               child: Padding(
                 padding: const EdgeInsets.all(16),
                 child: Column(
@@ -133,9 +133,11 @@ class _LoanDetailScreenState extends State<LoanDetailScreen> {
                         ),
                         if (_loan.isSettled)
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 8, vertical: 2),
                             decoration: BoxDecoration(
-                              color: const Color(0xFF2E7D32).withValues(alpha: 0.15),
+                              color: const Color(0xFF2E7D32)
+                                  .withValues(alpha: 0.15),
                               borderRadius: BorderRadius.circular(6),
                             ),
                             child: Text(
@@ -155,7 +157,9 @@ class _LoanDetailScreenState extends State<LoanDetailScreen> {
                       style: TextStyle(
                         fontSize: 24,
                         fontWeight: FontWeight.w900,
-                        color: remaining > 0 ? cs.primary : const Color(0xFF2E7D32),
+                        color: remaining > 0
+                            ? cs.primary
+                            : const Color(0xFF2E7D32),
                       ),
                     ),
                     const SizedBox(height: 12),
@@ -164,18 +168,22 @@ class _LoanDetailScreenState extends State<LoanDetailScreen> {
                       children: [
                         Text(
                           '${l10n.loans_paid}: ${formatAmount(totalPaid, cur)}',
-                          style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600),
+                          style: const TextStyle(
+                              fontSize: 11, fontWeight: FontWeight.w600),
                         ),
                         Text(
                           '${(progress * 100).toStringAsFixed(0)}%',
-                          style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
+                          style: const TextStyle(
+                              fontSize: 11, fontWeight: FontWeight.bold),
                         ),
                       ],
                     ),
                     const SizedBox(height: 6),
                     LinearProgressCard(
                       value: progress,
-                      color: _loan.isSettled ? const Color(0xFF2E7D32) : cs.primary,
+                      color: _loan.isSettled
+                          ? const Color(0xFF2E7D32)
+                          : cs.primary,
                     ),
                   ],
                 ),
@@ -190,19 +198,24 @@ class _LoanDetailScreenState extends State<LoanDetailScreen> {
               elevation: 0,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(12),
-                side: BorderSide(color: cs.outlineVariant.withValues(alpha: 0.5)),
+                side:
+                    BorderSide(color: cs.outlineVariant.withValues(alpha: 0.5)),
               ),
               child: Padding(
-                padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+                padding:
+                    const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
                 child: Column(
                   children: [
                     Row(
                       children: [
-                        Expanded(child: _DetailStat('Principal', formatAmount(_loan.principal, cur))),
+                        Expanded(
+                            child: _DetailStat('Principal',
+                                formatAmount(_loan.principal, cur))),
                         Expanded(
                           child: _DetailStat(
                             'Interest Rate',
-                            _loan.interestRate != null && _loan.interestRate! > 0
+                            _loan.interestRate != null &&
+                                    _loan.interestRate! > 0
                                 ? '${_loan.interestRate}%'
                                 : '0%',
                           ),
@@ -212,8 +225,14 @@ class _LoanDetailScreenState extends State<LoanDetailScreen> {
                     const Divider(height: 16, thickness: 0.5),
                     Row(
                       children: [
-                        Expanded(child: _DetailStat('Duration', l10n.loans_durationMonths(_loan.durationMonths))),
-                        Expanded(child: _DetailStat('Total a pagar', formatAmount(_loan.totalPayable, cur))),
+                        Expanded(
+                            child: _DetailStat(
+                                'Duration',
+                                l10n.loans_durationMonths(
+                                    _loan.durationMonths))),
+                        Expanded(
+                            child: _DetailStat('Total a pagar',
+                                formatAmount(_loan.totalPayable, cur))),
                       ],
                     ),
                     if (_loan.accountId != null) ...[
@@ -223,7 +242,8 @@ class _LoanDetailScreenState extends State<LoanDetailScreen> {
                           Expanded(
                             child: _DetailStat(
                               'Conta vinculada',
-                              app.accountById(_loan.accountId!)?.name ?? 'Conta excluída',
+                              app.accountById(_loan.accountId!)?.name ??
+                                  'Conta excluída',
                             ),
                           ),
                         ],
@@ -294,11 +314,14 @@ class _LoanDetailScreenState extends State<LoanDetailScreen> {
                     ),
                   )
                 : ListView.builder(
-                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
                     itemCount: payments.length,
                     itemBuilder: (context, index) {
                       final p = payments[index];
-                      final acc = p.accountId != null ? app.accountById(p.accountId!) : null;
+                      final acc = p.accountId != null
+                          ? app.accountById(p.accountId!)
+                          : null;
 
                       return Card(
                         margin: const EdgeInsets.only(bottom: 6),
@@ -312,7 +335,8 @@ class _LoanDetailScreenState extends State<LoanDetailScreen> {
                               color: const Color(0xFFC62828),
                               borderRadius: BorderRadius.circular(12),
                             ),
-                            child: const Icon(Icons.delete, color: Colors.white),
+                            child:
+                                const Icon(Icons.delete, color: Colors.white),
                           ),
                           confirmDismiss: (dir) async {
                             return await showDialog<bool>(
@@ -321,9 +345,13 @@ class _LoanDetailScreenState extends State<LoanDetailScreen> {
                                 title: Text(l10n.loans_deletePayment),
                                 content: Text(l10n.loans_confirmDeletePayment),
                                 actions: [
-                                  TextButton(onPressed: () => Navigator.pop(c, false), child: Text(l10n.shared_widgets_cancel)),
                                   TextButton(
-                                    style: TextButton.styleFrom(foregroundColor: const Color(0xFFC62828)),
+                                      onPressed: () => Navigator.pop(c, false),
+                                      child: Text(l10n.shared_widgets_cancel)),
+                                  TextButton(
+                                    style: TextButton.styleFrom(
+                                        foregroundColor:
+                                            const Color(0xFFC62828)),
                                     onPressed: () => Navigator.pop(c, true),
                                     child: Text(l10n.shared_widgets_delete_),
                                   ),
@@ -332,7 +360,8 @@ class _LoanDetailScreenState extends State<LoanDetailScreen> {
                             );
                           },
                           onDismissed: (dir) async {
-                            final undo = await app.deleteLoanPaymentWithUndo(p.id);
+                            final undo =
+                                await app.deleteLoanPaymentWithUndo(p.id);
                             if (context.mounted) {
                               showAppSnackbar(
                                 context,
@@ -349,11 +378,13 @@ class _LoanDetailScreenState extends State<LoanDetailScreen> {
                                 color: cs.primary.withValues(alpha: 0.1),
                                 borderRadius: BorderRadius.circular(10),
                               ),
-                              child: Icon(Icons.payment, color: cs.primary, size: 18),
+                              child: Icon(Icons.payment,
+                                  color: cs.primary, size: 18),
                             ),
                             title: Text(
                               formatAmount(p.amount, p.currency),
-                              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                              style: const TextStyle(
+                                  fontWeight: FontWeight.bold, fontSize: 14),
                             ),
                             subtitle: Text(
                               [
@@ -460,7 +491,8 @@ class _LogPaymentSheetState extends State<_LogPaymentSheet> {
             children: [
               Text(
                 l10n.loans_logPayment,
-                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                style:
+                    const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 16),
 
@@ -473,21 +505,24 @@ class _LogPaymentSheetState extends State<_LogPaymentSheet> {
                   border: const OutlineInputBorder(),
                   isDense: true,
                 ),
-                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                keyboardType:
+                    const TextInputType.numberWithOptions(decimal: true),
                 validator: (val) {
                   if (val == null || val.trim().isEmpty) return 'Required';
                   final num = parseMoney(val);
                   if (num == null || num <= 0) return 'Invalid';
                   return null;
                 },
-                onChanged: (val) => setState(() => _amount = parseMoney(val) ?? 0.0),
+                onChanged: (val) =>
+                    setState(() => _amount = parseMoney(val) ?? 0.0),
               ),
               const SizedBox(height: 16),
 
               // Account Picker
               Text(
                 l10n.loans_account,
-                style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                style:
+                    const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 6),
               AccountCardPicker(
@@ -524,7 +559,8 @@ class _LogPaymentSheetState extends State<_LogPaymentSheet> {
 
                   if (mounted) {
                     Navigator.pop(context);
-                    showAppSnackbar(context, 'Pagamento registrado: ${formatAmount(_amount, widget.loan.currency)}');
+                    showAppSnackbar(context,
+                        'Pagamento registrado: ${formatAmount(_amount, widget.loan.currency)}');
                   }
                 },
                 child: Text(l10n.loans_logPayment),

@@ -107,7 +107,6 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
   @override
   Widget build(BuildContext context) {
     final app = context.watch<AppProvider>();
-    final cs = Theme.of(context).colorScheme;
     final l10n = AppLocalizations.of(context)!;
     String fmt(double v) => formatAmount(v, app.settings.currency);
 
@@ -128,8 +127,6 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
       appBar: AppBar(
         title: Text(l10n.statistics_statistics,
             style: const TextStyle(fontWeight: FontWeight.w800)),
-        backgroundColor: cs.primary,
-        foregroundColor: cs.onPrimary,
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),

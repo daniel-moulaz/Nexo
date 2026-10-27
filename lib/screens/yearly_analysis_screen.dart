@@ -16,7 +16,7 @@ class YearlyLineItem {
 }
 
 const _kGreenAccent = Color(0xFF2E7D32);
-const _kTealAccent  = Color(0xFF00897B);
+const _kTealAccent = Color(0xFF00897B);
 const _kOrangeAccent = Color(0xFFF57C00);
 const _kPurpleAccent = Color(0xFF7B1FA2);
 
@@ -65,9 +65,11 @@ Map<int, Map<int, YearlyMonthData>> buildYearlyAnalysis(AppProvider app) {
     final cap = r.endDate ?? openEndedHorizon;
     if (r.hasSkippedInstallments) {
       for (final missed in r.skippedOccurrences) {
-        final item = YearlyLineItem(r.name, app.convertToMain(missed.amount, currency));
+        final item =
+            YearlyLineItem(r.name, app.convertToMain(missed.amount, currency));
         final b = bucket(missed.date);
-        (r.paymentType == 'income' ? b.recurringIncome : b.recurringExpense).add(item);
+        (r.paymentType == 'income' ? b.recurringIncome : b.recurringExpense)
+            .add(item);
       }
     }
     var cursor = r.nextDate;
@@ -116,8 +118,8 @@ Map<int, Map<int, YearlyMonthData>> buildYearlyAnalysis(AppProvider app) {
   }
 
   // 3. Borrowed money due (outflow)
-  for (final l in app.lended
-      .where((x) => x.type == 'borrowed' && !x.isSettled && x.dueDate != null)) {
+  for (final l in app.lended.where(
+      (x) => x.type == 'borrowed' && !x.isSettled && x.dueDate != null)) {
     final person = app.personById(l.personId)?.name ?? '';
     bucket(l.dueDate!).borrowedItems.add(YearlyLineItem(person, l.amount));
   }
@@ -189,8 +191,6 @@ class _YearlyAnalysisScreenState extends State<YearlyAnalysisScreen> {
       appBar: AppBar(
         title: Text(l10n.yearly_title,
             style: const TextStyle(fontWeight: FontWeight.w800)),
-        backgroundColor: cs.primary,
-        foregroundColor: cs.onPrimary,
       ),
       body: !hasAnyDataInApp
           ? EmptyState(
@@ -500,7 +500,8 @@ class _MonthCardState extends State<_MonthCard> {
                               FittedBox(
                                 fit: BoxFit.scaleDown,
                                 child: Text(
-                                  formatAmount(widget.data.totalInflow, widget.currency),
+                                  formatAmount(
+                                      widget.data.totalInflow, widget.currency),
                                   style: const TextStyle(
                                     fontSize: 15,
                                     fontWeight: FontWeight.w800,
@@ -543,7 +544,8 @@ class _MonthCardState extends State<_MonthCard> {
                               FittedBox(
                                 fit: BoxFit.scaleDown,
                                 child: Text(
-                                  formatAmount(widget.data.totalOutflow, widget.currency),
+                                  formatAmount(widget.data.totalOutflow,
+                                      widget.currency),
                                   style: TextStyle(
                                     fontSize: 15,
                                     fontWeight: FontWeight.w800,
@@ -575,36 +577,37 @@ class _MonthCardState extends State<_MonthCard> {
                                 if (widget.data.recurringIncome.isNotEmpty) ...[
                                   _buildSectionTitle(l10n.yearly_recurringInc,
                                       _kGreenAccent, Icons.autorenew_rounded),
-                                  ...widget.data.recurringIncome
-                                      .map((i) => _buildLineRow(i.name, i.amount)),
+                                  ...widget.data.recurringIncome.map(
+                                      (i) => _buildLineRow(i.name, i.amount)),
                                   const SizedBox(height: 14),
                                 ],
                                 if (widget.data.lentDueItems.isNotEmpty) ...[
                                   _buildSectionTitle(l10n.yearly_lentDue,
                                       _kTealAccent, Icons.handshake_rounded),
-                                  ...widget.data.lentDueItems
-                                      .map((i) => _buildLineRow(i.name, i.amount)),
+                                  ...widget.data.lentDueItems.map(
+                                      (i) => _buildLineRow(i.name, i.amount)),
                                   const SizedBox(height: 14),
                                 ],
-                                if (widget.data.recurringExpense.isNotEmpty) ...[
+                                if (widget
+                                    .data.recurringExpense.isNotEmpty) ...[
                                   _buildSectionTitle(l10n.yearly_recurringExp,
                                       _kOrangeAccent, Icons.autorenew_rounded),
-                                  ...widget.data.recurringExpense
-                                      .map((i) => _buildLineRow(i.name, i.amount)),
+                                  ...widget.data.recurringExpense.map(
+                                      (i) => _buildLineRow(i.name, i.amount)),
                                   const SizedBox(height: 14),
                                 ],
                                 if (widget.data.loanItems.isNotEmpty) ...[
-                                  _buildSectionTitle(l10n.yearly_loans, cs.error,
-                                      Icons.account_balance_rounded),
-                                  ...widget.data.loanItems
-                                      .map((i) => _buildLineRow(i.name, i.amount)),
+                                  _buildSectionTitle(l10n.yearly_loans,
+                                      cs.error, Icons.account_balance_rounded),
+                                  ...widget.data.loanItems.map(
+                                      (i) => _buildLineRow(i.name, i.amount)),
                                   const SizedBox(height: 14),
                                 ],
                                 if (widget.data.borrowedItems.isNotEmpty) ...[
                                   _buildSectionTitle(l10n.yearly_borrowed,
                                       _kPurpleAccent, Icons.handshake_rounded),
-                                  ...widget.data.borrowedItems
-                                      .map((i) => _buildLineRow(i.name, i.amount)),
+                                  ...widget.data.borrowedItems.map(
+                                      (i) => _buildLineRow(i.name, i.amount)),
                                 ],
                               ],
                             ),

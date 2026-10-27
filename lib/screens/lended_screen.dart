@@ -6,6 +6,7 @@ import '../providers/app_provider.dart';
 import '../models/models.dart';
 import '../theme/app_theme.dart';
 import '../widgets/shared_widgets.dart';
+import '../widgets/nexo_ui.dart';
 import 'lended_person_screen.dart';
 import '../utils/haptics.dart';
 
@@ -66,36 +67,39 @@ class LendedScreen extends StatelessWidget {
 
     return Scaffold(
       appBar: AppBar(
+        actions: [
+          IconButton(
+              tooltip: 'Nova pessoa',
+              icon: const Icon(Icons.person_add_alt_1_rounded),
+              onPressed: () {
+                AppHaptics.tap(context, HapticStrength.light);
+                _openPersonSheet(context);
+              }),
+        ],
         title: Text(l10n.lended_lentMoney,
             style: const TextStyle(fontWeight: FontWeight.w800)),
-        backgroundColor: cs.primary,
-        foregroundColor: cs.onPrimary,
       ),
       body: Column(children: [
         if (app.lendedPeople.isNotEmpty)
-          Container(
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
-            color: cs.primary,
-            child: Row(children: [
-              Expanded(
-                  child: _SumCol(
-                      label: l10n.lended_theyOweMe,
-                      value: fmt(theyOwe),
-                      color: cs.onPrimary.withValues(alpha: 0.9),
-                      labelColor: cs.onPrimary.withValues(alpha: 0.65))),
-              Expanded(
-                  child: _SumCol(
-                      label: l10n.lended_iOweThem,
-                      value: fmt(iOwe),
-                      color: cs.onPrimary.withValues(alpha: 0.9),
-                      labelColor: cs.onPrimary.withValues(alpha: 0.65))),
-              Expanded(
-                  child: _SumCol(
-                      label: l10n.lended_net,
-                      value: fmt(theyOwe - iOwe),
-                      color: cs.onPrimary,
-                      labelColor: cs.onPrimary.withValues(alpha: 0.65))),
-            ]),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
+            child: NexoCard(
+              child: Row(children: [
+                Expanded(
+                    child: NexoStatPill(
+                        label: l10n.lended_theyOweMe, value: fmt(theyOwe))),
+                const SizedBox(width: 8),
+                Expanded(
+                    child: NexoStatPill(
+                        label: l10n.lended_iOweThem, value: fmt(iOwe))),
+                const SizedBox(width: 8),
+                Expanded(
+                    child: NexoStatPill(
+                        label: l10n.lended_net,
+                        value: fmt(theyOwe - iOwe),
+                        valueColor: theyOwe - iOwe < 0 ? cs.error : null)),
+              ]),
+            ),
           ),
         Expanded(
             child: people.isEmpty
@@ -110,14 +114,6 @@ class LendedScreen extends StatelessWidget {
                         _PersonCard(person: people[i], fmt: fmt),
                   )),
       ]),
-      floatingActionButton: FloatingActionButton(
-        heroTag: null,
-        onPressed: () {
-          AppHaptics.tap(context, HapticStrength.light);
-          _openPersonSheet(context);
-        },
-        child: const Icon(Icons.person_add_alt_1_rounded),
-      ),
     );
   }
 
@@ -133,33 +129,6 @@ class LendedScreen extends StatelessWidget {
       builder: (_) => _PersonSheet(existing: existing),
     );
   }
-}
-
-// ── Summary column ────────────────────────────────────────────────────────────
-class _SumCol extends StatelessWidget {
-  final String label, value;
-  final Color color;
-  final Color? labelColor;
-  const _SumCol(
-      {required this.label,
-      required this.value,
-      required this.color,
-      this.labelColor});
-  @override
-  Widget build(BuildContext context) => Column(children: [
-        Text(label,
-            style: TextStyle(
-                fontSize: 10,
-                color: labelColor ??
-                    Theme.of(context)
-                        .colorScheme
-                        .onPrimaryContainer
-                        .withValues(alpha: 0.6))),
-        const SizedBox(height: 2),
-        Text(value,
-            style: TextStyle(
-                fontSize: 13, fontWeight: FontWeight.w800, color: color)),
-      ]);
 }
 
 // ── Person card ────────────────────────────────────────────────────────────────
@@ -331,11 +300,7 @@ class _PersonSheetState extends State<_PersonSheet> {
     final l10n = AppLocalizations.of(context)!;
     final cs = Theme.of(context).colorScheme;
     return Padding(
-      padding: const EdgeInsets.only(
-          bottom: 16,
-          left: 20,
-          right: 20,
-          top: 20),
+      padding: const EdgeInsets.only(bottom: 16, left: 20, right: 20, top: 20),
       child: SingleChildScrollView(
           child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -350,7 +315,6 @@ class _PersonSheetState extends State<_PersonSheet> {
           TextField(
             controller: _nameCtrl,
             textInputAction: TextInputAction.next,
-           
             autofocus: !isEdit,
             decoration: InputDecoration(
               labelText: l10n.lended_name,

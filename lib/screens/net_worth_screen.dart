@@ -12,18 +12,23 @@ class NetWorthScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    final cs   = Theme.of(context).colorScheme;
+    final cs = Theme.of(context).colorScheme;
 
-    final snapshots = context.select<AppProvider, List<dynamic>>((app) => app.netWorthSnapshots);
-    final totalAccounts = context.select<AppProvider, double>((app) => app.totalBalanceAll);
-    final totalAssets   = context.select<AppProvider, double>((app) => app.totalAssetsValue);
-    final liveNetWorth  = totalAccounts + totalAssets;
-    final currency      = context.select<AppProvider, String>((app) => app.settings.currency);
+    final snapshots = context
+        .select<AppProvider, List<dynamic>>((app) => app.netWorthSnapshots);
+    final totalAccounts =
+        context.select<AppProvider, double>((app) => app.totalBalanceAll);
+    final totalAssets =
+        context.select<AppProvider, double>((app) => app.totalAssetsValue);
+    final liveNetWorth = totalAccounts + totalAssets;
+    final currency =
+        context.select<AppProvider, String>((app) => app.settings.currency);
     String fmt(double v) => formatAmount(v, currency);
 
     final spots = <FlSpot>[];
     for (int i = 0; i < snapshots.length; i++) {
-      spots.add(FlSpot(i.toDouble(), (snapshots[i].netWorth as num).toDouble()));
+      spots
+          .add(FlSpot(i.toDouble(), (snapshots[i].netWorth as num).toDouble()));
     }
     // Append live current net worth point
     spots.add(FlSpot(snapshots.length.toDouble(), liveNetWorth));
@@ -34,8 +39,6 @@ class NetWorthScreen extends StatelessWidget {
           l10n.more_insights, // Fallback if netWorth_title unavailable
           style: const TextStyle(fontWeight: FontWeight.w800),
         ),
-        backgroundColor: cs.primary,
-        foregroundColor: cs.onPrimary,
       ),
       body: ListView(
         padding: const EdgeInsets.fromLTRB(16, 16, 16, 140),

@@ -9,6 +9,7 @@ import '../services/transaction_metadata_service.dart';
 import '../theme/app_theme.dart';
 import '../database/db_helper.dart';
 import '../services/cash_forecast.dart';
+import '../widgets/nexo_ui.dart';
 import 'agenda_screen.dart';
 
 class FinancialPlanningScreen extends StatelessWidget {
@@ -283,12 +284,8 @@ class _PlanningBody extends StatelessWidget {
       body: ListView(
         padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
         children: [
-          Container(
+          NexoCard(
             padding: const EdgeInsets.all(20),
-            decoration: BoxDecoration(
-              color: cs.primaryContainer.withValues(alpha: .58),
-              borderRadius: BorderRadius.circular(26),
-            ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [

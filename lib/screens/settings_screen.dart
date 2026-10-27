@@ -27,8 +27,6 @@ class SettingsScreen extends StatelessWidget {
       appBar: AppBar(
         title: Text(l10n.settings_title,
             style: const TextStyle(fontWeight: FontWeight.w800)),
-        backgroundColor: cs.primary,
-        foregroundColor: cs.onPrimary,
       ),
       body: SafeArea(
           bottom: true,

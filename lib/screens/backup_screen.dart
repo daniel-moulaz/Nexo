@@ -178,8 +178,6 @@ class _BackupScreenState extends State<BackupScreen> {
       appBar: AppBar(
         title: Text(l10n.backup_backupRestore,
             style: const TextStyle(fontWeight: FontWeight.w800)),
-        backgroundColor: cs.primary,
-        foregroundColor: cs.onPrimary,
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(20),

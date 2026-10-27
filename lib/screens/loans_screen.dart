@@ -6,6 +6,7 @@ import '../models/models.dart';
 import '../providers/app_provider.dart';
 import '../widgets/shared_widgets.dart';
 import '../theme/app_theme.dart';
+import '../utils/haptics.dart';
 import '../l10n/app_localizations.dart';
 import '../utils/snackbar.dart';
 import '../services/loan_reminder_service.dart';
@@ -46,10 +47,17 @@ class _LoansScreenState extends State<LoansScreen> {
 
     return Scaffold(
       appBar: AppBar(
+        actions: [
+          IconButton(
+              tooltip: 'Novo empréstimo',
+              icon: const Icon(Icons.add),
+              onPressed: () {
+                AppHaptics.tap(context, HapticStrength.light);
+                _openSheet(context);
+              }),
+        ],
         title: Text(l10n.loans_title,
             style: const TextStyle(fontWeight: FontWeight.w800)),
-        backgroundColor: cs.primary,
-        foregroundColor: cs.onPrimary,
       ),
       body: Column(
         children: [
@@ -141,11 +149,6 @@ class _LoansScreenState extends State<LoansScreen> {
                   ),
           ),
         ],
-      ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => _openSheet(context),
-        icon: const Icon(Icons.add),
-        label: const Text('Adicionar empréstimo'),
       ),
     );
   }
