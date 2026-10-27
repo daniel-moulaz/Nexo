@@ -152,21 +152,24 @@ class _InvestmentsScreenState extends State<InvestmentsScreen> {
   Widget build(BuildContext context) {
     final private = context.watch<AppProvider>().settings.hideBalance;
     return Scaffold(
-      appBar: AppBar(title: const Text('Investimentos'), actions: [
-        IconButton(
-            tooltip: 'Configurar cotações',
-            onPressed: _settings,
-            icon: const Icon(Icons.settings_outlined)),
-        IconButton(
-            tooltip: 'Atualizar cotações',
-            onPressed: _refreshing ? null : _quotes,
-            icon: _refreshing
-                ? const SizedBox(
-                    width: 20,
-                    height: 20,
-                    child: CircularProgressIndicator(strokeWidth: 2))
-                : const Icon(Icons.refresh)),
-      ]),
+      appBar: AppBar(
+          title: const Text('Investimentos',
+              style: TextStyle(fontWeight: FontWeight.w900)),
+          actions: [
+            IconButton(
+                tooltip: 'Configurar cotações',
+                onPressed: _settings,
+                icon: const Icon(Icons.settings_outlined)),
+            IconButton(
+                tooltip: 'Atualizar cotações',
+                onPressed: _refreshing ? null : _quotes,
+                icon: _refreshing
+                    ? const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(strokeWidth: 2))
+                    : const Icon(Icons.refresh)),
+          ]),
       floatingActionButton: MediaQuery.sizeOf(context).width < 900
           ? FloatingActionButton(
               tooltip: 'Adicionar investimento',
