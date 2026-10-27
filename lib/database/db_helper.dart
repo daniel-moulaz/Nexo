@@ -488,10 +488,9 @@ class DBHelper {
     if (oldV < 24) await InvestmentRepository.createSchema(db);
     if (oldV < 26) {
       // Kind of spending of a category (envelopes by share of income).
-      try {
+      final columns = await db.rawQuery('PRAGMA table_info(categories)');
+      if (!columns.any((c) => c['name'] == 'envelope')) {
         await db.execute('ALTER TABLE categories ADD COLUMN envelope TEXT');
-      } catch (e) {
-        debugPrint('Migration v$oldV envelope step failed');
       }
     }
     if (oldV >= 24 && oldV < 25) {
