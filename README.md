@@ -33,7 +33,7 @@ O Nexo reúne saldo, gastos, cartões, dívidas, investimentos e previsão de ca
 
 ## Telas
 
-As imagens abaixo são da versão 1.12.2, geradas com **dados fictícios** a partir das telas reais do app (`flutter test tool/readme_screens.dart`). Não representam finanças pessoais reais.
+As imagens abaixo são da versão 1.12.7, geradas com **dados fictícios** a partir das telas reais do app (`flutter test tool/readme_screens.dart`). Não representam finanças pessoais reais.
 
 <p align="center">
   <img src="docs/images/nexo-home-mobile.png" width="320" alt="Home do Nexo com saldo, resumo mensal e atalhos usando dados fictícios" />
@@ -55,7 +55,7 @@ As imagens abaixo são da versão 1.12.2, geradas com **dados fictícios** a par
 
 ## Estado do projeto
 
-Versão de referência: **1.12.4+41** (outubro de 2026). Detalhes em [CHANGELOG.md](CHANGELOG.md) e [docs/PLAN.md](docs/PLAN.md).
+Versão de referência: **1.12.7+44** (outubro de 2026). Detalhes em [CHANGELOG.md](CHANGELOG.md) e [docs/PLAN.md](docs/PLAN.md).
 
 | Área | Situação |
 | --- | --- |
