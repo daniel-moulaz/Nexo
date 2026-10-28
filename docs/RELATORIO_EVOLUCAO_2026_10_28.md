@@ -90,15 +90,14 @@ cinco telas sem navegação.
 | P3-2 Importação da B3 | `b3_import.dart`, Investir | `b3_import_test.dart` |
 | P3-3 IPCA, Selic, PTAX | `market_indices.dart`, Investir | `market_indices_test.dart` (4) |
 | P3-4 Personalizar o Hoje | `home_customize_sheet.dart`, Hoje, paleta | — |
-| P3-1 Cupom (parser) | `receipt_parser.dart` | `receipt_parser_test.dart` (4) |
+| P3-1 Cupom pela câmera (1.12.14) | `receipt_parser.dart`, `receipt_scan.dart`, `receipt_scan_mlkit.dart`, formulário, paleta | `receipt_parser_test.dart` (4) |
 | P0-2 Finais de linha | `.gitattributes` + normalização | — |
 
 Não feito, e por quê: **P2-1** (fatiar `AppProvider`) e **P2-4** (um serviço de
 lembretes) mexem no caminho de gravação e nas notificações agendadas de um app em uso
 real; sem homologação manual no aparelho, o risco de regressão silenciosa é maior que o
 ganho desta rodada. **P2-2** (cálculo fora das telas gigantes) fica junto com P2-1.
-**P2-8** (onboarding novo) ficou parcial: o passo de idioma saiu. **P3-1**: a câmera e o
-ML Kit não foram ligados; o parser está pronto para quando a dependência nativa entrar.
+**P2-8** (onboarding novo) ficou parcial: o passo de idioma saiu. **P3-1** entrou na 1.12.14 (ML Kit no Android; Windows sem o botão).
 
 ## 8. Validação
 

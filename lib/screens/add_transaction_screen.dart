@@ -12,6 +12,8 @@ import '../services/entry_suggestions.dart';
 import 'transfer_screen.dart';
 import '../services/entry_defaults.dart';
 import '../services/category_memory.dart';
+import '../services/receipt_scan.dart';
+import '../utils/snackbar.dart';
 
 class AddTransactionScreen extends StatefulWidget {
   final AppTransaction? existing;
@@ -99,6 +101,34 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
           : (account?.currency ?? app.settings.currency);
       if (isEdit) _loadMetadata(existing.id);
     }
+  }
+
+  /// A photo of the receipt fills amount, date and merchant; the person
+  /// still reviews and saves. Text is read on the device.
+  Future<void> _scanReceipt() async {
+    final reading = await ReceiptScan.scan();
+    if (reading == null || !mounted) return;
+    if (!reading.hasTotal && reading.merchant == null) {
+      showAppSnackbar(context,
+          'Não deu para ler o cupom. Tente com mais luz e o total visível.');
+      return;
+    }
+    setState(() {
+      if (reading.hasTotal) {
+        _amountCtrl.text =
+            reading.total!.toStringAsFixed(2).replaceAll('.', ',');
+      }
+      if (reading.merchant != null && _descriptionCtrl.text.trim().isEmpty) {
+        _descriptionCtrl.text = reading.merchant!;
+        if (!_categoryTouched) {
+          final id = _memory.suggest(reading.merchant!, type: _type);
+          if (id != null) _categoryId = id;
+        }
+      }
+      if (reading.date != null) _date = reading.date!;
+    });
+    showAppSnackbar(context,
+        'Lido do cupom${reading.hasTotal ? '' : ' (sem total)'}: confira e salve.');
   }
 
   /// Categories the history confirmed for this description come first.
@@ -470,6 +500,12 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
                   style: const TextStyle(fontWeight: FontWeight.w900),
                 ),
                 actions: [
+                  if (!isEdit && ReceiptScan.available)
+                    IconButton(
+                      tooltip: 'Fotografar cupom ou comprovante',
+                      onPressed: _saving ? null : _scanReceipt,
+                      icon: const Icon(Icons.photo_camera_outlined),
+                    ),
                   if (isEdit)
                     IconButton(
                       tooltip: 'Excluir lançamento',

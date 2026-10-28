@@ -28,6 +28,7 @@ import '../services/text_entry.dart';
 import '../services/text_normalize.dart';
 import '../theme/app_theme.dart';
 import '../screens/home_customize_sheet.dart';
+import '../services/receipt_scan.dart';
 
 /// Where a palette entry runs: the context the palette was opened from
 /// (still mounted after the palette closes) and the app state.
@@ -133,6 +134,28 @@ List<CommandEntry> paletteEntries(AppProvider app, String query) {
         icon: Icons.inbox_outlined,
         keywords: 'banco revisar sugestões',
         run: (h) => h.push(const NotificationInboxScreen())),
+    if (ReceiptScan.available)
+      CommandEntry(
+          title: 'Escanear cupom',
+          subtitle: 'Fotografa e preenche o lançamento',
+          icon: Icons.photo_camera_outlined,
+          keywords: 'foto nota comprovante ocr',
+          run: (h) async {
+            final r = await ReceiptScan.scan();
+            if (r == null) return;
+            final currency = h.app.settings.currency;
+            h.push(AddTransactionScreen(
+                initialDate: r.date,
+                template: AppTransaction(
+                    id: '',
+                    type: 'expense',
+                    amount: r.total ?? 0,
+                    description: r.merchant ?? '',
+                    accountId: '',
+                    categoryId: '',
+                    date: r.date ?? DateTime.now(),
+                    currency: currency)));
+          }),
     CommandEntry(
         title: 'Personalizar o Hoje',
         subtitle: 'Ordem e visibilidade dos cartões',

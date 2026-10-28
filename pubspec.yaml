@@ -1,7 +1,7 @@
 name: nexo
 description: Nexo — controle financeiro pessoal brasileiro com dados locais.
 publish_to: 'none'
-version: 1.12.13+50
+version: 1.12.14+51
 
 environment:
   sdk: '>=3.3.0 <4.0.0'
@@ -38,6 +38,8 @@ dependencies:
   cryptography: ^2.9.0
   local_auth_android: ^2.2.0
   flutter_svg: ^2.3.0
+  google_mlkit_text_recognition: ^0.17.1
+  image_picker: ^1.2.4
 
 dev_dependencies:
   flutter_test:
@@ -48,7 +50,6 @@ dev_dependencies:
 flutter:
   generate: true
   uses-material-design: true
-  assets:
 
 # Launcher icons from the brand mark (assets/brand/*, rendered from the SVG
 # in docs/brand). Run: dart run flutter_launcher_icons

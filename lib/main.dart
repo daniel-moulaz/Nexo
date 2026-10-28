@@ -31,11 +31,13 @@ import 'sync/sync_controller.dart';
 import 'services/pluggy_inbox.dart';
 import 'sync/mcp_connectors.dart';
 import 'sync/assistant_commands.dart';
+import 'services/receipt_scan_mlkit.dart';
 
 final GlobalKey<NavigatorState> rootNavigatorKey = GlobalKey<NavigatorState>();
 
 void main(List<String> arguments) async {
   WidgetsFlutterBinding.ensureInitialized();
+  wireReceiptScan();
   try {
     await DesktopProfile.initialize(arguments);
     await startNexo();

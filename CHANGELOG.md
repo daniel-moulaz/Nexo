@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.12.14] - 2026-10-28
+### Novo
+- **Cupom pela câmera (Android):** o botão de câmera no formulário de lançamento, e "Escanear cupom" na paleta, fotografam o cupom ou comprovante e preenchem valor, data e estabelecimento com reconhecimento de texto no próprio aparelho (Google ML Kit, sem enviar a imagem a lugar nenhum). Nada é salvo sem confirmar. No Windows o botão não aparece.
+### Base
+- Finais de linha padronizados em LF no repositório (`.gitattributes`).
+
 ## [1.12.13] - 2026-10-28
 ### Dinheiro
 - **Até a próxima renda:** "quanto posso gastar" conta de uma renda à outra (a maior receita recorrente marca o ciclo), não até o fim do mês; mostra o que ainda sai até lá e avisa quando a renda do ciclo está prevista mas não registrada.

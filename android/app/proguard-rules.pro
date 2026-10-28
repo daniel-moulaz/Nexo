@@ -23,3 +23,10 @@
 # home_widget rules
 -keep class es.antonborri.home_widget.** { *; }
 -dontwarn es.antonborri.home_widget.**
+
+# ML Kit text recognition: only the Latin model ships; the other scripts are
+# referenced by the plugin but never loaded.
+-dontwarn com.google.mlkit.vision.text.chinese.**
+-dontwarn com.google.mlkit.vision.text.devanagari.**
+-dontwarn com.google.mlkit.vision.text.japanese.**
+-dontwarn com.google.mlkit.vision.text.korean.**

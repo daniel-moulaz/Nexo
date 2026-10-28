@@ -55,7 +55,7 @@ As imagens abaixo são da versão 1.12.7, geradas com **dados fictícios** a par
 
 ## Estado do projeto
 
-Versão de referência: **1.12.13+50** (outubro de 2026). Detalhes em [CHANGELOG.md](CHANGELOG.md) e [docs/PLAN.md](docs/PLAN.md).
+Versão de referência: **1.12.14+51** (outubro de 2026). Detalhes em [CHANGELOG.md](CHANGELOG.md) e [docs/PLAN.md](docs/PLAN.md).
 
 | Área | Situação |
 | --- | --- |

@@ -21,7 +21,7 @@ escreve. Tudo que entra tem que servir a esse eixo; o resto é ruído.
 | # | Item | Problema | Solução | Arquivos | Complex. | Aceitação | Estado |
 |---|---|---|---|---|---|---|---|
 | P0-1 | Texto grande em toda tela | Só 3 telas são verificadas a 1,5×; o overflow da 1.12.7 passou | Teste que abre as 5 abas e as telas de Mais a 412 px com 1,5× e falha em overflow | `test/scaled_text_tabs_test.dart` | baixa | teste no CI, passa | **feito (1.12.11)** |
-| P0-2 | Finais de linha | CRLF e LF misturados; `git status` sujo | `.gitattributes` `* text=auto`, normalização num commit só | raiz | baixa | `git status` limpo após build | proposto (decisão do dono: commit grande) |
+| P0-2 | Finais de linha | CRLF e LF misturados; `git status` sujo | `.gitattributes` `* text=auto`, índice normalizado | raiz | baixa | `git status` limpo após build | **feito (1.12.14)** |
 | P0-3 | Projeto independente | pacote, banco, canais, docs, histórico | ver `docs/NEXO_PROJETO_INDEPENDENTE_2026_10.md` | vários | média | testes passam; só `com.ma.expensy` resta | **feito (1.12.10)** |
 | P0-4 | Erros silenciosos | 94 `catch (_)` sem registro | `Diagnostics.note(area, error)` local, contagem por área, sem valores; visível em Ajuda | `lib/services/diagnostics.dart` + 11 pontos em sync, login e Open Finance | média | falhas aparecem em Ajuda › Diagnóstico; `test/diagnostics_test.dart` | **feito (1.12.13)** |
 
@@ -59,7 +59,7 @@ escreve. Tudo que entra tem que servir a esse eixo; o resto é ruído.
 
 | # | Item | Referência | Observação |
 |---|---|---|---|
-| P3-1 | Cupom por câmera (OCR local) | Organizze | parser do cupom pronto e testado (`receipt_parser.dart`); câmera e ML Kit ainda não ligados |
+| P3-1 | Cupom por câmera (OCR local) | Organizze | **feito (1.12.14)**: ML Kit no Android, botão no formulário e na paleta; `receipt_parser_test.dart` |
 | P3-2 | Extrato da B3 (Excel) | Status Invest | **feito (1.12.13)**: `b3_import.dart`, botão no Investir, sem duplicar |
 | P3-3 | PTAX, IPCA, Selic | roadmap | **feito (1.12.13)**: `market_indices.dart`, cartão no Investir; Tesouro Direto continua proposto |
 | P3-4 | Cartões configuráveis no Hoje | Monzo, Revolut | **feito (1.12.13)**: "Personalizar o Hoje" na paleta |
