@@ -25,6 +25,7 @@ import '../widgets/analysis_widgets.dart';
 import '../widgets/cash_timeline_chart.dart';
 import '../widgets/nexo_ui.dart';
 import '../widgets/shared_widgets.dart' show CategoryDot;
+import '../widgets/command_palette.dart';
 import 'accounts_screen.dart';
 import 'analysis_screen.dart';
 import 'add_transaction_screen.dart';
@@ -201,8 +202,8 @@ class _FinanceHomeScreenState extends State<FinanceHomeScreen>
           ]),
           actions: [
             IconButton(
-                tooltip: 'Buscar lançamentos',
-                onPressed: () => _open(const TransactionSearchScreen()),
+                tooltip: 'Buscar ou fazer',
+                onPressed: () => showCommandPalette(context),
                 icon: const Icon(Icons.search)),
             IconButton(
                 tooltip: app.settings.hideBalance

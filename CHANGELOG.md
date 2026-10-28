@@ -1,5 +1,14 @@
 # Changelog
 
+## [1.12.11] - 2026-10-28
+### Novo
+- **Buscar ou fazer:** a lupa do Hoje e Ctrl+K no Windows abrem uma paleta que acha telas (Agenda, Orçamento, Mês em revisão…), ações (nova despesa, nova receita, transferir, Para revisar), contas e cartões e lançamentos pela descrição. Enter executa o primeiro resultado; no Windows os atalhos aparecem ao lado.
+- **Lançar por texto:** uma linha como "mercado 45,90 ontem no roxo" vira o formulário já preenchido com valor, data, conta e categoria; nada é salvo sem confirmar. Entende "hoje/ontem/anteontem", "dia 5", dias da semana, datas "27/10", valores com vírgula ou ponto, "R$", "recebi/salário/reembolso" para receitas, o nome da conta ou do cartão, e a categoria pelo nome ou por palavras comuns (mercado, uber, farmácia, aluguel…).
+- **Categoria aprendida:** o que você confirmou antes para a mesma descrição vira a sugestão (só com duas ou mais confirmações e maioria clara), com a segunda opção à mão. Por enquanto alimenta o lançamento por texto; a caixa "Para revisar" entra em seguida.
+### Qualidade
+- Teste que abre as nove telas principais a 412 px com texto 1,5× e falha em qualquer overflow.
+- Documentos novos: auditoria do produto e do código, pesquisa de referências com fontes, plano de evolução P0–P3, relatório da desvinculação do Expensy.
+
 ## [1.12.10] - 2026-10-28
 ### Desvinculação do Expensy
 - O pacote Dart chama-se `nexo` (405 imports reescritos); `ExpensyApp`, `ExpensyRoute` e `ExpensySlideUpRoute` viraram `NexoApp`, `NexoRoute` e `NexoSlideUpRoute`.

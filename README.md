@@ -55,7 +55,7 @@ As imagens abaixo são da versão 1.12.7, geradas com **dados fictícios** a par
 
 ## Estado do projeto
 
-Versão de referência: **1.12.10+47** (outubro de 2026). Detalhes em [CHANGELOG.md](CHANGELOG.md) e [docs/PLAN.md](docs/PLAN.md).
+Versão de referência: **1.12.11+48** (outubro de 2026). Detalhes em [CHANGELOG.md](CHANGELOG.md) e [docs/PLAN.md](docs/PLAN.md).
 
 | Área | Situação |
 | --- | --- |
@@ -147,7 +147,11 @@ O identificador Android `com.ma.expensy` é preservado para que o app instalado 
 ## Documentação
 
 **Estado atual**
-- [Plano de evolução e andamento](docs/PLAN.md)
+- [Plano de evolução P0–P3 (28/10/2026)](docs/PLANO_EVOLUCAO_2026_11.md)
+- [Auditoria do produto e do código](docs/AUDITORIA_NEXO_2026_10.md)
+- [Pesquisa de referências, com fontes](docs/PESQUISA_REFERENCIAS_2026_10.md)
+- [Desvinculação do Expensy](docs/NEXO_DESVINCULACAO_EXPENSY_2026_10.md)
+- [Plano anterior e andamento](docs/PLAN.md)
 - [Histórico de versões](CHANGELOG.md)
 - [Segurança: RLS, segredos e rotação](docs/SEGURANCA.md)
 - [APIs exploradas: Pluggy, Banco Central, brapi, BrasilAPI](docs/APIS_EXPLORACAO.md)

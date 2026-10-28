@@ -15,6 +15,7 @@ import 'settings_screen.dart';
 import 'statement_import_screen.dart';
 import 'investments_screen.dart';
 import 'add_transaction_screen.dart';
+import '../widgets/command_palette.dart';
 import '../services/nexo_security.dart';
 import '../services/bank_snapshots.dart';
 import '../services/pluggy_inbox.dart';
@@ -95,6 +96,10 @@ class _MainShellState extends State<MainShell> with WidgetsBindingObserver {
     if (event.logicalKey == LogicalKeyboardKey.keyN) {
       Navigator.push(context,
           MaterialPageRoute(builder: (_) => const AddTransactionScreen()));
+      return true;
+    }
+    if (event.logicalKey == LogicalKeyboardKey.keyK) {
+      showCommandPalette(context);
       return true;
     }
     if (event.logicalKey == LogicalKeyboardKey.keyF) {
@@ -178,7 +183,7 @@ class _MainShellState extends State<MainShell> with WidgetsBindingObserver {
               const Padding(
                   padding: EdgeInsets.all(16),
                   child: Text(
-                      'Ctrl+N  Novo lançamento\nCtrl+F  Buscar transações',
+                      'Ctrl+N  Novo lançamento\nCtrl+K  Buscar ou fazer\nCtrl+F  Extrato',
                       style: TextStyle(fontSize: 12))),
             ]))),
         const VerticalDivider(width: 1),

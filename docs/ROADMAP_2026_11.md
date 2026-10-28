@@ -1,3 +1,5 @@
+> **Substituído em 28/10/2026** por `docs/PLANO_EVOLUCAO_2026_11.md`, que prioriza (P0–P3) e registra o estado de cada item. Este arquivo fica como registro das ideias.
+
 # Nexo — o melhor app possível: plano de novembro/2026
 
 Pedido do dono (27/10): visual, ferramentas, automações, APIs e

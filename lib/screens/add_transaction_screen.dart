@@ -17,11 +17,15 @@ class AddTransactionScreen extends StatefulWidget {
   final AppTransaction? template;
   final String initialType;
 
+  /// Date for a new entry (text entry fills it); edits keep their own.
+  final DateTime? initialDate;
+
   const AddTransactionScreen({
     super.key,
     this.existing,
     this.template,
     this.initialType = 'expense',
+    this.initialDate,
   });
 
   @override
@@ -77,9 +81,9 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
           existing.amount.toStringAsFixed(2).replaceAll('.', ',');
       _descriptionCtrl.text = existing.description;
       _noteCtrl.text = existing.note;
-      _accountId = existing.accountId;
-      _categoryId = existing.categoryId;
-      _date = isEdit ? existing.date : DateTime.now();
+      if (existing.accountId.isNotEmpty) _accountId = existing.accountId;
+      if (existing.categoryId.isNotEmpty) _categoryId = existing.categoryId;
+      _date = isEdit ? existing.date : (widget.initialDate ?? DateTime.now());
       final account = app.accountById(existing.accountId);
       _currency = existing.currency.isNotEmpty
           ? existing.currency
