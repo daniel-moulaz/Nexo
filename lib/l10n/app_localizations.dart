@@ -5,17 +5,7 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:intl/intl.dart' as intl;
 
-import 'app_localizations_ar.dart';
-import 'app_localizations_de.dart';
-import 'app_localizations_en.dart';
-import 'app_localizations_es.dart';
-import 'app_localizations_fr.dart';
-import 'app_localizations_hi.dart';
-import 'app_localizations_it.dart';
-import 'app_localizations_ja.dart';
 import 'app_localizations_pt.dart';
-import 'app_localizations_ru.dart';
-import 'app_localizations_zh.dart';
 
 // ignore_for_file: type=lint
 
@@ -102,3324 +92,3312 @@ abstract class AppLocalizations {
   ];
 
   /// A list of this localizations delegate's supported locales.
-  static const List<Locale> supportedLocales = <Locale>[
-    Locale('ar'),
-    Locale('de'),
-    Locale('en'),
-    Locale('es'),
-    Locale('fr'),
-    Locale('hi'),
-    Locale('it'),
-    Locale('ja'),
-    Locale('pt'),
-    Locale('ru'),
-    Locale('zh')
-  ];
+  static const List<Locale> supportedLocales = <Locale>[Locale('pt')];
 
   /// No description provided for @appTitle.
   ///
-  /// In en, this message translates to:
+  /// In pt, this message translates to:
   /// **'Nexo'**
   String get appTitle;
 
   /// No description provided for @settings_title.
   ///
-  /// In en, this message translates to:
-  /// **'Settings'**
+  /// In pt, this message translates to:
+  /// **'Configurações'**
   String get settings_title;
 
   /// No description provided for @settings_appearance.
   ///
-  /// In en, this message translates to:
-  /// **'Appearance'**
+  /// In pt, this message translates to:
+  /// **'Aparência'**
   String get settings_appearance;
 
   /// No description provided for @settings_theme.
   ///
-  /// In en, this message translates to:
-  /// **'Theme'**
+  /// In pt, this message translates to:
+  /// **'Tema'**
   String get settings_theme;
 
   /// No description provided for @settings_system.
   ///
-  /// In en, this message translates to:
-  /// **'System'**
+  /// In pt, this message translates to:
+  /// **'Sistema'**
   String get settings_system;
 
   /// No description provided for @settings_light.
   ///
-  /// In en, this message translates to:
-  /// **'Light'**
+  /// In pt, this message translates to:
+  /// **'Claro'**
   String get settings_light;
 
   /// No description provided for @settings_dark.
   ///
-  /// In en, this message translates to:
-  /// **'Dark'**
+  /// In pt, this message translates to:
+  /// **'Escuro'**
   String get settings_dark;
 
   /// No description provided for @settings_amoledTitle.
   ///
-  /// In en, this message translates to:
-  /// **'Pure Black (AMOLED)'**
+  /// In pt, this message translates to:
+  /// **'Preto Puro (AMOLED)'**
   String get settings_amoledTitle;
 
   /// No description provided for @settings_amoledSubtitle.
   ///
-  /// In en, this message translates to:
-  /// **'Forces black backgrounds in dark mode'**
+  /// In pt, this message translates to:
+  /// **'Força fundos pretos no modo escuro'**
   String get settings_amoledSubtitle;
-
-  /// System default option in settings
-  ///
-  /// In en, this message translates to:
-  /// **'System Default'**
-  String get settings_systemDefault;
-
-  /// Dynamic Color toggle title
-  ///
-  /// In en, this message translates to:
-  /// **'Dynamic Color'**
-  String get settings_dynamicColor;
-
-  /// Dynamic Color toggle subtitle
-  ///
-  /// In en, this message translates to:
-  /// **'Use system wallpaper colors'**
-  String get settings_dynamicColorSubtitle;
 
   /// Accent Color title
   ///
-  /// In en, this message translates to:
-  /// **'Accent Color'**
+  /// In pt, this message translates to:
+  /// **'Cor de destaque'**
   String get settings_accentColor;
-
-  /// Accent Color subtitle
-  ///
-  /// In en, this message translates to:
-  /// **'Choose a seed color for the app'**
-  String get settings_accentColorSubtitle;
 
   /// No description provided for @settings_appFont.
   ///
-  /// In en, this message translates to:
-  /// **'App Font'**
+  /// In pt, this message translates to:
+  /// **'Fonte do aplicativo'**
   String get settings_appFont;
+
+  /// System default option in settings
+  ///
+  /// In pt, this message translates to:
+  /// **'Padrão do Sistema'**
+  String get settings_systemDefault;
 
   /// No description provided for @settings_currency.
   ///
-  /// In en, this message translates to:
-  /// **'Currency'**
+  /// In pt, this message translates to:
+  /// **'Moeda'**
   String get settings_currency;
 
   /// No description provided for @settings_defaultCurrency.
   ///
-  /// In en, this message translates to:
-  /// **'Default Currency'**
+  /// In pt, this message translates to:
+  /// **'Moeda padrão'**
   String get settings_defaultCurrency;
 
   /// No description provided for @settings_preferences.
   ///
-  /// In en, this message translates to:
-  /// **'Preferences'**
+  /// In pt, this message translates to:
+  /// **'Preferências'**
   String get settings_preferences;
 
   /// No description provided for @settings_weekStartsOn.
   ///
-  /// In en, this message translates to:
-  /// **'Week Starts On'**
+  /// In pt, this message translates to:
+  /// **'A semana começa'**
   String get settings_weekStartsOn;
 
   /// No description provided for @settings_monday.
   ///
-  /// In en, this message translates to:
-  /// **'Monday'**
+  /// In pt, this message translates to:
+  /// **'Segunda-feira'**
   String get settings_monday;
 
   /// No description provided for @settings_sunday.
   ///
-  /// In en, this message translates to:
-  /// **'Sunday'**
+  /// In pt, this message translates to:
+  /// **'Domingo'**
   String get settings_sunday;
 
   /// No description provided for @settings_hideBalance.
   ///
-  /// In en, this message translates to:
-  /// **'Hide Balance'**
+  /// In pt, this message translates to:
+  /// **'Ocultar saldo'**
   String get settings_hideBalance;
 
   /// No description provided for @settings_hideBalanceSubtitle.
   ///
-  /// In en, this message translates to:
-  /// **'Show ••••• instead of amounts'**
+  /// In pt, this message translates to:
+  /// **'Mostrar ••••• em vez de valores'**
   String get settings_hideBalanceSubtitle;
 
   /// No description provided for @settings_language.
   ///
-  /// In en, this message translates to:
-  /// **'Language'**
+  /// In pt, this message translates to:
+  /// **'Idioma'**
   String get settings_language;
 
   /// No description provided for @settings_profile.
   ///
-  /// In en, this message translates to:
-  /// **'Profile'**
+  /// In pt, this message translates to:
+  /// **'Perfil'**
   String get settings_profile;
 
   /// No description provided for @settings_displayName.
   ///
-  /// In en, this message translates to:
-  /// **'Display Name'**
+  /// In pt, this message translates to:
+  /// **'Nome de exibição'**
   String get settings_displayName;
 
   /// No description provided for @settings_notSet.
   ///
-  /// In en, this message translates to:
-  /// **'Not set'**
+  /// In pt, this message translates to:
+  /// **'Não definido'**
   String get settings_notSet;
 
   /// No description provided for @settings_about.
   ///
-  /// In en, this message translates to:
-  /// **'About'**
+  /// In pt, this message translates to:
+  /// **'Sobre'**
   String get settings_about;
 
   /// No description provided for @settings_version.
   ///
-  /// In en, this message translates to:
-  /// **'Version'**
+  /// In pt, this message translates to:
+  /// **'Versão'**
   String get settings_version;
 
   /// No description provided for @settings_privacy.
   ///
-  /// In en, this message translates to:
-  /// **'Privacy'**
+  /// In pt, this message translates to:
+  /// **'Privacidade'**
   String get settings_privacy;
 
   /// No description provided for @settings_privacySubtitle.
   ///
-  /// In en, this message translates to:
-  /// **'All data stored locally — 100% offline'**
+  /// In pt, this message translates to:
+  /// **'Todos os dados armazenados localmente — 100% offline'**
   String get settings_privacySubtitle;
 
   /// No description provided for @settings_github.
   ///
-  /// In en, this message translates to:
-  /// **'GitHub'**
+  /// In pt, this message translates to:
+  /// **'Github'**
   String get settings_github;
 
   /// No description provided for @settings_githubSubtitle.
   ///
-  /// In en, this message translates to:
-  /// **'View source code'**
+  /// In pt, this message translates to:
+  /// **'Ver código-fonte'**
   String get settings_githubSubtitle;
 
   /// No description provided for @settings_developer.
   ///
-  /// In en, this message translates to:
-  /// **'Developer'**
+  /// In pt, this message translates to:
+  /// **'Desenvolvedor'**
   String get settings_developer;
 
   /// No description provided for @settings_developerSubtitle.
   ///
-  /// In en, this message translates to:
-  /// **'Discover more projects by Mina Android'**
+  /// In pt, this message translates to:
+  /// **'Conheça mais projetos da Mina Android'**
   String get settings_developerSubtitle;
 
   /// No description provided for @settings_githubProfile.
   ///
-  /// In en, this message translates to:
-  /// **'GitHub Profile'**
+  /// In pt, this message translates to:
+  /// **'Perfil GitHub'**
   String get settings_githubProfile;
 
   /// No description provided for @settings_developerWebsite.
   ///
-  /// In en, this message translates to:
-  /// **'Developer Website'**
+  /// In pt, this message translates to:
+  /// **'Site do desenvolvedor'**
   String get settings_developerWebsite;
 
   /// No description provided for @settings_close.
   ///
-  /// In en, this message translates to:
-  /// **'Close'**
+  /// In pt, this message translates to:
+  /// **'Fechar'**
   String get settings_close;
 
   /// No description provided for @settings_yourName.
   ///
-  /// In en, this message translates to:
-  /// **'Your name'**
+  /// In pt, this message translates to:
+  /// **'Seu nome'**
   String get settings_yourName;
 
   /// No description provided for @settings_cancel.
   ///
-  /// In en, this message translates to:
-  /// **'Cancel'**
+  /// In pt, this message translates to:
+  /// **'Cancelar'**
   String get settings_cancel;
 
   /// No description provided for @settings_save.
   ///
-  /// In en, this message translates to:
-  /// **'Save'**
+  /// In pt, this message translates to:
+  /// **'Salvar'**
   String get settings_save;
 
   /// No description provided for @recurring_expenses.
   ///
-  /// In en, this message translates to:
-  /// **'Expenses ({count})'**
+  /// In pt, this message translates to:
+  /// **'Despesas ({count})'**
   String recurring_expenses(Object count);
 
   /// No description provided for @recurring_incomeList.
   ///
-  /// In en, this message translates to:
-  /// **'Income ({count})'**
+  /// In pt, this message translates to:
+  /// **'Receitas ({count})'**
   String recurring_incomeList(Object count);
 
   /// No description provided for @recurring_monthly.
   ///
-  /// In en, this message translates to:
-  /// **'Monthly'**
+  /// In pt, this message translates to:
+  /// **'Mensalmente'**
   String get recurring_monthly;
 
   /// No description provided for @recurring_weekly.
   ///
-  /// In en, this message translates to:
-  /// **'Weekly'**
+  /// In pt, this message translates to:
+  /// **'Semanal'**
   String get recurring_weekly;
 
   /// No description provided for @recurring_noRecurringExpenses.
   ///
-  /// In en, this message translates to:
-  /// **'No recurring expenses'**
+  /// In pt, this message translates to:
+  /// **'Sem despesas recorrentes'**
   String get recurring_noRecurringExpenses;
 
   /// No description provided for @recurring_noRecurringIncome.
   ///
-  /// In en, this message translates to:
-  /// **'No recurring income'**
+  /// In pt, this message translates to:
+  /// **'Sem receitas recorrentes'**
   String get recurring_noRecurringIncome;
 
   /// No description provided for @recurring_addExpense.
   ///
-  /// In en, this message translates to:
-  /// **'Add Expense'**
+  /// In pt, this message translates to:
+  /// **'Adicionar Despesa'**
   String get recurring_addExpense;
 
   /// No description provided for @recurring_addIncome.
   ///
-  /// In en, this message translates to:
-  /// **'Add Income'**
+  /// In pt, this message translates to:
+  /// **'Adicionar Renda'**
   String get recurring_addIncome;
 
   /// No description provided for @recurring_tapPlusToAddOne.
   ///
-  /// In en, this message translates to:
-  /// **'Tap + to add one'**
+  /// In pt, this message translates to:
+  /// **'Toque em + para adicionar um'**
   String get recurring_tapPlusToAddOne;
 
   /// No description provided for @recurring_fromOngoing.
   ///
-  /// In en, this message translates to:
-  /// **'From {date} · Ongoing'**
+  /// In pt, this message translates to:
+  /// **'Desde {date} · Sem data final'**
   String recurring_fromOngoing(Object date);
 
   /// No description provided for @recurring_paidPayments.
   ///
-  /// In en, this message translates to:
-  /// **'{paid}/{total} paid'**
+  /// In pt, this message translates to:
+  /// **'{paid}/{total} pagas'**
   String recurring_paidPayments(Object paid, Object total);
 
   /// No description provided for @recurring_totalAmount.
   ///
-  /// In en, this message translates to:
+  /// In pt, this message translates to:
   /// **'Total: {amount}'**
   String recurring_totalAmount(Object amount);
 
   /// No description provided for @recurring_overdue.
   ///
-  /// In en, this message translates to:
-  /// **'Overdue!'**
+  /// In pt, this message translates to:
+  /// **'Atrasado!'**
   String get recurring_overdue;
 
   /// No description provided for @recurring_dueToday.
   ///
-  /// In en, this message translates to:
-  /// **'Due Today'**
+  /// In pt, this message translates to:
+  /// **'Vencimento hoje'**
   String get recurring_dueToday;
 
   /// No description provided for @recurring_dueInDays.
   ///
-  /// In en, this message translates to:
-  /// **'Due in {days}d'**
+  /// In pt, this message translates to:
+  /// **'Vencimento em {days}d'**
   String recurring_dueInDays(Object days);
 
   /// No description provided for @recurring_edit.
   ///
-  /// In en, this message translates to:
-  /// **'Edit'**
+  /// In pt, this message translates to:
+  /// **'Editar'**
   String get recurring_edit;
 
   /// No description provided for @recurring_skipBtn.
   ///
-  /// In en, this message translates to:
-  /// **'Skip'**
+  /// In pt, this message translates to:
+  /// **'Pular'**
   String get recurring_skipBtn;
 
   /// No description provided for @recurring_nextDate.
   ///
-  /// In en, this message translates to:
-  /// **'Next: {date}'**
+  /// In pt, this message translates to:
+  /// **'Próxima: {date}'**
   String recurring_nextDate(Object date);
 
   /// No description provided for @recurring_pay.
   ///
-  /// In en, this message translates to:
-  /// **'Pay'**
+  /// In pt, this message translates to:
+  /// **'Pagar'**
   String get recurring_pay;
 
   /// No description provided for @recurring_del.
   ///
-  /// In en, this message translates to:
-  /// **'Del'**
+  /// In pt, this message translates to:
+  /// **'Excluir'**
   String get recurring_del;
 
   /// No description provided for @recurring_historyCount.
   ///
-  /// In en, this message translates to:
-  /// **'History ({count})'**
+  /// In pt, this message translates to:
+  /// **'Histórico ({count})'**
   String recurring_historyCount(Object count);
 
   /// No description provided for @recurring_paymentHistory.
   ///
-  /// In en, this message translates to:
-  /// **'Payment history'**
+  /// In pt, this message translates to:
+  /// **'Histórico de pagamentos'**
   String get recurring_paymentHistory;
 
   /// No description provided for @recurring_notificationPermissionDenied.
   ///
-  /// In en, this message translates to:
-  /// **'Notification permission denied. Enable it in Settings → Apps → Nexo → Notifications.'**
+  /// In pt, this message translates to:
+  /// **'Permissão de notificação negada. Ative-o em Configurações → Aplicativos → Nexo → Notificações.'**
   String get recurring_notificationPermissionDenied;
 
   /// No description provided for @recurring_remindMeAt.
   ///
-  /// In en, this message translates to:
-  /// **'Remind me at'**
+  /// In pt, this message translates to:
+  /// **'Lembre-me em'**
   String get recurring_remindMeAt;
 
   /// No description provided for @recurring_editRecurring.
   ///
-  /// In en, this message translates to:
-  /// **'Edit Recurring'**
+  /// In pt, this message translates to:
+  /// **'Editar recorrente'**
   String get recurring_editRecurring;
 
   /// No description provided for @recurring_addRecurring.
   ///
-  /// In en, this message translates to:
-  /// **'Add a Recurring Payment'**
+  /// In pt, this message translates to:
+  /// **'Adicionar um pagamento recorrente'**
   String get recurring_addRecurring;
 
   /// No description provided for @recurring_name.
   ///
-  /// In en, this message translates to:
-  /// **'Name'**
+  /// In pt, this message translates to:
+  /// **'Nome'**
   String get recurring_name;
 
   /// No description provided for @recurring_amountPerPayment.
   ///
-  /// In en, this message translates to:
-  /// **'Amount per payment'**
+  /// In pt, this message translates to:
+  /// **'Montante por pagamento'**
   String get recurring_amountPerPayment;
 
   /// No description provided for @recurring_firstDate.
   ///
-  /// In en, this message translates to:
-  /// **'First: {date}'**
+  /// In pt, this message translates to:
+  /// **'Primeira: {date}'**
   String recurring_firstDate(Object date);
 
   /// No description provided for @recurring_lastDate.
   ///
-  /// In en, this message translates to:
-  /// **'Last: {date}'**
+  /// In pt, this message translates to:
+  /// **'Última: {date}'**
   String recurring_lastDate(Object date);
 
   /// No description provided for @recurring_noLastPaymentOngoing.
   ///
-  /// In en, this message translates to:
-  /// **'No last payment (ongoing)'**
+  /// In pt, this message translates to:
+  /// **'Nenhum último pagamento (em andamento)'**
   String get recurring_noLastPaymentOngoing;
 
   /// No description provided for @accounts_refreshExchangeRates.
   ///
-  /// In en, this message translates to:
-  /// **'Refresh exchange rates'**
+  /// In pt, this message translates to:
+  /// **'Atualizar taxas de câmbio'**
   String get accounts_refreshExchangeRates;
 
   /// No description provided for @accounts_noAccounts.
   ///
-  /// In en, this message translates to:
-  /// **'No accounts'**
+  /// In pt, this message translates to:
+  /// **'Nenhuma conta'**
   String get accounts_noAccounts;
 
   /// No description provided for @accounts_tapPlusToAddYourFirst.
   ///
-  /// In en, this message translates to:
-  /// **'Tap + to add your first account'**
+  /// In pt, this message translates to:
+  /// **'Toque em + para adicionar sua primeira conta'**
   String get accounts_tapPlusToAddYourFirst;
 
   /// No description provided for @accounts_fetchingExchangeRates.
   ///
-  /// In en, this message translates to:
-  /// **'Fetching exchange rates…'**
+  /// In pt, this message translates to:
+  /// **'Buscando taxas de câmbio…'**
   String get accounts_fetchingExchangeRates;
 
   /// No description provided for @accounts_exchangeRatesUnavailable.
   ///
-  /// In en, this message translates to:
-  /// **'Exchange rates unavailable (offline). Balances shown in native currency.'**
+  /// In pt, this message translates to:
+  /// **'Taxas de câmbio indisponíveis (offline). Saldos apresentados em moeda nativa.'**
   String get accounts_exchangeRatesUnavailable;
 
   /// No description provided for @accounts_unknown.
   ///
-  /// In en, this message translates to:
-  /// **'Unknown'**
+  /// In pt, this message translates to:
+  /// **'Desconhecido'**
   String get accounts_unknown;
 
   /// No description provided for @accounts_ratesUpdated.
   ///
-  /// In en, this message translates to:
-  /// **'Rates updated {timeStr} · Tap ↺ to refresh'**
+  /// In pt, this message translates to:
+  /// **'Tarifas atualizadas {timeStr} · Toque em ↺ para atualizar'**
   String accounts_ratesUpdated(Object timeStr);
 
   /// No description provided for @accounts_goldCaps.
   ///
-  /// In en, this message translates to:
-  /// **'GOLD'**
+  /// In pt, this message translates to:
+  /// **'OURO'**
   String get accounts_goldCaps;
 
   /// No description provided for @accounts_balance.
   ///
-  /// In en, this message translates to:
-  /// **'Balance'**
+  /// In pt, this message translates to:
+  /// **'Saldo'**
   String get accounts_balance;
 
   /// No description provided for @accounts_income.
   ///
-  /// In en, this message translates to:
-  /// **'Income'**
+  /// In pt, this message translates to:
+  /// **'Receita'**
   String get accounts_income;
 
   /// No description provided for @accounts_expense.
   ///
-  /// In en, this message translates to:
-  /// **'Expense'**
+  /// In pt, this message translates to:
+  /// **'Despesa'**
   String get accounts_expense;
 
   /// No description provided for @accounts_txs.
   ///
-  /// In en, this message translates to:
-  /// **'Txs'**
+  /// In pt, this message translates to:
+  /// **'Tx'**
   String get accounts_txs;
 
   /// No description provided for @accounts_value.
   ///
-  /// In en, this message translates to:
-  /// **'Value'**
+  /// In pt, this message translates to:
+  /// **'Valor'**
   String get accounts_value;
 
   /// No description provided for @accounts_karat.
   ///
-  /// In en, this message translates to:
-  /// **'Karat'**
+  /// In pt, this message translates to:
+  /// **'Quilate'**
   String get accounts_karat;
 
   /// No description provided for @accounts_pure.
   ///
-  /// In en, this message translates to:
-  /// **'{percentage}% pure'**
+  /// In pt, this message translates to:
+  /// **'{percentage}% puro'**
   String accounts_pure(Object percentage);
 
   /// No description provided for @accounts_weightLabel.
   ///
-  /// In en, this message translates to:
-  /// **'Weight'**
+  /// In pt, this message translates to:
+  /// **'Peso'**
   String get accounts_weightLabel;
 
   /// No description provided for @accounts_perGram.
   ///
-  /// In en, this message translates to:
-  /// **'Per gram'**
+  /// In pt, this message translates to:
+  /// **'Por grama'**
   String get accounts_perGram;
 
   /// No description provided for @accounts_bank.
   ///
-  /// In en, this message translates to:
-  /// **'Bank'**
+  /// In pt, this message translates to:
+  /// **'Banco'**
   String get accounts_bank;
 
   /// No description provided for @accounts_cash.
   ///
-  /// In en, this message translates to:
-  /// **'Cash'**
+  /// In pt, this message translates to:
+  /// **'Dinheiro'**
   String get accounts_cash;
 
   /// No description provided for @accounts_savings.
   ///
-  /// In en, this message translates to:
-  /// **'Savings'**
+  /// In pt, this message translates to:
+  /// **'Poupança'**
   String get accounts_savings;
 
   /// No description provided for @accounts_creditCard.
   ///
-  /// In en, this message translates to:
-  /// **'Credit Card'**
+  /// In pt, this message translates to:
+  /// **'Cartão de Crédito'**
   String get accounts_creditCard;
 
   /// No description provided for @accounts_eWallet.
   ///
-  /// In en, this message translates to:
-  /// **'E-Wallet'**
+  /// In pt, this message translates to:
+  /// **'Carteira Eletrônica'**
   String get accounts_eWallet;
 
   /// No description provided for @accounts_gold.
   ///
-  /// In en, this message translates to:
-  /// **'Gold'**
+  /// In pt, this message translates to:
+  /// **'Ouro'**
   String get accounts_gold;
 
   /// No description provided for @accounts_editAccount.
   ///
-  /// In en, this message translates to:
-  /// **'Edit Account'**
+  /// In pt, this message translates to:
+  /// **'Editar conta'**
   String get accounts_editAccount;
 
   /// No description provided for @accounts_addAccount.
   ///
-  /// In en, this message translates to:
-  /// **'Add New Account'**
+  /// In pt, this message translates to:
+  /// **'Adicionar nova conta'**
   String get accounts_addAccount;
 
   /// No description provided for @accounts_accountName.
   ///
-  /// In en, this message translates to:
-  /// **'Account Name'**
+  /// In pt, this message translates to:
+  /// **'Nome da conta'**
   String get accounts_accountName;
 
   /// No description provided for @accounts_weightInGrams.
   ///
-  /// In en, this message translates to:
-  /// **'Weight in grams'**
+  /// In pt, this message translates to:
+  /// **'Peso em gramas'**
   String get accounts_weightInGrams;
 
   /// No description provided for @accounts_initialBalance.
   ///
-  /// In en, this message translates to:
-  /// **'Initial Balance'**
+  /// In pt, this message translates to:
+  /// **'Saldo Inicial'**
   String get accounts_initialBalance;
 
   /// No description provided for @accounts_wontCountTowardYourHome.
   ///
-  /// In en, this message translates to:
-  /// **'Won\'t count toward your home screen total'**
+  /// In pt, this message translates to:
+  /// **'Não contará para o total da tela inicial'**
   String get accounts_wontCountTowardYourHome;
 
   /// No description provided for @accounts_saveChanges.
   ///
-  /// In en, this message translates to:
-  /// **'Save Changes'**
+  /// In pt, this message translates to:
+  /// **'Salvar alterações'**
   String get accounts_saveChanges;
 
   /// No description provided for @accounts_addAccountBtn.
   ///
-  /// In en, this message translates to:
-  /// **'Add Account'**
+  /// In pt, this message translates to:
+  /// **'Adicionar conta'**
   String get accounts_addAccountBtn;
 
   /// No description provided for @accounts_fetchingGoldPrice.
   ///
-  /// In en, this message translates to:
-  /// **'Fetching gold price…'**
+  /// In pt, this message translates to:
+  /// **'Buscando o preço do ouro…'**
   String get accounts_fetchingGoldPrice;
 
   /// No description provided for @accounts_goldPriceUnavailable.
   ///
-  /// In en, this message translates to:
-  /// **'Gold price unavailable — check your connection'**
+  /// In pt, this message translates to:
+  /// **'Preço do ouro indisponível — verifique sua conexão'**
   String get accounts_goldPriceUnavailable;
 
   /// No description provided for @lended_person_owesYou.
   ///
-  /// In en, this message translates to:
-  /// **'{name} owes you'**
+  /// In pt, this message translates to:
+  /// **'{name} deve a você'**
   String lended_person_owesYou(Object name);
 
   /// No description provided for @lended_person_youOwe.
   ///
-  /// In en, this message translates to:
-  /// **'You owe {name}'**
+  /// In pt, this message translates to:
+  /// **'Você deve a {name}'**
   String lended_person_youOwe(Object name);
 
   /// No description provided for @lended_person_allSettledUp.
   ///
-  /// In en, this message translates to:
-  /// **'All settled up'**
+  /// In pt, this message translates to:
+  /// **'Tudo resolvido'**
   String get lended_person_allSettledUp;
 
   /// No description provided for @lended_person_noRecordsYet.
   ///
-  /// In en, this message translates to:
-  /// **'No records yet'**
+  /// In pt, this message translates to:
+  /// **'Ainda não há registros'**
   String get lended_person_noRecordsYet;
 
   /// No description provided for @lended_person_tapPlusToLog.
   ///
-  /// In en, this message translates to:
-  /// **'Tap + to log money lent or borrowed'**
+  /// In pt, this message translates to:
+  /// **'Toque em + para registrar dinheiro emprestado ou emprestado'**
   String get lended_person_tapPlusToLog;
 
   /// No description provided for @lended_person_name.
   ///
-  /// In en, this message translates to:
-  /// **'Name'**
+  /// In pt, this message translates to:
+  /// **'Nome'**
   String get lended_person_name;
 
   /// No description provided for @lended_person_notesOptional.
   ///
-  /// In en, this message translates to:
-  /// **'Notes (optional)'**
+  /// In pt, this message translates to:
+  /// **'Notas (opcional)'**
   String get lended_person_notesOptional;
 
   /// No description provided for @lended_person_lent.
   ///
-  /// In en, this message translates to:
-  /// **'Lent'**
+  /// In pt, this message translates to:
+  /// **'Quaresma'**
   String get lended_person_lent;
 
   /// No description provided for @lended_person_borrowed.
   ///
-  /// In en, this message translates to:
-  /// **'Borrowed'**
+  /// In pt, this message translates to:
+  /// **'Emprestado'**
   String get lended_person_borrowed;
 
   /// No description provided for @lended_person_overdue.
   ///
-  /// In en, this message translates to:
-  /// **'Overdue!'**
+  /// In pt, this message translates to:
+  /// **'Atrasado!'**
   String get lended_person_overdue;
 
   /// No description provided for @lended_person_due.
   ///
-  /// In en, this message translates to:
-  /// **'Due {date}'**
+  /// In pt, this message translates to:
+  /// **'Vence em {date}'**
   String lended_person_due(Object date);
 
   /// No description provided for @lended_person_reminderAt.
   ///
-  /// In en, this message translates to:
-  /// **'Reminder at {time}'**
+  /// In pt, this message translates to:
+  /// **'Lembrete às {time}'**
   String lended_person_reminderAt(Object time);
 
   /// No description provided for @lended_person_notificationPermissionDenied.
   ///
-  /// In en, this message translates to:
-  /// **'Notification permission denied. Enable it in Settings → Apps → Nexo → Notifications.'**
+  /// In pt, this message translates to:
+  /// **'Permissão de notificação negada. Ative-o em Configurações → Aplicativos → Nexo → Notificações.'**
   String get lended_person_notificationPermissionDenied;
 
   /// No description provided for @lended_person_remindMeAtPrompt.
   ///
-  /// In en, this message translates to:
-  /// **'Remind me at'**
+  /// In pt, this message translates to:
+  /// **'Lembre-me em'**
   String get lended_person_remindMeAtPrompt;
 
   /// No description provided for @lended_person_editRecord.
   ///
-  /// In en, this message translates to:
-  /// **'Edit Record'**
+  /// In pt, this message translates to:
+  /// **'Editar registro'**
   String get lended_person_editRecord;
 
   /// No description provided for @lended_person_addRecord.
   ///
-  /// In en, this message translates to:
-  /// **'Add Record'**
+  /// In pt, this message translates to:
+  /// **'Adicionar registro'**
   String get lended_person_addRecord;
 
   /// No description provided for @lended_person_amount.
   ///
-  /// In en, this message translates to:
-  /// **'Amount'**
+  /// In pt, this message translates to:
+  /// **'Quantia'**
   String get lended_person_amount;
 
   /// No description provided for @lended_person_dueColon.
   ///
-  /// In en, this message translates to:
-  /// **'Due: {date}'**
+  /// In pt, this message translates to:
+  /// **'Vencimento: {date}'**
   String lended_person_dueColon(Object date);
 
   /// No description provided for @lended_person_noDueDate.
   ///
-  /// In en, this message translates to:
-  /// **'No due date'**
+  /// In pt, this message translates to:
+  /// **'Sem data de vencimento'**
   String get lended_person_noDueDate;
 
   /// No description provided for @lended_person_setDueFirst.
   ///
-  /// In en, this message translates to:
-  /// **'Set a due date first'**
+  /// In pt, this message translates to:
+  /// **'Defina uma data de vencimento primeiro'**
   String get lended_person_setDueFirst;
 
   /// No description provided for @lended_person_notifiedOnDue.
   ///
-  /// In en, this message translates to:
-  /// **'You\'ll be notified on the due date'**
+  /// In pt, this message translates to:
+  /// **'Você será notificado na data de vencimento'**
   String get lended_person_notifiedOnDue;
 
   /// No description provided for @lended_person_getNotifiedWhenDue.
   ///
-  /// In en, this message translates to:
-  /// **'Get notified when this is due'**
+  /// In pt, this message translates to:
+  /// **'Seja notificado quando isso acontecer'**
   String get lended_person_getNotifiedWhenDue;
 
   /// No description provided for @lended_person_thatTimePassed.
   ///
-  /// In en, this message translates to:
-  /// **'That time today has already passed — you\'ll be notified shortly instead.'**
+  /// In pt, this message translates to:
+  /// **'Esse horário de hoje já passou. Em vez disso, você será notificado em breve.'**
   String get lended_person_thatTimePassed;
 
   /// No description provided for @lended_person_notificationFiresOn.
   ///
-  /// In en, this message translates to:
-  /// **'Notification fires on {date} at {time}.'**
+  /// In pt, this message translates to:
+  /// **'A notificação é disparada em {date} às {time}.'**
   String lended_person_notificationFiresOn(Object date, Object time);
 
   /// No description provided for @lended_person_saveChangesBtn.
   ///
-  /// In en, this message translates to:
-  /// **'Save Changes'**
+  /// In pt, this message translates to:
+  /// **'Salvar alterações'**
   String get lended_person_saveChangesBtn;
 
   /// No description provided for @lended_person_addRecordBtn.
   ///
-  /// In en, this message translates to:
-  /// **'Add Record'**
+  /// In pt, this message translates to:
+  /// **'Adicionar registro'**
   String get lended_person_addRecordBtn;
 
   /// No description provided for @transactions_searchTransactions.
   ///
-  /// In en, this message translates to:
-  /// **'Search transactions...'**
+  /// In pt, this message translates to:
+  /// **'Pesquisar transações...'**
   String get transactions_searchTransactions;
 
   /// No description provided for @transactions_all.
   ///
-  /// In en, this message translates to:
-  /// **'All'**
+  /// In pt, this message translates to:
+  /// **'Todos'**
   String get transactions_all;
 
   /// No description provided for @transactions_income.
   ///
-  /// In en, this message translates to:
-  /// **'Income'**
+  /// In pt, this message translates to:
+  /// **'Renda'**
   String get transactions_income;
 
   /// No description provided for @transactions_expenses.
   ///
-  /// In en, this message translates to:
-  /// **'Expenses'**
+  /// In pt, this message translates to:
+  /// **'Despesas'**
   String get transactions_expenses;
 
   /// No description provided for @transactions_lent.
   ///
-  /// In en, this message translates to:
-  /// **'Lent'**
+  /// In pt, this message translates to:
+  /// **'Quaresma'**
   String get transactions_lent;
 
   /// No description provided for @transactions_borrowed.
   ///
-  /// In en, this message translates to:
-  /// **'Borrowed'**
+  /// In pt, this message translates to:
+  /// **'Emprestado'**
   String get transactions_borrowed;
 
   /// No description provided for @transactions_noTransactions.
   ///
-  /// In en, this message translates to:
-  /// **'No transactions'**
+  /// In pt, this message translates to:
+  /// **'Nenhuma transação'**
   String get transactions_noTransactions;
 
   /// No description provided for @transactions_tapPlusToAddOne.
   ///
-  /// In en, this message translates to:
-  /// **'Tap + to add one'**
+  /// In pt, this message translates to:
+  /// **'Toque em + para adicionar um'**
   String get transactions_tapPlusToAddOne;
 
   /// No description provided for @transactions_today.
   ///
-  /// In en, this message translates to:
-  /// **'Today'**
+  /// In pt, this message translates to:
+  /// **'Hoje'**
   String get transactions_today;
 
   /// No description provided for @transactions_yesterday.
   ///
-  /// In en, this message translates to:
-  /// **'Yesterday'**
+  /// In pt, this message translates to:
+  /// **'Ontem'**
   String get transactions_yesterday;
 
   /// No description provided for @transactions_lentTo.
   ///
-  /// In en, this message translates to:
-  /// **'Lent to {name}'**
+  /// In pt, this message translates to:
+  /// **'Emprestado para {name}'**
   String transactions_lentTo(Object name);
 
   /// No description provided for @transactions_borrowedFrom.
   ///
-  /// In en, this message translates to:
-  /// **'Borrowed from {name}'**
+  /// In pt, this message translates to:
+  /// **'Emprestado de {name}'**
   String transactions_borrowedFrom(Object name);
 
   /// No description provided for @transactions_unknown.
   ///
-  /// In en, this message translates to:
-  /// **'Unknown'**
+  /// In pt, this message translates to:
+  /// **'Desconhecido'**
   String get transactions_unknown;
 
   /// No description provided for @transactions_due.
   ///
-  /// In en, this message translates to:
-  /// **'Due {date}'**
+  /// In pt, this message translates to:
+  /// **'Vence em {date}'**
   String transactions_due(Object date);
 
   /// No description provided for @transactions_unsettled.
   ///
-  /// In en, this message translates to:
-  /// **'Unsettled'**
+  /// In pt, this message translates to:
+  /// **'Inquieto'**
   String get transactions_unsettled;
 
   /// No description provided for @onboarding_restoreFailed.
   ///
-  /// In en, this message translates to:
-  /// **'Restore failed: the file may be corrupted or not an Nexo backup.'**
+  /// In pt, this message translates to:
+  /// **'Falha na restauração: o arquivo pode estar corrompido ou não ser um backup Nexo.'**
   String get onboarding_restoreFailed;
 
   /// No description provided for @onboarding_continue.
   ///
-  /// In en, this message translates to:
-  /// **'Continue'**
+  /// In pt, this message translates to:
+  /// **'Continuar'**
   String get onboarding_continue;
 
   /// No description provided for @onboarding_getStarted.
   ///
-  /// In en, this message translates to:
-  /// **'Get Started'**
+  /// In pt, this message translates to:
+  /// **'Comece'**
   String get onboarding_getStarted;
 
   /// No description provided for @onboarding_yourPersonalTracker.
   ///
-  /// In en, this message translates to:
-  /// **'Your personal, 100% offline finance tracker.\nAlready have a backup from another device or a previous install?'**
+  /// In pt, this message translates to:
+  /// **'Seu rastreador financeiro pessoal 100% offline.\nJá possui um backup de outro dispositivo ou uma instalação anterior?'**
   String get onboarding_yourPersonalTracker;
 
   /// No description provided for @onboarding_restoring.
   ///
-  /// In en, this message translates to:
-  /// **'Restoring...'**
+  /// In pt, this message translates to:
+  /// **'Restaurando...'**
   String get onboarding_restoring;
 
   /// No description provided for @onboarding_chooseBackupFile.
   ///
-  /// In en, this message translates to:
-  /// **'Choose Backup File'**
+  /// In pt, this message translates to:
+  /// **'Escolha o arquivo de backup'**
   String get onboarding_chooseBackupFile;
 
   /// No description provided for @onboarding_letsGetYouSetUp.
   ///
-  /// In en, this message translates to:
-  /// **'Let\'s get you set up'**
+  /// In pt, this message translates to:
+  /// **'Vamos preparar você'**
   String get onboarding_letsGetYouSetUp;
 
   /// No description provided for @onboarding_yourName.
   ///
-  /// In en, this message translates to:
-  /// **'Your name'**
+  /// In pt, this message translates to:
+  /// **'Seu nome'**
   String get onboarding_yourName;
 
   /// No description provided for @onboarding_accountName.
   ///
-  /// In en, this message translates to:
-  /// **'Account Name'**
+  /// In pt, this message translates to:
+  /// **'Nome da conta'**
   String get onboarding_accountName;
 
   /// No description provided for @onboarding_bank.
   ///
-  /// In en, this message translates to:
-  /// **'Bank'**
+  /// In pt, this message translates to:
+  /// **'Banco'**
   String get onboarding_bank;
 
   /// No description provided for @onboarding_cash.
   ///
-  /// In en, this message translates to:
-  /// **'Cash'**
+  /// In pt, this message translates to:
+  /// **'Dinheiro'**
   String get onboarding_cash;
 
   /// No description provided for @onboarding_savings.
   ///
-  /// In en, this message translates to:
-  /// **'Savings'**
+  /// In pt, this message translates to:
+  /// **'Poupança'**
   String get onboarding_savings;
 
   /// No description provided for @onboarding_credit.
   ///
-  /// In en, this message translates to:
-  /// **'Credit'**
+  /// In pt, this message translates to:
+  /// **'Crédito'**
   String get onboarding_credit;
 
   /// No description provided for @onboarding_wallet.
   ///
-  /// In en, this message translates to:
-  /// **'Wallet'**
+  /// In pt, this message translates to:
+  /// **'Carteira'**
   String get onboarding_wallet;
 
   /// No description provided for @onboarding_startingBalance.
   ///
-  /// In en, this message translates to:
-  /// **'Starting Balance'**
+  /// In pt, this message translates to:
+  /// **'Saldo Inicial'**
   String get onboarding_startingBalance;
 
   /// No description provided for @backup_replaceDataWarning.
   ///
-  /// In en, this message translates to:
-  /// **'This will replace ALL your current data with the backup.\nThis cannot be undone.'**
+  /// In pt, this message translates to:
+  /// **'Isso substituirá TODOS os seus dados atuais pelo backup.\nIsto não pode ser desfeito.'**
   String get backup_replaceDataWarning;
 
   /// No description provided for @backup_whatsIncluded.
   ///
-  /// In en, this message translates to:
-  /// **'What\'s included'**
+  /// In pt, this message translates to:
+  /// **'O que está incluído'**
   String get backup_whatsIncluded;
 
   /// No description provided for @backup_backupDescription.
   ///
-  /// In en, this message translates to:
-  /// **'Every backup includes all of your data — accounts, transactions, recurring payments and their pay/skip history, budgets, wishlist items, lent & borrowed people and records, assets, categories, and app settings.'**
+  /// In pt, this message translates to:
+  /// **'Cada backup inclui todos os seus dados – contas, transações, pagamentos recorrentes e seu histórico de pagamento/pular, orçamentos, itens da lista de desejos, pessoas e registros emprestados e emprestados, ativos, categorias e configurações de aplicativos.'**
   String get backup_backupDescription;
 
   /// No description provided for @backup_saving.
   ///
-  /// In en, this message translates to:
-  /// **'Saving...'**
+  /// In pt, this message translates to:
+  /// **'Salvando...'**
   String get backup_saving;
 
   /// No description provided for @backup_saveBackup.
   ///
-  /// In en, this message translates to:
-  /// **'Save Backup'**
+  /// In pt, this message translates to:
+  /// **'Salvar backup'**
   String get backup_saveBackup;
 
   /// No description provided for @backup_restoring.
   ///
-  /// In en, this message translates to:
-  /// **'Restoring...'**
+  /// In pt, this message translates to:
+  /// **'Restaurando...'**
   String get backup_restoring;
 
   /// No description provided for @backup_restoreBackupBtn.
   ///
-  /// In en, this message translates to:
-  /// **'Restore Backup'**
+  /// In pt, this message translates to:
+  /// **'Restaurar Backup'**
   String get backup_restoreBackupBtn;
 
   /// No description provided for @backup_restoreWarningText.
   ///
-  /// In en, this message translates to:
-  /// **'Compatible with backups from any app version. Missing fields are filled with safe defaults.'**
+  /// In pt, this message translates to:
+  /// **'Compatível com backups de qualquer versão do aplicativo. Os campos ausentes são preenchidos com padrões seguros.'**
   String get backup_restoreWarningText;
 
   /// No description provided for @backup_included.
   ///
-  /// In en, this message translates to:
-  /// **'included'**
+  /// In pt, this message translates to:
+  /// **'incluído'**
   String get backup_included;
 
   /// No description provided for @backup_accounts.
   ///
-  /// In en, this message translates to:
-  /// **'Accounts'**
+  /// In pt, this message translates to:
+  /// **'Contas'**
   String get backup_accounts;
 
   /// No description provided for @backup_transactions.
   ///
-  /// In en, this message translates to:
-  /// **'Transactions'**
+  /// In pt, this message translates to:
+  /// **'Transações'**
   String get backup_transactions;
 
   /// No description provided for @backup_recurringPayments.
   ///
-  /// In en, this message translates to:
-  /// **'Recurring Payments'**
+  /// In pt, this message translates to:
+  /// **'Pagamentos recorrentes'**
   String get backup_recurringPayments;
 
   /// No description provided for @backup_recurringHistory.
   ///
-  /// In en, this message translates to:
-  /// **'Recurring History'**
+  /// In pt, this message translates to:
+  /// **'Histórico recorrente'**
   String get backup_recurringHistory;
 
   /// No description provided for @backup_budgets.
   ///
-  /// In en, this message translates to:
-  /// **'Budgets'**
+  /// In pt, this message translates to:
+  /// **'Orçamentos'**
   String get backup_budgets;
 
   /// No description provided for @backup_wishlist.
   ///
-  /// In en, this message translates to:
-  /// **'Wishlist'**
+  /// In pt, this message translates to:
+  /// **'Lista de desejos'**
   String get backup_wishlist;
 
   /// No description provided for @backup_lentPeople.
   ///
-  /// In en, this message translates to:
-  /// **'Lent/Borrowed — People'**
+  /// In pt, this message translates to:
+  /// **'Quaresma/Empréstimo — Pessoas'**
   String get backup_lentPeople;
 
   /// No description provided for @backup_lentRecords.
   ///
-  /// In en, this message translates to:
-  /// **'Lent/Borrowed — Records'**
+  /// In pt, this message translates to:
+  /// **'Emprestado/Empréstimo — Registros'**
   String get backup_lentRecords;
 
   /// No description provided for @backup_assets.
   ///
-  /// In en, this message translates to:
-  /// **'Assets'**
+  /// In pt, this message translates to:
+  /// **'Ativos'**
   String get backup_assets;
 
   /// No description provided for @backup_categories.
   ///
-  /// In en, this message translates to:
-  /// **'Categories'**
+  /// In pt, this message translates to:
+  /// **'Categorias'**
   String get backup_categories;
 
   /// No description provided for @backup_settings.
   ///
-  /// In en, this message translates to:
-  /// **'Settings'**
+  /// In pt, this message translates to:
+  /// **'Configurações'**
   String get backup_settings;
 
   /// No description provided for @backup_backupSavedSuccessfully.
   ///
-  /// In en, this message translates to:
-  /// **'Backup saved successfully:\n{savedPath}'**
+  /// In pt, this message translates to:
+  /// **'Backup salvo com sucesso:\n{savedPath}'**
   String backup_backupSavedSuccessfully(Object savedPath);
 
   /// No description provided for @backup_backupFailed.
   ///
-  /// In en, this message translates to:
-  /// **'Backup failed: {error}'**
+  /// In pt, this message translates to:
+  /// **'Falha no backup: {error}'**
   String backup_backupFailed(Object error);
 
   /// No description provided for @backup_upgradedFrom.
   ///
-  /// In en, this message translates to:
-  /// **' (upgraded from v{originalVersion} → v{schemaVersion})'**
+  /// In pt, this message translates to:
+  /// **'(atualizado de v{originalVersion} → v{schemaVersion})'**
   String backup_upgradedFrom(Object originalVersion, Object schemaVersion);
 
   /// No description provided for @backup_dataRestoredSuccessfully.
   ///
-  /// In en, this message translates to:
-  /// **'Data restored successfully!{vLabel}'**
+  /// In pt, this message translates to:
+  /// **'Dados restaurados com sucesso!{vLabel}'**
   String backup_dataRestoredSuccessfully(Object vLabel);
 
   /// No description provided for @backup_restoreFailed.
   ///
-  /// In en, this message translates to:
-  /// **'Restore failed: {error}'**
+  /// In pt, this message translates to:
+  /// **'Falha na restauração: {error}'**
   String backup_restoreFailed(Object error);
 
   /// No description provided for @backup_restoreFailedCorrupted.
   ///
-  /// In en, this message translates to:
-  /// **'Restore failed: the file may be corrupted or not an Nexo backup.'**
+  /// In pt, this message translates to:
+  /// **'Falha na restauração: o arquivo pode estar corrompido ou não ser um backup Nexo.'**
   String get backup_restoreFailedCorrupted;
 
   /// No description provided for @budget_noBudgetsYet.
   ///
-  /// In en, this message translates to:
-  /// **'No budgets yet'**
+  /// In pt, this message translates to:
+  /// **'Ainda sem orçamentos'**
   String get budget_noBudgetsYet;
 
   /// No description provided for @budget_tapToAddBudget.
   ///
-  /// In en, this message translates to:
-  /// **'Tap + to set a spending limit per category'**
+  /// In pt, this message translates to:
+  /// **'Toque em + para definir um limite de gastos por categoria'**
   String get budget_tapToAddBudget;
 
   /// No description provided for @budget_budgeted.
   ///
-  /// In en, this message translates to:
-  /// **'Budgeted'**
+  /// In pt, this message translates to:
+  /// **'Orçamentado'**
   String get budget_budgeted;
-
-  /// No description provided for @budget_leftToSpend.
-  ///
-  /// In en, this message translates to:
-  /// **'Left to Spend'**
-  String get budget_leftToSpend;
 
   /// No description provided for @budget_spent.
   ///
-  /// In en, this message translates to:
-  /// **'Spent'**
+  /// In pt, this message translates to:
+  /// **'Gasto'**
   String get budget_spent;
 
   /// No description provided for @budget_overLimit.
   ///
-  /// In en, this message translates to:
-  /// **'Over limit'**
+  /// In pt, this message translates to:
+  /// **'Acima do limite'**
   String get budget_overLimit;
 
   /// No description provided for @budget_unknown.
   ///
-  /// In en, this message translates to:
-  /// **'Unknown'**
+  /// In pt, this message translates to:
+  /// **'Desconhecido'**
   String get budget_unknown;
 
   /// No description provided for @budget_weeklyLabel.
   ///
-  /// In en, this message translates to:
-  /// **'Weekly'**
+  /// In pt, this message translates to:
+  /// **'Semanal'**
   String get budget_weeklyLabel;
 
   /// No description provided for @budget_monthlyLabel.
   ///
-  /// In en, this message translates to:
-  /// **'Monthly'**
+  /// In pt, this message translates to:
+  /// **'Mensal'**
   String get budget_monthlyLabel;
 
   /// No description provided for @budget_overAmount.
   ///
-  /// In en, this message translates to:
-  /// **'{amount} over'**
+  /// In pt, this message translates to:
+  /// **'{amount} acima'**
   String budget_overAmount(Object amount);
 
   /// No description provided for @budget_leftAmount.
   ///
-  /// In en, this message translates to:
-  /// **'{amount} left'**
+  /// In pt, this message translates to:
+  /// **'{amount} restantes'**
   String budget_leftAmount(Object amount);
 
   /// No description provided for @budget_percentUsed.
   ///
-  /// In en, this message translates to:
-  /// **'{percent}% used'**
+  /// In pt, this message translates to:
+  /// **'{percent}% usado'**
   String budget_percentUsed(Object percent);
 
   /// No description provided for @budget_editBudget.
   ///
-  /// In en, this message translates to:
-  /// **'Edit Budget'**
+  /// In pt, this message translates to:
+  /// **'Editar orçamento'**
   String get budget_editBudget;
 
   /// No description provided for @budget_setBudget.
   ///
-  /// In en, this message translates to:
-  /// **'Add New Budget'**
+  /// In pt, this message translates to:
+  /// **'Adicionar novo orçamento'**
   String get budget_setBudget;
 
   /// No description provided for @budget_budgetAmount.
   ///
-  /// In en, this message translates to:
-  /// **'Budget amount'**
+  /// In pt, this message translates to:
+  /// **'Montante do orçamento'**
   String get budget_budgetAmount;
 
   /// No description provided for @budget_previewFor.
   ///
-  /// In en, this message translates to:
-  /// **'Preview for \"{catName}\"'**
+  /// In pt, this message translates to:
+  /// **'Visualização de \\\"{catName}\\\"'**
   String budget_previewFor(Object catName);
 
   /// No description provided for @budget_spentAmount.
   ///
-  /// In en, this message translates to:
-  /// **'Spent: {amount}'**
+  /// In pt, this message translates to:
+  /// **'Gasto: {amount}'**
   String budget_spentAmount(Object amount);
 
   /// No description provided for @budget_ofAmount.
   ///
-  /// In en, this message translates to:
-  /// **'of {amount}'**
+  /// In pt, this message translates to:
+  /// **'de {amount}'**
   String budget_ofAmount(Object amount);
 
   /// No description provided for @budget_saveChanges.
   ///
-  /// In en, this message translates to:
-  /// **'Save Changes'**
+  /// In pt, this message translates to:
+  /// **'Salvar alterações'**
   String get budget_saveChanges;
 
   /// No description provided for @budget_budget.
   ///
-  /// In en, this message translates to:
-  /// **'Budget'**
+  /// In pt, this message translates to:
+  /// **'Orçamento'**
   String get budget_budget;
 
   /// No description provided for @insights_other.
   ///
-  /// In en, this message translates to:
-  /// **'Other'**
+  /// In pt, this message translates to:
+  /// **'Outros'**
   String get insights_other;
 
   /// No description provided for @insights_noDataYet.
   ///
-  /// In en, this message translates to:
-  /// **'No data yet'**
+  /// In pt, this message translates to:
+  /// **'Ainda não há dados'**
   String get insights_noDataYet;
 
   /// No description provided for @insights_addSomeTransactions.
   ///
-  /// In en, this message translates to:
-  /// **'Add some transactions to see insights'**
+  /// In pt, this message translates to:
+  /// **'Adicione algumas transações para ver insights'**
   String get insights_addSomeTransactions;
 
   /// No description provided for @insights_thisMonthVsLastMonth.
   ///
-  /// In en, this message translates to:
-  /// **'This Month vs Last Month'**
+  /// In pt, this message translates to:
+  /// **'Este mês vs mês passado'**
   String get insights_thisMonthVsLastMonth;
 
   /// No description provided for @insights_dailyAverage.
   ///
-  /// In en, this message translates to:
-  /// **'Daily Average'**
+  /// In pt, this message translates to:
+  /// **'Média Diária'**
   String get insights_dailyAverage;
 
   /// No description provided for @insights_perDayBasedOn.
   ///
-  /// In en, this message translates to:
-  /// **'per day · based on {days} days this month'**
+  /// In pt, this message translates to:
+  /// **'por dia · com base em {days} dias deste mês'**
   String insights_perDayBasedOn(Object days);
 
   /// No description provided for @insights_incomeVsExpenses.
   ///
-  /// In en, this message translates to:
-  /// **'Income vs Expenses'**
+  /// In pt, this message translates to:
+  /// **'Receitas vs Despesas'**
   String get insights_incomeVsExpenses;
 
   /// No description provided for @insights_incomeAmount.
   ///
-  /// In en, this message translates to:
-  /// **'Income {amount}'**
+  /// In pt, this message translates to:
+  /// **'Receitas {amount}'**
   String insights_incomeAmount(Object amount);
 
   /// No description provided for @insights_expensesAmount.
   ///
-  /// In en, this message translates to:
-  /// **'Expenses {amount}'**
+  /// In pt, this message translates to:
+  /// **'Despesas {amount}'**
   String insights_expensesAmount(Object amount);
 
   /// No description provided for @insights_percentSaved.
   ///
-  /// In en, this message translates to:
-  /// **'{percent}% saved this month'**
+  /// In pt, this message translates to:
+  /// **'{percent}% economizados este mês'**
   String insights_percentSaved(Object percent);
 
   /// No description provided for @insights_topSpendingCategories.
   ///
-  /// In en, this message translates to:
-  /// **'Top Spending Categories'**
+  /// In pt, this message translates to:
+  /// **'Principais categorias de gastos'**
   String get insights_topSpendingCategories;
 
   /// No description provided for @insights_percentOfTotal.
   ///
-  /// In en, this message translates to:
-  /// **'{percent}% of total'**
+  /// In pt, this message translates to:
+  /// **'{percent}% do total'**
   String insights_percentOfTotal(Object percent);
 
   /// No description provided for @insights_biggestExpenseThisMonth.
   ///
-  /// In en, this message translates to:
-  /// **'Biggest Expense This Month'**
+  /// In pt, this message translates to:
+  /// **'Maior despesa deste mês'**
   String get insights_biggestExpenseThisMonth;
 
   /// No description provided for @insights_categoryTrends.
   ///
-  /// In en, this message translates to:
-  /// **'Category Trends (vs Last Month)'**
+  /// In pt, this message translates to:
+  /// **'Tendências da categoria (vs mês passado)'**
   String get insights_categoryTrends;
 
   /// No description provided for @insights_12MonthTrend.
   ///
-  /// In en, this message translates to:
-  /// **'12-Month Trend'**
+  /// In pt, this message translates to:
+  /// **'Tendência de 12 meses'**
   String get insights_12MonthTrend;
 
   /// No description provided for @insights_incomeLabel.
   ///
-  /// In en, this message translates to:
-  /// **'Income'**
+  /// In pt, this message translates to:
+  /// **'Renda'**
   String get insights_incomeLabel;
 
   /// No description provided for @insights_expensesLabel.
   ///
-  /// In en, this message translates to:
-  /// **'Expenses'**
+  /// In pt, this message translates to:
+  /// **'Despesas'**
   String get insights_expensesLabel;
 
   /// No description provided for @categories_expenseLabel.
   ///
-  /// In en, this message translates to:
-  /// **'Expense'**
+  /// In pt, this message translates to:
+  /// **'Despesa'**
   String get categories_expenseLabel;
 
   /// No description provided for @categories_incomeLabel.
   ///
-  /// In en, this message translates to:
-  /// **'Income'**
+  /// In pt, this message translates to:
+  /// **'Renda'**
   String get categories_incomeLabel;
 
   /// No description provided for @categories_editCategory.
   ///
-  /// In en, this message translates to:
-  /// **'Edit Category'**
+  /// In pt, this message translates to:
+  /// **'Editar categoria'**
   String get categories_editCategory;
 
   /// No description provided for @categories_addCategory.
   ///
-  /// In en, this message translates to:
-  /// **'Add Category'**
+  /// In pt, this message translates to:
+  /// **'Adicionar categoria'**
   String get categories_addCategory;
 
   /// No description provided for @categories_categoryName.
   ///
-  /// In en, this message translates to:
-  /// **'Category Name'**
+  /// In pt, this message translates to:
+  /// **'Nome da categoria'**
   String get categories_categoryName;
 
   /// No description provided for @categories_saveChanges.
   ///
-  /// In en, this message translates to:
-  /// **'Save Changes'**
+  /// In pt, this message translates to:
+  /// **'Salvar alterações'**
   String get categories_saveChanges;
 
   /// No description provided for @statistics_other.
   ///
-  /// In en, this message translates to:
-  /// **'Other'**
+  /// In pt, this message translates to:
+  /// **'Outros'**
   String get statistics_other;
 
   /// No description provided for @statistics_allAccounts.
   ///
-  /// In en, this message translates to:
-  /// **'All accounts'**
+  /// In pt, this message translates to:
+  /// **'Todas as contas'**
   String get statistics_allAccounts;
 
   /// No description provided for @statistics_income.
   ///
-  /// In en, this message translates to:
-  /// **'Income'**
+  /// In pt, this message translates to:
+  /// **'Renda'**
   String get statistics_income;
 
   /// No description provided for @statistics_expenses.
   ///
-  /// In en, this message translates to:
-  /// **'Expenses'**
+  /// In pt, this message translates to:
+  /// **'Despesas'**
   String get statistics_expenses;
 
   /// No description provided for @statistics_expense.
   ///
-  /// In en, this message translates to:
-  /// **'Expense'**
+  /// In pt, this message translates to:
+  /// **'Despesa'**
   String get statistics_expense;
 
   /// No description provided for @statistics_net.
   ///
-  /// In en, this message translates to:
-  /// **'Net'**
+  /// In pt, this message translates to:
+  /// **'Líquido'**
   String get statistics_net;
 
   /// No description provided for @statistics_6MonthOverviewAccount.
   ///
-  /// In en, this message translates to:
-  /// **'6-Month Overview · {accountName}'**
+  /// In pt, this message translates to:
+  /// **'Visão geral de 6 meses · {accountName}'**
   String statistics_6MonthOverviewAccount(Object accountName);
 
   /// No description provided for @statistics_6MonthOverview.
   ///
-  /// In en, this message translates to:
-  /// **'6-Month Overview'**
+  /// In pt, this message translates to:
+  /// **'Visão geral de 6 meses'**
   String get statistics_6MonthOverview;
 
   /// No description provided for @statistics_percentOfBudget.
   ///
-  /// In en, this message translates to:
-  /// **'{percent}% of budget'**
+  /// In pt, this message translates to:
+  /// **'{percent}% do orçamento'**
   String statistics_percentOfBudget(Object percent);
 
   /// No description provided for @add_transaction_editTransaction.
   ///
-  /// In en, this message translates to:
-  /// **'Edit Transaction'**
+  /// In pt, this message translates to:
+  /// **'Editar transação'**
   String get add_transaction_editTransaction;
 
   /// No description provided for @add_transaction_addTransaction.
   ///
-  /// In en, this message translates to:
-  /// **'Enter Transaction'**
+  /// In pt, this message translates to:
+  /// **'Insira a transação'**
   String get add_transaction_addTransaction;
 
   /// No description provided for @add_transaction_amount.
   ///
-  /// In en, this message translates to:
-  /// **'Amount'**
+  /// In pt, this message translates to:
+  /// **'Montante'**
   String get add_transaction_amount;
 
   /// No description provided for @add_transaction_conversionPreview.
   ///
-  /// In en, this message translates to:
-  /// **'≈ {amount} will be deducted from {accountName}'**
+  /// In pt, this message translates to:
+  /// **'≈ {amount} será deduzido de {accountName}'**
   String add_transaction_conversionPreview(Object accountName, Object amount);
 
   /// No description provided for @add_transaction_accountFallback.
   ///
-  /// In en, this message translates to:
-  /// **'account'**
+  /// In pt, this message translates to:
+  /// **'conta'**
   String get add_transaction_accountFallback;
 
   /// No description provided for @add_transaction_descriptionOptional.
   ///
-  /// In en, this message translates to:
-  /// **'Description (optional)'**
+  /// In pt, this message translates to:
+  /// **'Descrição (opcional)'**
   String get add_transaction_descriptionOptional;
 
   /// No description provided for @add_transaction_noteOptional.
   ///
-  /// In en, this message translates to:
-  /// **'Note (optional)'**
+  /// In pt, this message translates to:
+  /// **'Nota (opcional)'**
   String get add_transaction_noteOptional;
 
   /// No description provided for @add_transaction_saveChanges.
   ///
-  /// In en, this message translates to:
-  /// **'Save Changes'**
+  /// In pt, this message translates to:
+  /// **'Salvar alterações'**
   String get add_transaction_saveChanges;
 
   /// No description provided for @more_statistics.
   ///
-  /// In en, this message translates to:
-  /// **'Statistics'**
+  /// In pt, this message translates to:
+  /// **'Estatísticas'**
   String get more_statistics;
 
   /// No description provided for @more_statisticsSub.
   ///
-  /// In en, this message translates to:
-  /// **'Charts & monthly summary'**
+  /// In pt, this message translates to:
+  /// **'Gráficos e resumo mensal'**
   String get more_statisticsSub;
 
   /// No description provided for @more_insights.
   ///
-  /// In en, this message translates to:
-  /// **'Insights'**
+  /// In pt, this message translates to:
+  /// **'Informações'**
   String get more_insights;
 
   /// No description provided for @more_insightsSub.
   ///
-  /// In en, this message translates to:
-  /// **'Trends, averages & category analysis'**
+  /// In pt, this message translates to:
+  /// **'Tendências, médias e análise de categorias'**
   String get more_insightsSub;
 
   /// No description provided for @more_currencyConverter.
   ///
-  /// In en, this message translates to:
-  /// **'Currency Converter'**
+  /// In pt, this message translates to:
+  /// **'Conversor de moeda'**
   String get more_currencyConverter;
 
   /// No description provided for @more_currencyConverterSub.
   ///
-  /// In en, this message translates to:
-  /// **'Convert between currencies instantly'**
+  /// In pt, this message translates to:
+  /// **'Converta entre moedas instantaneamente'**
   String get more_currencyConverterSub;
 
   /// No description provided for @more_wishlist.
   ///
-  /// In en, this message translates to:
-  /// **'Wishlist'**
+  /// In pt, this message translates to:
+  /// **'Lista de desejos'**
   String get more_wishlist;
 
   /// No description provided for @more_wishlistSub.
   ///
-  /// In en, this message translates to:
-  /// **'{count, plural, =1{1 item} other{{count} items}}'**
+  /// In pt, this message translates to:
+  /// **'{count, plural, =1{1 item} other{{count} itens}}'**
   String more_wishlistSub(num count);
 
   /// No description provided for @more_lentMoney.
   ///
-  /// In en, this message translates to:
-  /// **'Lent Money'**
+  /// In pt, this message translates to:
+  /// **'Dinheiro Emprestado'**
   String get more_lentMoney;
 
   /// No description provided for @more_lentMoneySub.
   ///
-  /// In en, this message translates to:
-  /// **'{count} outstanding'**
+  /// In pt, this message translates to:
+  /// **'{count} em aberto'**
   String more_lentMoneySub(Object count);
 
   /// No description provided for @more_assets.
   ///
-  /// In en, this message translates to:
-  /// **'Assets'**
+  /// In pt, this message translates to:
+  /// **'Ativos'**
   String get more_assets;
 
   /// No description provided for @more_assetsSub.
   ///
-  /// In en, this message translates to:
-  /// **'{count, plural, =1{1 item} other{{count} items}}'**
+  /// In pt, this message translates to:
+  /// **'{count, plural, =1{1 item} other{{count} itens}}'**
   String more_assetsSub(num count);
 
   /// No description provided for @more_categories.
   ///
-  /// In en, this message translates to:
-  /// **'Categories'**
+  /// In pt, this message translates to:
+  /// **'Categorias'**
   String get more_categories;
 
   /// No description provided for @more_categoriesSub.
   ///
-  /// In en, this message translates to:
-  /// **'{count, plural, =1{1 category} other{{count} categories}}'**
+  /// In pt, this message translates to:
+  /// **'{count, plural, =1{1 categoria} other{{count} categorias}}'**
   String more_categoriesSub(num count);
 
   /// No description provided for @more_exportTransactions.
   ///
-  /// In en, this message translates to:
-  /// **'Export Transactions'**
+  /// In pt, this message translates to:
+  /// **'Transações de exportação'**
   String get more_exportTransactions;
 
   /// No description provided for @more_exportTransactionsSub.
   ///
-  /// In en, this message translates to:
-  /// **'Save as Excel (.xlsx)'**
+  /// In pt, this message translates to:
+  /// **'Salvar como Excel (.xlsx)'**
   String get more_exportTransactionsSub;
 
   /// No description provided for @more_backupRestore.
   ///
-  /// In en, this message translates to:
-  /// **'Backup & Restore'**
+  /// In pt, this message translates to:
+  /// **'Backup e restauração'**
   String get more_backupRestore;
 
   /// No description provided for @more_backupRestoreSub.
   ///
-  /// In en, this message translates to:
-  /// **'Save or load your data'**
+  /// In pt, this message translates to:
+  /// **'Salve ou carregue seus dados'**
   String get more_backupRestoreSub;
 
   /// No description provided for @more_settings.
   ///
-  /// In en, this message translates to:
-  /// **'Settings'**
+  /// In pt, this message translates to:
+  /// **'Configurações'**
   String get more_settings;
 
   /// No description provided for @more_settingsSub.
   ///
-  /// In en, this message translates to:
-  /// **'Theme, currency & preferences'**
+  /// In pt, this message translates to:
+  /// **'Tema, moeda e preferências'**
   String get more_settingsSub;
 
   /// No description provided for @home_greeting.
   ///
-  /// In en, this message translates to:
-  /// **'Hi, {name} 👋'**
+  /// In pt, this message translates to:
+  /// **'Olá, {name} 👋'**
   String home_greeting(Object name);
 
   /// No description provided for @home_there.
   ///
-  /// In en, this message translates to:
-  /// **'there'**
+  /// In pt, this message translates to:
+  /// **'aí'**
   String get home_there;
 
   /// No description provided for @home_income.
   ///
-  /// In en, this message translates to:
-  /// **'Income'**
+  /// In pt, this message translates to:
+  /// **'Renda'**
   String get home_income;
 
   /// No description provided for @home_expenses.
   ///
-  /// In en, this message translates to:
-  /// **'Expenses'**
+  /// In pt, this message translates to:
+  /// **'Despesas'**
   String get home_expenses;
 
   /// No description provided for @home_net.
   ///
-  /// In en, this message translates to:
-  /// **'Net'**
+  /// In pt, this message translates to:
+  /// **'Líquido'**
   String get home_net;
 
   /// No description provided for @wishlist_noItems.
   ///
-  /// In en, this message translates to:
-  /// **'No wishlist items'**
+  /// In pt, this message translates to:
+  /// **'Nenhum item da lista de desejos'**
   String get wishlist_noItems;
 
   /// No description provided for @wishlist_noItemsSub.
   ///
-  /// In en, this message translates to:
-  /// **'Tap + to add items you\'re saving for'**
+  /// In pt, this message translates to:
+  /// **'Toque em + para adicionar itens para os quais você está salvando'**
   String get wishlist_noItemsSub;
 
   /// No description provided for @wishlist_editItem.
   ///
-  /// In en, this message translates to:
-  /// **'Edit Item'**
+  /// In pt, this message translates to:
+  /// **'Editar item'**
   String get wishlist_editItem;
 
   /// No description provided for @wishlist_addWishlistItem.
   ///
-  /// In en, this message translates to:
-  /// **'Add Wishlist Item'**
+  /// In pt, this message translates to:
+  /// **'Adicionar item à lista de desejos'**
   String get wishlist_addWishlistItem;
 
   /// No description provided for @wishlist_itemName.
   ///
-  /// In en, this message translates to:
-  /// **'Item Name'**
+  /// In pt, this message translates to:
+  /// **'Nome do item'**
   String get wishlist_itemName;
 
   /// No description provided for @wishlist_targetPrice.
   ///
-  /// In en, this message translates to:
-  /// **'Target Price'**
+  /// In pt, this message translates to:
+  /// **'Preço Alvo'**
   String get wishlist_targetPrice;
 
   /// No description provided for @wishlist_priorityLow.
   ///
-  /// In en, this message translates to:
-  /// **'Low'**
+  /// In pt, this message translates to:
+  /// **'Baixo'**
   String get wishlist_priorityLow;
 
   /// No description provided for @wishlist_priorityMedium.
   ///
-  /// In en, this message translates to:
-  /// **'Medium'**
+  /// In pt, this message translates to:
+  /// **'Médio'**
   String get wishlist_priorityMedium;
 
   /// No description provided for @wishlist_priorityHigh.
   ///
-  /// In en, this message translates to:
-  /// **'High'**
+  /// In pt, this message translates to:
+  /// **'Alto'**
   String get wishlist_priorityHigh;
 
   /// No description provided for @wishlist_notesOptional.
   ///
-  /// In en, this message translates to:
-  /// **'Notes (optional)'**
+  /// In pt, this message translates to:
+  /// **'Notas (opcional)'**
   String get wishlist_notesOptional;
 
   /// No description provided for @wishlist_saveChanges.
   ///
-  /// In en, this message translates to:
-  /// **'Save Changes'**
+  /// In pt, this message translates to:
+  /// **'Salvar alterações'**
   String get wishlist_saveChanges;
 
   /// No description provided for @wishlist_addItem.
   ///
-  /// In en, this message translates to:
-  /// **'Add Item'**
+  /// In pt, this message translates to:
+  /// **'Adicionar item'**
   String get wishlist_addItem;
 
   /// No description provided for @lended_theyOweMe.
   ///
-  /// In en, this message translates to:
-  /// **'They Owe Me'**
+  /// In pt, this message translates to:
+  /// **'Eles me devem'**
   String get lended_theyOweMe;
 
   /// No description provided for @lended_iOweThem.
   ///
-  /// In en, this message translates to:
-  /// **'I Owe Them'**
+  /// In pt, this message translates to:
+  /// **'Eu devo a eles'**
   String get lended_iOweThem;
 
   /// No description provided for @lended_net.
   ///
-  /// In en, this message translates to:
-  /// **'Net'**
+  /// In pt, this message translates to:
+  /// **'Líquido'**
   String get lended_net;
 
   /// No description provided for @lended_noOneYet.
   ///
-  /// In en, this message translates to:
-  /// **'No one yet'**
+  /// In pt, this message translates to:
+  /// **'Ninguém ainda'**
   String get lended_noOneYet;
 
   /// No description provided for @lended_noOneYetSub.
   ///
-  /// In en, this message translates to:
-  /// **'Tap + to add a person you lend to or borrow from'**
+  /// In pt, this message translates to:
+  /// **'Toque em + para adicionar uma pessoa a quem você empresta ou pede emprestado'**
   String get lended_noOneYetSub;
 
   /// No description provided for @lended_owesYou.
   ///
-  /// In en, this message translates to:
-  /// **'Owes you'**
+  /// In pt, this message translates to:
+  /// **'Devo a você'**
   String get lended_owesYou;
 
   /// No description provided for @lended_youOwe.
   ///
-  /// In en, this message translates to:
-  /// **'You owe'**
+  /// In pt, this message translates to:
+  /// **'Você deve'**
   String get lended_youOwe;
 
   /// No description provided for @lended_settledUp.
   ///
-  /// In en, this message translates to:
-  /// **'Settled up'**
+  /// In pt, this message translates to:
+  /// **'Resolvido'**
   String get lended_settledUp;
 
   /// No description provided for @lended_noActiveRecords.
   ///
-  /// In en, this message translates to:
-  /// **'No active records'**
+  /// In pt, this message translates to:
+  /// **'Nenhum registro ativo'**
   String get lended_noActiveRecords;
 
   /// No description provided for @lended_activeRecords.
   ///
-  /// In en, this message translates to:
-  /// **'{count, plural, =1{1 active record} other{{count} active records}}'**
+  /// In pt, this message translates to:
+  /// **'{count, plural, =1{1 registro ativo} other{{count} registros ativos}}'**
   String lended_activeRecords(num count);
 
   /// No description provided for @lended_editPerson.
   ///
-  /// In en, this message translates to:
-  /// **'Edit Person'**
+  /// In pt, this message translates to:
+  /// **'Editar Pessoa'**
   String get lended_editPerson;
 
   /// No description provided for @lended_addPerson.
   ///
-  /// In en, this message translates to:
-  /// **'Add Person'**
+  /// In pt, this message translates to:
+  /// **'Adicionar Pessoa'**
   String get lended_addPerson;
 
   /// No description provided for @lended_name.
   ///
-  /// In en, this message translates to:
-  /// **'Name'**
+  /// In pt, this message translates to:
+  /// **'Nome'**
   String get lended_name;
 
   /// No description provided for @lended_notesOptional.
   ///
-  /// In en, this message translates to:
-  /// **'Notes (optional)'**
+  /// In pt, this message translates to:
+  /// **'Notas (opcional)'**
   String get lended_notesOptional;
 
   /// No description provided for @lended_saveChanges.
   ///
-  /// In en, this message translates to:
-  /// **'Save Changes'**
+  /// In pt, this message translates to:
+  /// **'Salvar alterações'**
   String get lended_saveChanges;
 
   /// No description provided for @assets_totalAssets.
   ///
-  /// In en, this message translates to:
-  /// **'Total Assets'**
+  /// In pt, this message translates to:
+  /// **'Ativo total'**
   String get assets_totalAssets;
 
   /// No description provided for @assets_items.
   ///
-  /// In en, this message translates to:
-  /// **'Items'**
+  /// In pt, this message translates to:
+  /// **'Itens'**
   String get assets_items;
 
   /// No description provided for @assets_noAssetsYet.
   ///
-  /// In en, this message translates to:
-  /// **'No assets yet'**
+  /// In pt, this message translates to:
+  /// **'Ainda não há ativos'**
   String get assets_noAssetsYet;
 
   /// No description provided for @assets_noAssetsYetSub.
   ///
-  /// In en, this message translates to:
-  /// **'Tap + to add a product or asset'**
+  /// In pt, this message translates to:
+  /// **'Toque em + para adicionar um produto ou ativo'**
   String get assets_noAssetsYetSub;
 
   /// No description provided for @assets_editAsset.
   ///
-  /// In en, this message translates to:
-  /// **'Edit Asset'**
+  /// In pt, this message translates to:
+  /// **'Editar recurso'**
   String get assets_editAsset;
 
   /// No description provided for @assets_addAsset.
   ///
-  /// In en, this message translates to:
-  /// **'Add Asset'**
+  /// In pt, this message translates to:
+  /// **'Adicionar ativo'**
   String get assets_addAsset;
 
   /// No description provided for @assets_productAssetName.
   ///
-  /// In en, this message translates to:
-  /// **'Product / Asset Name'**
+  /// In pt, this message translates to:
+  /// **'Nome do produto/ativo'**
   String get assets_productAssetName;
 
   /// No description provided for @assets_value.
   ///
-  /// In en, this message translates to:
-  /// **'Value'**
+  /// In pt, this message translates to:
+  /// **'Valor'**
   String get assets_value;
 
   /// No description provided for @assets_notesOptional.
   ///
-  /// In en, this message translates to:
-  /// **'Notes (optional)'**
+  /// In pt, this message translates to:
+  /// **'Notas (opcional)'**
   String get assets_notesOptional;
 
   /// No description provided for @assets_saveChanges.
   ///
-  /// In en, this message translates to:
-  /// **'Save Changes'**
+  /// In pt, this message translates to:
+  /// **'Salvar alterações'**
   String get assets_saveChanges;
 
   /// No description provided for @currency_converter_loadingRates.
   ///
-  /// In en, this message translates to:
-  /// **'Loading exchange rates…'**
+  /// In pt, this message translates to:
+  /// **'Carregando taxas de câmbio…'**
   String get currency_converter_loadingRates;
 
   /// No description provided for @currency_converter_ratesUnavailable.
   ///
-  /// In en, this message translates to:
-  /// **'Exchange rates unavailable. Connect to the internet and sync.'**
+  /// In pt, this message translates to:
+  /// **'Taxas de câmbio indisponíveis. Conecte-se à Internet e sincronize.'**
   String get currency_converter_ratesUnavailable;
 
   /// No description provided for @currency_converter_rateAgeJustNow.
   ///
-  /// In en, this message translates to:
-  /// **'Just now'**
+  /// In pt, this message translates to:
+  /// **'Agora mesmo'**
   String get currency_converter_rateAgeJustNow;
 
   /// No description provided for @currency_converter_rateAgeMins.
   ///
-  /// In en, this message translates to:
-  /// **'{minutes}m ago'**
+  /// In pt, this message translates to:
+  /// **'há {minutes} min'**
   String currency_converter_rateAgeMins(Object minutes);
 
   /// No description provided for @currency_converter_rateAgeHours.
   ///
-  /// In en, this message translates to:
-  /// **'{hours}h ago'**
+  /// In pt, this message translates to:
+  /// **'{hours}h atrás'**
   String currency_converter_rateAgeHours(Object hours);
 
   /// No description provided for @currency_converter_rateAgeDays.
   ///
-  /// In en, this message translates to:
-  /// **'{days}d ago'**
+  /// In pt, this message translates to:
+  /// **'há {days} dias'**
   String currency_converter_rateAgeDays(Object days);
 
   /// No description provided for @currency_converter_commonConversions.
   ///
-  /// In en, this message translates to:
-  /// **'Common Conversions from {fromCurrency}'**
+  /// In pt, this message translates to:
+  /// **'Conversões comuns de {fromCurrency}'**
   String currency_converter_commonConversions(Object fromCurrency);
 
   /// No description provided for @transfer_fromAcc.
   ///
-  /// In en, this message translates to:
-  /// **'From ({currency})'**
+  /// In pt, this message translates to:
+  /// **'Origem ({currency})'**
   String transfer_fromAcc(Object currency);
 
   /// No description provided for @transfer_toAcc.
   ///
-  /// In en, this message translates to:
-  /// **'To ({currency})'**
+  /// In pt, this message translates to:
+  /// **'Destino ({currency})'**
   String transfer_toAcc(Object currency);
 
   /// No description provided for @transfer_exchangeRatesNotLoaded.
   ///
-  /// In en, this message translates to:
-  /// **'Exchange rates not loaded — amount will be transferred as-is'**
+  /// In pt, this message translates to:
+  /// **'Taxas de câmbio não carregadas — o montante será transferido no estado em que se encontra'**
   String get transfer_exchangeRatesNotLoaded;
 
   /// No description provided for @transfer_amount.
   ///
-  /// In en, this message translates to:
-  /// **'Amount'**
+  /// In pt, this message translates to:
+  /// **'Montante'**
   String get transfer_amount;
 
   /// No description provided for @transfer_noteOptional.
   ///
-  /// In en, this message translates to:
-  /// **'Note (optional)'**
+  /// In pt, this message translates to:
+  /// **'Nota (opcional)'**
   String get transfer_noteOptional;
 
   /// No description provided for @export_from.
   ///
-  /// In en, this message translates to:
-  /// **'From'**
+  /// In pt, this message translates to:
+  /// **'De'**
   String get export_from;
 
   /// No description provided for @export_to.
   ///
-  /// In en, this message translates to:
-  /// **'To'**
+  /// In pt, this message translates to:
+  /// **'Para'**
   String get export_to;
 
   /// No description provided for @export_txCount.
   ///
-  /// In en, this message translates to:
-  /// **'{count, plural, =1{1 transaction in range} other{{count} transactions in range}}'**
+  /// In pt, this message translates to:
+  /// **'{count, plural, =1{1 lançamento no período} other{{count} lançamentos no período}}'**
   String export_txCount(num count);
 
   /// No description provided for @export_saved.
   ///
-  /// In en, this message translates to:
-  /// **'Saved: {path}'**
+  /// In pt, this message translates to:
+  /// **'Salvo em: {path}'**
   String export_saved(Object path);
 
   /// No description provided for @export_complete.
   ///
-  /// In en, this message translates to:
-  /// **'Export complete'**
+  /// In pt, this message translates to:
+  /// **'Exportação concluída'**
   String get export_complete;
 
   /// No description provided for @export_exporting.
   ///
-  /// In en, this message translates to:
-  /// **'Exporting...'**
+  /// In pt, this message translates to:
+  /// **'Exportando...'**
   String get export_exporting;
 
   /// No description provided for @export_exportAsExcel.
   ///
-  /// In en, this message translates to:
-  /// **'Export as Excel'**
+  /// In pt, this message translates to:
+  /// **'Exportar como Excel'**
   String get export_exportAsExcel;
 
   /// No description provided for @shared_widgets_deleteConfirm.
   ///
-  /// In en, this message translates to:
-  /// **'Delete \"{name}\"? This cannot be undone.'**
+  /// In pt, this message translates to:
+  /// **'Excluir \"{name}\"? Essa ação não pode ser desfeita.'**
   String shared_widgets_deleteConfirm(Object name);
 
   /// No description provided for @shared_widgets_searchByCode.
   ///
-  /// In en, this message translates to:
-  /// **'Search by code or name...'**
+  /// In pt, this message translates to:
+  /// **'Pesquise por código ou nome...'**
   String get shared_widgets_searchByCode;
 
   /// No description provided for @accounts_accounts.
   ///
-  /// In en, this message translates to:
-  /// **'Accounts'**
+  /// In pt, this message translates to:
+  /// **'Contas'**
   String get accounts_accounts;
 
   /// No description provided for @accounts_totalBalance.
   ///
-  /// In en, this message translates to:
-  /// **'Total Balance'**
+  /// In pt, this message translates to:
+  /// **'Saldo Total'**
   String get accounts_totalBalance;
 
   /// No description provided for @accounts_excluded.
   ///
-  /// In en, this message translates to:
-  /// **'Excluded'**
+  /// In pt, this message translates to:
+  /// **'Excluído'**
   String get accounts_excluded;
 
   /// No description provided for @accounts_goldPriceNotYetLoade.
   ///
-  /// In en, this message translates to:
-  /// **'Gold price not yet loaded. Wait a moment and try again.'**
+  /// In pt, this message translates to:
+  /// **'Preço do ouro ainda não carregado. Aguarde e tente novamente.'**
   String get accounts_goldPriceNotYetLoade;
 
   /// No description provided for @accounts_accountType.
   ///
-  /// In en, this message translates to:
-  /// **'Account Type'**
+  /// In pt, this message translates to:
+  /// **'Tipo de Conta'**
   String get accounts_accountType;
 
   /// No description provided for @accounts_currency.
   ///
-  /// In en, this message translates to:
-  /// **'Currency'**
+  /// In pt, this message translates to:
+  /// **'Moeda'**
   String get accounts_currency;
 
   /// No description provided for @accounts_goldPurityKarat.
   ///
-  /// In en, this message translates to:
-  /// **'Gold Purity (Karat)'**
+  /// In pt, this message translates to:
+  /// **'Pureza do Ouro (Quilates)'**
   String get accounts_goldPurityKarat;
 
   /// No description provided for @accounts_weight.
   ///
-  /// In en, this message translates to:
-  /// **'Weight'**
+  /// In pt, this message translates to:
+  /// **'Peso'**
   String get accounts_weight;
 
   /// No description provided for @accounts_excludeFromTotalBala.
   ///
-  /// In en, this message translates to:
-  /// **'Exclude from Total Balance'**
+  /// In pt, this message translates to:
+  /// **'Excluir do Saldo Total'**
   String get accounts_excludeFromTotalBala;
 
   /// No description provided for @accounts_color.
   ///
-  /// In en, this message translates to:
-  /// **'Color'**
+  /// In pt, this message translates to:
+  /// **'Cor'**
   String get accounts_color;
 
   /// No description provided for @accounts_liveGoldValue.
   ///
-  /// In en, this message translates to:
-  /// **'Live Gold Value'**
+  /// In pt, this message translates to:
+  /// **'Valor do Ouro em Tempo Real'**
   String get accounts_liveGoldValue;
 
   /// No description provided for @accounts_enterWeightAboveToSe.
   ///
-  /// In en, this message translates to:
-  /// **'Enter weight above to see value'**
+  /// In pt, this message translates to:
+  /// **'Insira o peso acima para ver o valor'**
   String get accounts_enterWeightAboveToSe;
 
   /// No description provided for @add_transaction_expense.
   ///
-  /// In en, this message translates to:
-  /// **'Expense'**
+  /// In pt, this message translates to:
+  /// **'Despesa'**
   String get add_transaction_expense;
 
   /// No description provided for @add_transaction_income.
   ///
-  /// In en, this message translates to:
-  /// **'Income'**
+  /// In pt, this message translates to:
+  /// **'Receita'**
   String get add_transaction_income;
 
   /// No description provided for @add_transaction_account.
   ///
-  /// In en, this message translates to:
-  /// **'Account'**
+  /// In pt, this message translates to:
+  /// **'Conta'**
   String get add_transaction_account;
 
   /// No description provided for @add_transaction_category.
   ///
-  /// In en, this message translates to:
-  /// **'Category'**
+  /// In pt, this message translates to:
+  /// **'Categoria'**
   String get add_transaction_category;
 
   /// No description provided for @assets_assets.
   ///
-  /// In en, this message translates to:
-  /// **'Assets'**
+  /// In pt, this message translates to:
+  /// **'Ativos'**
   String get assets_assets;
 
   /// No description provided for @backup_restoreBackup.
   ///
-  /// In en, this message translates to:
-  /// **'Restore Backup?'**
+  /// In pt, this message translates to:
+  /// **'Restaurar Backup?'**
   String get backup_restoreBackup;
 
   /// No description provided for @backup_cancel.
   ///
-  /// In en, this message translates to:
-  /// **'Cancel'**
+  /// In pt, this message translates to:
+  /// **'Cancelar'**
   String get backup_cancel;
 
   /// No description provided for @backup_replaceData.
   ///
-  /// In en, this message translates to:
-  /// **'Replace Data'**
+  /// In pt, this message translates to:
+  /// **'Substituir Dados'**
   String get backup_replaceData;
 
   /// No description provided for @backup_backupRestore.
   ///
-  /// In en, this message translates to:
-  /// **'Backup & Restore'**
+  /// In pt, this message translates to:
+  /// **'Backup e Restauração'**
   String get backup_backupRestore;
 
   /// No description provided for @backup_everythingAlways.
   ///
-  /// In en, this message translates to:
-  /// **'Everything, always'**
+  /// In pt, this message translates to:
+  /// **'Tudo, sempre'**
   String get backup_everythingAlways;
 
   /// No description provided for @backup_createBackup.
   ///
-  /// In en, this message translates to:
-  /// **'Create Backup'**
+  /// In pt, this message translates to:
+  /// **'Criar Backup'**
   String get backup_createBackup;
 
   /// No description provided for @backup_saveAsJson.
   ///
-  /// In en, this message translates to:
-  /// **'Save as JSON'**
+  /// In pt, this message translates to:
+  /// **'Salvar como JSON'**
   String get backup_saveAsJson;
 
   /// No description provided for @backup_exportsAllAppDataToA.
   ///
-  /// In en, this message translates to:
-  /// **'Exports ALL app data to a portable file'**
+  /// In pt, this message translates to:
+  /// **'Exporta TODOS os dados do app para um arquivo'**
   String get backup_exportsAllAppDataToA;
 
   /// No description provided for @backup_restoreBackup_.
   ///
-  /// In en, this message translates to:
-  /// **'Restore Backup'**
+  /// In pt, this message translates to:
+  /// **'Restaurar Backup'**
   String get backup_restoreBackup_;
 
   /// No description provided for @backup_loadFromJson.
   ///
-  /// In en, this message translates to:
-  /// **'Load from JSON'**
+  /// In pt, this message translates to:
+  /// **'Carregar do JSON'**
   String get backup_loadFromJson;
 
   /// No description provided for @backup_picksABackupFileAndR.
   ///
-  /// In en, this message translates to:
-  /// **'Picks a backup file and restores it'**
+  /// In pt, this message translates to:
+  /// **'Escolhe um arquivo de backup e o restaura'**
   String get backup_picksABackupFileAndR;
 
   /// No description provided for @backup_thisOverwritesAllCur.
   ///
-  /// In en, this message translates to:
-  /// **'This overwrites ALL current data.'**
+  /// In pt, this message translates to:
+  /// **'Isso sobrescreve TODOS os dados atuais.'**
   String get backup_thisOverwritesAllCur;
 
   /// No description provided for @budget_budgets.
   ///
-  /// In en, this message translates to:
-  /// **'Budgets'**
+  /// In pt, this message translates to:
+  /// **'Orçamentos'**
   String get budget_budgets;
 
   /// No description provided for @budget_empty.
   ///
-  /// In en, this message translates to:
-  /// **' · '**
+  /// In pt, this message translates to:
+  /// **'·'**
   String get budget_empty;
 
   /// No description provided for @budget_overBudget.
   ///
-  /// In en, this message translates to:
-  /// **'Over budget'**
+  /// In pt, this message translates to:
+  /// **'Acima do orçamento'**
   String get budget_overBudget;
 
   /// No description provided for @budget_thisCategoryAlreadyH.
   ///
-  /// In en, this message translates to:
-  /// **'This category already has a budget. Tap it to edit.'**
+  /// In pt, this message translates to:
+  /// **'Esta categoria já tem um orçamento. Toque para editar.'**
   String get budget_thisCategoryAlreadyH;
 
   /// No description provided for @budget_period.
   ///
-  /// In en, this message translates to:
-  /// **'Period'**
+  /// In pt, this message translates to:
+  /// **'Período'**
   String get budget_period;
 
   /// No description provided for @budget_monthly.
   ///
-  /// In en, this message translates to:
-  /// **'Monthly'**
+  /// In pt, this message translates to:
+  /// **'Mensal'**
   String get budget_monthly;
 
   /// No description provided for @budget_weekly.
   ///
-  /// In en, this message translates to:
-  /// **'Weekly'**
+  /// In pt, this message translates to:
+  /// **'Semanal'**
   String get budget_weekly;
 
   /// No description provided for @budget_category.
   ///
-  /// In en, this message translates to:
-  /// **'Category'**
+  /// In pt, this message translates to:
+  /// **'Categoria'**
   String get budget_category;
 
   /// No description provided for @categories_categories.
   ///
-  /// In en, this message translates to:
-  /// **'Categories'**
+  /// In pt, this message translates to:
+  /// **'Categorias'**
   String get categories_categories;
 
   /// No description provided for @categories_expense.
   ///
-  /// In en, this message translates to:
-  /// **'Expense'**
+  /// In pt, this message translates to:
+  /// **'Despesa'**
   String get categories_expense;
 
   /// No description provided for @categories_income.
   ///
-  /// In en, this message translates to:
-  /// **'Income'**
+  /// In pt, this message translates to:
+  /// **'Receita'**
   String get categories_income;
 
   /// No description provided for @categories_color.
   ///
-  /// In en, this message translates to:
-  /// **'Color'**
+  /// In pt, this message translates to:
+  /// **'Cor'**
   String get categories_color;
 
   /// No description provided for @categories_icon.
   ///
-  /// In en, this message translates to:
-  /// **'Icon'**
+  /// In pt, this message translates to:
+  /// **'Ícone'**
   String get categories_icon;
 
   /// No description provided for @categories_autoBasedOnName.
   ///
-  /// In en, this message translates to:
-  /// **'Auto (based on name)'**
+  /// In pt, this message translates to:
+  /// **'Auto (baseado no nome)'**
   String get categories_autoBasedOnName;
 
   /// No description provided for @categories_expenseCategories.
   ///
-  /// In en, this message translates to:
-  /// **'Expense Categories'**
+  /// In pt, this message translates to:
+  /// **'Categorias de Despesas'**
   String get categories_expenseCategories;
 
   /// No description provided for @categories_incomeCategories.
   ///
-  /// In en, this message translates to:
-  /// **'Income Categories'**
+  /// In pt, this message translates to:
+  /// **'Categorias de Receitas'**
   String get categories_incomeCategories;
 
   /// No description provided for @currency_converter_currencyConverter.
   ///
-  /// In en, this message translates to:
-  /// **'Currency Converter'**
+  /// In pt, this message translates to:
+  /// **'Conversor de Moedas'**
   String get currency_converter_currencyConverter;
 
   /// No description provided for @currency_converter_amount.
   ///
-  /// In en, this message translates to:
-  /// **'Amount'**
+  /// In pt, this message translates to:
+  /// **'Valor'**
   String get currency_converter_amount;
 
   /// No description provided for @currency_converter_convertedTo.
   ///
-  /// In en, this message translates to:
-  /// **'Converted to'**
+  /// In pt, this message translates to:
+  /// **'Convertido para'**
   String get currency_converter_convertedTo;
 
   /// No description provided for @export_exportTransactions.
   ///
-  /// In en, this message translates to:
-  /// **'Export Transactions'**
+  /// In pt, this message translates to:
+  /// **'Exportar Transações'**
   String get export_exportTransactions;
 
   /// No description provided for @export_dateRange.
   ///
-  /// In en, this message translates to:
-  /// **'Date Range'**
+  /// In pt, this message translates to:
+  /// **'Período'**
   String get export_dateRange;
 
   /// No description provided for @export_formatExcelXlsx.
   ///
-  /// In en, this message translates to:
-  /// **'Format: Excel (.xlsx)'**
+  /// In pt, this message translates to:
+  /// **'Formato: Excel (.xlsx)'**
   String get export_formatExcelXlsx;
 
   /// No description provided for @home_totalBalance.
   ///
-  /// In en, this message translates to:
-  /// **'Total Balance'**
+  /// In pt, this message translates to:
+  /// **'Saldo Total'**
   String get home_totalBalance;
 
   /// No description provided for @home_accounts.
   ///
-  /// In en, this message translates to:
-  /// **'Accounts'**
+  /// In pt, this message translates to:
+  /// **'Contas'**
   String get home_accounts;
 
   /// No description provided for @home_recentTransactions.
   ///
-  /// In en, this message translates to:
-  /// **'Recent Transactions'**
+  /// In pt, this message translates to:
+  /// **'Transações Recentes'**
   String get home_recentTransactions;
 
   /// No description provided for @home_noTransactionsYet.
   ///
-  /// In en, this message translates to:
-  /// **'No transactions yet'**
+  /// In pt, this message translates to:
+  /// **'Nenhuma transação ainda'**
   String get home_noTransactionsYet;
 
   /// No description provided for @home_add.
   ///
-  /// In en, this message translates to:
-  /// **'Add'**
+  /// In pt, this message translates to:
+  /// **'Adicionar'**
   String get home_add;
 
   /// No description provided for @insights_insights.
   ///
-  /// In en, this message translates to:
-  /// **'Insights'**
+  /// In pt, this message translates to:
+  /// **'Informações'**
   String get insights_insights;
 
   /// No description provided for @lended_person_deletePerson.
   ///
-  /// In en, this message translates to:
-  /// **'Delete person'**
+  /// In pt, this message translates to:
+  /// **'Excluir pessoa'**
   String get lended_person_deletePerson;
 
   /// No description provided for @lended_person_editPerson.
   ///
-  /// In en, this message translates to:
-  /// **'Edit Person'**
+  /// In pt, this message translates to:
+  /// **'Editar Pessoa'**
   String get lended_person_editPerson;
 
   /// No description provided for @lended_person_color.
   ///
-  /// In en, this message translates to:
-  /// **'Color'**
+  /// In pt, this message translates to:
+  /// **'Cor'**
   String get lended_person_color;
 
   /// No description provided for @lended_person_saveChanges.
   ///
-  /// In en, this message translates to:
-  /// **'Save Changes'**
+  /// In pt, this message translates to:
+  /// **'Salvar Alterações'**
   String get lended_person_saveChanges;
 
   /// No description provided for @lended_person_settled.
   ///
-  /// In en, this message translates to:
-  /// **'SETTLED'**
+  /// In pt, this message translates to:
+  /// **'QUITADO'**
   String get lended_person_settled;
 
   /// No description provided for @lended_person_settle.
   ///
-  /// In en, this message translates to:
-  /// **'Settle'**
+  /// In pt, this message translates to:
+  /// **'Quitar'**
   String get lended_person_settle;
 
   /// No description provided for @lended_person_setADueDateFirstToEn.
   ///
-  /// In en, this message translates to:
-  /// **'Set a due date first to enable reminders.'**
+  /// In pt, this message translates to:
+  /// **'Defina uma data de vencimento primeiro para ativar lembretes.'**
   String get lended_person_setADueDateFirstToEn;
 
   /// No description provided for @lended_person_iLent.
   ///
-  /// In en, this message translates to:
-  /// **'I Lent'**
+  /// In pt, this message translates to:
+  /// **'Eu Emprestei'**
   String get lended_person_iLent;
 
   /// No description provided for @lended_person_iBorrowed.
   ///
-  /// In en, this message translates to:
-  /// **'I Borrowed'**
+  /// In pt, this message translates to:
+  /// **'Eu Peguei Emprestado'**
   String get lended_person_iBorrowed;
 
   /// No description provided for @lended_person_accountOptional.
   ///
-  /// In en, this message translates to:
-  /// **'Account (optional)'**
+  /// In pt, this message translates to:
+  /// **'Conta (opcional)'**
   String get lended_person_accountOptional;
 
   /// No description provided for @lended_person_dueDateReminder.
   ///
-  /// In en, this message translates to:
-  /// **'Due Date Reminder'**
+  /// In pt, this message translates to:
+  /// **'Lembrete de Vencimento'**
   String get lended_person_dueDateReminder;
 
   /// No description provided for @lended_person_remindMeAt.
   ///
-  /// In en, this message translates to:
-  /// **'Remind me at'**
+  /// In pt, this message translates to:
+  /// **'Lembrar-me às'**
   String get lended_person_remindMeAt;
 
   /// No description provided for @lended_person_active.
   ///
-  /// In en, this message translates to:
-  /// **'Active'**
+  /// In pt, this message translates to:
+  /// **'Ativo'**
   String get lended_person_active;
 
   /// No description provided for @lended_person_settled_.
   ///
-  /// In en, this message translates to:
-  /// **'Settled'**
+  /// In pt, this message translates to:
+  /// **'Quitado'**
   String get lended_person_settled_;
 
   /// No description provided for @lended_lentMoney.
   ///
-  /// In en, this message translates to:
-  /// **'Lent Money'**
+  /// In pt, this message translates to:
+  /// **'Dinheiro Emprestado'**
   String get lended_lentMoney;
 
   /// No description provided for @lended_overdue.
   ///
-  /// In en, this message translates to:
-  /// **'OVERDUE'**
+  /// In pt, this message translates to:
+  /// **'ATRASADO'**
   String get lended_overdue;
 
   /// No description provided for @lended_color.
   ///
-  /// In en, this message translates to:
-  /// **'Color'**
+  /// In pt, this message translates to:
+  /// **'Cor'**
   String get lended_color;
 
   /// No description provided for @more_more.
   ///
-  /// In en, this message translates to:
-  /// **'More'**
+  /// In pt, this message translates to:
+  /// **'Mais'**
   String get more_more;
 
   /// No description provided for @onboarding_back.
   ///
-  /// In en, this message translates to:
-  /// **'Back'**
+  /// In pt, this message translates to:
+  /// **'Voltar'**
   String get onboarding_back;
 
   /// No description provided for @onboarding_welcomeToNexo.
   ///
-  /// In en, this message translates to:
+  /// In pt, this message translates to:
   /// **'Bem-vindo ao Nexo!'**
   String get onboarding_welcomeToNexo;
 
   /// No description provided for @onboarding_restoreABackup.
   ///
-  /// In en, this message translates to:
-  /// **'Restore a Backup'**
+  /// In pt, this message translates to:
+  /// **'Restaurar um Backup'**
   String get onboarding_restoreABackup;
 
   /// No description provided for @onboarding_loadAPreviouslySaved.
   ///
-  /// In en, this message translates to:
-  /// **'Load a previously saved Nexo JSON file'**
+  /// In pt, this message translates to:
+  /// **'Carregar um arquivo JSON do Nexo salvo anteriormente'**
   String get onboarding_loadAPreviouslySaved;
 
   /// No description provided for @onboarding_or.
   ///
-  /// In en, this message translates to:
-  /// **'or'**
+  /// In pt, this message translates to:
+  /// **'ou'**
   String get onboarding_or;
 
   /// No description provided for @onboarding_startFresh.
   ///
-  /// In en, this message translates to:
-  /// **'Start Fresh'**
+  /// In pt, this message translates to:
+  /// **'Começar do Zero'**
   String get onboarding_startFresh;
 
   /// No description provided for @onboarding_firstWhatShouldWeCal.
   ///
-  /// In en, this message translates to:
-  /// **'First, what should we call you?'**
+  /// In pt, this message translates to:
+  /// **'Primeiro, como devemos chamá-lo?'**
   String get onboarding_firstWhatShouldWeCal;
 
   /// No description provided for @onboarding_defaultCurrency.
   ///
-  /// In en, this message translates to:
-  /// **'Default Currency'**
+  /// In pt, this message translates to:
+  /// **'Moeda Padrão'**
   String get onboarding_defaultCurrency;
 
   /// No description provided for @onboarding_thisWillBeUsedAcross.
   ///
-  /// In en, this message translates to:
-  /// **'This will be used across the app.\\nYou can change it later in Settings.'**
+  /// In pt, this message translates to:
+  /// **'Isso será usado em todo o app.\nVocê pode mudar isso depois nas Configurações.'**
   String get onboarding_thisWillBeUsedAcross;
 
   /// No description provided for @onboarding_searchAllCurrencies.
   ///
-  /// In en, this message translates to:
-  /// **'Search all currencies'**
+  /// In pt, this message translates to:
+  /// **'Pesquisar todas as moedas'**
   String get onboarding_searchAllCurrencies;
 
   /// No description provided for @onboarding_yourFirstAccount.
   ///
-  /// In en, this message translates to:
-  /// **'Your First Account'**
+  /// In pt, this message translates to:
+  /// **'Sua Primeira Conta'**
   String get onboarding_yourFirstAccount;
 
   /// No description provided for @onboarding_setUpYourMainAccount.
   ///
-  /// In en, this message translates to:
-  /// **'Set up your main account to start tracking.'**
+  /// In pt, this message translates to:
+  /// **'Configure sua conta principal para começar a rastrear.'**
   String get onboarding_setUpYourMainAccount;
 
   /// No description provided for @onboarding_accountType.
   ///
-  /// In en, this message translates to:
-  /// **'Account Type'**
+  /// In pt, this message translates to:
+  /// **'Tipo de Conta'**
   String get onboarding_accountType;
 
   /// No description provided for @onboarding_currency.
   ///
-  /// In en, this message translates to:
-  /// **'Currency'**
+  /// In pt, this message translates to:
+  /// **'Moeda'**
   String get onboarding_currency;
 
   /// No description provided for @onboarding_color.
   ///
-  /// In en, this message translates to:
-  /// **'Color'**
+  /// In pt, this message translates to:
+  /// **'Cor'**
   String get onboarding_color;
 
   /// No description provided for @recurring_recurring.
   ///
-  /// In en, this message translates to:
-  /// **'Recurring'**
+  /// In pt, this message translates to:
+  /// **'Recorrente'**
   String get recurring_recurring;
 
   /// No description provided for @recurring_income.
   ///
-  /// In en, this message translates to:
-  /// **'INCOME'**
+  /// In pt, this message translates to:
+  /// **'RECEITA'**
   String get recurring_income;
 
   /// No description provided for @recurring_2D.
   ///
-  /// In en, this message translates to:
+  /// In pt, this message translates to:
   /// **'−2d'**
   String get recurring_2D;
 
   /// No description provided for @recurring_skipNextPayment.
   ///
-  /// In en, this message translates to:
-  /// **'Skip Next Payment?'**
+  /// In pt, this message translates to:
+  /// **'Pular Próximo Pagamento?'**
   String get recurring_skipNextPayment;
 
   /// No description provided for @recurring_cancel.
   ///
-  /// In en, this message translates to:
-  /// **'Cancel'**
+  /// In pt, this message translates to:
+  /// **'Cancelar'**
   String get recurring_cancel;
 
   /// No description provided for @recurring_skip.
   ///
-  /// In en, this message translates to:
-  /// **'Skip'**
+  /// In pt, this message translates to:
+  /// **'Pular'**
   String get recurring_skip;
 
   /// No description provided for @recurring_noHistoryYet.
   ///
-  /// In en, this message translates to:
-  /// **'No history yet'**
+  /// In pt, this message translates to:
+  /// **'Nenhum histórico ainda'**
   String get recurring_noHistoryYet;
 
   /// No description provided for @recurring_expense.
   ///
-  /// In en, this message translates to:
-  /// **'Expense'**
+  /// In pt, this message translates to:
+  /// **'Despesa'**
   String get recurring_expense;
 
   /// No description provided for @recurring_income_.
   ///
-  /// In en, this message translates to:
-  /// **'Income'**
+  /// In pt, this message translates to:
+  /// **'Receita'**
   String get recurring_income_;
 
   /// No description provided for @recurring_every.
   ///
-  /// In en, this message translates to:
-  /// **'Every '**
+  /// In pt, this message translates to:
+  /// **'A cada '**
   String get recurring_every;
 
   /// No description provided for @recurring_days.
   ///
-  /// In en, this message translates to:
-  /// **'Days'**
+  /// In pt, this message translates to:
+  /// **'Dias'**
   String get recurring_days;
 
   /// No description provided for @recurring_weeks.
   ///
-  /// In en, this message translates to:
-  /// **'Weeks'**
+  /// In pt, this message translates to:
+  /// **'Semanas'**
   String get recurring_weeks;
 
   /// No description provided for @recurring_months.
   ///
-  /// In en, this message translates to:
-  /// **'Months'**
+  /// In pt, this message translates to:
+  /// **'Meses'**
   String get recurring_months;
 
   /// No description provided for @recurring_years.
   ///
-  /// In en, this message translates to:
-  /// **'Years'**
+  /// In pt, this message translates to:
+  /// **'Anos'**
   String get recurring_years;
 
   /// No description provided for @recurring_payments.
   ///
-  /// In en, this message translates to:
-  /// **'Payments'**
+  /// In pt, this message translates to:
+  /// **'Pagamentos'**
   String get recurring_payments;
 
   /// No description provided for @recurring_totalCost.
   ///
-  /// In en, this message translates to:
-  /// **'Total Cost'**
+  /// In pt, this message translates to:
+  /// **'Custo Total'**
   String get recurring_totalCost;
 
   /// No description provided for @recurring_account.
   ///
-  /// In en, this message translates to:
-  /// **'Account'**
+  /// In pt, this message translates to:
+  /// **'Conta'**
   String get recurring_account;
 
   /// No description provided for @recurring_category.
   ///
-  /// In en, this message translates to:
-  /// **'Category'**
+  /// In pt, this message translates to:
+  /// **'Categoria'**
   String get recurring_category;
 
   /// No description provided for @recurring_paymentReminder.
   ///
-  /// In en, this message translates to:
-  /// **'Payment Reminder'**
+  /// In pt, this message translates to:
+  /// **'Lembrete de Pagamento'**
   String get recurring_paymentReminder;
 
   /// No description provided for @recurring_notificationWillFire.
   ///
-  /// In en, this message translates to:
-  /// **'Notification will fire on the next due date at this time.'**
+  /// In pt, this message translates to:
+  /// **'A notificação disparará na próxima data de vencimento neste horário.'**
   String get recurring_notificationWillFire;
 
   /// No description provided for @recurring_remind2DaysBefore.
   ///
-  /// In en, this message translates to:
-  /// **'Remind 2 days before'**
+  /// In pt, this message translates to:
+  /// **'Lembrar 2 dias antes'**
   String get recurring_remind2DaysBefore;
 
   /// No description provided for @statistics_statistics.
   ///
-  /// In en, this message translates to:
-  /// **'Statistics'**
+  /// In pt, this message translates to:
+  /// **'Estatísticas'**
   String get statistics_statistics;
 
   /// No description provided for @statistics_expensesByCategory.
   ///
-  /// In en, this message translates to:
-  /// **'Expenses by Category'**
+  /// In pt, this message translates to:
+  /// **'Despesas por Categoria'**
   String get statistics_expensesByCategory;
 
   /// No description provided for @transactions_transactions.
   ///
-  /// In en, this message translates to:
-  /// **'Transactions'**
+  /// In pt, this message translates to:
+  /// **'Transações'**
   String get transactions_transactions;
 
   /// No description provided for @transactions_settled.
   ///
-  /// In en, this message translates to:
-  /// **'Settled'**
+  /// In pt, this message translates to:
+  /// **'Quitado'**
   String get transactions_settled;
 
   /// No description provided for @transfer_transfer.
   ///
-  /// In en, this message translates to:
-  /// **'Transfer'**
+  /// In pt, this message translates to:
+  /// **'Transferência'**
   String get transfer_transfer;
 
   /// No description provided for @transfer_from.
   ///
-  /// In en, this message translates to:
-  /// **'FROM'**
+  /// In pt, this message translates to:
+  /// **'DE'**
   String get transfer_from;
 
   /// No description provided for @transfer_to.
   ///
-  /// In en, this message translates to:
-  /// **'TO'**
+  /// In pt, this message translates to:
+  /// **'PARA'**
   String get transfer_to;
 
   /// No description provided for @transfer_enterAnAmountToSeeTh.
   ///
-  /// In en, this message translates to:
-  /// **'Enter an amount to see the conversion'**
+  /// In pt, this message translates to:
+  /// **'Insira um valor para ver a conversão'**
   String get transfer_enterAnAmountToSeeTh;
 
   /// No description provided for @wishlist_wishlist.
   ///
-  /// In en, this message translates to:
-  /// **'Wishlist'**
+  /// In pt, this message translates to:
+  /// **'Lista de Desejos'**
   String get wishlist_wishlist;
 
   /// No description provided for @wishlist_priority.
   ///
-  /// In en, this message translates to:
-  /// **'Priority'**
+  /// In pt, this message translates to:
+  /// **'Prioridade'**
   String get wishlist_priority;
 
   /// No description provided for @shared_widgets_delete.
   ///
-  /// In en, this message translates to:
-  /// **'Delete?'**
+  /// In pt, this message translates to:
+  /// **'Excluir?'**
   String get shared_widgets_delete;
 
   /// No description provided for @shared_widgets_cancel.
   ///
-  /// In en, this message translates to:
-  /// **'Cancel'**
+  /// In pt, this message translates to:
+  /// **'Cancelar'**
   String get shared_widgets_cancel;
 
   /// No description provided for @shared_widgets_delete_.
   ///
-  /// In en, this message translates to:
-  /// **'Delete'**
+  /// In pt, this message translates to:
+  /// **'Excluir'**
   String get shared_widgets_delete_;
 
   /// No description provided for @shared_widgets_none.
   ///
-  /// In en, this message translates to:
-  /// **'None'**
+  /// In pt, this message translates to:
+  /// **'Nenhum'**
   String get shared_widgets_none;
 
   /// No description provided for @shared_widgets_selectCurrency.
   ///
-  /// In en, this message translates to:
-  /// **'Select Currency'**
+  /// In pt, this message translates to:
+  /// **'Selecionar Moeda'**
   String get shared_widgets_selectCurrency;
 
   /// No description provided for @main_home.
   ///
-  /// In en, this message translates to:
-  /// **'Home'**
+  /// In pt, this message translates to:
+  /// **'Início'**
   String get main_home;
 
   /// No description provided for @main_transactions.
   ///
-  /// In en, this message translates to:
-  /// **'Transactions'**
+  /// In pt, this message translates to:
+  /// **'Transações'**
   String get main_transactions;
 
   /// No description provided for @main_recurring.
   ///
-  /// In en, this message translates to:
-  /// **'Recurring'**
+  /// In pt, this message translates to:
+  /// **'Recorrente'**
   String get main_recurring;
 
   /// No description provided for @main_accounts.
   ///
-  /// In en, this message translates to:
-  /// **'Accounts'**
+  /// In pt, this message translates to:
+  /// **'Contas'**
   String get main_accounts;
 
   /// No description provided for @main_budgets.
   ///
-  /// In en, this message translates to:
-  /// **'Budgets'**
+  /// In pt, this message translates to:
+  /// **'Orçamentos'**
   String get main_budgets;
 
   /// No description provided for @main_more.
   ///
-  /// In en, this message translates to:
-  /// **'More'**
+  /// In pt, this message translates to:
+  /// **'Mais'**
   String get main_more;
 
   /// No description provided for @onboarding_chooseLanguage.
   ///
-  /// In en, this message translates to:
-  /// **'Choose Language'**
+  /// In pt, this message translates to:
+  /// **'Escolha o idioma'**
   String get onboarding_chooseLanguage;
 
   /// No description provided for @error_required.
   ///
-  /// In en, this message translates to:
-  /// **'This field is required'**
+  /// In pt, this message translates to:
+  /// **'Este campo é obrigatório'**
   String get error_required;
 
   /// No description provided for @recurring_subscriptions.
   ///
-  /// In en, this message translates to:
-  /// **'Subscriptions ({count})'**
+  /// In pt, this message translates to:
+  /// **'Assinaturas ({count})'**
   String recurring_subscriptions(Object count);
 
   /// No description provided for @recurring_installments.
   ///
-  /// In en, this message translates to:
-  /// **'Installments ({count})'**
+  /// In pt, this message translates to:
+  /// **'Parcelas ({count})'**
   String recurring_installments(Object count);
 
   /// No description provided for @recurring_recurringType.
   ///
-  /// In en, this message translates to:
-  /// **'Recurring Type'**
+  /// In pt, this message translates to:
+  /// **'Tipo recorrente'**
   String get recurring_recurringType;
 
   /// No description provided for @recurring_subscription.
   ///
-  /// In en, this message translates to:
-  /// **'Subscription'**
+  /// In pt, this message translates to:
+  /// **'Assinatura'**
   String get recurring_subscription;
 
   /// No description provided for @recurring_installment.
   ///
-  /// In en, this message translates to:
-  /// **'Installment'**
+  /// In pt, this message translates to:
+  /// **'Parcelamento'**
   String get recurring_installment;
 
   /// No description provided for @recurring_installmentsRequireEndDate.
   ///
-  /// In en, this message translates to:
-  /// **'Installments must have a final payment date.'**
+  /// In pt, this message translates to:
+  /// **'As parcelas devem ter uma data final de pagamento.'**
   String get recurring_installmentsRequireEndDate;
 
   /// No description provided for @backup_importFromOtherApps.
   ///
-  /// In en, this message translates to:
-  /// **'Import from Other Apps'**
+  /// In pt, this message translates to:
+  /// **'Importar de outros aplicativos'**
   String get backup_importFromOtherApps;
 
   /// No description provided for @backup_importDescription.
   ///
-  /// In en, this message translates to:
-  /// **'Import data from supported apps'**
+  /// In pt, this message translates to:
+  /// **'Importar dados de aplicativos suportados'**
   String get backup_importDescription;
 
   /// No description provided for @backup_importFromGreenStash.
   ///
-  /// In en, this message translates to:
-  /// **'Import from GreenStash (.json)'**
+  /// In pt, this message translates to:
+  /// **'Importar do GreenStash (.json)'**
   String get backup_importFromGreenStash;
+
+  /// Dynamic Color toggle title
+  ///
+  /// In pt, this message translates to:
+  /// **'Cor Dinâmica'**
+  String get settings_dynamicColor;
+
+  /// Dynamic Color toggle subtitle
+  ///
+  /// In pt, this message translates to:
+  /// **'Use cores de papel de parede do sistema'**
+  String get settings_dynamicColorSubtitle;
+
+  /// Accent Color subtitle
+  ///
+  /// In pt, this message translates to:
+  /// **'Escolha uma cor de semente para o aplicativo'**
+  String get settings_accentColorSubtitle;
 
   /// No description provided for @backup_automaticBackup.
   ///
-  /// In en, this message translates to:
-  /// **'Automatic Backup'**
+  /// In pt, this message translates to:
+  /// **'Backup Automático'**
   String get backup_automaticBackup;
 
   /// No description provided for @backup_dailyAutoBackup.
   ///
-  /// In en, this message translates to:
-  /// **'Daily Auto Backup'**
+  /// In pt, this message translates to:
+  /// **'Backup automático diário'**
   String get backup_dailyAutoBackup;
 
   /// No description provided for @backup_runsDailyAt.
   ///
-  /// In en, this message translates to:
-  /// **'Runs daily at {time}'**
+  /// In pt, this message translates to:
+  /// **'Funciona diariamente às {time}'**
   String backup_runsDailyAt(String time);
 
   /// No description provided for @backup_lastBackup.
   ///
-  /// In en, this message translates to:
-  /// **'Last backup: {time}'**
+  /// In pt, this message translates to:
+  /// **'Último backup: {time}'**
   String backup_lastBackup(String time);
 
   /// No description provided for @backup_savingTo.
   ///
-  /// In en, this message translates to:
-  /// **'Saving to: {path}'**
+  /// In pt, this message translates to:
+  /// **'Salvando em: {path}'**
   String backup_savingTo(String path);
 
   /// No description provided for @backup_changeTime.
   ///
-  /// In en, this message translates to:
-  /// **'Change Time'**
+  /// In pt, this message translates to:
+  /// **'Alterar horário'**
   String get backup_changeTime;
 
   /// No description provided for @backup_changeFolder.
   ///
-  /// In en, this message translates to:
-  /// **'Change Folder'**
+  /// In pt, this message translates to:
+  /// **'Alterar pasta'**
   String get backup_changeFolder;
 
   /// No description provided for @budget_budgetsAndGoals.
   ///
-  /// In en, this message translates to:
-  /// **'Budgets & Goals'**
+  /// In pt, this message translates to:
+  /// **'Orçamentos e Metas'**
   String get budget_budgetsAndGoals;
 
   /// No description provided for @onboarding_restoreGreenStash.
   ///
-  /// In en, this message translates to:
-  /// **'Restore from GreenStash (.json)'**
+  /// In pt, this message translates to:
+  /// **'Restaurar do GreenStash (.json)'**
   String get onboarding_restoreGreenStash;
 
   /// No description provided for @savings_goalNotFound.
   ///
-  /// In en, this message translates to:
-  /// **'Goal not found'**
+  /// In pt, this message translates to:
+  /// **'Meta não encontrada'**
   String get savings_goalNotFound;
 
   /// No description provided for @savings_savedSoFar.
   ///
-  /// In en, this message translates to:
-  /// **'Saved so far'**
+  /// In pt, this message translates to:
+  /// **'Salvo até agora'**
   String get savings_savedSoFar;
 
   /// No description provided for @savings_target.
   ///
-  /// In en, this message translates to:
-  /// **'Target'**
+  /// In pt, this message translates to:
+  /// **'Meta'**
   String get savings_target;
 
   /// No description provided for @savings_targetDate.
   ///
-  /// In en, this message translates to:
-  /// **'Target Date: {date}'**
+  /// In pt, this message translates to:
+  /// **'Prazo: {date}'**
   String savings_targetDate(String date);
 
   /// No description provided for @savings_contribute.
   ///
-  /// In en, this message translates to:
-  /// **'Contribute'**
+  /// In pt, this message translates to:
+  /// **'Adicionar aporte'**
   String get savings_contribute;
 
   /// No description provided for @savings_withdraw.
   ///
-  /// In en, this message translates to:
-  /// **'Withdraw'**
+  /// In pt, this message translates to:
+  /// **'Retirar'**
   String get savings_withdraw;
 
   /// No description provided for @savings_noAccounts.
   ///
-  /// In en, this message translates to:
-  /// **'No accounts available. Please add an account first.'**
+  /// In pt, this message translates to:
+  /// **'Nenhuma conta disponível. Adicione uma conta primeiro.'**
   String get savings_noAccounts;
 
   /// No description provided for @settings_budgetAlerts.
   ///
-  /// In en, this message translates to:
-  /// **'Budget Alerts'**
+  /// In pt, this message translates to:
+  /// **'Alertas de orçamento'**
   String get settings_budgetAlerts;
 
   /// No description provided for @settings_budgetAlertsSub.
   ///
-  /// In en, this message translates to:
-  /// **'Notify when a budget or goal is reached'**
+  /// In pt, this message translates to:
+  /// **'Notificar quando um orçamento ou meta for atingido'**
   String get settings_budgetAlertsSub;
 
   /// No description provided for @settings_dailyReminder.
   ///
-  /// In en, this message translates to:
-  /// **'Daily Reminder'**
+  /// In pt, this message translates to:
+  /// **'Lembrete Diário'**
   String get settings_dailyReminder;
 
   /// No description provided for @settings_dailyReminderSub.
   ///
-  /// In en, this message translates to:
-  /// **'Remind to log transactions daily'**
+  /// In pt, this message translates to:
+  /// **'Lembre de registrar transações diariamente'**
   String get settings_dailyReminderSub;
 
   /// No description provided for @settings_reminderTime.
   ///
-  /// In en, this message translates to:
-  /// **'Reminder Time'**
+  /// In pt, this message translates to:
+  /// **'Hora do lembrete'**
   String get settings_reminderTime;
 
   /// No description provided for @settings_hapticFeedback.
   ///
-  /// In en, this message translates to:
-  /// **'Haptic Feedback'**
+  /// In pt, this message translates to:
+  /// **'Feedback tátil'**
   String get settings_hapticFeedback;
 
   /// No description provided for @settings_hapticFeedbackSub.
   ///
-  /// In en, this message translates to:
-  /// **'Vibrate on interactions'**
+  /// In pt, this message translates to:
+  /// **'Vibrar nas interações'**
   String get settings_hapticFeedbackSub;
 
   /// No description provided for @savings_saveGoal.
   ///
-  /// In en, this message translates to:
-  /// **'Save Goal'**
+  /// In pt, this message translates to:
+  /// **'Salvar meta'**
   String get savings_saveGoal;
 
   /// No description provided for @more_loans.
   ///
-  /// In en, this message translates to:
-  /// **'Loans'**
+  /// In pt, this message translates to:
+  /// **'Empréstimos'**
   String get more_loans;
 
   /// No description provided for @more_loansSub.
   ///
-  /// In en, this message translates to:
-  /// **'{count, plural, =1{1 active loan} other{{count} active loans}}'**
+  /// In pt, this message translates to:
+  /// **'{count, plural, =1{1 empréstimo ativo} other{{count} empréstimos ativos}}'**
   String more_loansSub(num count);
 
   /// No description provided for @loans_title.
   ///
-  /// In en, this message translates to:
-  /// **'Loans'**
+  /// In pt, this message translates to:
+  /// **'Empréstimos'**
   String get loans_title;
 
   /// No description provided for @loans_addLoan.
   ///
-  /// In en, this message translates to:
-  /// **'Add Loan'**
+  /// In pt, this message translates to:
+  /// **'Adicionar empréstimo'**
   String get loans_addLoan;
 
   /// No description provided for @loans_editLoan.
   ///
-  /// In en, this message translates to:
-  /// **'Edit Loan'**
+  /// In pt, this message translates to:
+  /// **'Editar empréstimo'**
   String get loans_editLoan;
 
   /// No description provided for @loans_loanName.
   ///
-  /// In en, this message translates to:
-  /// **'Loan Name'**
+  /// In pt, this message translates to:
+  /// **'Nome do empréstimo'**
   String get loans_loanName;
 
   /// No description provided for @loans_amount.
   ///
-  /// In en, this message translates to:
-  /// **'Amount'**
+  /// In pt, this message translates to:
+  /// **'Valor'**
   String get loans_amount;
 
   /// No description provided for @loans_startDate.
   ///
-  /// In en, this message translates to:
-  /// **'Start Date'**
+  /// In pt, this message translates to:
+  /// **'Data de início'**
   String get loans_startDate;
 
   /// No description provided for @loans_endDate.
   ///
-  /// In en, this message translates to:
-  /// **'End Date'**
+  /// In pt, this message translates to:
+  /// **'Data de término'**
   String get loans_endDate;
 
   /// No description provided for @loans_interestRateOptional.
   ///
-  /// In en, this message translates to:
-  /// **'Interest Rate (Optional)'**
+  /// In pt, this message translates to:
+  /// **'Taxa de juros (Opcional)'**
   String get loans_interestRateOptional;
 
   /// No description provided for @loans_account.
   ///
-  /// In en, this message translates to:
-  /// **'Linked Account'**
+  /// In pt, this message translates to:
+  /// **'Conta vinculada'**
   String get loans_account;
 
   /// No description provided for @loans_monthlyPayment.
   ///
-  /// In en, this message translates to:
-  /// **'Monthly Payment'**
+  /// In pt, this message translates to:
+  /// **'Pagamento mensal'**
   String get loans_monthlyPayment;
 
   /// No description provided for @loans_totalPayable.
   ///
-  /// In en, this message translates to:
-  /// **'Total Payable'**
+  /// In pt, this message translates to:
+  /// **'Total a pagar'**
   String get loans_totalPayable;
 
   /// No description provided for @loans_remaining.
   ///
-  /// In en, this message translates to:
-  /// **'Remaining'**
+  /// In pt, this message translates to:
+  /// **'Restante'**
   String get loans_remaining;
 
   /// No description provided for @loans_paid.
   ///
-  /// In en, this message translates to:
-  /// **'Paid'**
+  /// In pt, this message translates to:
+  /// **'Pago'**
   String get loans_paid;
 
   /// No description provided for @loans_logPayment.
   ///
-  /// In en, this message translates to:
-  /// **'Log Payment'**
+  /// In pt, this message translates to:
+  /// **'Registrar pagamento'**
   String get loans_logPayment;
 
   /// No description provided for @loans_paymentReminder.
   ///
-  /// In en, this message translates to:
-  /// **'Payment Reminder'**
+  /// In pt, this message translates to:
+  /// **'Lembrete de pagamento'**
   String get loans_paymentReminder;
 
   /// No description provided for @loans_reminderDay.
   ///
-  /// In en, this message translates to:
-  /// **'Reminder Day'**
+  /// In pt, this message translates to:
+  /// **'Dia do lembrete'**
   String get loans_reminderDay;
 
   /// No description provided for @loans_notes.
   ///
-  /// In en, this message translates to:
-  /// **'Notes'**
+  /// In pt, this message translates to:
+  /// **'Notas'**
   String get loans_notes;
 
   /// No description provided for @loans_saveLoan.
   ///
-  /// In en, this message translates to:
-  /// **'Save Loan'**
+  /// In pt, this message translates to:
+  /// **'Salvar empréstimo'**
   String get loans_saveLoan;
 
   /// No description provided for @loans_deleteLoan.
   ///
-  /// In en, this message translates to:
-  /// **'Delete Loan'**
+  /// In pt, this message translates to:
+  /// **'Excluir empréstimo'**
   String get loans_deleteLoan;
 
   /// No description provided for @loans_settled.
   ///
-  /// In en, this message translates to:
-  /// **'Settled'**
+  /// In pt, this message translates to:
+  /// **'Quitado'**
   String get loans_settled;
 
   /// No description provided for @loans_durationMonths.
   ///
-  /// In en, this message translates to:
-  /// **'{count, plural, =1{1 month} other{{count} months}}'**
+  /// In pt, this message translates to:
+  /// **'{count, plural, =1{1 mês} other{{count} meses}}'**
   String loans_durationMonths(num count);
 
   /// No description provided for @loans_paymentHistory.
   ///
-  /// In en, this message translates to:
-  /// **'Payment History'**
+  /// In pt, this message translates to:
+  /// **'Histórico de pagamentos'**
   String get loans_paymentHistory;
 
   /// No description provided for @loans_noPayments.
   ///
-  /// In en, this message translates to:
-  /// **'No payments logged yet'**
+  /// In pt, this message translates to:
+  /// **'Nenhum pagamento registrado ainda'**
   String get loans_noPayments;
 
   /// No description provided for @loans_outstandingDebt.
   ///
-  /// In en, this message translates to:
-  /// **'Outstanding Debt'**
+  /// In pt, this message translates to:
+  /// **'Dívida pendente'**
   String get loans_outstandingDebt;
 
   /// No description provided for @loans_monthlyObligation.
   ///
-  /// In en, this message translates to:
-  /// **'Monthly Obligation'**
+  /// In pt, this message translates to:
+  /// **'Obrigação mensal'**
   String get loans_monthlyObligation;
 
   /// No description provided for @insights_loans.
   ///
-  /// In en, this message translates to:
-  /// **'Loans'**
+  /// In pt, this message translates to:
+  /// **'Empréstimos'**
   String get insights_loans;
 
   /// No description provided for @backup_loans.
   ///
-  /// In en, this message translates to:
-  /// **'Loans'**
+  /// In pt, this message translates to:
+  /// **'Empréstimos'**
   String get backup_loans;
 
   /// No description provided for @backup_loanPayments.
   ///
-  /// In en, this message translates to:
-  /// **'Loan Payments'**
+  /// In pt, this message translates to:
+  /// **'Pagamentos de empréstimos'**
   String get backup_loanPayments;
 
   /// No description provided for @more_yearlyAnalysis.
   ///
-  /// In en, this message translates to:
-  /// **'Yearly Analysis'**
+  /// In pt, this message translates to:
+  /// **'Análise anual'**
   String get more_yearlyAnalysis;
 
   /// No description provided for @more_yearlyAnalysisSub.
   ///
-  /// In en, this message translates to:
-  /// **'Month-by-month cash flow forecast'**
+  /// In pt, this message translates to:
+  /// **'Previsão de fluxo de caixa mês a mês'**
   String get more_yearlyAnalysisSub;
 
   /// No description provided for @yearly_title.
   ///
-  /// In en, this message translates to:
-  /// **'Yearly Analysis'**
+  /// In pt, this message translates to:
+  /// **'Análise anual'**
   String get yearly_title;
 
   /// No description provided for @yearly_recurringExp.
   ///
-  /// In en, this message translates to:
-  /// **'Recurring Expenses'**
+  /// In pt, this message translates to:
+  /// **'Despesas recorrentes'**
   String get yearly_recurringExp;
 
   /// No description provided for @yearly_recurringInc.
   ///
-  /// In en, this message translates to:
-  /// **'Recurring Income'**
+  /// In pt, this message translates to:
+  /// **'Receitas recorrentes'**
   String get yearly_recurringInc;
 
   /// No description provided for @yearly_loans.
   ///
-  /// In en, this message translates to:
-  /// **'Loan Payments'**
+  /// In pt, this message translates to:
+  /// **'Pagamentos de empréstimos'**
   String get yearly_loans;
 
   /// No description provided for @yearly_borrowed.
   ///
-  /// In en, this message translates to:
-  /// **'Borrowed Due'**
+  /// In pt, this message translates to:
+  /// **'Dívidas a pagar'**
   String get yearly_borrowed;
 
   /// No description provided for @yearly_lentDue.
   ///
-  /// In en, this message translates to:
-  /// **'Lent Due Back'**
+  /// In pt, this message translates to:
+  /// **'Valores a receber'**
   String get yearly_lentDue;
 
   /// No description provided for @yearly_inflow.
   ///
-  /// In en, this message translates to:
-  /// **'Inflows'**
+  /// In pt, this message translates to:
+  /// **'Entradas'**
   String get yearly_inflow;
 
   /// No description provided for @yearly_outflow.
   ///
-  /// In en, this message translates to:
-  /// **'Outflows'**
+  /// In pt, this message translates to:
+  /// **'Saídas'**
   String get yearly_outflow;
 
   /// No description provided for @yearly_netFlow.
   ///
-  /// In en, this message translates to:
-  /// **'Net Flow'**
+  /// In pt, this message translates to:
+  /// **'Fluxo líquido'**
   String get yearly_netFlow;
 
   /// No description provided for @yearly_totalInflow.
   ///
-  /// In en, this message translates to:
-  /// **'Total Inflow'**
+  /// In pt, this message translates to:
+  /// **'Entrada total'**
   String get yearly_totalInflow;
 
   /// No description provided for @yearly_totalOutflow.
   ///
-  /// In en, this message translates to:
-  /// **'Total Outflow'**
+  /// In pt, this message translates to:
+  /// **'Saída total'**
   String get yearly_totalOutflow;
 
   /// No description provided for @yearly_netCashFlow.
   ///
-  /// In en, this message translates to:
-  /// **'Net Cash Flow'**
+  /// In pt, this message translates to:
+  /// **'Fluxo de caixa líquido'**
   String get yearly_netCashFlow;
 
   /// No description provided for @yearly_noData.
   ///
-  /// In en, this message translates to:
-  /// **'No projected activity yet'**
+  /// In pt, this message translates to:
+  /// **'Sem atividade projetada'**
   String get yearly_noData;
 
   /// No description provided for @yearly_noDataSub.
   ///
-  /// In en, this message translates to:
-  /// **'Add recurring payments, loans, or lent money with due dates to see a forecast'**
+  /// In pt, this message translates to:
+  /// **'Adicione pagamentos recorrentes ou empréstimos para ver a previsão'**
   String get yearly_noDataSub;
 
   /// No description provided for @budget_addBudget.
   ///
-  /// In en, this message translates to:
-  /// **'Add Budget'**
+  /// In pt, this message translates to:
+  /// **'Adicionar orçamento'**
   String get budget_addBudget;
 
   /// No description provided for @budget_addGoal.
   ///
-  /// In en, this message translates to:
-  /// **'Add Savings Goal'**
+  /// In pt, this message translates to:
+  /// **'Adicionar meta de economia'**
   String get budget_addGoal;
+
+  /// No description provided for @budget_leftToSpend.
+  ///
+  /// In pt, this message translates to:
+  /// **'Disponível para gastar'**
+  String get budget_leftToSpend;
 
   /// No description provided for @add_transaction_possibleDuplicate.
   ///
-  /// In en, this message translates to:
-  /// **'Possible duplicate'**
+  /// In pt, this message translates to:
+  /// **'Possível duplicidade'**
   String get add_transaction_possibleDuplicate;
 
   /// No description provided for @add_transaction_goBack.
   ///
-  /// In en, this message translates to:
-  /// **'Go back'**
+  /// In pt, this message translates to:
+  /// **'Revisar'**
   String get add_transaction_goBack;
 
   /// No description provided for @add_transaction_saveAnyway.
   ///
-  /// In en, this message translates to:
-  /// **'Save anyway'**
+  /// In pt, this message translates to:
+  /// **'Salvar mesmo assim'**
   String get add_transaction_saveAnyway;
 
   /// No description provided for @loans_confirmDeleteLoan.
   ///
-  /// In en, this message translates to:
-  /// **'Are you sure you want to delete this loan and all its payments?'**
+  /// In pt, this message translates to:
+  /// **'Excluir este empréstimo e todos os pagamentos?'**
   String get loans_confirmDeleteLoan;
 
   /// No description provided for @loans_deletePayment.
   ///
-  /// In en, this message translates to:
-  /// **'Delete Payment'**
+  /// In pt, this message translates to:
+  /// **'Excluir pagamento'**
   String get loans_deletePayment;
 
   /// No description provided for @loans_confirmDeletePayment.
   ///
-  /// In en, this message translates to:
-  /// **'Are you sure you want to delete this payment record?'**
+  /// In pt, this message translates to:
+  /// **'Excluir este registro de pagamento?'**
   String get loans_confirmDeletePayment;
 }
 
@@ -3433,19 +3411,8 @@ class _AppLocalizationsDelegate
   }
 
   @override
-  bool isSupported(Locale locale) => <String>[
-        'ar',
-        'de',
-        'en',
-        'es',
-        'fr',
-        'hi',
-        'it',
-        'ja',
-        'pt',
-        'ru',
-        'zh'
-      ].contains(locale.languageCode);
+  bool isSupported(Locale locale) =>
+      <String>['pt'].contains(locale.languageCode);
 
   @override
   bool shouldReload(_AppLocalizationsDelegate old) => false;
@@ -3454,28 +3421,8 @@ class _AppLocalizationsDelegate
 AppLocalizations lookupAppLocalizations(Locale locale) {
   // Lookup logic when only language code is specified.
   switch (locale.languageCode) {
-    case 'ar':
-      return AppLocalizationsAr();
-    case 'de':
-      return AppLocalizationsDe();
-    case 'en':
-      return AppLocalizationsEn();
-    case 'es':
-      return AppLocalizationsEs();
-    case 'fr':
-      return AppLocalizationsFr();
-    case 'hi':
-      return AppLocalizationsHi();
-    case 'it':
-      return AppLocalizationsIt();
-    case 'ja':
-      return AppLocalizationsJa();
     case 'pt':
       return AppLocalizationsPt();
-    case 'ru':
-      return AppLocalizationsRu();
-    case 'zh':
-      return AppLocalizationsZh();
   }
 
   throw FlutterError(

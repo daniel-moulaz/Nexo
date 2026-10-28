@@ -11,6 +11,7 @@ import '../widgets/shared_widgets.dart' show CategoryDot, showCurrencyPicker;
 import '../services/entry_suggestions.dart';
 import 'transfer_screen.dart';
 import '../services/entry_defaults.dart';
+import '../services/category_memory.dart';
 
 class AddTransactionScreen extends StatefulWidget {
   final AppTransaction? existing;
@@ -34,6 +35,10 @@ class AddTransactionScreen extends StatefulWidget {
 
 class _AddTransactionScreenState extends State<AddTransactionScreen> {
   final _amountCtrl = TextEditingController();
+
+  /// What the history confirmed for a description; a manual pick wins.
+  late final CategoryMemory _memory;
+  bool _categoryTouched = false;
   final _descriptionCtrl = TextEditingController();
   final _noteCtrl = TextEditingController();
   final _installmentCurrentCtrl = TextEditingController();
@@ -65,6 +70,7 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
     _type =
         widget.existing?.type ?? widget.template?.type ?? widget.initialType;
     final app = context.read<AppProvider>();
+    _memory = CategoryMemory.fromTransactions(app.transactions);
     final accounts = app.accounts.where((a) => !a.isGold).toList();
     if (accounts.isNotEmpty) {
       final recent = EntryDefaults.recentAccount(
@@ -82,7 +88,10 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
       _descriptionCtrl.text = existing.description;
       _noteCtrl.text = existing.note;
       if (existing.accountId.isNotEmpty) _accountId = existing.accountId;
-      if (existing.categoryId.isNotEmpty) _categoryId = existing.categoryId;
+      if (existing.categoryId.isNotEmpty) {
+        _categoryId = existing.categoryId;
+        _categoryTouched = true;
+      }
       _date = isEdit ? existing.date : (widget.initialDate ?? DateTime.now());
       final account = app.accountById(existing.accountId);
       _currency = existing.currency.isNotEmpty
@@ -90,6 +99,18 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
           : (account?.currency ?? app.settings.currency);
       if (isEdit) _loadMetadata(existing.id);
     }
+  }
+
+  /// Categories the history confirmed for this description come first.
+  List<AppCategory> _rankedCategories(List<AppCategory> all) {
+    final ranked = _memory.ranked(_descriptionCtrl.text, type: _type);
+    if (ranked.isEmpty) return all;
+    int rank(AppCategory c) {
+      final i = ranked.indexOf(c.id);
+      return i < 0 ? ranked.length : i;
+    }
+
+    return [...all]..sort((a, b) => rank(a).compareTo(rank(b)));
   }
 
   void _selectFirstCategory(AppProvider app, String type) {
@@ -599,7 +620,14 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
                           : 'Ex.: mercado, almoço, internet...',
                       prefixIcon: const Icon(Icons.edit_note_rounded),
                     ),
-                    onChanged: (_) => setState(() {}),
+                    onChanged: (text) => setState(() {
+                      if (!isEdit && !_categoryTouched) {
+                        final id = _memory.suggest(text, type: _type);
+                        if (id != null && categories.any((c) => c.id == id)) {
+                          _categoryId = id;
+                        }
+                      }
+                    }),
                   ),
                   if (!isEdit)
                     for (final past in [
@@ -704,7 +732,7 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
                     Wrap(
                       spacing: 8,
                       runSpacing: 8,
-                      children: categories.map((category) {
+                      children: _rankedCategories(categories).map((category) {
                         return ChoiceChip(
                           selected: _categoryId == category.id,
                           label: Text(_categoryLabel(category)),
@@ -712,6 +740,7 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
                           onSelected: (_) {
                             setState(() {
                               _categoryId = category.id;
+                              _categoryTouched = true;
                               if (!_subcategories(category.id)
                                   .contains(_subcategory)) {
                                 _subcategory = '';

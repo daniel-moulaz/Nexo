@@ -11,6 +11,8 @@ import '../widgets/nexo_ui.dart';
 import 'add_transaction_screen.dart';
 import 'net_worth_screen.dart';
 import 'finance_export_screen.dart';
+import '../services/merchant_breakdown.dart';
+import '../widgets/nexo_sankey.dart';
 
 FinancialAnalysis analyzePeriod(AppProvider app, AnalysisFilter filter) =>
     FinancialAnalysis(
@@ -323,6 +325,66 @@ class _AnalysisScreenState extends State<AnalysisScreen> {
                   Text(
                       'Média de despesas nos ${_historyMonths - 1} meses anteriores: ${money(history.take(_historyMonths - 1).fold<double>(0, (s, d) => s + d.expense) / (_historyMonths - 1))}. Meses sem registros contam como zero.'),
                 ])),
+      if (!app.settings.hideBalance && data.income > 0)
+        AnalysisCard(
+            title: 'De onde veio, para onde foi',
+            child: Builder(builder: (context) {
+              final top = data.topCategories.take(6).toList();
+              final covered = top.fold<double>(0, (s, e) => s + e.value);
+              final rest = data.expense - covered;
+              final left = data.income - data.expense;
+              return NexoSankey(
+                  sourceLabel: 'Receitas',
+                  source: data.income,
+                  money: money,
+                  flows: [
+                    for (final e in top)
+                      SankeyFlow(
+                          label:
+                              app.categoryById(e.key)?.name ?? 'Sem categoria',
+                          value: e.value,
+                          color: Color(app.categoryById(e.key)?.colorValue ??
+                              0xff607d8b)),
+                    if (rest > .005)
+                      SankeyFlow(
+                          label: 'Outras categorias',
+                          value: rest,
+                          color: Theme.of(context).colorScheme.outline),
+                    if (left > .005)
+                      SankeyFlow(
+                          label: 'Sobrou',
+                          value: left,
+                          color: NexoTones.income(context)),
+                  ]);
+            })),
+      AnalysisCard(
+          title: 'Por estabelecimento',
+          child: Builder(builder: (context) {
+            final lines = merchantBreakdown(
+                transactions: data.realized,
+                metadata: app.transactionMetadata,
+                from: f.from,
+                to: f.to.add(const Duration(days: 1)),
+                amount: (t) => app.convertToMain(
+                    t.amount,
+                    t.currency.isEmpty
+                        ? app.accountById(t.accountId)?.currency ??
+                            app.settings.currency
+                        : t.currency));
+            if (lines.isEmpty) return const Text('Sem despesas no período.');
+            return Column(children: [
+              for (final l in lines)
+                ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    dense: true,
+                    title: Text(l.name,
+                        maxLines: 1, overflow: TextOverflow.ellipsis),
+                    subtitle: Text(
+                        '${l.count}× · ${app.categoryById(l.categoryId)?.name ?? 'Sem categoria'}'),
+                    trailing: Text(money(l.total),
+                        style: const TextStyle(fontWeight: FontWeight.w800))),
+            ]);
+          })),
       AnalysisCard(
           title: 'Composição das despesas',
           child:

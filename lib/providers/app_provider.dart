@@ -57,6 +57,12 @@ class AppSettings {
   bool hapticsEnabled;
   List<String> pinnedWidgetAccountIds;
 
+  /// Goals whose money is set aside: out of the free balance on Hoje.
+  List<String> lockedGoalIds;
+
+  /// Order and visibility of the Hoje cards; empty = the default order.
+  List<String> homeCards;
+
   AppSettings({
     this.currency = 'BRL',
     this.themeSeed = 'violet',
@@ -76,6 +82,8 @@ class AppSettings {
     this.dailyReminderTime = '22:00',
     this.hapticsEnabled = true,
     this.pinnedWidgetAccountIds = const [],
+    this.lockedGoalIds = const [],
+    this.homeCards = const [],
   }) : envelopeShares = envelopeShares ?? defaultEnvelopeShares;
 
   Map<String, dynamic> toJson() => {
@@ -97,6 +105,8 @@ class AppSettings {
         'dailyReminderTime': dailyReminderTime,
         'hapticsEnabled': hapticsEnabled,
         'pinnedWidgetAccountIds': pinnedWidgetAccountIds,
+        'lockedGoalIds': lockedGoalIds,
+        'homeCards': homeCards,
       };
 
   static const _validThemeModes = {'system', 'light', 'dark'};
@@ -198,6 +208,14 @@ class AppSettings {
       dailyReminderEnabled: (j['dailyReminderEnabled'] as bool?) ?? false,
       dailyReminderTime: (j['dailyReminderTime'] as String?) ?? '22:00',
       hapticsEnabled: (j['hapticsEnabled'] as bool?) ?? true,
+      lockedGoalIds: (j['lockedGoalIds'] as List<dynamic>?)
+              ?.map((e) => e.toString())
+              .toList() ??
+          const [],
+      homeCards: (j['homeCards'] as List<dynamic>?)
+              ?.map((e) => e.toString())
+              .toList() ??
+          const [],
       pinnedWidgetAccountIds: (j['pinnedWidgetAccountIds'] as List<dynamic>?)
               ?.map((e) => e.toString())
               .toList() ??
@@ -554,6 +572,12 @@ class AppProvider extends ChangeNotifier {
         break;
       case 'hapticsEnabled':
         settings.hapticsEnabled = value as bool;
+        break;
+      case 'lockedGoalIds':
+        settings.lockedGoalIds = List<String>.from(value as List);
+        break;
+      case 'homeCards':
+        settings.homeCards = List<String>.from(value as List);
         break;
       case 'pinnedWidgetAccountIds':
         settings.pinnedWidgetAccountIds = value as List<String>;

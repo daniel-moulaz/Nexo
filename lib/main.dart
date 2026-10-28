@@ -198,7 +198,6 @@ class _NexoAppState extends State<NexoApp> {
     });
 
     final usesDynamic = settingsRecord.$1;
-    final languageCode = settingsRecord.$2;
     final themeMode = settingsRecord.$3;
     final themeSeed = settingsRecord.$4;
     final appFont = settingsRecord.$5;
@@ -226,7 +225,7 @@ class _NexoAppState extends State<NexoApp> {
                 : SecurityGate(child: child!),
             localizationsDelegates: AppLocalizations.localizationsDelegates,
             supportedLocales: AppLocalizations.supportedLocales,
-            locale: languageCode == 'system' ? null : Locale(languageCode),
+            locale: const Locale('pt'),
             themeMode: resolveThemeMode(themeMode),
             theme: buildTheme(
               seed: themeSeed,

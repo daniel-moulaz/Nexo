@@ -10,6 +10,12 @@ import '../utils/finance_input.dart';
 import 'add_transaction_screen.dart';
 import 'card_invoice_screen.dart';
 import 'recurring_detail_screen.dart';
+import 'dart:convert';
+import '../services/agenda_ics.dart';
+import '../services/file_output.dart';
+import '../widgets/nexo_month_grid.dart';
+import '../utils/snackbar.dart';
+import 'dart:typed_data';
 
 class AgendaScreen extends StatefulWidget {
   final int initialDays;
@@ -21,6 +27,43 @@ class AgendaScreen extends StatefulWidget {
 
 class _AgendaScreenState extends State<AgendaScreen> {
   late int _days = widget.initialDays;
+
+  /// In the month grid, the day the person tapped (null = all days).
+  DateTime? _day;
+
+  Map<DateTime, DayLoad> _loads(List<ForecastEvent> events) {
+    final loads = <DateTime, DayLoad>{};
+    for (final e in events) {
+      if (e.kind == 'closing') continue;
+      final k = NexoMonthGrid.dayKey(e.date);
+      loads[k] = (loads[k] ?? const DayLoad()).add(e.amount);
+    }
+    return loads;
+  }
+
+  bool _visible(ForecastEvent e) =>
+      _days != -2 ||
+      _day == null ||
+      NexoMonthGrid.dayKey(e.date) == NexoMonthGrid.dayKey(_day!);
+
+  Future<void> _exportIcs(List<ForecastEvent> events, AppProvider app) async {
+    final ics = AgendaIcs.build(events,
+        money: formatAmount,
+        accountName: (id) => app.accountById(id)?.name ?? '');
+    try {
+      final path = await FileOutput.save(
+          title: 'Agenda do Nexo',
+          name: 'nexo-agenda',
+          extension: 'ics',
+          bytes: Uint8List.fromList(utf8.encode(ics)));
+      if (!mounted) return;
+      showAppSnackbar(context,
+          path == null ? 'Exportação cancelada.' : 'Agenda salva: $path');
+    } catch (e) {
+      if (mounted) showAppSnackbar(context, 'Não foi possível salvar: $e');
+    }
+  }
+
   bool _busy = false;
   Future<List<Map<String, dynamic>>> _payments() async =>
       (await DBHelper.database).query('card_invoice_payments');
@@ -99,7 +142,7 @@ class _AgendaScreenState extends State<AgendaScreen> {
     final app = context.watch<AppProvider>();
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
-    final until = _days == -1
+    final until = _days == -1 || _days == -2
         ? DateTime(now.year, now.month + 1, 0)
         : today.add(Duration(days: _days));
     String money(double v) => app.settings.hideBalance
@@ -135,7 +178,8 @@ class _AgendaScreenState extends State<AgendaScreen> {
                         15: '15 dias',
                         30: '30 dias',
                         90: '90 dias',
-                        -1: 'Este mês'
+                        -1: 'Este mês',
+                        -2: 'Mês em grade'
                       }.entries)
                         ChoiceChip(
                             label: Text(e.value),
@@ -183,11 +227,38 @@ class _AgendaScreenState extends State<AgendaScreen> {
                                         padding: const EdgeInsets.only(top: 8),
                                         child: Text(warning)),
                                 ]))),
+                    if (_days == -2) ...[
+                      const SizedBox(height: 8),
+                      NexoMonthGrid(
+                          month: today,
+                          loads: _loads(forecast.events),
+                          money: money,
+                          today: today,
+                          selected: _day,
+                          hidden: app.settings.hideBalance,
+                          onDay: (d) =>
+                              setState(() => _day = _day == d ? null : d)),
+                      const SizedBox(height: 6),
+                      Text(
+                          _day == null
+                              ? 'Toque em um dia para ver só o que vence nele.'
+                              : 'Mostrando ${ptDate(_day!)}. Toque de novo para ver o mês.',
+                          style: Theme.of(context).textTheme.bodySmall),
+                    ],
+                    Align(
+                        alignment: Alignment.centerLeft,
+                        child: TextButton.icon(
+                            onPressed: forecast.events.isEmpty || _busy
+                                ? null
+                                : () => _exportIcs(forecast.events, app),
+                            icon: const Icon(Icons.calendar_month_outlined),
+                            label: const Text(
+                                'Exportar para o calendário (.ics)'))),
                     if (forecast.events.isEmpty)
                       const Padding(
                           padding: EdgeInsets.all(24),
                           child: Text('Nenhum compromisso neste período.')),
-                    for (final event in forecast.events)
+                    for (final event in forecast.events.where(_visible))
                       Card(
                           child: Padding(
                               padding: const EdgeInsets.all(12),

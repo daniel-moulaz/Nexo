@@ -1,6 +1,6 @@
 {
   "@@locale": "pt",
-  "appTitle": "Caro",
+  "appTitle": "Nexo",
   "settings_title": "Configurações",
   "settings_appearance": "Aparência",
   "settings_theme": "Tema",
@@ -614,7 +614,7 @@
   "settings_hapticFeedbackSub": "Vibrar nas interações",
   "savings_saveGoal": "Salvar meta",
   "more_loans": "Empréstimos",
-  "more_loansSub": "Empréstimos ativos",
+  "more_loansSub": "{count, plural, =1{1 empréstimo ativo} other{{count} empréstimos ativos}}",
   "loans_title": "Empréstimos",
   "loans_addLoan": "Adicionar empréstimo",
   "loans_editLoan": "Editar empréstimo",
@@ -635,7 +635,7 @@
   "loans_saveLoan": "Salvar empréstimo",
   "loans_deleteLoan": "Excluir empréstimo",
   "loans_settled": "Quitado",
-  "loans_durationMonths": "Meses",
+  "loans_durationMonths": "{count, plural, =1{1 mês} other{{count} meses}}",
   "loans_paymentHistory": "Histórico de pagamentos",
   "loans_noPayments": "Nenhum pagamento registrado ainda",
   "loans_outstandingDebt": "Dívida pendente",
@@ -667,5 +667,48 @@
   "add_transaction_saveAnyway": "Salvar mesmo assim",
   "loans_confirmDeleteLoan": "Excluir este empréstimo e todos os pagamentos?",
   "loans_deletePayment": "Excluir pagamento",
-  "loans_confirmDeletePayment": "Excluir este registro de pagamento?"
+  "loans_confirmDeletePayment": "Excluir este registro de pagamento?",
+  "@settings_systemDefault": {
+    "description": "System default option in settings"
+  },
+  "@settings_dynamicColor": {
+    "description": "Dynamic Color toggle title"
+  },
+  "@settings_dynamicColorSubtitle": {
+    "description": "Dynamic Color toggle subtitle"
+  },
+  "@settings_accentColor": {
+    "description": "Accent Color title"
+  },
+  "@settings_accentColorSubtitle": {
+    "description": "Accent Color subtitle"
+  },
+  "@backup_runsDailyAt": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "@backup_lastBackup": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "@backup_savingTo": {
+    "placeholders": {
+      "path": {
+        "type": "String"
+      }
+    }
+  },
+  "@savings_targetDate": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  }
 }

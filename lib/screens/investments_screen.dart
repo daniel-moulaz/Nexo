@@ -13,8 +13,15 @@ import '../utils/finance_input.dart';
 import '../widgets/analysis_widgets.dart';
 import '../widgets/investment_market_info.dart';
 import '../widgets/investment_price_chart.dart';
-import '../widgets/nexo_ui.dart' show NexoTones;
 import '../widgets/portfolio_charts.dart';
+import 'dart:io';
+import 'package:file_picker/file_picker.dart';
+import '../services/b3_import.dart';
+import '../services/market_indices.dart';
+import '../services/net_worth_history.dart';
+import '../utils/snackbar.dart';
+import '../widgets/nexo_ui.dart';
+import '../services/diagnostics.dart';
 
 String _money(BuildContext context, int cents) =>
     context.read<AppProvider>().settings.hideBalance
@@ -161,6 +168,10 @@ class _InvestmentsScreenState extends State<InvestmentsScreen> {
                 onPressed: _create,
                 icon: const Icon(Icons.add)),
             IconButton(
+                tooltip: 'Importar negociações da B3',
+                onPressed: _importB3,
+                icon: const Icon(Icons.upload_file_outlined)),
+            IconButton(
                 tooltip: 'Configurar cotações',
                 onPressed: _settings,
                 icon: const Icon(Icons.settings_outlined)),
@@ -247,7 +258,11 @@ class _InvestmentsScreenState extends State<InvestmentsScreen> {
                               if (all.any((p) => p.operations.isNotEmpty)) ...[
                                 const SizedBox(height: 16),
                                 _CdiCard(positions: all),
+                                const SizedBox(height: 16),
+                                _HistoryCard(positions: all),
                               ],
+                              const SizedBox(height: 16),
+                              const _IndicesCard(),
                               if (_quoteStatus != null)
                                 Padding(
                                     padding: const EdgeInsets.symmetric(
@@ -388,6 +403,255 @@ class _InvestmentsScreenState extends State<InvestmentsScreen> {
 }
 
 /// The portfolio against the same money at 100% of the CDI.
+/// Import from the B3 investor area ("Negociação" Excel): each trade becomes
+/// a buy or sell; the id is the trade's fingerprint, so a second import of
+/// the same file adds nothing. New tickers become investments in "Ações".
+extension _B3 on _InvestmentsScreenState {
+  Future<void> _importB3() async {
+    final picked = await FilePicker.platform.pickFiles(
+        type: FileType.custom, allowedExtensions: ['xlsx'], withData: true);
+    if (picked == null || picked.files.isEmpty || !mounted) return;
+    final file = picked.files.first;
+    final bytes = file.bytes ?? await File(file.path!).readAsBytes();
+    final B3ImportResult result;
+    try {
+      result = B3Import.parse(bytes);
+    } catch (e) {
+      if (mounted) showAppSnackbar(context, 'Arquivo não reconhecido: $e');
+      return;
+    }
+    if (!mounted) return;
+    if (result.trades.isEmpty) {
+      showAppSnackbar(
+          context,
+          result.skipped.isEmpty
+              ? 'Nenhuma negociação encontrada. Exporte "Negociação" na área do investidor da B3.'
+              : 'Nada importável. ${result.skipped.first}');
+      return;
+    }
+    final positions = await repository.load();
+    final known = {
+      for (final p in positions)
+        for (final o in p.operations) o.id
+    };
+    final fresh =
+        result.trades.where((t) => !known.contains(t.fingerprint)).toList();
+    if (!mounted) return;
+    final go = await showModalBottomSheet<bool>(
+        context: context,
+        isScrollControlled: true,
+        useSafeArea: true,
+        showDragHandle: true,
+        builder: (_) => _B3ReviewSheet(
+            trades: fresh,
+            already: result.trades.length - fresh.length,
+            skipped: result.skipped));
+    if (go != true || !mounted) return;
+    var done = 0;
+    final byTicker = {
+      for (final p in positions) p.investment.ticker.toUpperCase(): p.investment
+    };
+    for (final t in fresh) {
+      try {
+        var inv = byTicker[t.ticker];
+        final op = InvestmentOperation(
+            id: t.fingerprint,
+            investmentId: inv?.id ?? const Uuid().v4(),
+            kind: t.kind,
+            quantity: t.quantity,
+            cents: t.totalCents,
+            date: t.date,
+            createdAt: DateTime.now());
+        if (inv == null) {
+          if (t.kind == 'sell') continue; // nothing to sell from
+          inv = Investment(
+              id: op.investmentId,
+              name: t.ticker,
+              assetClass: 'Ações',
+              ticker: t.ticker,
+              institution: t.institution,
+              priceMicros: t.priceCents * 10000,
+              priceAt: t.date);
+          await repository.create(inv, op);
+          byTicker[t.ticker] = inv;
+        } else {
+          await repository.record(op);
+        }
+        done++;
+      } catch (e) {
+        Diagnostics.note('importação B3', e);
+      }
+    }
+    if (mounted) {
+      showAppSnackbar(context,
+          'Importadas $done de ${fresh.length} negociações. Confira as posições e vincule o caixa se quiser.');
+    }
+  }
+}
+
+class _B3ReviewSheet extends StatelessWidget {
+  const _B3ReviewSheet(
+      {required this.trades, required this.already, required this.skipped});
+  final List<B3Trade> trades;
+  final int already;
+  final List<String> skipped;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return SizedBox(
+      height: MediaQuery.sizeOf(context).height * .75,
+      child: Column(children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
+          child: Text('Negociações da B3',
+              style: theme.textTheme.titleLarge
+                  ?.copyWith(fontWeight: FontWeight.w900)),
+        ),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 20),
+          child: Text(
+              '${trades.length} nova(s)${already > 0 ? ', $already já importada(s)' : ''}${skipped.isNotEmpty ? ', ${skipped.length} linha(s) ilegível(is)' : ''}. Compras e vendas entram como operações; o caixa não é movimentado até você vincular uma conta.',
+              style: theme.textTheme.bodySmall),
+        ),
+        Expanded(
+          child: ListView(
+              padding: const EdgeInsets.fromLTRB(8, 8, 8, 8),
+              children: [
+                for (final t in trades)
+                  ListTile(
+                      dense: true,
+                      leading: Icon(t.kind == 'buy'
+                          ? Icons.south_west_rounded
+                          : Icons.north_east_rounded),
+                      title: Text(
+                          '${t.ticker} · ${t.quantity} × ${formatAmount(t.priceCents / 100, 'BRL')}'),
+                      subtitle: Text(
+                          '${DateFormat('dd/MM/yyyy').format(t.date)} · ${t.kind == 'buy' ? 'compra' : 'venda'} · ${t.institution}',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis),
+                      trailing: Text(formatAmount(t.totalCents / 100, 'BRL'),
+                          style: const TextStyle(fontWeight: FontWeight.w800))),
+              ]),
+        ),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
+          child: FilledButton(
+              onPressed:
+                  trades.isEmpty ? null : () => Navigator.of(context).pop(true),
+              child: Text('Importar ${trades.length} negociação(ões)')),
+        ),
+      ]),
+    );
+  }
+}
+
+/// Months back: cash plus what was put into investments (at cost), and the
+/// income the investments paid. Bars, not a market curve: this is what the
+/// person holds and put in, month by month.
+class _HistoryCard extends StatelessWidget {
+  const _HistoryCard({required this.positions});
+  final List<InvestmentPosition> positions;
+
+  @override
+  Widget build(BuildContext context) {
+    final app = context.watch<AppProvider>();
+    final points = netWorthHistory(
+        accounts: app.accounts,
+        transactions: app.transactions,
+        metadata: app.transactionMetadata,
+        operations: positions.expand((p) => p.operations).toList(),
+        convert: app.convertToMain,
+        defaultCurrency: app.settings.currency,
+        now: DateTime.now(),
+        months: 6);
+    final top = points.fold<double>(0, (m, p) => p.total > m ? p.total : m);
+    final hidden = app.settings.hideBalance;
+    String money(double v) =>
+        hidden ? '••••' : formatAmount(v, app.settings.currency);
+    return AnalysisCard(
+        title: 'Patrimônio ao longo do tempo',
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          for (final p in points)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 4),
+              child: Row(children: [
+                SizedBox(
+                    width: 44,
+                    child: Text(DateFormat('MMM', 'pt_BR').format(p.month),
+                        style: Theme.of(context).textTheme.labelSmall)),
+                Expanded(
+                    child: NexoProgress(
+                        value: top <= 0
+                            ? 0
+                            : (p.total / top).clamp(0, 1).toDouble())),
+                const SizedBox(width: 8),
+                SizedBox(
+                    width: 96,
+                    child: Text(money(p.total),
+                        textAlign: TextAlign.end,
+                        style: const TextStyle(
+                            fontWeight: FontWeight.w800, fontSize: 12))),
+              ]),
+            ),
+          const SizedBox(height: 6),
+          Text(
+              'Contas mais o que foi aportado, ao custo. Proventos nos últimos 6 meses: ${money(points.fold<double>(0, (s, p) => s + p.income))}.',
+              style: Theme.of(context).textTheme.bodySmall),
+        ]));
+  }
+}
+
+/// IPCA, Selic and the dollar from the Central Bank, as context.
+class _IndicesCard extends StatefulWidget {
+  const _IndicesCard();
+  @override
+  State<_IndicesCard> createState() => _IndicesCardState();
+}
+
+class _IndicesCardState extends State<_IndicesCard> {
+  late final Future<IndexReading?> _reading = MarketIndices().read();
+
+  @override
+  Widget build(BuildContext context) => FutureBuilder<IndexReading?>(
+      future: _reading,
+      builder: (context, snapshot) {
+        final r = snapshot.data;
+        final small = Theme.of(context).textTheme.bodySmall;
+        if (snapshot.connectionState != ConnectionState.done) {
+          return AnalysisCard(
+              title: 'Índices do Banco Central',
+              child: Text('Lendo…', style: small));
+        }
+        if (r == null) {
+          return AnalysisCard(
+              title: 'Índices do Banco Central',
+              child: Text(
+                  'Sem leitura ainda: precisa de internet uma vez por dia.',
+                  style: small));
+        }
+        String pct(double? v) =>
+            v == null ? '—' : '${v.toStringAsFixed(2).replaceAll('.', ',')}%';
+        return AnalysisCard(
+            title: 'Índices do Banco Central',
+            child:
+                Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              AnalysisMetrics(values: [
+                ('IPCA 12 meses', pct(r.ipca12m)),
+                ('Selic ao ano', pct(r.selic)),
+                (
+                  'Dólar (PTAX)',
+                  r.ptax == null ? '—' : formatAmount(r.ptax!, 'BRL')
+                ),
+              ]),
+              const SizedBox(height: 6),
+              Text(
+                  'Lidos em ${DateFormat('dd/MM HH:mm').format(r.at)}. Fonte: BCB (SGS 433, 432; PTAX).',
+                  style: small),
+            ]));
+      });
+}
+
 class _CdiCard extends StatefulWidget {
   const _CdiCard({required this.positions});
   final List<InvestmentPosition> positions;

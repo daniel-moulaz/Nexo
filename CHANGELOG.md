@@ -1,5 +1,26 @@
 # Changelog
 
+## [1.12.13] - 2026-10-28
+### Dinheiro
+- **Até a próxima renda:** "quanto posso gastar" conta de uma renda à outra (a maior receita recorrente marca o ciclo), não até o fim do mês; mostra o que ainda sai até lá e avisa quando a renda do ciclo está prevista mas não registrada.
+- **"É a renda do mês?":** uma entrada grande sem recorrente, enquanto a renda do ciclo falta, vira um aviso no Hoje; "É a renda" marca o lançamento como a renda e o plano passa a contar a partir dela.
+- **Contas anuais provisionadas:** IPVA, seguro e matrícula cadastrados como recorrentes anuais ou semestrais entram no "posso gastar" como a parte de cada mês, até o mês em que vencem.
+- **Objetivos travados:** o cadeado no objetivo tira o valor guardado do "saldo em contas" do Hoje.
+### Entrada e revisão
+- **Categoria aprendida** no formulário (a sugestão muda enquanto você digita a descrição; as mais usadas vêm primeiro) e na caixa "Para revisar".
+- **Parece recorrente:** na revisão de uma cobrança que se repete, um toque abre o cadastro do recorrente já preenchido.
+- **Banco lido em…:** a caixa "Para revisar" diz a hora da última leitura e quando a próxima costuma chegar.
+### Telas
+- **Agenda em grade:** o mês como calendário com entradas e saídas por dia; toque num dia filtra a lista. **Exportar .ics** leva os compromissos para o calendário do celular ou do PC.
+- **Análises:** "De onde veio, para onde foi" (fluxo das receitas para as categorias) e "Por estabelecimento".
+- **Investir:** patrimônio ao longo do tempo (contas + aportes ao custo, 6 meses) com proventos, índices do Banco Central (IPCA 12 meses, Selic, dólar PTAX) e **importação das negociações da B3** (Excel da área do investidor), sem duplicar o que já entrou.
+- **Personalizar o Hoje:** ordem e visibilidade dos cartões, pela paleta ("Personalizar o Hoje").
+- Listas vazias com o botão da ação (contas, cartões, orçamento, bens, desejos, dinheiro emprestado); rótulos de leitura de tela nos números do Hoje e nos pills.
+### Base
+- **Diagnóstico local:** falhas de sincronização, login e Open Finance deixam um registro sem valores em Ajuda › Diagnóstico.
+- **Português único:** os 11 idiomas gerados saíram; o app é PT-BR. O seletor de idioma saiu das Configurações e do onboarding (que ficou com quatro passos).
+- Leitor de cupom: parser pronto e testado (`receipt_parser.dart`); a câmera ainda não está ligada.
+
 ## [1.12.12] - 2026-10-28
 ### Projeto independente
 - Últimas menções ao nome antigo fora do código: `docs/legacy` apagada, CHANGELOG começa na 1.11.0, README e LICENSE só com o crédito MIT exigido, link do GitHub nas Configurações apontando para o repositório do Nexo, mensagem de backup inválido e chave de boas-vindas do onboarding com o nome Nexo.

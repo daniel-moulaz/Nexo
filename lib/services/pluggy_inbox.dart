@@ -8,6 +8,7 @@ import '../database/db_helper.dart';
 import 'balance_check.dart';
 import '../sync/supabase_auth.dart';
 import '../sync/sync_config.dart';
+import 'diagnostics.dart';
 
 class PluggyItem {
   const PluggyItem(this.itemId, this.label, this.state, this.message,
@@ -234,7 +235,8 @@ class PluggyInbox {
     _lastBackground = _now();
     try {
       await sync();
-    } catch (_) {
+    } catch (e) {
+      Diagnostics.note('open finance', e);
       // Offline or server down: the next opening tries again.
     }
     return true;

@@ -14,6 +14,9 @@ import '../services/inbox_reconciler.dart';
 import '../services/reconciliation.dart';
 import '../widgets/nexo_ui.dart';
 import '../widgets/android_feature_notice.dart';
+import '../services/category_memory.dart';
+import '../services/subscription_detector.dart';
+import 'recurring_screen.dart';
 
 class NotificationInboxScreen extends StatefulWidget {
   const NotificationInboxScreen({super.key});
@@ -29,6 +32,9 @@ class _NotificationInboxScreenState extends State<NotificationInboxScreen>
 
   /// "Os dados de hoje ainda não chegaram…" (Open Finance is daily).
   String? _freshness;
+
+  /// Newest bank movement the server holds, across connections.
+  DateTime? _lastRead;
   bool _showResolved = false;
   @override
   void initState() {
@@ -55,11 +61,18 @@ class _NotificationInboxScreenState extends State<NotificationInboxScreen>
     try {
       String? syncError;
       String? freshness;
+      DateTime? lastRead;
       if (PluggyInbox.instance case final pluggy?) {
         final problem = await pluggy.sync(force: force);
         if (problem != null) syncError = 'Open Finance: $problem';
         try {
-          freshness = todayMissing(await pluggy.remote.items(), DateTime.now());
+          final items = await pluggy.remote.items();
+          freshness = todayMissing(items, DateTime.now());
+          lastRead = items
+              .map((i) => i.bankUpdatedAt)
+              .whereType<DateTime>()
+              .fold<DateTime?>(
+                  null, (a, b) => a == null || b.isAfter(a) ? b : a);
         } catch (_) {
           // Only a hint: the inbox works without it.
         }
@@ -75,6 +88,7 @@ class _NotificationInboxScreenState extends State<NotificationInboxScreen>
           state = result;
           error = syncError;
           _freshness = freshness;
+          _lastRead = lastRead;
         });
     } catch (_) {
       if (mounted)
@@ -296,6 +310,17 @@ class _NotificationInboxScreenState extends State<NotificationInboxScreen>
                             const SizedBox(width: 6),
                             Expanded(child: Text(_freshness!)),
                           ])),
+                if (_lastRead != null)
+                  Padding(
+                      padding: const EdgeInsets.only(bottom: 8),
+                      child: Row(children: [
+                        Icon(Icons.sync, size: 18, color: cs.onSurfaceVariant),
+                        const SizedBox(width: 6),
+                        Expanded(
+                            child: Text(
+                                'Banco lido em ${DateFormat('dd/MM').format(_lastRead!)} às ${DateFormat('HH:mm').format(_lastRead!)}. A próxima leitura costuma chegar na manhã seguinte.',
+                                style: TextStyle(color: cs.onSurfaceVariant))),
+                      ])),
                 if (state == null && error == null)
                   const LinearProgressIndicator(),
                 if (state != null) ...[
@@ -513,7 +538,11 @@ class _SuggestionReviewScreenState extends State<SuggestionReviewScreen> {
       final rule = ImportRulesService.match(rules, description.text, type,
           context.read<AppProvider>().categories);
       setState(() {
-        category = rule?.categoryId ?? widget.suggestedCategory;
+        category = rule?.categoryId ??
+            widget.suggestedCategory ??
+            CategoryMemory.fromTransactions(
+                    context.read<AppProvider>().transactions)
+                .suggest(description.text, type: type);
         subcategory.text = rule?.subcategory ?? '';
         account = NotificationPreferences.suggest(
             accounts, ruleScope, context.read<AppProvider>().accounts,
@@ -707,6 +736,30 @@ class _SuggestionReviewScreenState extends State<SuggestionReviewScreen> {
                     }),
           const Text(
               'Escolha a conta correta. Pix entre suas próprias contas é transferência, não receita ou despesa.'),
+          if (type == 'expense')
+            Builder(builder: (context) {
+              final key = SubscriptionDetector.normalize(description.text);
+              final match = SubscriptionDetector.detect(
+                  transactions: app.transactions,
+                  metadata: app.transactionMetadata,
+                  recurring: app.recurring,
+                  now: DateTime.now(),
+                  amount: (t) => app.convertToMain(
+                      t.amount,
+                      t.currency.isEmpty
+                          ? app.accountById(t.accountId)?.currency ??
+                              app.settings.currency
+                          : t.currency)).where((c) => c.key == key).firstOrNull;
+              if (match == null) return const SizedBox.shrink();
+              return Padding(
+                  padding: const EdgeInsets.only(bottom: 8),
+                  child: ActionChip(
+                      avatar: const Icon(Icons.repeat, size: 18),
+                      label: Text(
+                          'Parece recorrente (${match.months}× nos últimos meses): criar'),
+                      onPressed: () =>
+                          openRecurringSheet(context, suggestion: match)));
+            }),
           DropdownButtonFormField<String>(
               initialValue: type,
               isExpanded: true,

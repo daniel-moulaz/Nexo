@@ -8,6 +8,7 @@ import '../services/desktop_profile.dart';
 import 'supabase_sync_transport.dart' show SyncAuthenticationRequired;
 import 'sync_config.dart';
 import 'sync_protocol.dart' show SyncUnavailable;
+import '../services/diagnostics.dart';
 
 /// A failure the person can act on; messages never contain the e-mail,
 /// the code or any token.
@@ -98,7 +99,8 @@ class SupabaseAuth {
         _session = raw == null
             ? null
             : SyncSession.fromJson(jsonDecode(raw) as Map<String, dynamic>);
-      } catch (_) {
+      } catch (e) {
+        Diagnostics.note('login: sessão', e);
         _session = null;
       }
     }

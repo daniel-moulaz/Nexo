@@ -60,6 +60,8 @@ class AssetsScreen extends StatelessWidget {
                   icon: Icons.inventory_2_outlined,
                   message: l10n.assets_noAssetsYet,
                   subMessage: l10n.assets_noAssetsYetSub,
+                  action: 'Adicionar bem',
+                  onAction: () => _openSheet(context),
                 )
               : ListView.builder(
                   padding: const EdgeInsets.fromLTRB(14, 14, 14, 140),

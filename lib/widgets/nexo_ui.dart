@@ -117,49 +117,54 @@ class NexoStatPill extends StatelessWidget {
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     final fg = onDark ? Colors.white : cs.onSurface;
-    return Material(
-      color: onDark
-          ? Colors.white.withValues(alpha: .14)
-          : cs.surfaceContainerHigh,
-      borderRadius: BorderRadius.circular(16),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(16),
-        onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-          child:
-              Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Row(children: [
-              if (icon != null) ...[
-                Icon(icon, size: 14, color: fg.withValues(alpha: .8)),
-                const SizedBox(width: 4),
-              ],
-              Flexible(
-                child: Text(label,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                        fontSize: 11.5,
-                        height: 1.15,
-                        color: fg.withValues(alpha: .8))),
-              ),
-            ]),
-            const SizedBox(height: 2),
-            FittedBox(
-              fit: BoxFit.scaleDown,
-              alignment: Alignment.centerLeft,
-              child: Text(value,
-                  maxLines: 1,
-                  style: TextStyle(
-                      fontWeight: FontWeight.w800,
-                      fontSize: 15,
-                      color: valueColor ?? fg,
-                      fontFeatures: NexoTones.figures)),
+    return Semantics(
+        label: '$label: $value',
+        button: onTap != null,
+        excludeSemantics: true,
+        child: Material(
+          color: onDark
+              ? Colors.white.withValues(alpha: .14)
+              : cs.surfaceContainerHigh,
+          borderRadius: BorderRadius.circular(16),
+          child: InkWell(
+            borderRadius: BorderRadius.circular(16),
+            onTap: onTap,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(children: [
+                      if (icon != null) ...[
+                        Icon(icon, size: 14, color: fg.withValues(alpha: .8)),
+                        const SizedBox(width: 4),
+                      ],
+                      Flexible(
+                        child: Text(label,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                                fontSize: 11.5,
+                                height: 1.15,
+                                color: fg.withValues(alpha: .8))),
+                      ),
+                    ]),
+                    const SizedBox(height: 2),
+                    FittedBox(
+                      fit: BoxFit.scaleDown,
+                      alignment: Alignment.centerLeft,
+                      child: Text(value,
+                          maxLines: 1,
+                          style: TextStyle(
+                              fontWeight: FontWeight.w800,
+                              fontSize: 15,
+                              color: valueColor ?? fg,
+                              fontFeatures: NexoTones.figures)),
+                    ),
+                  ]),
             ),
-          ]),
-        ),
-      ),
-    );
+          ),
+        ));
   }
 }
 

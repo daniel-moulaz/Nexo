@@ -15,6 +15,7 @@ import 'sync_activation.dart';
 import 'supabase_sync_transport.dart';
 import 'sync_config.dart';
 import 'sync_lab_check.dart';
+import '../services/diagnostics.dart';
 
 /// A safety step stopped activation or verification; [message] is for people.
 class SyncActivationFailed implements Exception {
@@ -198,11 +199,13 @@ class SyncController extends ChangeNotifier with WidgetsBindingObserver {
           status == LedgerSyncStatus.progressed) {
         try {
           await afterSync?.call();
-        } catch (_) {
+        } catch (e) {
+          Diagnostics.note('sync', e);
           // Requests stay queued on the server; the next pass retries.
         }
       }
-    } catch (_) {
+    } catch (e) {
+      Diagnostics.note('sync', e);
       // A rejected page leaves cursor and data untouched; try again later.
       status = LedgerSyncStatus.retryLater;
     } finally {
@@ -241,7 +244,8 @@ class SyncController extends ChangeNotifier with WidgetsBindingObserver {
       await server.setDatasetLabel(dataset, label);
       await LedgerSync.createDataset(await DBHelper.database,
           datasetId: dataset, epoch: epoch, deviceId: device);
-    } catch (_) {
+    } catch (e) {
+      Diagnostics.note('sync', e);
       // A real dataset is unique per person: do not leave an empty one.
       if (real) {
         try {

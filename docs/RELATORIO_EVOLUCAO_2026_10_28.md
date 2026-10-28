@@ -70,6 +70,36 @@ Removidas na 1.12.9 (já antes da missão, aprovadas pelo dono): monitoramento d
 notificações do Android, Revisão financeira, Previsão detalhada, Dívidas e compromissos,
 cinco telas sem navegação.
 
+### Segunda rodada (1.12.13), a pedido do dono: "implementar tudo"
+
+| Item do plano | Onde | Teste |
+|---|---|---|
+| P1-5 Até a próxima renda; "é a renda do mês?" | `spendable.dart`, Hoje | `spendable_test.dart` (7) |
+| P1-4 Contas anuais provisionadas | `spendable.dart` | idem |
+| P1-3 Categoria aprendida no formulário e no Para revisar | `add_transaction_screen.dart`, `notification_inbox_screen.dart` | `text_entry_test.dart` |
+| P1-8 Banco lido em… | `notification_inbox_screen.dart` | — (texto) |
+| P1-9 Parece recorrente: criar | `notification_inbox_screen.dart` → `openRecurringSheet` | `subscription_detector_test.dart` (existente) |
+| P1-7 Semântica | `nexo_ui.dart`, Hoje, `nexo_month_grid.dart` | — |
+| P0-4 Diagnóstico local | `diagnostics.dart`, 11 pontos de captura, Ajuda | `diagnostics_test.dart` (3) |
+| P2-3 PT-BR único | `lib/l10n` (um ARB), Configurações, onboarding | suíte |
+| P2-5 Agenda em grade + .ics (P3-5) | `agenda_screen.dart`, `nexo_month_grid.dart`, `agenda_ics.dart` | `agenda_ics_test.dart` |
+| P2-6 Patrimônio ao longo do tempo, proventos | `net_worth_history.dart`, Investir | `net_worth_history_test.dart` |
+| P2-7 Listas vazias com ação | `shared_widgets.dart` e seis telas | suíte de telas |
+| P2-9 Objetivos travados (parcial) | `budget_screen.dart`, Hoje, settings | — |
+| P2-10 Sankey; por estabelecimento | `nexo_sankey.dart`, `merchant_breakdown.dart`, Análises | `merchant_breakdown_test.dart` |
+| P3-2 Importação da B3 | `b3_import.dart`, Investir | `b3_import_test.dart` |
+| P3-3 IPCA, Selic, PTAX | `market_indices.dart`, Investir | `market_indices_test.dart` (4) |
+| P3-4 Personalizar o Hoje | `home_customize_sheet.dart`, Hoje, paleta | — |
+| P3-1 Cupom (parser) | `receipt_parser.dart` | `receipt_parser_test.dart` (4) |
+| P0-2 Finais de linha | `.gitattributes` + normalização | — |
+
+Não feito, e por quê: **P2-1** (fatiar `AppProvider`) e **P2-4** (um serviço de
+lembretes) mexem no caminho de gravação e nas notificações agendadas de um app em uso
+real; sem homologação manual no aparelho, o risco de regressão silenciosa é maior que o
+ganho desta rodada. **P2-2** (cálculo fora das telas gigantes) fica junto com P2-1.
+**P2-8** (onboarding novo) ficou parcial: o passo de idioma saiu. **P3-1**: a câmera e o
+ML Kit não foram ligados; o parser está pronto para quando a dependência nativa entrar.
+
 ## 8. Validação
 
 - Suíte Flutter completa, análise limpa (número no CLAUDE.md, "Última validação").

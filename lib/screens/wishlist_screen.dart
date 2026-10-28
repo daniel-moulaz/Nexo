@@ -37,7 +37,9 @@ class WishlistScreen extends StatelessWidget {
           ? EmptyState(
               icon: Icons.star_outline_rounded,
               message: l10n.wishlist_noItems,
-              subMessage: l10n.wishlist_noItemsSub)
+              subMessage: l10n.wishlist_noItemsSub,
+              action: 'Adicionar desejo',
+              onAction: () => _openSheet(context))
           : ListView.builder(
               padding: const EdgeInsets.fromLTRB(14, 14, 14, 100),
               itemCount: app.wishlist.length,

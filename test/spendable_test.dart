@@ -79,8 +79,131 @@ void main() {
     expect(s.goals, closeTo(100, 1e-9)); // R$ 600 over Oct..Mar
     expect(s.variableSpent, 120);
     expect(s.free, closeTo(1750 - 239.82 - 50 - 100 - 120, 1e-9));
-    expect(s.daysLeft, 11);
-    expect(s.perDay, closeTo(s.free / 11, 1e-9));
+    // The horizon is the next salary (5/11), not the end of the month.
+    expect(s.untilNextIncome, isTrue);
+    expect(s.since, DateTime(2026, 10, 5));
+    expect(s.until, DateTime(2026, 11, 5));
+    expect(s.daysLeft, 15);
+    expect(s.perDay, closeTo(s.free / 15, 1e-9));
+    expect(s.upcomingBills, closeTo(6.82 + 50, 1e-9));
+    expect(s.incomeExpected, isFalse);
+  });
+
+  test('a late salary is planned on, and said so', () {
+    final s = spendable(
+        transactions: [
+          tx('delivery', 40, 8)
+        ],
+        metadata: const {},
+        recurring: [
+          rec('salary', 1500, 7, type: 'income', next: DateTime(2026, 10, 7)),
+          rec('rent', 233, 10, next: DateTime(2026, 10, 10)),
+        ],
+        goals: const [],
+        toMain: (t) => t.amount,
+        convert: (v, _) => v,
+        currencyOf: (_) => 'BRL',
+        now: DateTime(2026, 10, 9, 9));
+    expect(s.incomeExpected, isTrue);
+    expect(s.since, DateTime(2026, 10, 7));
+    expect(s.until, DateTime(2026, 11, 7));
+    expect(s.fixedIncome, 1500);
+    expect(s.fixedBills, 233);
+    expect(s.variableSpent, 40);
+    expect(s.daysLeft, 29);
+  });
+
+  test('a manual income marked as the salary opens the cycle', () {
+    final s = spendable(
+        transactions: [
+          tx('pix salario', 1480, 6, type: 'income'),
+          tx('delivery', 40, 8),
+        ],
+        metadata: {
+          'pix salario': const TransactionMetadata(
+              transactionId: 'pix salario', source: 'recurring:salary'),
+        },
+        recurring: [
+          rec('salary', 1500, 5, type: 'income', next: DateTime(2026, 10, 5)),
+        ],
+        goals: const [],
+        toMain: (t) => t.amount,
+        convert: (v, _) => v,
+        currencyOf: (_) => 'BRL',
+        now: DateTime(2026, 10, 9, 9));
+    expect(s.incomeExpected, isFalse);
+    expect(s.since, DateTime(2026, 10, 6));
+    expect(s.until, DateTime(2026, 11, 5));
+    expect(s.fixedIncome, 1480); // the projected 5/10 is covered, not doubled
+  });
+
+  test('yearly bills are reserved monthly unless due in the cycle', () {
+    Spendable run(DateTime now, {DateTime? ipvaNext}) => spendable(
+            transactions: [
+              tx('recurring:salary:2026-10-05T00:00:00.000', 3000, 5,
+                  type: 'income'),
+            ],
+            metadata: const {},
+            recurring: [
+              rec('salary', 3000, 5,
+                  type: 'income', next: DateTime(2026, 11, 5)),
+              RecurringPayment(
+                  id: 'ipva',
+                  name: 'ipva',
+                  accountId: 'mp',
+                  categoryId: 'c',
+                  amount: 1200,
+                  paymentType: 'expense',
+                  freqVal: 1,
+                  freqUnit: 'years',
+                  startDate: DateTime(2026, 1, 20),
+                  nextDate: ipvaNext ?? DateTime(2027, 1, 20)),
+            ],
+            goals: const [],
+            toMain: (t) => t.amount,
+            convert: (v, _) => v,
+            currencyOf: (_) => 'BRL',
+            now: now);
+    final far = run(DateTime(2026, 10, 21));
+    expect(far.reserved, closeTo(100, 1e-9)); // 1200 / 12, a 31-day cycle
+    expect(far.fixedBills, 0);
+    expect(far.free, closeTo(3000 - 100, 1e-9));
+    final due = run(DateTime(2026, 10, 21), ipvaNext: DateTime(2026, 10, 25));
+    expect(due.reserved, 0);
+    expect(due.fixedBills, 1200);
+  });
+
+  test('"is this the salary?" asks only for a big manual income', () {
+    final recurringSalary = [
+      rec('salary', 1500, 5, type: 'income', next: DateTime(2026, 10, 5)),
+    ];
+    AppTransaction? ask(List<AppTransaction> txs,
+            {Map<String, TransactionMetadata> meta = const {}}) =>
+        incomeToConfirm(
+            transactions: txs,
+            metadata: meta,
+            recurring: recurringSalary,
+            toMain: (t) => t.amount,
+            convert: (v, _) => v,
+            currencyOf: (_) => 'BRL',
+            now: DateTime(2026, 10, 9, 9));
+    expect(ask([tx('pix', 1480, 6, type: 'income')])?.id, 'pix');
+    expect(ask([tx('odd job', 200, 6, type: 'income')]), isNull);
+    expect(
+        ask([
+          tx('pix', 1480, 6, type: 'income')
+        ], meta: {
+          'pix': const TransactionMetadata(
+              transactionId: 'pix', source: 'recurring:salary')
+        }),
+        isNull);
+    expect(
+        ask([
+          tx('recurring:salary:2026-10-05T00:00:00.000', 1500, 5,
+              type: 'income'),
+          tx('pix', 1480, 6, type: 'income'),
+        ]),
+        isNull);
   });
 
   test('without a recurring income there is no base to plan on', () {

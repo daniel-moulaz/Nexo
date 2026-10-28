@@ -7,7 +7,7 @@ import '../models/models.dart';
 import '../providers/app_provider.dart';
 import '../theme/app_theme.dart';
 import '../utils/finance_input.dart';
-import '../widgets/shared_widgets.dart' show showCurrencyPicker;
+import '../widgets/shared_widgets.dart';
 import '../widgets/nexo_ui.dart';
 import 'card_invoice_screen.dart';
 
@@ -148,12 +148,11 @@ class _AccountsList extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (accounts.isEmpty) {
-      return const _EmptyState(
-        icon: Icons.account_balance_wallet_outlined,
-        title: 'Nenhuma conta cadastrada',
-        subtitle:
-            'Adicione onde seu dinheiro fica: banco, carteira, dinheiro ou poupança.',
-      );
+      return EmptyState(
+          icon: Icons.account_balance_wallet_outlined,
+          message: 'Nenhuma conta cadastrada',
+          subMessage:
+              'Adicione onde seu dinheiro fica: banco, carteira, dinheiro ou poupança.');
     }
     return ListView.builder(
       padding: const EdgeInsets.fromLTRB(12, 12, 12, 150),
@@ -232,12 +231,11 @@ class _CardsList extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (cards.isEmpty) {
-      return const _EmptyState(
-        icon: Icons.credit_card_off_outlined,
-        title: 'Nenhum cartão cadastrado',
-        subtitle:
-            'Cadastre o cartão com limite, fechamento e vencimento para acompanhar a fatura.',
-      );
+      return EmptyState(
+          icon: Icons.credit_card_off_outlined,
+          message: 'Nenhum cartão cadastrado',
+          subMessage:
+              'Cadastre o cartão com limite, fechamento e vencimento para acompanhar a fatura.');
     }
     return ListView.builder(
       padding: const EdgeInsets.fromLTRB(12, 12, 12, 150),
@@ -453,39 +451,6 @@ IconData _accountIcon(String type) => switch (type) {
       'debit' => Icons.credit_card_outlined,
       _ => Icons.account_balance_outlined,
     };
-
-class _EmptyState extends StatelessWidget {
-  final IconData icon;
-  final String title;
-  final String subtitle;
-
-  const _EmptyState(
-      {required this.icon, required this.title, required this.subtitle});
-
-  @override
-  Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(30),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(icon,
-                size: 64, color: cs.onSurfaceVariant.withValues(alpha: .35)),
-            const SizedBox(height: 14),
-            Text(title,
-                textAlign: TextAlign.center,
-                style:
-                    const TextStyle(fontWeight: FontWeight.w900, fontSize: 18)),
-            const SizedBox(height: 6),
-            Text(subtitle, textAlign: TextAlign.center),
-          ],
-        ),
-      ),
-    );
-  }
-}
 
 class _AccountEditor extends StatefulWidget {
   final Account? existing;

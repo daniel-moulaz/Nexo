@@ -27,6 +27,7 @@ import '../services/category_memory.dart';
 import '../services/text_entry.dart';
 import '../services/text_normalize.dart';
 import '../theme/app_theme.dart';
+import '../screens/home_customize_sheet.dart';
 
 /// Where a palette entry runs: the context the palette was opened from
 /// (still mounted after the palette closes) and the app state.
@@ -132,6 +133,12 @@ List<CommandEntry> paletteEntries(AppProvider app, String query) {
         icon: Icons.inbox_outlined,
         keywords: 'banco revisar sugestões',
         run: (h) => h.push(const NotificationInboxScreen())),
+    CommandEntry(
+        title: 'Personalizar o Hoje',
+        subtitle: 'Ordem e visibilidade dos cartões',
+        icon: Icons.tune,
+        keywords: 'home início cartões ordem',
+        run: (h) => showHomeCustomizeSheet(h.context)),
   ];
   final tabs = [
     (0, 'Hoje', 'Resumo do mês e ações', Icons.today_outlined, ''),

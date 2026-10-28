@@ -62,8 +62,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   final _pageCtrl = PageController();
   int _page = 0;
 
-  static const int _totalPages =
-      6; // 0: language, 1: welcome/restore, 2-5: existing setup steps
+  static const int _totalPages = 5; // 0: welcome/restore, 1-4: setup steps
 
   bool _restoring = false;
   String? _restoreError;
@@ -102,7 +101,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   }
 
   void _next() {
-    if (_page == 2 && _nameCtrl.text.trim().isEmpty) return;
+    if (_page == 1 && _nameCtrl.text.trim().isEmpty) return;
     if (_page < _totalPages - 1) {
       _pageCtrl.nextPage(
           duration: const Duration(milliseconds: 300), curve: Curves.easeInOut);
@@ -112,10 +111,10 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   }
 
   void _skip() {
-    if (_page == 3) {
+    if (_page == 2) {
       _accNameCtrl.clear();
       _accBalCtrl.clear();
-    } else if (_page == 4) {
+    } else if (_page == 3) {
       _cardNameCtrl.clear();
       _cardBalCtrl.clear();
       _cardLimitCtrl.clear();
@@ -284,7 +283,6 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
               physics: const NeverScrollableScrollPhysics(),
               onPageChanged: (i) => setState(() => _page = i),
               children: [
-                _PageLanguage(onNext: _next),
                 _PageWelcome(
                   restoring: _restoring,
                   error: _restoreError,
@@ -326,7 +324,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
           // Navigation buttons — hidden on the welcome page, which has its
           // own inline actions (Restore Backup / Start Fresh).
-          if (_page != 1)
+          if (_page != 0)
             Padding(
               padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
               child: Column(
@@ -362,7 +360,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                       ),
                     ),
                   ]),
-                  if (_page == 3 || _page == 4)
+                  if (_page == 2 || _page == 3)
                     Padding(
                       padding: const EdgeInsets.only(top: 8),
                       child: TextButton(
@@ -1065,87 +1063,6 @@ class _PageFour extends StatelessWidget {
         ),
         const SizedBox(height: 20),
       ]),
-    );
-  }
-}
-
-// ── Page 0: Language ─────────────────────────────────────────────────────────
-class _PageLanguage extends StatelessWidget {
-  final VoidCallback onNext;
-  const _PageLanguage({required this.onNext});
-
-  @override
-  Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context)!;
-    final cs = Theme.of(context).colorScheme;
-    final s = context.watch<AppProvider>().settings;
-
-    return Padding(
-      padding: const EdgeInsets.all(24),
-      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        const SizedBox(height: 24),
-        Container(
-          width: 64,
-          height: 64,
-          decoration: BoxDecoration(
-              color: cs.primaryContainer,
-              borderRadius: BorderRadius.circular(20)),
-          child: Icon(Icons.language_outlined, color: cs.primary, size: 32),
-        ),
-        const SizedBox(height: 20),
-        Text(l10n.onboarding_chooseLanguage,
-            style: Theme.of(context)
-                .textTheme
-                .headlineSmall
-                ?.copyWith(fontWeight: FontWeight.w800)),
-        const SizedBox(height: 24),
-        Expanded(
-          child: ListView(
-            children: [
-              _langTile('system', l10n.settings_systemDefault, s.languageCode,
-                  context),
-              _langTile('en', 'English', s.languageCode, context),
-              _langTile('ar', 'العربية', s.languageCode, context),
-              _langTile('fr', 'Français', s.languageCode, context),
-              _langTile('de', 'Deutsch', s.languageCode, context),
-              _langTile('es', 'Español', s.languageCode, context),
-              _langTile('hi', 'हिन्दी', s.languageCode, context),
-              _langTile('pt', 'Português', s.languageCode, context),
-              _langTile('zh', '中文', s.languageCode, context),
-              _langTile('ja', '日本語', s.languageCode, context),
-              _langTile('ru', 'Русский', s.languageCode, context),
-              _langTile('it', 'Italiano', s.languageCode, context),
-            ],
-          ),
-        ),
-      ]),
-    );
-  }
-
-  Widget _langTile(
-      String code, String name, String current, BuildContext context) {
-    final sel = code == current;
-    final cs = Theme.of(context).colorScheme;
-    return Card(
-      elevation: sel ? 2 : 0,
-      color: sel ? cs.primaryContainer : cs.surfaceContainerLow,
-      margin: const EdgeInsets.only(bottom: 8),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
-        side: sel ? BorderSide(color: cs.primary, width: 2) : BorderSide.none,
-      ),
-      child: ListTile(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Text(name,
-            style:
-                TextStyle(fontWeight: sel ? FontWeight.w700 : FontWeight.w500)),
-        trailing:
-            sel ? Icon(Icons.check_circle_rounded, color: cs.primary) : null,
-        onTap: () {
-          context.read<AppProvider>().updateSetting('languageCode', code);
-          Future.delayed(const Duration(milliseconds: 300), onNext);
-        },
-      ),
     );
   }
 }

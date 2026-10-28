@@ -106,7 +106,9 @@ class LendedScreen extends StatelessWidget {
                 ? EmptyState(
                     icon: Icons.handshake_outlined,
                     message: l10n.lended_noOneYet,
-                    subMessage: l10n.lended_noOneYetSub)
+                    subMessage: l10n.lended_noOneYetSub,
+                    action: 'Adicionar pessoa',
+                    onAction: () => _openPersonSheet(context))
                 : ListView.builder(
                     padding: const EdgeInsets.fromLTRB(14, 14, 14, 100),
                     itemCount: people.length,

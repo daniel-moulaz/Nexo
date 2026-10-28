@@ -115,7 +115,9 @@ class _BudgetScreenState extends State<BudgetScreen>
                 icon: Icons.pie_chart_outline,
                 message: l10n.budget_noBudgetsYet,
                 subMessage:
-                    'Defina quanto quer gastar por categoria e o Nexo mostra quanto ainda cabe por dia.'),
+                    'Defina quanto quer gastar por categoria e o Nexo mostra quanto ainda cabe por dia.',
+                action: 'Criar orçamento',
+                onAction: () => BudgetScreen._openSheet(context)),
           for (final b in budgets)
             Padding(
                 padding: const EdgeInsets.only(bottom: 12),
@@ -466,6 +468,8 @@ class _GoalCard extends StatelessWidget {
     String money(double v) => hidden ? '••••' : formatAmount(v, goal.currency);
     final progress = app.goalProgress(goal);
     final isCompleted = goal.isCompleted;
+    final lockedIds = app.settings.lockedGoalIds;
+    final locked = lockedIds.contains(goal.id);
     final done = NexoTones.income(context);
     final color = Color(goal.colorValue);
     final monthly = goalMonthlyNeeded(goal, now);
@@ -541,6 +545,19 @@ class _GoalCard extends StatelessWidget {
                     style: const TextStyle(
                         fontWeight: FontWeight.w700, fontSize: 16)),
               ),
+              IconButton(
+                  tooltip: locked
+                      ? 'Destravar: volta a contar no saldo livre'
+                      : 'Travar: fica fora do saldo livre do Hoje',
+                  visualDensity: VisualDensity.compact,
+                  onPressed: () => context.read<AppProvider>().updateSetting(
+                      'lockedGoalIds',
+                      locked
+                          ? lockedIds.where((id) => id != goal.id).toList()
+                          : [...lockedIds, goal.id]),
+                  icon: Icon(locked ? Icons.lock : Icons.lock_open_outlined,
+                      size: 18,
+                      color: locked ? cs.primary : cs.onSurfaceVariant)),
               _Amounts(
                   top: money(goal.currentAmount),
                   bottom: 'de ${money(goal.targetAmount)}',

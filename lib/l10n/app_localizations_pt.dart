@@ -9,7 +9,7 @@ class AppLocalizationsPt extends AppLocalizations {
   AppLocalizationsPt([String locale = 'pt']) : super(locale);
 
   @override
-  String get appTitle => 'Caro';
+  String get appTitle => 'Nexo';
 
   @override
   String get settings_title => 'Configurações';
@@ -36,24 +36,13 @@ class AppLocalizationsPt extends AppLocalizations {
   String get settings_amoledSubtitle => 'Força fundos pretos no modo escuro';
 
   @override
-  String get settings_systemDefault => 'Padrão do Sistema';
-
-  @override
-  String get settings_dynamicColor => 'Cor Dinâmica';
-
-  @override
-  String get settings_dynamicColorSubtitle =>
-      'Use cores de papel de parede do sistema';
-
-  @override
   String get settings_accentColor => 'Cor de destaque';
 
   @override
-  String get settings_accentColorSubtitle =>
-      'Escolha uma cor de semente para o aplicativo';
+  String get settings_appFont => 'Fonte do aplicativo';
 
   @override
-  String get settings_appFont => 'Fonte do aplicativo';
+  String get settings_systemDefault => 'Padrão do Sistema';
 
   @override
   String get settings_currency => 'Moeda';
@@ -652,9 +641,6 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get budget_budgeted => 'Orçamentado';
-
-  @override
-  String get budget_leftToSpend => 'Disponível para gastar';
 
   @override
   String get budget_spent => 'Gasto';
@@ -1619,6 +1605,17 @@ class AppLocalizationsPt extends AppLocalizations {
   String get backup_importFromGreenStash => 'Importar do GreenStash (.json)';
 
   @override
+  String get settings_dynamicColor => 'Cor Dinâmica';
+
+  @override
+  String get settings_dynamicColorSubtitle =>
+      'Use cores de papel de parede do sistema';
+
+  @override
+  String get settings_accentColorSubtitle =>
+      'Escolha uma cor de semente para o aplicativo';
+
+  @override
   String get backup_automaticBackup => 'Backup Automático';
 
   @override
@@ -1706,7 +1703,13 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String more_loansSub(num count) {
-    return 'Empréstimos ativos';
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count empréstimos ativos',
+      one: '1 empréstimo ativo',
+    );
+    return '$_temp0';
   }
 
   @override
@@ -1771,7 +1774,13 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String loans_durationMonths(num count) {
-    return 'Meses';
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count meses',
+      one: '1 mês',
+    );
+    return '$_temp0';
   }
 
   @override
@@ -1849,6 +1858,9 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get budget_addGoal => 'Adicionar meta de economia';
+
+  @override
+  String get budget_leftToSpend => 'Disponível para gastar';
 
   @override
   String get add_transaction_possibleDuplicate => 'Possível duplicidade';

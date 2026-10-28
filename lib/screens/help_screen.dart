@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
 import '../services/help_topics.dart';
+import '../utils/finance_input.dart';
+import '../services/diagnostics.dart';
 
 /// Searchable answers about how the Nexo counts money and what each part
 /// does. The search looks in the whole answer, not only in the question.
@@ -12,6 +14,12 @@ class HelpScreen extends StatefulWidget {
 }
 
 class _HelpScreenState extends State<HelpScreen> {
+  @override
+  void initState() {
+    super.initState();
+    Diagnostics.load();
+  }
+
   String _query = '';
 
   @override
@@ -69,6 +77,37 @@ class _HelpScreenState extends State<HelpScreen> {
                     children: [Text(t.answer)]),
               ),
             const SizedBox(height: 12),
+          ],
+          if (_query.isEmpty) ...[
+            Text('Diagnóstico',
+                style: theme.textTheme.titleMedium
+                    ?.copyWith(fontWeight: FontWeight.w800)),
+            const SizedBox(height: 4),
+            ValueListenableBuilder<int>(
+                valueListenable: Diagnostics.revision,
+                builder: (context, _, __) {
+                  final entries = Diagnostics.entries;
+                  if (entries.isEmpty) {
+                    return Text(
+                        'Nenhuma falha registrada. Erros de rede, de sincronização e do Open Finance aparecem aqui, sem valores.',
+                        style: theme.textTheme.bodySmall);
+                  }
+                  return Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        for (final e in entries)
+                          ListTile(
+                              contentPadding: EdgeInsets.zero,
+                              dense: true,
+                              leading: const Icon(Icons.error_outline),
+                              title: Text(
+                                  '${e.area} · ${e.count}× · última ${ptShortDate(e.last)}'),
+                              subtitle: Text(e.message)),
+                        TextButton(
+                            onPressed: Diagnostics.clear,
+                            child: const Text('Limpar diagnóstico')),
+                      ]);
+                }),
           ],
         ],
       ),

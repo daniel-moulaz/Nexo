@@ -14,8 +14,17 @@ class EmptyState extends StatelessWidget {
   final IconData icon;
   final String message;
   final String? subMessage;
+
+  /// A button that does the one thing an empty list asks for.
+  final String? action;
+  final VoidCallback? onAction;
   const EmptyState(
-      {super.key, required this.icon, required this.message, this.subMessage});
+      {super.key,
+      required this.icon,
+      required this.message,
+      this.subMessage,
+      this.action,
+      this.onAction});
 
   @override
   Widget build(BuildContext context) {
@@ -38,6 +47,13 @@ class EmptyState extends StatelessWidget {
               textAlign: TextAlign.center,
               style: TextStyle(
                   fontSize: 13, color: cs.onSurface.withValues(alpha: 0.35))),
+        ],
+        if (action != null && onAction != null) ...[
+          const SizedBox(height: 14),
+          FilledButton.tonalIcon(
+              onPressed: onAction,
+              icon: const Icon(Icons.add),
+              label: Text(action!)),
         ],
       ]),
     ));

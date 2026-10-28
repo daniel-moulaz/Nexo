@@ -1,5 +1,6 @@
 import 'balance_check.dart';
 import 'pluggy_inbox.dart';
+import 'diagnostics.dart';
 
 /// The Open Finance account snapshots (balance, card limit), read from the
 /// server at most every few minutes and shared by the screens. Empty when
@@ -26,7 +27,8 @@ class BankSnapshots {
     try {
       _cache = await remote.accounts();
       _at = DateTime.now();
-    } catch (_) {
+    } catch (e) {
+      Diagnostics.note('open finance: contas', e);
       // Keep what we had; an extra never fails a screen.
     }
     return _cache ?? const [];

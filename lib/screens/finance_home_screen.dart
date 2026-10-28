@@ -40,6 +40,9 @@ import 'transaction_search_screen.dart';
 import 'transfer_screen.dart';
 import 'month_review_screen.dart';
 import 'net_worth_screen.dart';
+import '../models/transaction_metadata.dart';
+import '../utils/snackbar.dart';
+import 'home_customize_sheet.dart';
 
 class FinanceHomeScreen extends StatefulWidget {
   const FinanceHomeScreen({super.key});
@@ -251,6 +254,12 @@ class _FinanceHomeScreenState extends State<FinanceHomeScreen>
             final hidden = app.settings.hideBalance;
             // Month in view: one control on top, as in the period selectors
             // of the reference apps; the cards below follow it.
+            final lockedGoals = app.savingsGoals
+                .where((g) => app.settings.lockedGoalIds.contains(g.id))
+                .fold<double>(
+                    0,
+                    (sum, g) =>
+                        sum + app.convertToMain(g.currentAmount, g.currency));
             final monthBar = Row(children: [
               Expanded(
                   child: Text(currentMonth ? 'Mês atual' : 'Mês escolhido',
@@ -278,7 +287,9 @@ class _FinanceHomeScreenState extends State<FinanceHomeScreen>
                     child: _Kpi(
                         label: 'Saldo em contas',
                         value: money(commitment.cash),
-                        hint: 'hoje',
+                        hint: lockedGoals > 0
+                            ? '${money(lockedGoals)} travados em objetivos'
+                            : 'hoje',
                         big: true,
                         onInfo: _explain,
                         onTap: () => _open(const AccountsScreen()))),
@@ -755,6 +766,36 @@ class _FinanceHomeScreenState extends State<FinanceHomeScreen>
                   subtitle: 'Quanto saiu, para onde foi e o que mudou.',
                   action: 'Ver',
                   onTap: () => _open(MonthReviewScreen(month: last))));
+            }
+            // A big manual income while the cycle's salary is missing: ask.
+            final askIncome = hidden
+                ? null
+                : incomeToConfirm(
+                    transactions: app.transactions,
+                    metadata: app.transactionMetadata,
+                    recurring: app.recurring,
+                    toMain: (t) => app.convertToMain(
+                        t.amount,
+                        t.currency.isEmpty
+                            ? app.accountById(t.accountId)?.currency ??
+                                app.settings.currency
+                            : t.currency),
+                    convert: app.convertToMain,
+                    currencyOf: (r) =>
+                        app.accountById(r.accountId)?.currency ??
+                        app.settings.currency,
+                    now: now);
+            if (askIncome != null) {
+              insights.insert(
+                  0,
+                  NexoInsight(
+                      icon: Icons.payments_outlined,
+                      color: cs.primary,
+                      title: 'É a renda do mês? ${askIncome.description}',
+                      subtitle:
+                          '${money(app.convertToMain(askIncome.amount, askIncome.currency.isEmpty ? app.accountById(askIncome.accountId)?.currency ?? app.settings.currency : askIncome.currency))} em ${ptShortDate(askIncome.date)}. Se for, o "quanto posso gastar" passa a contar a partir dela.',
+                      action: 'É a renda',
+                      onTap: () => _confirmIncome(app, askIncome)));
             }
             for (final alert in hidden
                 ? const <ChargeAlert>[]
@@ -1292,21 +1333,20 @@ class _FinanceHomeScreenState extends State<FinanceHomeScreen>
                                     links,
                                     const SizedBox(height: 12),
                                     if (attention != null) ...[attention, gap],
-                                    dailyCard,
-                                    gap,
-                                    monthCard,
-                                    gap,
-                                    weekCard,
-                                    gap,
-                                    categories,
-                                    gap,
-                                    netWorthCard,
-                                    gap,
-                                    futureCard,
-                                    gap,
-                                    budgetCard,
-                                    gap,
-                                    cards,
+                                    for (final key in homeSectionOrder(
+                                        app.settings.homeCards)) ...[
+                                      switch (key) {
+                                        'daily' => dailyCard,
+                                        'month' => monthCard,
+                                        'week' => weekCard,
+                                        'categories' => categories,
+                                        'netWorth' => netWorthCard,
+                                        'future' => futureCard,
+                                        'budget' => budgetCard,
+                                        _ => cards,
+                                      },
+                                      gap,
+                                    ],
                                   ],
                                   gap,
                                   activity,
@@ -1315,6 +1355,35 @@ class _FinanceHomeScreenState extends State<FinanceHomeScreen>
             });
           }),
     );
+  }
+
+  /// Marks a manual income as this cycle's salary, so the plan counts from
+  /// it. Only metadata changes; the entry and the balance stay.
+  Future<void> _confirmIncome(AppProvider app, AppTransaction t) async {
+    final main = mainIncome(app.recurring,
+        convert: app.convertToMain,
+        currencyOf: (r) =>
+            app.accountById(r.accountId)?.currency ?? app.settings.currency);
+    if (main == null) return;
+    final old = app.transactionMetadata[t.id] ??
+        TransactionMetadata(transactionId: t.id);
+    try {
+      await app.updateTransaction(t, t,
+          metadata: TransactionMetadata(
+              transactionId: t.id,
+              subcategory: old.subcategory,
+              status: old.status,
+              dueDate: old.dueDate,
+              expenseClass: old.expenseClass,
+              excludeFromSpending: old.excludeFromSpending,
+              installmentCurrent: old.installmentCurrent,
+              installmentTotal: old.installmentTotal,
+              source: 'recurring:${main.id}',
+              affectsBalance: old.affectsBalance));
+      if (mounted) showAppSnackbar(context, 'Contada como ${main.name}.');
+    } catch (e) {
+      if (mounted) showAppSnackbar(context, 'Não deu para marcar: $e');
+    }
   }
 
   Future<void> _chargeAlert(AppProvider app, ChargeAlert alert) async {
@@ -1451,7 +1520,7 @@ class _SpendableBodyState extends State<_SpendableBody> {
                 fontWeight: FontWeight.w800,
                 fontSize: 16)),
         Text(
-            '${money(-s.free)} além dela, com ${s.daysLeft} dia(s) pela frente. Renda extra e reserva não entram nesta conta.',
+            '${money(-s.free)} além dela, com ${s.daysLeft} dia(s) até ${s.untilNextIncome ? 'a próxima renda' : 'o fim do mês'}. Renda extra e reserva não entram nesta conta.',
             style: small),
       ] else ...[
         FittedBox(
@@ -1467,19 +1536,35 @@ class _SpendableBodyState extends State<_SpendableBody> {
                       fontFeatures: NexoTones.figures)),
               const TextSpan(text: '  por dia'),
             ]))),
-        Text('${money(s.free)} livres até o fim do mês · ${s.daysLeft} dia(s)',
+        Text(
+            '${money(s.free)} livres até ${DateFormat('dd/MM').format(s.until)}${s.untilNextIncome ? ', a próxima renda' : ', fim do mês'} · ${s.daysLeft} dia(s)',
             style: small),
+        if (s.upcomingBills > 0)
+          Text('Ainda saem ${money(s.upcomingBills)} em contas até lá.',
+              style: small),
       ],
+      if (s.incomeExpected)
+        Padding(
+            padding: const EdgeInsets.only(top: 4),
+            child: Text(
+                'A renda de ${DateFormat('dd/MM').format(s.since)} ainda não foi registrada; a conta já parte dela.',
+                style: small?.copyWith(
+                    color: NexoTones.warning(context),
+                    fontWeight: FontWeight.w700))),
       if (_open) ...[
         const Divider(height: 20),
-        row('Renda fixa do mês', s.fixedIncome, plus: true),
-        row('Contas fixas do mês', s.fixedBills),
-        if (s.pendingBills > 0) row('Pendentes do mês', s.pendingBills),
+        row('Renda fixa até lá', s.fixedIncome, plus: true),
+        row('Contas fixas até lá', s.fixedBills),
+        if (s.pendingBills > 0) row('Pendentes até lá', s.pendingBills),
         if (s.goals > 0) row('Guardar para metas', s.goals),
-        row('Gasto variável até hoje', s.variableSpent),
+        if (s.reserved > 0) row('Reservado para contas anuais', s.reserved),
+        row('Gasto variável desde ${DateFormat('dd/MM').format(s.since)}',
+            s.variableSpent),
         const SizedBox(height: 6),
         Text(
-            'Renda extra, transferências e reservas não entram. Contas fixas e renda fixa vêm das recorrentes.',
+            s.untilNextIncome
+                ? 'Conta de uma renda à outra: de ${DateFormat('dd/MM').format(s.since)} até ${DateFormat('dd/MM').format(s.until)}. Renda extra, transferências e reservas não entram. Contas anuais entram como a parte de cada mês.'
+                : 'Sem renda recorrente para marcar o ciclo, a conta vai até o fim do mês. Renda extra, transferências e reservas não entram.',
             style: small),
       ],
     ]);
@@ -1681,11 +1766,12 @@ class _Kpi extends StatelessWidget {
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Row(children: [
             Expanded(
-                child: Text(label,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: theme.textTheme.labelLarge
-                        ?.copyWith(color: cs.onSurfaceVariant))),
+                child: ExcludeSemantics(
+                    child: Text(label,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: theme.textTheme.labelLarge
+                            ?.copyWith(color: cs.onSurfaceVariant)))),
             if (onInfo != null)
               IconButton(
                   tooltip: 'Entender os valores',
@@ -1699,15 +1785,18 @@ class _Kpi extends StatelessWidget {
             else
               const SizedBox(height: 28),
           ]),
-          FittedBox(
-              fit: BoxFit.scaleDown,
-              alignment: Alignment.centerLeft,
-              child: Text(value,
-                  style: TextStyle(
-                      fontSize: big ? 24 : 20,
-                      fontWeight: FontWeight.w900,
-                      color: color,
-                      fontFeatures: NexoTones.figures))),
+          Semantics(
+              label: '$label: $value${hint == null ? '' : ', $hint'}',
+              excludeSemantics: true,
+              child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: Alignment.centerLeft,
+                  child: Text(value,
+                      style: TextStyle(
+                          fontSize: big ? 24 : 20,
+                          fontWeight: FontWeight.w900,
+                          color: color,
+                          fontFeatures: NexoTones.figures)))),
           if (hint != null)
             Text(hint!,
                 style: theme.textTheme.labelSmall

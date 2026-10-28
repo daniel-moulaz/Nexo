@@ -7,6 +7,7 @@ import 'package:http/http.dart' as http;
 
 import 'sync_controller.dart' show RemoteDataset, SyncRemote;
 import 'sync_protocol.dart';
+import '../services/diagnostics.dart';
 
 class SyncAuthenticationRequired implements Exception {
   const SyncAuthenticationRequired();
@@ -106,7 +107,8 @@ class SupabaseSyncTransport implements SyncRemote {
           (claims['sub'] as String).isEmpty) {
         throw const FormatException();
       }
-    } catch (_) {
+    } catch (e) {
+      Diagnostics.note('sync: sessão', e);
       throw const SyncAuthenticationRequired();
     }
   }
@@ -161,7 +163,8 @@ class SupabaseSyncTransport implements SyncRemote {
     if (status == 204 || body.isEmpty) return null;
     try {
       return jsonDecode(utf8.decode(body));
-    } catch (_) {
+    } catch (e) {
+      Diagnostics.note('sync: resposta', e);
       throw const SyncProtocolException('invalid_server_response');
     }
   }
@@ -251,7 +254,8 @@ class SupabaseSyncTransport implements SyncRemote {
             (d['devices'] as num).toInt(),
           )
       ];
-    } catch (_) {
+    } catch (e) {
+      Diagnostics.note('sync: resposta', e);
       throw const SyncProtocolException('invalid_server_response');
     }
   }
@@ -274,7 +278,8 @@ class SupabaseSyncTransport implements SyncRemote {
       return receipt;
     } on SyncProtocolException {
       rethrow;
-    } catch (_) {
+    } catch (e) {
+      Diagnostics.note('sync: resposta', e);
       throw const SyncProtocolException('invalid_server_response');
     }
   }
@@ -308,7 +313,8 @@ class SupabaseSyncTransport implements SyncRemote {
         return SyncRejected(remote);
       } on SyncProtocolException {
         rethrow;
-      } catch (_) {
+      } catch (e) {
+        Diagnostics.note('sync: resposta', e);
         throw const SyncProtocolException('invalid_server_response');
       }
     }

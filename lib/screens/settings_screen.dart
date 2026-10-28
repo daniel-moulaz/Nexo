@@ -323,33 +323,6 @@ class SettingsScreen extends StatelessWidget {
                     },
                   )),
 
-              // ── Language ──────────────────────────────────────────────────
-              SectionHeader(title: l10n.settings_language),
-              Card(
-                  margin: const EdgeInsets.only(bottom: 8),
-                  child: ListTile(
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(16)),
-                    leading: Icon(Icons.language_outlined, color: cs.primary),
-                    title: Text(l10n.settings_language,
-                        style: const TextStyle(
-                            fontWeight: FontWeight.w700, fontSize: 14)),
-                    subtitle: Text(_langName(context, s.languageCode),
-                        style: TextStyle(
-                            fontSize: 12,
-                            color: cs.onSurface.withValues(alpha: 0.55))),
-                    trailing: const Icon(Icons.chevron_right_rounded),
-                    onTap: () async {
-                      final picked = await _showLanguagePicker(context,
-                          current: s.languageCode);
-                      if (picked != null && context.mounted) {
-                        context
-                            .read<AppProvider>()
-                            .updateSetting('languageCode', picked);
-                      }
-                    },
-                  )),
-
               // ── Preferences ───────────────────────────────────────────────
               SectionHeader(title: l10n.settings_preferences),
               Card(
@@ -547,8 +520,8 @@ class SettingsScreen extends StatelessWidget {
                       trailing: Icon(Icons.open_in_new_rounded,
                           size: 18, color: cs.onSurface.withValues(alpha: 0.4)),
                       onTap: () async {
-                        final uri = Uri.parse(
-                            'https://github.com/daniel-moulaz/Nexo');
+                        final uri =
+                            Uri.parse('https://github.com/daniel-moulaz/Nexo');
                         if (await canLaunchUrl(uri)) {
                           await launchUrl(uri,
                               mode: LaunchMode.externalApplication);
@@ -644,80 +617,6 @@ class SettingsScreen extends StatelessWidget {
           ),
         ],
       ),
-    );
-  }
-
-  String _langName(BuildContext context, String code) {
-    final l10n = AppLocalizations.of(context)!;
-    switch (code) {
-      case 'en':
-        return 'English';
-      case 'ar':
-        return 'العربية';
-      case 'fr':
-        return 'Français';
-      case 'de':
-        return 'Deutsch';
-      case 'hi':
-        return 'हिन्दी';
-      case 'es':
-        return 'Español';
-      case 'pt':
-        return 'Português';
-      case 'zh':
-        return '中文';
-      case 'ja':
-        return '日本語';
-      case 'ru':
-        return 'Русский';
-      case 'it':
-        return 'Italiano';
-      default:
-        return l10n.settings_systemDefault;
-    }
-  }
-
-  Future<String?> _showLanguagePicker(BuildContext context,
-      {required String current}) {
-    final l10n = AppLocalizations.of(context)!;
-    return showDialog<String>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text(l10n.settings_language),
-        contentPadding: const EdgeInsets.only(top: 16, bottom: 8),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            _langTile(l10n.settings_systemDefault, 'system', current, ctx),
-            _langTile('English', 'en', current, ctx),
-            _langTile('العربية', 'ar', current, ctx),
-            _langTile('Français', 'fr', current, ctx),
-            _langTile('Deutsch', 'de', current, ctx),
-            _langTile('हिन्दी', 'hi', current, ctx),
-            _langTile('Español', 'es', current, ctx),
-            _langTile('Português', 'pt', current, ctx),
-            _langTile('中文', 'zh', current, ctx),
-            _langTile('日本語', 'ja', current, ctx),
-            _langTile('Русский', 'ru', current, ctx),
-            _langTile('Italiano', 'it', current, ctx),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _langTile(
-      String label, String code, String current, BuildContext ctx) {
-    final sel = code == current;
-    final cs = Theme.of(ctx).colorScheme;
-    return ListTile(
-      leading: sel
-          ? Icon(Icons.check, color: cs.primary)
-          : const SizedBox(width: 24),
-      title: Text(label,
-          style:
-              TextStyle(fontWeight: sel ? FontWeight.bold : FontWeight.normal)),
-      onTap: () => Navigator.pop(ctx, code),
     );
   }
 }
