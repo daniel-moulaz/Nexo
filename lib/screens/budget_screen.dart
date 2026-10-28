@@ -1,0 +1,845 @@
+// lib/screens/budget_screen.dart
+import 'package:flutter/material.dart';
+import '../l10n/app_localizations.dart';
+import 'package:provider/provider.dart';
+import '../providers/app_provider.dart';
+import '../models/models.dart';
+import '../theme/app_theme.dart';
+import '../widgets/shared_widgets.dart';
+import '../widgets/savings_goal_sheet.dart';
+import 'savings_goal_detail_screen.dart';
+import '../utils/haptics.dart';
+import '../utils/snackbar.dart';
+
+class BudgetScreen extends StatefulWidget {
+  const BudgetScreen({super.key});
+
+  static void _openSheet(BuildContext context, {Budget? existing}) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+      builder: (_) => _BudgetSheet(existing: existing),
+    );
+  }
+
+  @override
+  State<BudgetScreen> createState() => _BudgetScreenState();
+}
+
+class _BudgetScreenState extends State<BudgetScreen> with SingleTickerProviderStateMixin {
+  late TabController _tabCtrl;
+
+  @override
+  void initState() {
+    super.initState();
+    _tabCtrl = TabController(length: 2, vsync: this);
+    _tabCtrl.addListener(() => setState(() {}));
+  }
+
+  @override
+  void dispose() {
+    _tabCtrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final app = context.watch<AppProvider>();
+    final cs  = Theme.of(context).colorScheme;
+    final cur = app.settings.currency;
+
+    final overCount = app.budgets.where(app.budgetExceeded).length;
+    final totalBudgeted = app.budgets.fold(0.0, (s, b) => s + b.amount);
+    final totalSpent    = app.budgets.fold(0.0, (s, b) => s + app.budgetSpent(b));
+
+    // Calculate total monthly recurring income in main currency
+    final recurringIncomes = app.recurring.where((r) => r.paymentType == 'income');
+    double totalMonthlyIncome = 0.0;
+    for (final r in recurringIncomes) {
+      final amountInMain = app.convertToMain(r.amount, app.accountById(r.accountId)?.currency ?? cur);
+      double multiplier = 1.0;
+      switch (r.freqUnit) {
+        case 'days':
+          multiplier = 30.0 / r.freqVal;
+          break;
+        case 'weeks':
+          multiplier = 52.0 / 12.0 / r.freqVal;
+          break;
+        case 'months':
+          multiplier = 1.0 / r.freqVal;
+          break;
+        case 'years':
+          multiplier = 1.0 / (12.0 * r.freqVal);
+          break;
+      }
+      totalMonthlyIncome += amountInMain * multiplier;
+    }
+
+    // Calculate total monthly budgets in main currency
+    double totalMonthlyBudgets = 0.0;
+    for (final b in app.budgets) {
+      if (b.period == 'weekly') {
+        totalMonthlyBudgets += b.amount * 52.0 / 12.0;
+      } else {
+        totalMonthlyBudgets += b.amount;
+      }
+    }
+
+    final leftToSpend = totalMonthlyIncome - totalMonthlyBudgets;
+
+    final goals = app.savingsGoals;
+    final totalSaved = app.totalSaved;
+    final totalTarget = goals.fold(0.0, (s, g) => s + app.convertToMain(g.targetAmount, g.currency));
+    
+    // Check if we need to show empty states
+    final emptyBudgets = app.budgets.isEmpty
+        ? EmptyState(
+            icon: Icons.account_balance_wallet_outlined,
+            message: l10n.budget_noBudgetsYet,
+            subMessage: l10n.budget_tapToAddBudget)
+        : Column(children: [
+            // ── Summary strip ───────────────────────────────────────
+            Container(
+              width: double.infinity,
+              color: Colors.transparent,
+              padding: const EdgeInsets.symmetric(vertical: 10),
+              child: SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: Row(children: [
+                  SizedBox(
+                    width: 130,
+                    child: _SumChip(
+                      label: l10n.budget_budgeted,
+                      value: formatAmount(totalBudgeted, cur),
+                      color: cs.primary,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  SizedBox(
+                    width: 130,
+                    child: _SumChip(
+                      label: l10n.budget_spent,
+                      value: formatAmount(totalSpent, cur),
+                      color: totalSpent > totalBudgeted
+                          ? cs.error
+                          : const Color(0xFF2E7D32),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  SizedBox(
+                    width: 130,
+                    child: _SumChip(
+                      label: l10n.budget_leftToSpend,
+                      value: formatAmount(leftToSpend, cur),
+                      color: leftToSpend < 0 ? cs.error : const Color(0xFF2E7D32),
+                    ),
+                  ),
+                  if (overCount > 0) ...[
+                    const SizedBox(width: 8),
+                    SizedBox(
+                      width: 130,
+                      child: _SumChip(
+                        label: l10n.budget_overLimit,
+                        value: '$overCount',
+                        color: cs.error,
+                      ),
+                    ),
+                  ],
+                ]),
+              ),
+            ),
+            // ── Budget list ─────────────────────────────────────────
+            Expanded(
+              child: ListView.builder(
+                padding: const EdgeInsets.fromLTRB(14, 10, 14, 140),
+                itemCount: app.budgets.length,
+                itemBuilder: (_, i) => _BudgetCard(
+                  budget: app.budgets[i], app: app,
+                ),
+              ),
+            ),
+          ]);
+          
+    final emptyGoals = goals.isEmpty
+        ? const EmptyState(
+            icon: Icons.savings_outlined,
+            message: 'No Savings Goals',
+            subMessage: 'Tap + to set a new goal')
+        : Column(children: [
+            Container(
+              color: Colors.transparent,
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+              child: Row(children: [
+                Expanded(
+                  child: _SumChip(
+                    label: 'Target',
+                    value: formatAmount(totalTarget, cur),
+                    color: cs.primary,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: _SumChip(
+                    label: 'Saved',
+                    value: formatAmount(totalSaved, cur),
+                    color: const Color(0xFF2E7D32),
+                  ),
+                ),
+              ]),
+            ),
+            Expanded(
+              child: ListView.builder(
+                padding: const EdgeInsets.fromLTRB(14, 10, 14, 140),
+                itemCount: goals.length,
+                itemBuilder: (_, i) => _GoalCard(
+                  goal: goals[i], app: app,
+                ),
+              ),
+            ),
+          ]);
+
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(l10n.budget_budgetsAndGoals, style: const TextStyle(fontWeight: FontWeight.w800)),
+        backgroundColor: cs.primary, foregroundColor: cs.onPrimary,
+        actions: [
+          Padding(
+            padding: const EdgeInsets.only(right: 16),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                if (_tabCtrl.index == 0) ...[
+                  Text(l10n.budget_leftToSpend,
+                      style: TextStyle(
+                          fontSize: 10,
+                          color: cs.onPrimary.withValues(alpha: 0.7))),
+                  Text(
+                    formatAmount(leftToSpend, cur),
+                    style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w800,
+                        color: cs.onPrimary),
+                  ),
+                ] else ...[
+                  Text('Target / Saved',
+                      style: TextStyle(
+                          fontSize: 10,
+                          color: cs.onPrimary.withValues(alpha: 0.7))),
+                  Text(
+                    '${formatAmount(totalTarget, cur)} / ${formatAmount(totalSaved, cur)}',
+                    style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: cs.onPrimary),
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ],
+        bottom: TabBar(
+          controller: _tabCtrl,
+          indicatorColor: cs.onPrimary,
+          indicatorWeight: 3,
+          labelColor: cs.onPrimary,
+          unselectedLabelColor: cs.onPrimary.withValues(alpha: 0.6),
+          tabs: [
+            Tab(text: l10n.budget_budgets),
+            const Tab(text: 'Goals'),
+          ],
+        ),
+      ),
+      body: TabBarView(
+        controller: _tabCtrl,
+        children: [
+          emptyBudgets,
+          emptyGoals,
+        ],
+      ),
+      floatingActionButton: Padding(
+        padding: const EdgeInsets.only(bottom: 76),
+        child: ExpandableFab(
+          label: l10n.home_add,
+          items: [
+            ExpandableFabItem(
+              label: l10n.budget_addBudget,
+              icon: Icons.pie_chart_rounded,
+              color: const Color(0xFF2E7D32),
+              onTap: () => BudgetScreen._openSheet(context),
+            ),
+            ExpandableFabItem(
+              label: l10n.budget_addGoal,
+              icon: Icons.savings_rounded,
+              color: const Color(0xFF2E7D32),
+              onTap: () => showModalBottomSheet(
+                context: context,
+                isScrollControlled: true,
+                shape: const RoundedRectangleBorder(
+                    borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+                builder: (_) => const SavingsGoalSheet(),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ── Summary chip ──────────────────────────────────────────────────────────────
+class _SumChip extends StatelessWidget {
+  final String label, value;
+  final Color color;
+  const _SumChip({required this.label, required this.value, required this.color});
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return Card(
+      elevation: 1,
+      margin: EdgeInsets.zero,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 14),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 10,
+                fontWeight: FontWeight.w600,
+                color: cs.onSurface.withValues(alpha: 0.5),
+              ),
+            ),
+            const SizedBox(height: 3),
+            Text(
+              value,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.bold,
+                color: color,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ── Budget card ───────────────────────────────────────────────────────────────
+class _BudgetCard extends StatelessWidget {
+  final Budget budget;
+  final AppProvider app;
+  const _BudgetCard({required this.budget, required this.app});
+
+  Color _barColor(double progress, ColorScheme cs) {
+    if (progress >= 1.0) return cs.error;
+    if (progress >= 0.75) return Colors.orange;
+    return cs.primary;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final cs       = Theme.of(context).colorScheme;
+    final cat      = app.categoryById(budget.categoryId);
+    final spent    = app.budgetSpent(budget);
+    final progress = app.budgetProgress(budget);
+    final exceeded = app.budgetExceeded(budget);
+    final barColor = _barColor(progress, cs);
+    final cur      = app.settings.currency;
+
+    return Card(
+      margin: const EdgeInsets.only(bottom: 12),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: () => BudgetScreen._openSheet(context, existing: budget),
+        onLongPress: () async {
+          if (await showDeleteConfirm(context, cat?.name ?? l10n.budget_budget) &&
+              context.mounted) {
+            final undo = await context.read<AppProvider>().deleteBudgetWithUndo(budget.id);
+            if (context.mounted) {
+              showAppSnackbar(
+                context,
+                'Deleted ${cat?.name ?? 'Budget'}',
+                onUndo: undo,
+              );
+            }
+          }
+        },
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Row(children: [
+              CategoryDot(category: cat, size: 40),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                  Text(cat?.name ?? l10n.budget_unknown,
+                      style: const TextStyle(
+                          fontWeight: FontWeight.w700, fontSize: 15)),
+                  Row(children: [
+                    Text(
+                      budget.period == 'weekly' ? l10n.budget_weeklyLabel : l10n.budget_monthlyLabel,
+                      style: TextStyle(
+                          fontSize: 11,
+                          color: cs.onSurface.withValues(alpha: 0.5)),
+                    ),
+                    Text(l10n.budget_empty,
+                        style: TextStyle(
+                            color: cs.onSurface.withValues(alpha: 0.3))),
+                    Text(
+                      formatAmount(budget.amount, cur),
+                      style: TextStyle(
+                          fontSize: 11,
+                          color: cs.onSurface.withValues(alpha: 0.5)),
+                    ),
+                  ]),
+                ]),
+              ),
+              // Spent / remaining pill
+              Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
+                Text(
+                  formatAmount(spent, cur),
+                  style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w800,
+                      color: barColor),
+                ),
+                Text(
+                  exceeded
+                      ? l10n.budget_overAmount(formatAmount(spent - budget.amount, cur))
+                      : l10n.budget_leftAmount(formatAmount(budget.amount - spent, cur)),
+                  style: TextStyle(
+                      fontSize: 10,
+                      color: exceeded
+                          ? cs.error
+                          : cs.onSurface.withValues(alpha: 0.5)),
+                ),
+              ]),
+            ]),
+            const SizedBox(height: 10),
+            // Progress bar
+            ClipRRect(
+              borderRadius: BorderRadius.circular(4),
+              child: LinearProgressIndicator(
+                value: progress,
+                minHeight: 6,
+                backgroundColor: barColor.withValues(alpha: 0.12),
+                valueColor: AlwaysStoppedAnimation<Color>(barColor),
+              ),
+            ),
+            const SizedBox(height: 5),
+            Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+              Text(
+                l10n.budget_percentUsed((progress * 140).toStringAsFixed(0)),
+                style: TextStyle(
+                    fontSize: 10,
+                    fontWeight: FontWeight.w600,
+                    color: barColor),
+              ),
+              if (exceeded)
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: cs.errorContainer,
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: Text(l10n.budget_overBudget,
+                      style: TextStyle(
+                          fontSize: 9,
+                          fontWeight: FontWeight.w800,
+                          color: cs.onErrorContainer)),
+                ),
+            ]),
+          ]),
+        ),
+      ),
+    );
+  }
+}
+
+// ── Goal card ───────────────────────────────────────────────────────────────
+class _GoalCard extends StatelessWidget {
+  final SavingsGoal goal;
+  final AppProvider app;
+  const _GoalCard({required this.goal, required this.app});
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final progress = app.goalProgress(goal);
+    final isCompleted = goal.isCompleted;
+    final barColor = isCompleted ? const Color(0xFF2E7D32) : cs.primary;
+    final color = Color(goal.colorValue);
+
+    return Card(
+      margin: const EdgeInsets.only(bottom: 12),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: () {
+          Navigator.push(
+            context,
+            ExpensyRoute(builder: (_) => SavingsGoalDetailScreen(goal: goal)),
+          );
+        },
+        onLongPress: () async {
+          if (await showDeleteConfirm(context, goal.name) && context.mounted) {
+            final undo = await context.read<AppProvider>().deleteSavingsGoalWithUndo(goal.id);
+            if (context.mounted) {
+              showAppSnackbar(
+                context,
+                'Deleted ${goal.name}',
+                onUndo: undo,
+              );
+            }
+          }
+        },
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Row(children: [
+              Container(
+                width: 40, height: 40,
+                decoration: BoxDecoration(
+                  color: color.withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Icon(Icons.savings_outlined, color: color, size: 19),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                  Text(goal.name,
+                      style: const TextStyle(
+                          fontWeight: FontWeight.w700, fontSize: 15)),
+                  if (goal.targetDate != null)
+                    Text(
+                      'Target: ${goal.targetDate}',
+                      style: TextStyle(
+                          fontSize: 11,
+                          color: cs.onSurface.withValues(alpha: 0.5)),
+                    ),
+                ]),
+              ),
+              Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
+                Text(
+                  formatAmount(goal.currentAmount, goal.currency),
+                  style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w800,
+                      color: barColor),
+                ),
+                Text(
+                  isCompleted ? 'Completed' : 'of ${formatAmount(goal.targetAmount, goal.currency)}',
+                  style: TextStyle(
+                      fontSize: 10,
+                      color: isCompleted ? const Color(0xFF2E7D32) : cs.onSurface.withValues(alpha: 0.5)),
+                ),
+              ]),
+            ]),
+            const SizedBox(height: 10),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(4),
+              child: LinearProgressIndicator(
+                value: progress,
+                minHeight: 6,
+                color: barColor,
+                backgroundColor: barColor.withValues(alpha: 0.15),
+              ),
+            ),
+          ]),
+        ),
+      ),
+    );
+  }
+}
+
+// ── Budget sheet ──────────────────────────────────────────────────────────────
+class _BudgetSheet extends StatefulWidget {
+  final Budget? existing;
+  const _BudgetSheet({this.existing});
+  @override
+  State<_BudgetSheet> createState() => _BudgetSheetState();
+}
+
+class _BudgetSheetState extends State<_BudgetSheet> {
+  final _amtCtrl = TextEditingController();
+  String? _categoryId;
+  String  _period = 'monthly';
+  bool _submitted = false;
+
+  bool get isEdit => widget.existing != null;
+
+  @override
+  void initState() {
+    super.initState();
+    if (isEdit) {
+      final e = widget.existing!;
+      _amtCtrl.text = e.amount.toStringAsFixed(2);
+      _categoryId   = e.categoryId;
+      _period       = e.period;
+    } else {
+      // Default to first expense category not yet budgeted
+      final app = context.read<AppProvider>();
+      final expCats = app.categories.where((c) => c.type == 'expense').toList();
+      final budgetedIds = app.budgets.map((b) => b.categoryId).toSet();
+      final free = expCats.where((c) => !budgetedIds.contains(c.id)).toList();
+      if (free.isNotEmpty) {
+        _categoryId = free.first.id;
+      } else if (expCats.isNotEmpty) _categoryId = expCats.first.id;
+    }
+  }
+
+  @override
+  void dispose() {
+    _amtCtrl.dispose();
+    super.dispose();
+  }
+
+  Future<void> _submit() async {
+    setState(() => _submitted = true);
+    final amount = double.tryParse(_amtCtrl.text);
+    if (amount == null || amount <= 0 || _categoryId == null) return;
+    final app = context.read<AppProvider>();
+    final l10n = AppLocalizations.of(context)!;
+
+    // Guard: if adding and category already has a budget, block it
+    if (!isEdit) {
+      final existing = app.budgetForCategory(_categoryId!);
+      if (existing != null) {
+        if (!mounted) return;
+        showAppSnackbar(context, l10n.budget_thisCategoryAlreadyH);
+        return;
+      }
+    }
+
+    final b = Budget(
+      id: isEdit ? widget.existing!.id : app.newId(),
+      categoryId: _categoryId!,
+      amount: amount,
+      period: _period,
+      createdAt: isEdit ? widget.existing!.createdAt : DateTime.now(),
+    );
+
+    if (isEdit) {
+      await app.updateBudget(b);
+    } else {
+      await app.addBudget(b);
+    }
+    if (mounted) Navigator.pop(context);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final app     = context.watch<AppProvider>();
+    final cs      = Theme.of(context).colorScheme;
+    final sym     = currencyInfo(app.settings.currency).symbol;
+    final expCats = app.categories.where((c) => c.type == 'expense').toList();
+
+    return Padding(
+      padding: EdgeInsets.only(
+          bottom: MediaQuery.of(context).viewInsets.bottom + 16,
+          left: 20, right: 20, top: 20),
+      child: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              isEdit ? l10n.budget_editBudget : l10n.budget_setBudget,
+              style: Theme.of(context)
+                  .textTheme
+                  .titleLarge
+                  ?.copyWith(fontWeight: FontWeight.w800),
+            ),
+            const SizedBox(height: 16),
+
+            // Amount
+            TextField(
+              controller: _amtCtrl,
+              textInputAction: TextInputAction.done,
+              onSubmitted: (_) => _submit(),
+              keyboardType:
+                  const TextInputType.numberWithOptions(decimal: true),
+              decoration: InputDecoration(
+                labelText: l10n.budget_budgetAmount,
+                prefixText: '$sym ',
+                errorText: _submitted && (double.tryParse(_amtCtrl.text) ?? 0) <= 0 ? l10n.error_required : null,
+              ),
+              onChanged: (_) => setState(() {}),
+            ),
+            const SizedBox(height: 16),
+
+            // Period selector
+            Text(l10n.budget_period,
+                style: Theme.of(context)
+                    .textTheme
+                    .labelMedium
+                    ?.copyWith(letterSpacing: 1)),
+            const SizedBox(height: 8),
+            Row(children: [
+              Expanded(
+                child: GestureDetector(
+                  onTap: () => setState(() => _period = 'monthly'),
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 140),
+                    padding: const EdgeInsets.symmetric(vertical: 10),
+                    decoration: BoxDecoration(
+                      color: _period == 'monthly'
+                          ? cs.primary
+                          : cs.primaryContainer.withValues(alpha: 0.4),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Center(
+                      child: Text(l10n.budget_monthly,
+                          style: TextStyle(
+                              fontWeight: FontWeight.w700,
+                              color: _period == 'monthly'
+                                  ? cs.onPrimary
+                                  : cs.primary)),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: GestureDetector(
+                  onTap: () => setState(() => _period = 'weekly'),
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 140),
+                    padding: const EdgeInsets.symmetric(vertical: 10),
+                    decoration: BoxDecoration(
+                      color: _period == 'weekly'
+                          ? cs.secondary
+                          : cs.secondaryContainer.withValues(alpha: 0.4),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Center(
+                      child: Text(l10n.budget_weekly,
+                          style: TextStyle(
+                              fontWeight: FontWeight.w700,
+                              color: _period == 'weekly'
+                                  ? cs.onSecondary
+                                  : cs.secondary)),
+                    ),
+                  ),
+                ),
+              ),
+            ]),
+            const SizedBox(height: 16),
+
+            // Category
+            if (expCats.isNotEmpty) ...[
+              Text(l10n.budget_category,
+                  style: Theme.of(context)
+                      .textTheme
+                      .labelMedium
+                      ?.copyWith(letterSpacing: 1)),
+              const SizedBox(height: 8),
+              CategoryChipPicker(
+                categories: expCats,
+                selectedId: _categoryId,
+                onSelected: (id) => setState(() => _categoryId = id),
+              ),
+              const SizedBox(height: 16),
+            ],
+
+            // Preview
+            if (_categoryId != null &&
+                double.tryParse(_amtCtrl.text) != null &&
+                double.parse(_amtCtrl.text) > 0) ...[
+              Builder(builder: (ctx) {
+                final spent = app.budgetSpent(Budget(
+                  id: '',
+                  categoryId: _categoryId!,
+                  amount: double.parse(_amtCtrl.text),
+                  period: _period,
+                  createdAt: DateTime.now(),
+                ));
+                final budgetAmt = double.parse(_amtCtrl.text);
+                final pct = (spent / budgetAmt).clamp(0.0, 1.0);
+                final catName = app.categoryById(_categoryId!)?.name ?? '';
+                return Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: cs.primaryContainer.withValues(alpha: 0.4),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                    Text(l10n.budget_previewFor(catName),
+                        style: TextStyle(
+                            fontSize: 11,
+                            color: cs.onSurface.withValues(alpha: 0.6))),
+                    const SizedBox(height: 6),
+                    Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                      Text(
+                          l10n.budget_spentAmount(formatAmount(spent, app.settings.currency)),
+                          style: const TextStyle(
+                              fontSize: 13, fontWeight: FontWeight.w700)),
+                      Text(
+                          l10n.budget_ofAmount(formatAmount(budgetAmt, app.settings.currency)),
+                          style: TextStyle(
+                              fontSize: 12,
+                              color: cs.onSurface.withValues(alpha: 0.5))),
+                    ]),
+                    const SizedBox(height: 6),
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(4),
+                      child: LinearProgressIndicator(
+                        value: pct,
+                        minHeight: 5,
+                        backgroundColor:
+                            cs.primary.withValues(alpha: 0.12),
+                        valueColor: AlwaysStoppedAnimation<Color>(
+                            pct >= 1.0
+                                ? cs.error
+                                : pct >= 0.75
+                                    ? Colors.orange
+                                    : cs.primary),
+                      ),
+                    ),
+                  ]),
+                );
+              }),
+              const SizedBox(height: 16),
+            ],
+
+            FilledButton.icon(
+              onPressed: () { AppHaptics.tap(context, HapticStrength.light); _submit(); },
+              icon: Icon(isEdit ? Icons.save_outlined : Icons.add),
+              label: Text(isEdit ? l10n.budget_saveChanges : l10n.budget_setBudget),
+              style: FilledButton.styleFrom(
+                minimumSize: const Size.fromHeight(50),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(28)),
+              ),
+            ),
+            const SizedBox(height: 4),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+
