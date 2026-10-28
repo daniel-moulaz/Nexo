@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.12.9] - 2026-10-27
+### Removido
+Depois do Open Finance e do conector MCP, estas partes faziam de novo o que outras já fazem (análise em `docs/REVISAO_SOBREPOSICOES_2026_10.md`):
+- **Monitoramento de notificações:** o serviço Android que lia notificações dos bancos, a tela Configurações › Automação e a permissão de acesso a notificações. "Para revisar" passa a receber só o Open Finance; "Esquecer contas sugeridas" ficou no menu dessa caixa e as regras de categoria continuam em Importar extrato.
+- **Revisão financeira** (arquivo de 3 ou 7 dias): o fechamento semanal e o cartão "Sua semana" abrem "Mês em revisão".
+- **Previsão detalhada** e **Dívidas e compromissos:** o atalho "Dívidas" do Hoje virou "Agenda"; o pill "Cartões" e "Ver tudo" abrem Contas e cartões; o botão de empréstimos abre Empréstimos.
+- Telas sem nenhum caminho de navegação apagadas do código: Estatísticas, Análise anual, Insights, Despesas v2 com Receitas e Conversor de moedas.
+
 ## [1.12.8] - 2026-10-27
 ### Visual
 - **Mais:** grupos em cartões planos com divisórias entre os itens, ícones numa só cor e abertura animada; o item morto "Orçamentos e objetivos" saiu e o subtítulo de "Sincronizar dispositivos" deixou de dizer que a sincronização está inativa.

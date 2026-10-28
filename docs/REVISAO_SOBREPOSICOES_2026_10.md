@@ -4,7 +4,8 @@ Pedido do dono: "implementamos coisas que meio que inutilizam outras; o
 monitoramento de notificações sendo que o Open Finance já funciona". Esta
 revisão lista o que ficou redundante depois do Open Finance (Pluggy, 4 bancos,
 leitura uma vez por dia) e do conector MCP (Claude lê e lança direto), com uma
-recomendação por item. **Nada daqui foi removido ainda**; a decisão é do dono.
+recomendação por item. O dono aprovou tudo em 27/10 e a remoção saiu na
+**1.12.9** (itens 1 a 5). O item 6 fica como está.
 
 ## Resumo
 
@@ -100,7 +101,11 @@ manter ou virar um cabeçalho da Agenda.
 - **Lembretes** (diário, orçamento, cartão, empréstimo, emprestado): cada um
   avisa de uma coisa diferente.
 
-## Já feito na 1.12.8
+## Feito
 
-- Item morto "Orçamentos e objetivos" em Mais removido.
-- Subtítulo de "Sincronizar dispositivos" corrigido (dizia "ainda inativa").
+- 1.12.8: item morto "Orçamentos e objetivos" em Mais removido; subtítulo de
+  "Sincronizar dispositivos" corrigido (dizia "ainda inativa").
+- 1.12.9: itens 1 a 5 removidos. O canal nativo `com.ma.expensy/automation`
+  continua só para as opções de privacidade (recentes e captura de tela).
+  A tabela `notification_suggestions` não muda: linhas antigas do listener
+  viram lápides como antes.
