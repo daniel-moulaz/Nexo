@@ -261,4 +261,76 @@ void main() {
       });
     }
   }
+
+  // The second tab of Orçamento and the desktop layout of every tab.
+  Future<void> capture(WidgetTester tester, String name, int tab,
+      {required Size size,
+      required double dpr,
+      bool dark = false,
+      TargetPlatform platform = TargetPlatform.android,
+      Future<void> Function(WidgetTester)? after}) async {
+    debugDefaultTargetPlatformOverride = platform;
+    tester.view.physicalSize = size * dpr;
+    tester.view.devicePixelRatio = dpr;
+    final app = _fixture();
+    app.tabIndexNotifier.value = tab;
+    final boundary = GlobalKey();
+    await tester.pumpWidget(ChangeNotifierProvider.value(
+        value: app,
+        child: RepaintBoundary(
+          key: boundary,
+          child: MaterialApp(
+              debugShowCheckedModeBanner: false,
+              locale: const Locale('pt'),
+              localizationsDelegates: AppLocalizations.localizationsDelegates,
+              supportedLocales: AppLocalizations.supportedLocales,
+              theme: buildTheme(seed: 'teal', dark: dark),
+              home: const MainShell()),
+        )));
+    Future<void> settle(int frames) async {
+      for (var i = 0; i < frames; i++) {
+        await tester.runAsync(
+            () => Future<void>.delayed(const Duration(milliseconds: 50)));
+        await tester.pump(const Duration(milliseconds: 100));
+      }
+    }
+
+    await settle(20);
+    if (after != null) {
+      await after(tester);
+      await settle(10);
+    }
+    await tester.runAsync(() async {
+      final image = await (boundary.currentContext!.findRenderObject()!
+              as RenderRepaintBoundary)
+          .toImage(pixelRatio: dpr);
+      final bytes = await image.toByteData(format: ui.ImageByteFormat.png);
+      final f = File('build/review/gallery/$name.png');
+      await f.parent.create(recursive: true);
+      await f.writeAsBytes(bytes!.buffer.asUint8List());
+      image.dispose();
+    });
+    await tester.pumpWidget(const SizedBox());
+    debugDefaultTargetPlatformOverride = null;
+    tester.view.resetPhysicalSize();
+    tester.view.resetDevicePixelRatio();
+  }
+
+  for (final dark in [false, true]) {
+    testWidgets('objetivos ${dark ? 'dark' : 'light'}', (tester) async {
+      await capture(tester, 'objetivos-${dark ? 'dark' : 'light'}', 4,
+          size: const Size(412, 915),
+          dpr: 2,
+          dark: dark,
+          after: (t) => t.tap(find.text('Objetivos')));
+    });
+  }
+  for (final e in tabs.entries) {
+    testWidgets('desk ${e.key}', (tester) async {
+      await capture(tester, 'desk-${e.key}', e.value,
+          size: const Size(1280, 800),
+          dpr: 1,
+          platform: TargetPlatform.windows);
+    });
+  }
 }

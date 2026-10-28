@@ -154,10 +154,10 @@ class _MainShellState extends State<MainShell> with WidgetsBindingObserver {
                           fontSize: 28, fontWeight: FontWeight.w800))),
               for (final entry in const [
                 (0, 'Hoje', Icons.today_outlined),
-                (8, 'Transações', Icons.receipt_long_outlined),
-                (4, 'Orçamentos e objetivos', Icons.pie_chart_outline),
+                (8, 'Extrato', Icons.receipt_long_outlined),
+                (4, 'Orçamento', Icons.pie_chart_outline),
                 (3, 'Contas e cartões', Icons.account_balance_wallet_outlined),
-                (11, 'Investimentos', Icons.show_chart),
+                (11, 'Investir', Icons.show_chart),
                 (2, 'Recorrentes', Icons.repeat),
                 (6, 'Análises', Icons.bar_chart),
                 (7, 'Agenda', Icons.event_note),

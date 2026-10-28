@@ -49,7 +49,6 @@ flutter:
   generate: true
   uses-material-design: true
   assets:
-    - assets/splash_icon.png
 
 # Launcher icons from the brand mark (assets/brand/*, rendered from the SVG
 # in docs/brand). Run: dart run flutter_launcher_icons

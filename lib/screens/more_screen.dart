@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
+import '../widgets/nexo_ui.dart';
 import 'package:provider/provider.dart';
 
 import '../providers/app_provider.dart';
 import '../theme/app_theme.dart';
 import 'assets_screen.dart';
 import 'recurring_screen.dart';
-import 'budget_screen.dart';
 import 'backup_screen.dart';
 import 'categories_screen.dart';
 import 'finance_export_screen.dart';
@@ -45,95 +45,75 @@ class MoreScreen extends StatelessWidget {
           icon: Icons.repeat,
           label: 'Recorrentes e assinaturas',
           sub: 'Contas que se repetem e próximas cobranças',
-          color: Color(0xFF00897B),
           screen: RecurringScreen()),
-      const _Item(
-          icon: Icons.pie_chart_outline,
-          label: 'Orçamentos e objetivos',
-          sub: 'Limites de gastos e metas para guardar dinheiro',
-          color: Color(0xFF00897B),
-          screen: BudgetScreen()),
       const _Item(
           icon: Icons.account_balance_wallet_outlined,
           label: 'Contas e cartões',
           sub: 'Saldos, cartões, faturas e vínculo com o banco',
-          color: Color(0xFF00897B),
           screen: AccountsScreen()),
       const _Item(
           icon: Icons.help_outline_rounded,
           label: 'Ajuda',
           sub: 'Como o Nexo conta o dinheiro e o que cada parte faz',
-          color: Color(0xFF00695C),
           screen: HelpScreen()),
       const _Item(
           icon: Icons.fact_check_outlined,
           label: 'Conferir com o banco',
           sub: 'Saldo do Open Finance × saldo do Nexo, com ajuste neutro',
-          color: Color(0xFF00695C),
           screen: BalanceCheckScreen()),
       const _Item(
           icon: Icons.auto_stories_outlined,
           label: 'Mês em revisão',
           sub: 'Destaques do mês e comparação com o anterior',
-          color: Color(0xFF00695C),
           screen: MonthReviewScreen()),
       const _Item(
           icon: Icons.fact_check_outlined,
           label: 'Revisão financeira',
           sub: 'Resumo de 3 ou 7 dias e próximos compromissos',
-          color: Color(0xFF00695C),
           screen: FinancialCheckupScreen()),
       const _Item(
           icon: Icons.account_balance_outlined,
           label: 'Dívidas e compromissos',
           sub: 'Cartões, empréstimos, parcelas e despesas pendentes',
-          color: Color(0xFF6750A4),
           screen: DebtOverviewScreen()),
       const _Item(
           icon: Icons.inbox_outlined,
           label: 'Sugestões de lançamentos',
           sub: 'Revisar notificações financeiras, sem registro automático',
-          color: Color(0xFF00695C),
           screen: NotificationInboxScreen()),
       const _Item(
           icon: Icons.event_note,
           label: 'Agenda financeira',
           sub: 'Próximos vencimentos, receitas, parcelas e faturas',
-          color: Color(0xFF00897B),
           screen: AgendaScreen()),
       const _Item(
         icon: Icons.auto_graph_rounded,
         label: 'Previsão detalhada',
         sub: 'Previsão de caixa, assinaturas, reserva e alertas',
-        color: Color(0xFF6750A4),
         screen: FinancialPlanningScreen(),
       ),
       const _Item(
         icon: Icons.upload_file_rounded,
         label: 'Importar extrato',
         sub: 'Mercado Pago, Nubank e CSV genérico',
-        color: Color(0xFF00897B),
         screen: StatementImportScreen(),
       ),
       const _Item(
         icon: Icons.table_view_rounded,
         label: 'Exportar relatório',
         sub: 'Excel e CSV para análise e portabilidade',
-        color: Color(0xFF2E7D32),
         screen: FinanceExportScreen(),
       ),
       const _Item(
           icon: Icons.bar_chart_outlined,
           label: 'Análises',
           sub: 'Categorias, comparações e fechamento mensal',
-          color: Color(0xFF1565C0),
           screen: AnalysisScreen()),
       _Item(
         icon: Icons.star_outline_rounded,
         label: 'Lista de desejos',
         sub:
             '$wishlistLen ${wishlistLen == 1 ? 'item pendente' : 'itens pendentes'}',
-        color: const Color(0xFF7D5260),
         screen: const WishlistScreen(),
       ),
       _Item(
@@ -141,7 +121,6 @@ class MoreScreen extends StatelessWidget {
         label: 'Dinheiro emprestado',
         sub:
             '$lendedLen ${lendedLen == 1 ? 'registro em aberto' : 'registros em aberto'}',
-        color: const Color(0xFFE65140),
         screen: const LendedScreen(),
       ),
       _Item(
@@ -149,7 +128,6 @@ class MoreScreen extends StatelessWidget {
         label: 'Bens e patrimônio',
         sub:
             '$assetsLen ${assetsLen == 1 ? 'item cadastrado' : 'itens cadastrados'}',
-        color: const Color(0xFF1565C0),
         screen: const AssetsScreen(),
       ),
       _Item(
@@ -157,35 +135,30 @@ class MoreScreen extends StatelessWidget {
         label: 'Empréstimos',
         sub:
             '$loansLen ${loansLen == 1 ? 'empréstimo ativo' : 'empréstimos ativos'}',
-        color: const Color(0xFF4A148C),
         screen: const LoansScreen(),
       ),
       _Item(
         icon: Icons.label_outline_rounded,
         label: 'Categorias',
         sub: '$categoriesLen categorias cadastradas',
-        color: const Color(0xFF00897B),
         screen: const CategoriesScreen(),
       ),
       const _Item(
         icon: Icons.backup_outlined,
         label: 'Backup e restauração',
         sub: 'Salve ou recupere todos os dados do aplicativo',
-        color: Color(0xFF37474F),
         screen: BackupScreen(),
       ),
       const _Item(
         icon: Icons.devices_outlined,
         label: 'Sincronizar dispositivos',
-        sub: 'Conta e teste do servidor; sincronização ainda inativa',
-        color: Color(0xFF00695C),
+        sub: 'Acervo compartilhado entre celular e PC, Open Finance e conector',
         screen: SyncSettingsScreen(),
       ),
       const _Item(
         icon: Icons.settings_outlined,
         label: 'Configurações',
         sub: 'Tema, privacidade, moeda, alertas e preferências',
-        color: Color(0xFF4A148C),
         screen: SettingsScreen(),
       ),
     ];
@@ -234,24 +207,16 @@ class MoreScreen extends StatelessWidget {
                 'Lista de desejos',
                 'Previsão detalhada',
               ],
-            }.entries)
-              Card(
-                  child: ExpansionTile(
-                      shape: const Border(),
-                      collapsedShape: const Border(),
-                      title: Text(group.key),
-                      initiallyExpanded: group.key == 'Planejar e acompanhar',
-                      children: [
-                    for (final item in group.value.map((label) =>
-                        items.singleWhere((item) => item.label == label)))
-                      ListTile(
-                          leading: Icon(item.icon, color: item.color),
-                          title: Text(item.label),
-                          subtitle: Text(item.sub),
-                          trailing: const Icon(Icons.chevron_right),
-                          onTap: () => Navigator.push(context,
-                              ExpensyRoute(builder: (_) => item.screen))),
-                  ])),
+            }.entries) ...[
+              _Group(
+                  title: group.key,
+                  initiallyOpen: group.key == 'Planejar e acompanhar',
+                  items: [
+                    for (final label in group.value)
+                      items.singleWhere((item) => item.label == label)
+                  ]),
+              const SizedBox(height: 12),
+            ],
           ]),
     );
   }
@@ -261,14 +226,78 @@ class _Item {
   final IconData icon;
   final String label;
   final String sub;
-  final Color color;
   final Widget screen;
 
   const _Item({
     required this.icon,
     required this.label,
     required this.sub,
-    required this.color,
     required this.screen,
   });
+}
+
+/// One group of the Mais screen: a flat card whose header opens and closes
+/// the list, with a hairline between the items.
+class _Group extends StatefulWidget {
+  const _Group(
+      {required this.title, required this.items, this.initiallyOpen = false});
+  final String title;
+  final List<_Item> items;
+  final bool initiallyOpen;
+  @override
+  State<_Group> createState() => _GroupState();
+}
+
+class _GroupState extends State<_Group> {
+  late bool open = widget.initiallyOpen;
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return NexoCard(
+      padding: EdgeInsets.zero,
+      child: Column(children: [
+        InkWell(
+          borderRadius: BorderRadius.circular(20),
+          onTap: () => setState(() => open = !open),
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 14, 12, 14),
+            child: Row(children: [
+              Expanded(
+                  child: Text(widget.title,
+                      style: const TextStyle(
+                          fontSize: 16, fontWeight: FontWeight.w800))),
+              AnimatedRotation(
+                  turns: open ? .5 : 0,
+                  duration: const Duration(milliseconds: 160),
+                  child: Icon(Icons.expand_more, color: cs.onSurfaceVariant)),
+            ]),
+          ),
+        ),
+        AnimatedSize(
+          duration: const Duration(milliseconds: 160),
+          alignment: Alignment.topCenter,
+          child: !open
+              ? const SizedBox(width: double.infinity)
+              : Column(children: [
+                  for (final (i, item) in widget.items.indexed) ...[
+                    Divider(
+                        height: 1,
+                        indent: i == 0 ? 0 : 56,
+                        color: cs.outlineVariant.withValues(alpha: .6)),
+                    ListTile(
+                        leading: Icon(item.icon, color: cs.primary),
+                        title: Text(item.label),
+                        subtitle: Text(item.sub),
+                        trailing: Icon(Icons.chevron_right,
+                            color: cs.onSurfaceVariant),
+                        onTap: () => Navigator.push(context,
+                            ExpensyRoute(builder: (_) => item.screen))),
+                  ],
+                  const SizedBox(height: 4),
+                ]),
+        ),
+      ]),
+    );
+  }
 }

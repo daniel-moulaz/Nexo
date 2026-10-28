@@ -260,7 +260,7 @@ void main() {
     }
 
     // Give the desktop shell a focused control before keyboard navigation.
-    await tester.tap(find.text('Transações'));
+    await tester.tap(find.text('Extrato'));
     await tester.pumpAndSettle();
     await chord(LogicalKeyboardKey.keyF);
     await tester.enterText(find.byType(TextField), 'Compra demonstrativa 8');
@@ -269,7 +269,7 @@ void main() {
     expect(find.byType(DataTable), findsOneWidget);
     await tester.tap(find.widgetWithText(ListTile, 'Hoje'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Transações'));
+    await tester.tap(find.text('Extrato'));
     await tester.pumpAndSettle();
     expect(find.text('1 lançamento'), findsOneWidget);
     for (final size in [

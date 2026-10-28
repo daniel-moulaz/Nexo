@@ -1,10 +1,16 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  Keep the native launch window deliberately minimal. The previous bitmap used
-  its intrinsic pixel size on some OEM launchers and briefly filled most of the
-  screen. Flutter paints the branded UI immediately afterwards, so a neutral
-  background avoids a stretched/oversized logo flash during startup.
+  Launch window before the Flutter engine draws its first frame: the system
+  background color with the brand mark (gold N) centered at 96dp. The mark
+  ships as one PNG per density (drawable-*dpi/splash_mark.png), so launchers
+  that use the bitmap's intrinsic size still get 96dp. On Android 12+ the
+  system splash uses the adaptive launcher icon instead.
 -->
 <layer-list xmlns:android="http://schemas.android.com/apk/res/android">
     <item android:drawable="?android:colorBackground" />
+    <item>
+        <bitmap
+            android:gravity="center"
+            android:src="@drawable/splash_mark" />
+    </item>
 </layer-list>
