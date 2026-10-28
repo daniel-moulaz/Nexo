@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.12.8] - 2026-10-27
+### Visual
+- **Mais:** grupos em cartões planos com divisórias entre os itens, ícones numa só cor e abertura animada; o item morto "Orçamentos e objetivos" saiu e o subtítulo de "Sincronizar dispositivos" deixou de dizer que a sincronização está inativa.
+- **Windows:** a barra lateral usa os mesmos nomes da barra do celular (Extrato, Orçamento, Investir). `tool/screen_gallery.dart` agora também renderiza a aba Objetivos e o layout de 1280 px de cada aba.
+- **Abertura:** a janela de abertura do Android mostra a marca (N dourado) centralizada em 96 dp, com um PNG por densidade; a cor de fundo do ícone no tema escuro passou a ser a da marca. A imagem antiga do splash saiu do app.
+
 ## [1.12.7] - 2026-10-27
 ### Marca
 - **Ícone novo:** N dourado de traço único sobre fundo quase preto, no Android (adaptativo, com versão monocromática para ícones temáticos do Android 13+) e no Windows. Fonte em `docs/brand/nexo-mark.svg`.
