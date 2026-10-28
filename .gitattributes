@@ -1,0 +1,25 @@
+# Line endings: LF in the repository, native on checkout. Generated and
+# binary files are left alone.
+* text=auto
+*.dart text
+*.yaml text
+*.md text
+*.json text
+*.arb text
+*.kt text
+*.xml text
+*.gradle text
+*.sql text
+*.ts text
+*.cmake text
+*.txt text
+*.svg text
+*.png binary
+*.jpg binary
+*.ico binary
+*.ttf binary
+*.otf binary
+*.jar binary
+*.apk binary
+*.db binary
+*.bundle binary
