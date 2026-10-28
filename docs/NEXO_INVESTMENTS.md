@@ -22,7 +22,7 @@ Consulta real em 19/10/2026 com PETR4 de demonstração retornou HTTP 200, BRL, 
 
 ## Persistência e backup
 
-`expensy.db` schema **23 → 24**. Migração aditiva cria `investments` e `investment_operations`, além de índice por investimento. Nenhuma tabela anterior é renomeada ou apagada. IDs UUID estáveis e datas UTC nas operações. Backup JSON inclui ambas as tabelas; restauração valida vínculos, IDs, tipos e replay contábil antes de substituir dados. Backup 23 continua aceito e restaura carteira vazia. Backup 24 incompleto é rejeitado. Versões anteriores do app não devem receber backup 24.
+`nexo.db` schema **23 → 24**. Migração aditiva cria `investments` e `investment_operations`, além de índice por investimento. Nenhuma tabela anterior é renomeada ou apagada. IDs UUID estáveis e datas UTC nas operações. Backup JSON inclui ambas as tabelas; restauração valida vínculos, IDs, tipos e replay contábil antes de substituir dados. Backup 23 continua aceito e restaura carteira vazia. Backup 24 incompleto é rejeitado. Versões anteriores do app não devem receber backup 24.
 
 Sem integração com protótipo de sincronização nesta rodada. Histórico local não significa sync ativo. API de cotações não faz login bancário nem importa carteira da B3.
 

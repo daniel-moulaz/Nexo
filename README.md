@@ -55,7 +55,7 @@ As imagens abaixo são da versão 1.12.7, geradas com **dados fictícios** a par
 
 ## Estado do projeto
 
-Versão de referência: **1.12.11+48** (outubro de 2026). Detalhes em [CHANGELOG.md](CHANGELOG.md) e [docs/PLAN.md](docs/PLAN.md).
+Versão de referência: **1.12.12+49** (outubro de 2026). Detalhes em [CHANGELOG.md](CHANGELOG.md) e [docs/PLAN.md](docs/PLAN.md).
 
 | Área | Situação |
 | --- | --- |
@@ -142,7 +142,7 @@ node tool/test_pluggy.mjs         # Open Finance
 - **TypeScript (Deno):** Edge Functions do Open Finance e do assistente.
 - **Testes:** regras contábeis, persistência, sincronização, importação/exportação, segurança, navegação e layouts.
 
-O identificador Android `com.ma.expensy` é preservado para que o app instalado continue o mesmo, com os dados no lugar; é o único nome herdado que resta no código. O pacote Dart chama-se `nexo` e o banco local, `nexo.db` (renomeado sozinho na primeira abertura da 1.12.9).
+O identificador Android `com.ma.expensy` é preservado para que o app instalado continue o mesmo, com os dados no lugar. O pacote Dart chama-se `nexo` e o banco local, `nexo.db`.
 
 ## Documentação
 
@@ -150,7 +150,7 @@ O identificador Android `com.ma.expensy` é preservado para que o app instalado 
 - [Plano de evolução P0–P3 (28/10/2026)](docs/PLANO_EVOLUCAO_2026_11.md)
 - [Auditoria do produto e do código](docs/AUDITORIA_NEXO_2026_10.md)
 - [Pesquisa de referências, com fontes](docs/PESQUISA_REFERENCIAS_2026_10.md)
-- [Desvinculação do Expensy](docs/NEXO_DESVINCULACAO_EXPENSY_2026_10.md)
+- [Projeto independente: identificadores, migração do banco e histórico](docs/NEXO_PROJETO_INDEPENDENTE_2026_10.md)
 - [Plano anterior e andamento](docs/PLAN.md)
 - [Histórico de versões](CHANGELOG.md)
 - [Segurança: RLS, segredos e rotação](docs/SEGURANCA.md)
@@ -174,11 +174,9 @@ O identificador Android `com.ma.expensy` é preservado para que o app instalado 
 
 Os documentos registram diferentes etapas do desenvolvimento; consulte a data e a versão de cada um. Os que tratam de propostas indicam no topo o que já virou funcionalidade. Builds, capturas privadas e bases temporárias não fazem parte do código publicado.
 
-## Desenvolvimento e origem
+## Desenvolvimento
 
-O Nexo é desenvolvido por [Daniel Moulaz](https://github.com/daniel-moulaz) a partir do [Expensy, de Mina Android](https://github.com/mina-android/Expensy), sob licença MIT. A evolução inclui adaptação brasileira, revisão contábil, sincronização entre aparelhos, Open Finance, assistente, experiência desktop e novas formas de visualizar compromissos financeiros. Documentos herdados do Expensy ficam em [docs/legacy/](docs/legacy/).
-
-O histórico e a autoria do projeto original são preservados. Este repositório tem apresentação e evolução próprias; não é o repositório oficial do Expensy.
+O Nexo é desenvolvido por [Daniel Moulaz](https://github.com/daniel-moulaz). Parte do código deriva de uma base sob licença MIT; o crédito exigido está em `LICENSE`.
 
 Contribuições devem manter testes relevantes, compatibilidade dos dados e migrações explícitas quando necessárias. Nunca inclua bancos pessoais, notificações reais, extratos, PINs, tokens, chaves de serviço, keystores ou arquivos de configuração locais em commits ou issues.
 

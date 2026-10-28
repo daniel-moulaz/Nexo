@@ -13,7 +13,7 @@
 - Instância normal do usuário preservada. Nenhum dado pessoal lido/importado para a base de testes.
 - ZIP original: `build/distribution/Nexo-1.5.1+17-windows-x64.zip`, SHA-256 `16C99EE04DA20672EA7D624548F575752AE438C56CFEC8D5549EBE55BC3F98DD`.
 - Extração original limpa: `build/review/homologation-20260930-184435/bundle`. Executado com `--test-profile` e TEMP/TMP próprios.
-- Banco normal permanece `%LOCALAPPDATA%/Nexo/expensy.db`. QA usa `%TEMP%/NexoWindowsQA/expensy.db`, prefixo de preferências e chave de segurança separados.
+- Banco normal permanece `%LOCALAPPDATA%/Nexo/nexo.db`. QA usa `%TEMP%/NexoWindowsQA/nexo.db`, prefixo de preferências e chave de segurança separados.
 
 ## Bugs encontrados e corrigidos
 

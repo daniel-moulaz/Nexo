@@ -8,7 +8,7 @@ Data: 16/10/2026. Branch: `codex/nexo-sync-foundation`.
 
 O Nexo instalado ainda **não sincroniza celular e Windows**. Este lote implementa um protocolo e um journal SQLite isolados, exercitados com dois dispositivos fictícios e um terceiro SQLite como servidor de referência. Não há Supabase provisionado, autenticação, cliente HTTP, migração no banco do app ou opção de sincronização na interface.
 
-Nenhum dado financeiro real foi lido para os testes ou transmitido. Nenhuma conta externa, serviço pago ou credencial foi criada. `expensy.db` e o schema de produção **23** permanecem inalterados; Android conserva identidade e assinatura.
+Nenhum dado financeiro real foi lido para os testes ou transmitido. Nenhuma conta externa, serviço pago ou credencial foi criada. `nexo.db` e o schema de produção **23** permanecem inalterados; Android conserva identidade e assinatura.
 
 ## Código disponível
 

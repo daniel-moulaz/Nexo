@@ -42,7 +42,7 @@ Não há previsão de salário ou compras sem cadastro. Contratos de empréstimo
 
 A navegação do mês afeta receitas/despesas/categorias. Saldos, previsão e orçamentos atuais permanecem identificados como situação de hoje. A agenda recebe o mesmo horizonte selecionado na Home, inclusive 90 dias ou fim do mês.
 
-Schema antes/depois: **23 → 23**. Banco `expensy.db`, identidade Android `com.ma.expensy` e configuração de assinatura preservados. Nenhum dado real foi incluído nas fixtures, capturas de revisão ou documentação.
+Schema antes/depois: **23 → 23**. Banco `nexo.db`, identidade Android `com.ma.expensy` e configuração de assinatura preservados. Nenhum dado real foi incluído nas fixtures, capturas de revisão ou documentação.
 
 ## Validação
 

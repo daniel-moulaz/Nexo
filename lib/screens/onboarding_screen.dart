@@ -412,7 +412,7 @@ class _PageWelcome extends StatelessWidget {
               color: cs.primary, size: 32),
         ),
         const SizedBox(height: 20),
-        Text(l10n.onboarding_welcomeToExpensy,
+        Text(l10n.onboarding_welcomeToNexo,
             style: Theme.of(context)
                 .textTheme
                 .headlineSmall

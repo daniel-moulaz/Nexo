@@ -1787,7 +1787,7 @@ class AppProvider extends ChangeNotifier {
     };
     if (!data.keys.any(knownKeys.contains)) {
       throw const FormatException(
-          'Invalid backup file: no recognisable Expensy data found.');
+          'Invalid backup file: no recognisable Nexo data found.');
     }
 
     // Parse preferences before replacing SQLite: malformed settings must not

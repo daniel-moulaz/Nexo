@@ -548,7 +548,7 @@ class SettingsScreen extends StatelessWidget {
                           size: 18, color: cs.onSurface.withValues(alpha: 0.4)),
                       onTap: () async {
                         final uri = Uri.parse(
-                            'https://github.com/mina-android/Expensy');
+                            'https://github.com/daniel-moulaz/Nexo');
                         if (await canLaunchUrl(uri)) {
                           await launchUrl(uri,
                               mode: LaunchMode.externalApplication);

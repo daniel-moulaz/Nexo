@@ -22,7 +22,7 @@ escreve. Tudo que entra tem que servir a esse eixo; o resto é ruído.
 |---|---|---|---|---|---|---|---|
 | P0-1 | Texto grande em toda tela | Só 3 telas são verificadas a 1,5×; o overflow da 1.12.7 passou | Teste que abre as 5 abas e as telas de Mais a 412 px com 1,5× e falha em overflow | `test/scaled_text_tabs_test.dart` | baixa | teste no CI, passa | **feito (1.12.11)** |
 | P0-2 | Finais de linha | CRLF e LF misturados; `git status` sujo | `.gitattributes` `* text=auto`, normalização num commit só | raiz | baixa | `git status` limpo após build | proposto (decisão do dono: commit grande) |
-| P0-3 | Desvinculação do Expensy | pacote, banco, canais, docs | ver `docs/NEXO_DESVINCULACAO_EXPENSY_2026_10.md` | vários | média | testes passam; só `com.ma.expensy` resta | **feito (1.12.10)** |
+| P0-3 | Projeto independente | pacote, banco, canais, docs, histórico | ver `docs/NEXO_PROJETO_INDEPENDENTE_2026_10.md` | vários | média | testes passam; só `com.ma.expensy` resta | **feito (1.12.10)** |
 | P0-4 | Erros silenciosos | 94 `catch (_)` sem registro | `Diagnostics.note(area, error)` local, contagem por área, sem valores; visível em Ajuda | `lib/services/diagnostics.dart` + pontos de captura | média | falhas de rede/IO aparecem na tela de diagnóstico | proposto |
 
 ## P1 — Alto impacto

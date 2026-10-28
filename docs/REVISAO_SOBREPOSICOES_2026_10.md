@@ -105,7 +105,7 @@ manter ou virar um cabeçalho da Agenda.
 
 - 1.12.8: item morto "Orçamentos e objetivos" em Mais removido; subtítulo de
   "Sincronizar dispositivos" corrigido (dizia "ainda inativa").
-- 1.12.9: itens 1 a 5 removidos. O canal nativo `com.ma.expensy/automation`
+- 1.12.9: itens 1 a 5 removidos. O canal nativo de privacidade (`nexo/privacy`)
   continua só para as opções de privacidade (recentes e captura de tela).
   A tabela `notification_suggestions` não muda: linhas antigas do listener
   viram lápides como antes.

@@ -1405,7 +1405,7 @@ class AppLocalizationsDe extends AppLocalizations {
   String get onboarding_back => 'Zurück';
 
   @override
-  String get onboarding_welcomeToExpensy => 'Willkommen bei Nexo!';
+  String get onboarding_welcomeToNexo => 'Willkommen bei Nexo!';
 
   @override
   String get onboarding_restoreABackup => 'Ein Backup wiederherstellen';

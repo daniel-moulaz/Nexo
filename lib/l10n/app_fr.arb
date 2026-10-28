@@ -536,7 +536,7 @@
   "lended_color": "Couleur",
   "more_more": "Plus",
   "onboarding_back": "Retour",
-  "onboarding_welcomeToExpensy": "Bienvenue sur Nexo !",
+  "onboarding_welcomeToNexo": "Bienvenue sur Nexo !",
   "onboarding_restoreABackup": "Restaurer une sauvegarde",
   "onboarding_loadAPreviouslySaved": "Charger un fichier JSON Nexo précédemment enregistré",
   "onboarding_or": "ou",

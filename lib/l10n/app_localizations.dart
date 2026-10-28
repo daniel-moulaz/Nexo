@@ -2552,11 +2552,11 @@ abstract class AppLocalizations {
   /// **'Back'**
   String get onboarding_back;
 
-  /// No description provided for @onboarding_welcomeToExpensy.
+  /// No description provided for @onboarding_welcomeToNexo.
   ///
   /// In en, this message translates to:
   /// **'Bem-vindo ao Nexo!'**
-  String get onboarding_welcomeToExpensy;
+  String get onboarding_welcomeToNexo;
 
   /// No description provided for @onboarding_restoreABackup.
   ///

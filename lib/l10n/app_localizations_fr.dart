@@ -1413,7 +1413,7 @@ class AppLocalizationsFr extends AppLocalizations {
   String get onboarding_back => 'Retour';
 
   @override
-  String get onboarding_welcomeToExpensy => 'Bienvenue sur Nexo !';
+  String get onboarding_welcomeToNexo => 'Bienvenue sur Nexo !';
 
   @override
   String get onboarding_restoreABackup => 'Restaurer une sauvegarde';

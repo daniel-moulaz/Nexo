@@ -1,7 +1,5 @@
 # Nexo — Home Screen Widgets Architecture
 
-> Escrito quando o app ainda se chamava Expensy; os nomes foram atualizados, a arquitetura é a mesma.
-
 This document describes the native Android App Widget integration for Nexo.
 
 ---
@@ -43,4 +41,4 @@ The widgets communicate with the Flutter app through two channels:
 
 - `main.dart` maintains a `rootNavigatorKey = GlobalKey<NavigatorState>()`.
 - Widget taps push `AddTransactionScreen` on top of `rootNavigatorKey.currentState`.
-- This ensures `MainShell` remains the true root of the app hierarchy, and standard `ExpensySlideUpRoute` back navigation works seamlessly.
+- This ensures `MainShell` remains the true root of the app hierarchy, and standard `NexoSlideUpRoute` back navigation works seamlessly.

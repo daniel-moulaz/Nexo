@@ -28,7 +28,7 @@ Pedir intervenção somente quando necessário por risco real de perda de dados,
 
 | Item | Estado no corte |
 |---|---|
-| Diretório real | `C:\Users\danie\projetos\Expensy` |
+| Diretório real | a pasta local do Nexo (ver `CLAUDE.md`) |
 | Produto | Nexo |
 | Branch atual | `codex/nexo-investments` |
 | Versão | **1.6.5+26** em `pubspec.yaml` e confirmada no Android |
@@ -50,9 +50,7 @@ Não afirmar que tudo foi integrado à main: o push verificado foi da branch `co
 
 Remotos:
 
-- `nexo`: `https://github.com/daniel-moulaz/Nexo.git` — repositório público do produto/portfólio.
-- `origin`: `https://github.com/daniel-moulaz/Expensy.git` — preservado.
-- `upstream`: `https://github.com/mina-android/Expensy.git` — origem do código.
+- `origin`: `https://github.com/daniel-moulaz/Nexo.git` — o único remoto desde 28/10/2026.
 
 A licença MIT, autoria e histórico do projeto original devem permanecer. Não apresentar Nexo como código inteiramente escrito do zero; não fabricar commits/datas para contribuições. Nenhum force push ou reescrita de autoria.
 
@@ -296,7 +294,7 @@ TLS/RLS não são E2EE. PIN não é senha do servidor nem chave criptográfica. 
 
 ## 10. Windows: produto nativo e pendências de homologação
 
-**Windows não é web.** Executa `Nexo.exe` com banco local em `%LOCALAPPDATA%\Nexo\expensy.db`.
+**Windows não é web.** Executa `Nexo.exe` com banco local em `%LOCALAPPDATA%\Nexo\nexo.db`.
 
 Não copiar um banco SQLite aberto entre PC/celular, OneDrive, Drive ou pasta compartilhada como “sync”. Os dois dispositivos atualmente têm bases independentes.
 
@@ -313,7 +311,7 @@ Implementado:
 
 PIN protege acesso pela interface, **não criptografa SQLite/backups**. Windows Hello não foi ativado. Filtros persistem na sessão, não necessariamente após restart. Paginação é na UI, não SQL; parsing pesado ainda merece estudo de desempenho.
 
-Ensaio seguro: `Nexo.exe --test-profile`; usa `%TEMP%\NexoWindowsQA\expensy.db`, prefixos e chaves QA separados. Para base nova, TEMP/TMP exclusivos somente no processo lançado. Não modificar ambiente global nem abrir base real para testes.
+Ensaio seguro: `Nexo.exe --test-profile`; usa `%TEMP%\NexoWindowsQA\nexo.db`, prefixos e chaves QA separados. Para base nova, TEMP/TMP exclusivos somente no processo lançado. Não modificar ambiente global nem abrir base real para testes.
 
 `tool/windows_native_check.dart` é entrypoint de teste: pode gerar bundle temporário isolado, **nunca distribuir esse alvo**. Depois reconstruir explicitamente `--target lib/main.dart`.
 
@@ -367,7 +365,7 @@ $adb = 'C:\Users\danie\AppData\Local\Android\Sdk\platform-tools\adb.exe'
 Pré-voo:
 
 ```powershell
-Set-Location 'C:\Users\danie\projetos\Expensy'
+Set-Location '<pasta do Nexo>'
 git status --short
 git branch --show-current
 git diff --stat

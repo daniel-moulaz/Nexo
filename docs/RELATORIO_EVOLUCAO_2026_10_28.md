@@ -1,6 +1,6 @@
 # Relatório da rodada de evolução (27 e 28/10/2026)
 
-Resposta à missão "desvinculação do Expensy e evolução integral do Nexo". Cada
+Resposta à missão "Nexo como projeto independente e evolução integral". Cada
 item diz o que **já existia**, o que foi **preservado**, **corrigido**, **redesenhado**,
 **criado**, o que ficou só **recomendado** e o que está **pendente** e por quê. Nada
 aqui é dado como feito sem teste ou instalação registrada.
@@ -13,9 +13,9 @@ como pedido), o que pesa (`AppProvider` de 2.103 linhas, telas gigantes, 94 `cat
 silenciosos, i18n pela metade, finais de linha mistos, sete serviços de notificação) e o
 que falta no produto.
 
-## 2. Desvinculação do Expensy
+## 2. Projeto independente
 
-`docs/NEXO_DESVINCULACAO_EXPENSY_2026_10.md`. **Feito (1.12.10):** pacote Dart `nexo`
+`docs/NEXO_PROJETO_INDEPENDENTE_2026_10.md`. **Feito (1.12.10):** pacote Dart `nexo`
 (405 imports), classes `Nexo*`, banco `nexo.db` com migração testada, canais nativos
 `nexo/*`, CMake `nexo`, sonda nativa removida, LICENSE com o aviso do Nexo sobre o MIT
 original, README e docs sem o nome antigo fora do histórico, remotos git só do Nexo.
@@ -90,6 +90,5 @@ dono).
 
 - **Instalar a 1.12.11 no celular:** o aparelho saiu do USB durante a rodada; o APK está
   compilado e conferido. O CLAUDE.md diz o estado exato.
-- **Pasta local `projetos\Expensy`:** só o dono renomeia, com as sessões fechadas.
-- **Fork `daniel-moulaz/Expensy` no GitHub:** intocado; arquivar ou apagar é decisão do
-  dono.
+- **Pasta local:** renomear para `Nexo` é tarefa do dono, com as sessões fechadas.
+- **Fork anterior no GitHub:** apagar é decisão do dono (ação irreversível, feita pela conta dele).

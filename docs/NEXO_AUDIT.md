@@ -7,7 +7,7 @@ A seção final registra a rodada de produto 1.3.0. Os resultados e hashes de 1.
 ## Base 1.2.0
 
 Base integrada: `0219769814a40fa02148359291eff5dcde391731`, exclusivamente em `feat/finance-app-base`.
-Identificador Android preservado: `com.ma.expensy`. Banco preservado: `expensy.db`.
+Identificador Android preservado: `com.ma.expensy`. Banco preservado (hoje `nexo.db`).
 
 ## Correções principais
 

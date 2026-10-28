@@ -12,7 +12,7 @@
 
 ## Persistência e compatibilidade
 
-Schema 24 → 25, mantendo `expensy.db` e a identidade Android:
+Schema 24 → 25, mantendo `nexo.db` e a identidade Android:
 
 - `investments.archived INTEGER NOT NULL DEFAULT 0`;
 - `investment_operations.cash_account_id TEXT`, nulo para todo registro preexistente;

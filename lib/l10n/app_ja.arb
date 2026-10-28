@@ -509,7 +509,7 @@
   "lended_color": "色",
   "more_more": "その他",
   "onboarding_back": "戻る",
-  "onboarding_welcomeToExpensy": "Nexoへようこそ！",
+  "onboarding_welcomeToNexo": "Nexoへようこそ！",
   "onboarding_restoreABackup": "バックアップを復元",
   "onboarding_loadAPreviouslySaved": "以前に保存したNexoのJSONファイルを読み込む",
   "onboarding_or": "または",

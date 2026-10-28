@@ -1403,7 +1403,7 @@ class AppLocalizationsHi extends AppLocalizations {
   String get onboarding_back => 'पीछे';
 
   @override
-  String get onboarding_welcomeToExpensy => 'Nexo में आपका स्वागत है!';
+  String get onboarding_welcomeToNexo => 'Nexo में आपका स्वागत है!';
 
   @override
   String get onboarding_restoreABackup => 'एक बैकअप पुनर्स्थापित करें';

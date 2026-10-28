@@ -10,14 +10,14 @@ O runner Windows x64 funciona com SQLite local e plugins nativos. A contabilidad
 
 Extrair `build/distribution/Nexo-1.5.1+17-windows-x64.zip` e abrir `Nexo.exe`. Distribuir **toda a pasta**, incluindo DLLs e `data/`, nunca somente o EXE. `tool/package_windows.ps1` valida componentes, rejeita bancos/credenciais/logs e gera o ZIP e seu SHA-256. O bundle inclui runtime C++ local. Instalação limpa de Windows x64 ainda precisa ser homologada.
 
-Ensaio isolado: `Nexo.exe --test-profile`. A janela e o banner mostram TESTE LOCAL. O banco fica em `%TEMP%/NexoWindowsQA/expensy.db`; preferências usam prefixo separado e PIN usa chave própria. Para outra base sintética, definir TEMP/TMP somente no processo que inicia o app. Nunca apontar para dados reais. O perfil de QA não copia a base normal. Um mutex por perfil/sessão Windows impede que a segunda interface inicialize o banco.
+Ensaio isolado: `Nexo.exe --test-profile`. A janela e o banner mostram TESTE LOCAL. O banco fica em `%TEMP%/NexoWindowsQA/nexo.db`; preferências usam prefixo separado e PIN usa chave própria. Para outra base sintética, definir TEMP/TMP somente no processo que inicia o app. Nunca apontar para dados reais. O perfil de QA não copia a base normal. Um mutex por perfil/sessão Windows impede que a segunda interface inicialize o banco.
 
 Não há assinatura Windows nem certificado adquirido. MSIX fica para depois da homologação funcional e definição da identidade de assinatura. Nenhuma política de segurança foi desativada.
 
 ## Persistência e segurança
 
 - `DatabasePlatform` configura SQLite FFI no Windows e mantém sqflite no Android.
-- Banco normal: **`%LOCALAPPDATA%/Nexo/expensy.db`**. Não fica ao lado do EXE nem em arquivo compartilhado entre dispositivos.
+- Banco normal: **`%LOCALAPPDATA%/Nexo/nexo.db`**. Não fica ao lado do EXE nem em arquivo compartilhado entre dispositivos.
 - Schema **23 → 23**. Upgrade 22→23 e restore de backup antigo têm testes com SQLite real.
 - DBHelper, AppProvider, FinanceRules e metadados são compartilhados: pendentes não debitam saldo; transferências/reservas e pagamentos de fatura não contam como novo consumo.
 - CSV/XLSX e backup JSON usam seletor nativo. No Windows, o picker retorna o caminho; `FileOutput` grava em temporário irmão e substitui o destino somente após concluir. Falha preserva o arquivo anterior.

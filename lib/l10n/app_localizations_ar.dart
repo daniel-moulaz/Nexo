@@ -1389,7 +1389,7 @@ class AppLocalizationsAr extends AppLocalizations {
   String get onboarding_back => 'رجوع';
 
   @override
-  String get onboarding_welcomeToExpensy => 'مرحبًا بك في Nexo!';
+  String get onboarding_welcomeToNexo => 'مرحبًا بك في Nexo!';
 
   @override
   String get onboarding_restoreABackup => 'استعادة نسخة احتياطية';

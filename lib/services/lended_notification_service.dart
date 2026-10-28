@@ -54,7 +54,7 @@ class LendedNotificationService {
     _initialized = true;
 
     // Eagerly create the Android notification channel so it appears in
-    // Settings → Apps → Expensy → Notifications from the very first launch,
+    // Settings → Apps → Nexo → Notifications from the very first launch,
     // not just after the first reminder is scheduled.
     final android = _plugin.resolvePlatformSpecificImplementation<
         AndroidFlutterLocalNotificationsPlugin>();

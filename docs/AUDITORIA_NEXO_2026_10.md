@@ -1,8 +1,8 @@
 # Auditoria do Nexo (28/10/2026, código da 1.12.10)
 
 Leitura crítica do produto e do código, feita depois de dois dias de trabalho no
-repositório inteiro (redesenho visual, remoção de sobreposições, desvinculação do
-Expensy). Separa fatos medidos de opinião; cada ponto fraco aponta para o item do
+repositório inteiro (redesenho visual, remoção de sobreposições, projeto
+independente). Separa fatos medidos de opinião; cada ponto fraco aponta para o item do
 plano em `docs/PLANO_EVOLUCAO_2026_11.md`.
 
 ## Números

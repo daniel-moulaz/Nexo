@@ -1381,7 +1381,7 @@ class AppLocalizationsJa extends AppLocalizations {
   String get onboarding_back => '戻る';
 
   @override
-  String get onboarding_welcomeToExpensy => 'Nexoへようこそ！';
+  String get onboarding_welcomeToNexo => 'Nexoへようこそ！';
 
   @override
   String get onboarding_restoreABackup => 'バックアップを復元';

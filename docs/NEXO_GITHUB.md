@@ -2,10 +2,9 @@
 
 ## Organização
 
-- Repositório próprio: `daniel-moulaz/Nexo`, público e independente da rede de forks.
+- Repositório próprio: `daniel-moulaz/Nexo`, público e independente.
 - Branch de apresentação: `main` no novo repositório.
-- Repositório anterior: `daniel-moulaz/Expensy`, preservado.
-- Projeto de origem: `mina-android/Expensy`, com autoria, histórico e licença MIT preservados.
+- Base de código inicial sob licença MIT; o crédito exigido está em `LICENSE`. Histórico reescrito em 28/10/2026 para começar no Nexo (`docs/NEXO_PROJETO_INDEPENDENTE_2026_10.md`).
 
 A publicação inicial reúne o histórico já commitado da versão 1.5.4 e sua apresentação. Não usa squash, datas artificiais, force push nem reescrita da autoria. Mudanças locais que ainda aguardam revisão permanecem fora da publicação; os relatórios de builds de 13/10 descrevem o workspace daquela rodada, como indicado nos próprios documentos.
 
@@ -25,7 +24,7 @@ Referência: [solucionar contribuições ausentes](https://docs.github.com/en/ac
 
 Trabalhar em branches de funcionalidade, testar e integrar na `main` por pull request. Usar mensagens que descrevam mudanças reais, como `fix(backup): reject incomplete restores` ou `feat(home): add cash timeline`. Preservar a sequência de commits revisados quando ela for útil para entender a evolução.
 
-O remoto adicional `nexo` aponta para o novo repositório; `origin` e `upstream` anteriores são preservados. A branch de publicação local acompanha sua equivalente no novo remoto, sem alterar a `main` local antiga.
+Desde 28/10/2026 o único remoto é `origin`, apontando para este repositório.
 
 ## Arquivos publicados
 

@@ -1,6 +1,6 @@
 # Nexo 1.5.2+18 — cartão e sugestões
 
-Revisão concluída em 04/10/2026. Projeto: C:\Users\danie\projetos\Expensy.
+Revisão concluída em 04/10/2026. Projeto: a pasta local do Nexo.
 
 ## Alterações
 

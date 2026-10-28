@@ -291,7 +291,7 @@ class DBHelper {
         // builds instead of failing completely silently.
         // ignore: avoid_print
         // ignore: avoid_print
-        print('Expensy DB migration warning: lended_money rebuild failed');
+        print('Nexo DB migration warning: lended_money rebuild failed');
       }
     }
     // v10 → v11: savings goals and contributions

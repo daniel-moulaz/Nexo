@@ -1409,7 +1409,7 @@ class AppLocalizationsEs extends AppLocalizations {
   String get onboarding_back => 'Atrás';
 
   @override
-  String get onboarding_welcomeToExpensy => '¡Bienvenido a Caro!';
+  String get onboarding_welcomeToNexo => '¡Bienvenido a Nexo!';
 
   @override
   String get onboarding_restoreABackup => 'Restaurar una copia de seguridad';
