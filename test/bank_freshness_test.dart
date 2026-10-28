@@ -1,4 +1,4 @@
-import 'package:expensy/services/pluggy_inbox.dart';
+import 'package:nexo/services/pluggy_inbox.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {

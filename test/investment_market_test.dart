@@ -3,8 +3,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:expensy/investments/investment_quotes.dart';
-import 'package:expensy/investments/investment_models.dart';
+import 'package:nexo/investments/investment_quotes.dart';
+import 'package:nexo/investments/investment_models.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();

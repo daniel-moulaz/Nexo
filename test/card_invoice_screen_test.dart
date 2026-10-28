@@ -4,10 +4,10 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
-import 'package:expensy/database/db_helper.dart';
-import 'package:expensy/models/models.dart';
-import 'package:expensy/providers/app_provider.dart';
-import 'package:expensy/screens/card_invoice_screen.dart';
+import 'package:nexo/database/db_helper.dart';
+import 'package:nexo/models/models.dart';
+import 'package:nexo/providers/app_provider.dart';
+import 'package:nexo/screens/card_invoice_screen.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();

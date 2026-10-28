@@ -4,10 +4,10 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
-import 'package:expensy/database/db_helper.dart';
-import 'package:expensy/investments/investment_models.dart';
-import 'package:expensy/investments/investment_repository.dart';
-import 'package:expensy/investments/investment_quotes.dart';
+import 'package:nexo/database/db_helper.dart';
+import 'package:nexo/investments/investment_models.dart';
+import 'package:nexo/investments/investment_repository.dart';
+import 'package:nexo/investments/investment_quotes.dart';
 
 Investment asset({String id = 'asset'}) => Investment(
     id: id,

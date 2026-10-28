@@ -1,5 +1,5 @@
-import 'package:expensy/services/cash_forecast.dart';
-import 'package:expensy/services/financial_reminders.dart';
+import 'package:nexo/services/cash_forecast.dart';
+import 'package:nexo/services/financial_reminders.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {

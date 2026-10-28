@@ -1,4 +1,4 @@
-import 'package:expensy/services/mcp_recipes.dart';
+import 'package:nexo/services/mcp_recipes.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {

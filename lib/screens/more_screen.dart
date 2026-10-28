@@ -153,8 +153,8 @@ class MoreScreen extends StatelessWidget {
           IconButton(
               tooltip: 'Configurações',
               icon: const Icon(Icons.settings_outlined),
-              onPressed: () => Navigator.push(context,
-                  ExpensyRoute(builder: (_) => const SettingsScreen())))
+              onPressed: () => Navigator.push(
+                  context, NexoRoute(builder: (_) => const SettingsScreen())))
         ],
       ),
       body: ListView(
@@ -269,8 +269,8 @@ class _GroupState extends State<_Group> {
                         subtitle: Text(item.sub),
                         trailing: Icon(Icons.chevron_right,
                             color: cs.onSurfaceVariant),
-                        onTap: () => Navigator.push(context,
-                            ExpensyRoute(builder: (_) => item.screen))),
+                        onTap: () => Navigator.push(
+                            context, NexoRoute(builder: (_) => item.screen))),
                   ],
                   const SizedBox(height: 4),
                 ]),

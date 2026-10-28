@@ -1,12 +1,12 @@
 import 'dart:io';
 
-import 'package:expensy/database/database_platform.dart';
-import 'package:expensy/database/db_helper.dart';
-import 'package:expensy/models/models.dart';
-import 'package:expensy/providers/app_provider.dart';
-import 'package:expensy/services/notification_inbox.dart';
-import 'package:expensy/services/balance_check.dart';
-import 'package:expensy/services/pluggy_inbox.dart';
+import 'package:nexo/database/database_platform.dart';
+import 'package:nexo/database/db_helper.dart';
+import 'package:nexo/models/models.dart';
+import 'package:nexo/providers/app_provider.dart';
+import 'package:nexo/services/notification_inbox.dart';
+import 'package:nexo/services/balance_check.dart';
+import 'package:nexo/services/pluggy_inbox.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';

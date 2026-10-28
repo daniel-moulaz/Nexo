@@ -1,14 +1,14 @@
-# Expensy — Home Screen Widgets Architecture
+# Nexo — Home Screen Widgets Architecture
 
-> Documento do Expensy, mantido porque o código dos widgets Android o cita. Os nomes "Expensy" abaixo correspondem ao Nexo atual.
+> Escrito quando o app ainda se chamava Expensy; os nomes foram atualizados, a arquitetura é a mesma.
 
-This document describes the native Android App Widget integration for Expensy.
+This document describes the native Android App Widget integration for Nexo.
 
 ---
 
 ## §0 Overview
 
-Expensy supports three Android Home Screen Widgets:
+Nexo supports three Android Home Screen Widgets:
 1. **Quick Add Transaction Widget** (`QuickAddWidgetProvider.kt`) — One-tap shortcut that launches `AddTransactionScreen` via a native `MethodChannel` / `EventChannel` bridge.
 2. **Accounts Widget** (`AccountsWidgetProvider.kt`) — Displays the user's top 3 pinned accounts and balances, updated via `home_widget` SharedPreferences.
 3. **Budget Widget** (`BudgetWidgetProvider.kt`) — Displays active category budgets and spending progress, updated via `home_widget` SharedPreferences.
@@ -27,7 +27,7 @@ The widgets communicate with the Flutter app through two channels:
      - `budget_widget_data` → `BudgetWidgetProvider.kt`
 
 2. **Hand-Rolled `MethodChannel` + `EventChannel` (Quick Add Fast Path)**
-   - Defined in `lib/services/quick_add_service.dart` (`com.ma.expensy/quick_add`).
+   - Defined in `lib/services/quick_add_service.dart` (`nexo/quick_add`).
    - Does not use `home_widget` to avoid overhead on single-tap launches.
 
 ---

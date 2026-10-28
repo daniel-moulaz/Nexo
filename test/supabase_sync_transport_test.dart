@@ -1,8 +1,8 @@
 import 'dart:async';
 import 'dart:convert';
 
-import 'package:expensy/sync/supabase_sync_transport.dart';
-import 'package:expensy/sync/sync_protocol.dart';
+import 'package:nexo/sync/supabase_sync_transport.dart';
+import 'package:nexo/sync/sync_protocol.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';

@@ -1,6 +1,6 @@
-import 'package:expensy/models/models.dart';
-import 'package:expensy/models/transaction_metadata.dart';
-import 'package:expensy/services/subscription_detector.dart';
+import 'package:nexo/models/models.dart';
+import 'package:nexo/models/transaction_metadata.dart';
+import 'package:nexo/services/subscription_detector.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {

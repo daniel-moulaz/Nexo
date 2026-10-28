@@ -1,15 +1,15 @@
 import 'dart:io';
 
-import 'package:expensy/database/database_platform.dart';
-import 'package:expensy/database/db_helper.dart';
-import 'package:expensy/investments/investment_models.dart';
-import 'package:expensy/investments/investment_repository.dart';
-import 'package:expensy/models/models.dart';
-import 'package:expensy/providers/app_provider.dart';
-import 'package:expensy/services/billing_cycle.dart';
-import 'package:expensy/services/import_rules_service.dart';
-import 'package:expensy/services/transaction_metadata_service.dart';
-import 'package:expensy/sync/ledger_capture.dart';
+import 'package:nexo/database/database_platform.dart';
+import 'package:nexo/database/db_helper.dart';
+import 'package:nexo/investments/investment_models.dart';
+import 'package:nexo/investments/investment_repository.dart';
+import 'package:nexo/models/models.dart';
+import 'package:nexo/providers/app_provider.dart';
+import 'package:nexo/services/billing_cycle.dart';
+import 'package:nexo/services/import_rules_service.dart';
+import 'package:nexo/services/transaction_metadata_service.dart';
+import 'package:nexo/sync/ledger_capture.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -136,8 +136,8 @@ void main() {
     await LedgerCapture.install(await DBHelper.database);
     await DBHelper.close();
     await Directory(p.join(root.path, 'pc')).create();
-    await File(p.join(root.path, 'phone', 'expensy.db'))
-        .copy(p.join(root.path, 'pc', 'expensy.db'));
+    await File(p.join(root.path, 'phone', 'nexo.db'))
+        .copy(p.join(root.path, 'pc', 'nexo.db'));
     await use('phone');
   });
 

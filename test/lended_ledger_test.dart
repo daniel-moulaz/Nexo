@@ -1,10 +1,10 @@
 import 'dart:io';
 
-import 'package:expensy/database/database_platform.dart';
-import 'package:expensy/database/db_helper.dart';
-import 'package:expensy/models/models.dart';
-import 'package:expensy/providers/app_provider.dart';
-import 'package:expensy/services/lended_ledger.dart';
+import 'package:nexo/database/database_platform.dart';
+import 'package:nexo/database/db_helper.dart';
+import 'package:nexo/models/models.dart';
+import 'package:nexo/providers/app_provider.dart';
+import 'package:nexo/services/lended_ledger.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
 

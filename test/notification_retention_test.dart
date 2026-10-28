@@ -1,8 +1,8 @@
 import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
-import 'package:expensy/database/db_helper.dart';
-import 'package:expensy/services/notification_inbox.dart';
+import 'package:nexo/database/db_helper.dart';
+import 'package:nexo/services/notification_inbox.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();

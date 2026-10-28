@@ -1,8 +1,8 @@
-import 'package:expensy/services/current_invoice_summary.dart';
+import 'package:nexo/services/current_invoice_summary.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:expensy/models/models.dart';
-import 'package:expensy/services/card_commitment.dart';
-import 'package:expensy/services/transaction_metadata_service.dart';
+import 'package:nexo/models/models.dart';
+import 'package:nexo/services/card_commitment.dart';
+import 'package:nexo/services/transaction_metadata_service.dart';
 
 void main() {
   Account account(String id, String type, double balance,

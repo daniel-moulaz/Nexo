@@ -1,9 +1,9 @@
-import 'package:expensy/models/models.dart';
-import 'package:expensy/models/transaction_metadata.dart';
-import 'package:expensy/services/month_review.dart';
-import 'package:expensy/l10n/app_localizations.dart';
-import 'package:expensy/providers/app_provider.dart';
-import 'package:expensy/screens/month_review_screen.dart';
+import 'package:nexo/models/models.dart';
+import 'package:nexo/models/transaction_metadata.dart';
+import 'package:nexo/services/month_review.dart';
+import 'package:nexo/l10n/app_localizations.dart';
+import 'package:nexo/providers/app_provider.dart';
+import 'package:nexo/screens/month_review_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:intl/date_symbol_data_local.dart';

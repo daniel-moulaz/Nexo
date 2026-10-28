@@ -1,6 +1,6 @@
-import 'package:expensy/services/balance_check.dart';
-import 'package:expensy/services/bank_snapshots.dart';
-import 'package:expensy/services/pluggy_inbox.dart';
+import 'package:nexo/services/balance_check.dart';
+import 'package:nexo/services/bank_snapshots.dart';
+import 'package:nexo/services/pluggy_inbox.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 class _Remote implements PluggyRemote {

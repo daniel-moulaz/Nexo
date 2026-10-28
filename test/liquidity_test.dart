@@ -1,8 +1,8 @@
-import 'package:expensy/investments/investment_models.dart';
-import 'package:expensy/models/models.dart';
-import 'package:expensy/services/cash_forecast.dart';
-import 'package:expensy/services/cash_timeline.dart';
-import 'package:expensy/services/liquidity.dart';
+import 'package:nexo/investments/investment_models.dart';
+import 'package:nexo/models/models.dart';
+import 'package:nexo/services/cash_forecast.dart';
+import 'package:nexo/services/cash_timeline.dart';
+import 'package:nexo/services/liquidity.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {

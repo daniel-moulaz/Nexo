@@ -1,5 +1,5 @@
-import 'package:expensy/screens/help_screen.dart';
-import 'package:expensy/services/help_topics.dart';
+import 'package:nexo/screens/help_screen.dart';
+import 'package:nexo/services/help_topics.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 

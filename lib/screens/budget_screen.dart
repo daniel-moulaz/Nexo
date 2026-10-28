@@ -491,7 +491,7 @@ class _GoalCard extends StatelessWidget {
         onTap: () {
           Navigator.push(
             context,
-            ExpensyRoute(builder: (_) => SavingsGoalDetailScreen(goal: goal)),
+            NexoRoute(builder: (_) => SavingsGoalDetailScreen(goal: goal)),
           );
         },
         onLongPress: () async {

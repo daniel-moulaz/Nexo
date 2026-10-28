@@ -150,7 +150,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       }
       if (mounted) {
         Navigator.pushReplacement(
-            context, ExpensyRoute(builder: (_) => const MainShell()));
+            context, NexoRoute(builder: (_) => const MainShell()));
       }
     } on FormatException catch (e) {
       if (mounted) {
@@ -191,7 +191,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       }
       if (mounted) {
         Navigator.pushReplacement(
-            context, ExpensyRoute(builder: (_) => const MainShell()));
+            context, NexoRoute(builder: (_) => const MainShell()));
       }
     } on FormatException catch (e) {
       if (mounted) {
@@ -245,7 +245,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
     if (mounted) {
       Navigator.pushReplacement(
-          context, ExpensyRoute(builder: (_) => const MainShell()));
+          context, NexoRoute(builder: (_) => const MainShell()));
     }
   }
 
@@ -943,8 +943,9 @@ class _PageFour extends StatelessWidget {
                           style: TextStyle(
                               fontSize: 12,
                               fontWeight: FontWeight.w600,
-                              color:
-                                  type == opt.$1 ? Colors.white : cs.onSurface)),
+                              color: type == opt.$1
+                                  ? Colors.white
+                                  : cs.onSurface)),
                     ]),
                   ),
                 ),

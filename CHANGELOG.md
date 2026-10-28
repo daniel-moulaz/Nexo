@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.12.10] - 2026-10-28
+### Desvinculação do Expensy
+- O pacote Dart chama-se `nexo` (405 imports reescritos); `ExpensyApp`, `ExpensyRoute` e `ExpensySlideUpRoute` viraram `NexoApp`, `NexoRoute` e `NexoSlideUpRoute`.
+- O banco local passa a `nexo.db`: na primeira abertura o app dobra o write-ahead log no arquivo, fecha e renomeia `expensy.db` e seus sidecars; se a renomeação falhar, o nome antigo continua valendo. Coberto por `test/database_rename_test.dart`.
+- Canais nativos `nexo/quick_add`, `nexo/quick_add_stream` e `nexo/privacy`; projeto CMake `nexo`; sonda nativa do listener removida.
+- `LICENSE` com o aviso do Nexo acima do aviso MIT original (exigido pela licença do código herdado); README e docs sem o nome antigo fora do histórico. Mantidos por decisão do dono: `applicationId` `com.ma.expensy` e os ids internos dos canais de notificação. Relatório em `docs/NEXO_DESVINCULACAO_EXPENSY_2026_10.md`.
+
 ## [1.12.9] - 2026-10-27
 ### Removido
 Depois do Open Finance e do conector MCP, estas partes faziam de novo o que outras já fazem (análise em `docs/REVISAO_SOBREPOSICOES_2026_10.md`):

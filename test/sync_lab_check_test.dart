@@ -1,6 +1,6 @@
-import 'package:expensy/sync/supabase_sync_transport.dart';
-import 'package:expensy/sync/sync_lab_check.dart';
-import 'package:expensy/sync/sync_protocol.dart';
+import 'package:nexo/sync/supabase_sync_transport.dart';
+import 'package:nexo/sync/sync_lab_check.dart';
+import 'package:nexo/sync/sync_protocol.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 

@@ -621,7 +621,7 @@ class _AddTypeSheet extends StatelessWidget {
                 Navigator.pop(context);
                 Navigator.push(
                     context,
-                    ExpensySlideUpRoute(
+                    NexoSlideUpRoute(
                         builder: (_) =>
                             const AddTransactionScreen(initialType: 'income')));
               },
@@ -636,7 +636,7 @@ class _AddTypeSheet extends StatelessWidget {
                 Navigator.pop(context);
                 Navigator.push(
                     context,
-                    ExpensySlideUpRoute(
+                    NexoSlideUpRoute(
                         builder: (_) => const AddTransactionScreen(
                             initialType: 'expense')));
               },

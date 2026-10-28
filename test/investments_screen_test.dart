@@ -11,13 +11,13 @@ import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
-import 'package:expensy/database/db_helper.dart';
-import 'package:expensy/investments/cdi_benchmark.dart';
-import 'package:expensy/investments/investment_models.dart';
-import 'package:expensy/investments/investment_repository.dart';
-import 'package:expensy/screens/investments_screen.dart';
-import 'package:expensy/providers/app_provider.dart';
-import 'package:expensy/l10n/app_localizations.dart';
+import 'package:nexo/database/db_helper.dart';
+import 'package:nexo/investments/cdi_benchmark.dart';
+import 'package:nexo/investments/investment_models.dart';
+import 'package:nexo/investments/investment_repository.dart';
+import 'package:nexo/screens/investments_screen.dart';
+import 'package:nexo/providers/app_provider.dart';
+import 'package:nexo/l10n/app_localizations.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();

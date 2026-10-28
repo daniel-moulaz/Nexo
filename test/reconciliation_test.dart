@@ -1,6 +1,6 @@
-import 'package:expensy/models/models.dart';
-import 'package:expensy/models/transaction_metadata.dart';
-import 'package:expensy/services/reconciliation.dart';
+import 'package:nexo/models/models.dart';
+import 'package:nexo/models/transaction_metadata.dart';
+import 'package:nexo/services/reconciliation.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 /// The October 2026 session (fictitious names), section 7 of the plan.

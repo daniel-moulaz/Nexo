@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
   Default (pre-Android-12) widget tile background: a solid circle in
-  Expensy's default 'violet' seed colour (kSeedColours in app_theme.dart).
+  the app's default 'violet' seed colour (kSeedColours in app_theme.dart).
   Pre-31 devices can't read the system's dynamic/monochrome palette, so a
   static brand colour is the correct fallback here — see
   drawable-v31/widget_background.xml for the themed version.

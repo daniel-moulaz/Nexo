@@ -1,8 +1,8 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:expensy/services/cash_forecast.dart';
-import 'package:expensy/services/cash_timeline.dart';
-import 'package:expensy/models/models.dart';
-import 'package:expensy/services/transaction_metadata_service.dart';
+import 'package:nexo/services/cash_forecast.dart';
+import 'package:nexo/services/cash_timeline.dart';
+import 'package:nexo/models/models.dart';
+import 'package:nexo/services/transaction_metadata_service.dart';
 
 void main() {
   final now = DateTime(2026, 10, 13, 16);

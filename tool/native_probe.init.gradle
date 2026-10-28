@@ -1,9 +1,0 @@
-// Explicitly opt-in native-only QA. Does not change production identity/signing.
-gradle.beforeProject { project ->
-    project.plugins.withId('com.android.application') {
-        project.androidComponents.finalizeDsl { android ->
-            android.defaultConfig.testInstrumentationRunner = 'com.ma.expensy.NotificationProbe'
-            android.buildTypes.debug.applicationIdSuffix = '.nativeqa'
-        }
-    }
-}

@@ -1,10 +1,10 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:expensy/models/models.dart';
-import 'package:expensy/services/financial_analysis.dart';
-import 'package:expensy/services/transaction_metadata_service.dart';
-import 'package:expensy/services/notification_preferences.dart';
-import 'package:expensy/services/entry_defaults.dart';
+import 'package:nexo/models/models.dart';
+import 'package:nexo/services/financial_analysis.dart';
+import 'package:nexo/services/transaction_metadata_service.dart';
+import 'package:nexo/services/notification_preferences.dart';
+import 'package:nexo/services/entry_defaults.dart';
 
 void main() {
   AppTransaction tx(String id,

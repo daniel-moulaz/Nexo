@@ -1,6 +1,6 @@
-import 'package:expensy/models/models.dart';
-import 'package:expensy/models/transaction_metadata.dart';
-import 'package:expensy/services/week_summary.dart';
+import 'package:nexo/models/models.dart';
+import 'package:nexo/models/transaction_metadata.dart';
+import 'package:nexo/services/week_summary.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 AppTransaction _tx(String id, double amount, DateTime date,

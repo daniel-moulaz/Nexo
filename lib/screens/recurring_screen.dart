@@ -56,7 +56,7 @@ class _RecurringScreenState extends State<RecurringScreen>
     final app = context.read<AppProvider>();
     Navigator.push(
         context,
-        ExpensyRoute(
+        NexoRoute(
             builder: (_) => RecurringDetailScreen(
                 recurring: r,
                 fmt: (v) => formatAmount(
@@ -260,7 +260,7 @@ class _RecurringScreenState extends State<RecurringScreen>
               NexoChipRow(children: [
                 TextButton.icon(
                     onPressed: () => Navigator.push(context,
-                        ExpensyRoute(builder: (_) => const AgendaScreen())),
+                        NexoRoute(builder: (_) => const AgendaScreen())),
                     icon: const Icon(Icons.event_note),
                     label: const Text('Ver saldo previsto')),
               ]),
@@ -436,7 +436,7 @@ class _RecurringTile extends StatelessWidget {
       child: InkWell(
         borderRadius: BorderRadius.circular(20),
         onTap: () => Navigator.of(context).push(
-          ExpensyRoute(
+          NexoRoute(
             builder: (_) => RecurringDetailScreen(
               recurring: recurring,
               fmt: (value) => formatAmount(value, currency),

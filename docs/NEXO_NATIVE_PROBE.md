@@ -1,3 +1,8 @@
+> **Obsoleto desde a 1.12.9.** O listener de notificações saiu do app (ver
+> `docs/REVISAO_SOBREPOSICOES_2026_10.md`), e com ele o `NotificationProbe.kt`
+> e o `tool/native_probe.init.gradle` descritos abaixo. O texto fica como
+> registro do método.
+
 # Validação nativa isolada de notificações
 
 Este ensaio usa o listener, parser e fila criptografada reais em um Android descartável. Não abre a interface Flutter nem valida a confirmação SQLite/Dart. O APK gerado sem assets Flutter é exclusivo de teste, não uma atualização distribuível.

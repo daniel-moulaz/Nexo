@@ -8,12 +8,12 @@ import 'package:http/testing.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:expensy/investments/investment_history.dart';
-import 'package:expensy/investments/investment_quotes.dart';
-import 'package:expensy/investments/investment_models.dart';
-import 'package:expensy/providers/app_provider.dart';
-import 'package:expensy/widgets/investment_price_chart.dart';
-import 'package:expensy/widgets/portfolio_charts.dart';
+import 'package:nexo/investments/investment_history.dart';
+import 'package:nexo/investments/investment_quotes.dart';
+import 'package:nexo/investments/investment_models.dart';
+import 'package:nexo/providers/app_provider.dart';
+import 'package:nexo/widgets/investment_price_chart.dart';
+import 'package:nexo/widgets/portfolio_charts.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();

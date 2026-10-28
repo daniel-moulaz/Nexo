@@ -1,13 +1,13 @@
 import 'dart:io';
 
-import 'package:expensy/database/database_platform.dart';
-import 'package:expensy/database/db_helper.dart';
-import 'package:expensy/l10n/app_localizations.dart';
-import 'package:expensy/models/models.dart';
-import 'package:expensy/providers/app_provider.dart';
-import 'package:expensy/screens/due_plan_screen.dart';
-import 'package:expensy/services/cash_forecast.dart';
-import 'package:expensy/services/liquidity.dart';
+import 'package:nexo/database/database_platform.dart';
+import 'package:nexo/database/db_helper.dart';
+import 'package:nexo/l10n/app_localizations.dart';
+import 'package:nexo/models/models.dart';
+import 'package:nexo/providers/app_provider.dart';
+import 'package:nexo/screens/due_plan_screen.dart';
+import 'package:nexo/services/cash_forecast.dart';
+import 'package:nexo/services/liquidity.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';

@@ -18,10 +18,9 @@ class QuickAddService {
 
   static const String routeQuickAdd = 'quick_add_transaction';
 
-  static const MethodChannel _methodChannel =
-      MethodChannel('com.ma.expensy/quick_add');
+  static const MethodChannel _methodChannel = MethodChannel('nexo/quick_add');
   static const EventChannel _eventChannel =
-      EventChannel('com.ma.expensy/quick_add_stream');
+      EventChannel('nexo/quick_add_stream');
 
   Stream<String?>? _routeStream;
 

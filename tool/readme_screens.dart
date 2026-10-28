@@ -8,13 +8,13 @@
 import 'dart:io';
 import 'dart:ui' as ui;
 
-import 'package:expensy/database/db_helper.dart';
-import 'package:expensy/l10n/app_localizations.dart';
-import 'package:expensy/models/models.dart';
-import 'package:expensy/models/transaction_metadata.dart';
-import 'package:expensy/providers/app_provider.dart';
-import 'package:expensy/screens/main_shell.dart';
-import 'package:expensy/theme/app_theme.dart';
+import 'package:nexo/database/db_helper.dart';
+import 'package:nexo/l10n/app_localizations.dart';
+import 'package:nexo/models/models.dart';
+import 'package:nexo/models/transaction_metadata.dart';
+import 'package:nexo/providers/app_provider.dart';
+import 'package:nexo/screens/main_shell.dart';
+import 'package:nexo/theme/app_theme.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';

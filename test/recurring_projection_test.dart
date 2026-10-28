@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:expensy/models/models.dart';
-import 'package:expensy/services/recurring_projection.dart';
+import 'package:nexo/models/models.dart';
+import 'package:nexo/services/recurring_projection.dart';
 
 void main() {
   RecurringPayment recurring(

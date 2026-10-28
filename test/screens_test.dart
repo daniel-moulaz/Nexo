@@ -9,17 +9,17 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:expensy/models/models.dart';
-import 'package:expensy/database/db_helper.dart';
-import 'package:expensy/providers/app_provider.dart';
-import 'package:expensy/l10n/app_localizations.dart';
-import 'package:expensy/screens/accounts_screen.dart';
-import 'package:expensy/screens/add_transaction_screen.dart';
-import 'package:expensy/screens/budget_screen.dart';
-import 'package:expensy/screens/recurring_screen.dart';
-import 'package:expensy/screens/finance_home_screen.dart';
-import 'package:expensy/screens/more_screen.dart';
-import 'package:expensy/screens/agenda_screen.dart';
+import 'package:nexo/models/models.dart';
+import 'package:nexo/database/db_helper.dart';
+import 'package:nexo/providers/app_provider.dart';
+import 'package:nexo/l10n/app_localizations.dart';
+import 'package:nexo/screens/accounts_screen.dart';
+import 'package:nexo/screens/add_transaction_screen.dart';
+import 'package:nexo/screens/budget_screen.dart';
+import 'package:nexo/screens/recurring_screen.dart';
+import 'package:nexo/screens/finance_home_screen.dart';
+import 'package:nexo/screens/more_screen.dart';
+import 'package:nexo/screens/agenda_screen.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();

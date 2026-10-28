@@ -1,8 +1,8 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:expensy/utils/finance_input.dart';
-import 'package:expensy/services/billing_cycle.dart';
-import 'package:expensy/services/ofx_parser.dart';
-import 'package:expensy/models/models.dart';
+import 'package:nexo/utils/finance_input.dart';
+import 'package:nexo/services/billing_cycle.dart';
+import 'package:nexo/services/ofx_parser.dart';
+import 'package:nexo/models/models.dart';
 
 void main() {
   test('Brazilian and decimal money input, rejecting malformed values', () {

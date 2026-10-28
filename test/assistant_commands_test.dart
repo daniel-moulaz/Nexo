@@ -1,13 +1,13 @@
 import 'dart:io';
 
-import 'package:expensy/database/database_platform.dart';
-import 'package:expensy/database/db_helper.dart';
-import 'package:expensy/models/models.dart';
-import 'package:expensy/providers/app_provider.dart';
-import 'package:expensy/sync/assistant_commands.dart';
-import 'package:expensy/sync/assistant_more_commands.dart';
-import 'package:expensy/investments/investment_repository.dart';
-import 'package:expensy/models/transaction_metadata.dart';
+import 'package:nexo/database/database_platform.dart';
+import 'package:nexo/database/db_helper.dart';
+import 'package:nexo/models/models.dart';
+import 'package:nexo/providers/app_provider.dart';
+import 'package:nexo/sync/assistant_commands.dart';
+import 'package:nexo/sync/assistant_more_commands.dart';
+import 'package:nexo/investments/investment_repository.dart';
+import 'package:nexo/models/transaction_metadata.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';

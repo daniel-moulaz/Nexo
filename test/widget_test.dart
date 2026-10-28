@@ -1,13 +1,13 @@
 // test/widget_test.dart
 import 'package:flutter_test/flutter_test.dart';
-import 'package:expensy/main.dart';
+import 'package:nexo/main.dart';
 import 'package:provider/provider.dart';
-import 'package:expensy/providers/app_provider.dart';
+import 'package:nexo/providers/app_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter/material.dart';
-import 'package:expensy/widgets/security_gate.dart';
-import 'package:expensy/services/nexo_security.dart';
+import 'package:nexo/widgets/security_gate.dart';
+import 'package:nexo/services/nexo_security.dart';
 import 'package:local_auth/local_auth.dart';
 
 void main() {
@@ -45,8 +45,8 @@ void main() {
     SharedPreferences.setMockInitialValues({});
     GoogleFonts.config.allowRuntimeFetching = false;
     await tester.pumpWidget(ChangeNotifierProvider(
-        create: (_) => AppProvider(), child: const ExpensyApp()));
-    expect(find.byType(ExpensyApp), findsOneWidget);
+        create: (_) => AppProvider(), child: const NexoApp()));
+    expect(find.byType(NexoApp), findsOneWidget);
   });
 }
 

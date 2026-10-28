@@ -1,9 +1,9 @@
 import 'dart:convert';
 import 'dart:io';
 
-import 'package:expensy/models/models.dart';
-import 'package:expensy/services/financial_analysis.dart';
-import 'package:expensy/services/transaction_metadata_service.dart';
+import 'package:nexo/models/models.dart';
+import 'package:nexo/services/financial_analysis.dart';
+import 'package:nexo/services/transaction_metadata_service.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 /// Writes/validates test/fixtures/mcp_parity.json: synthetic rows as the

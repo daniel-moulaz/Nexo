@@ -293,12 +293,12 @@ ThemeData _base(ColorScheme cs, String appFont) {
   );
 }
 
-class ExpensyRoute<T> extends MaterialPageRoute<T> {
-  ExpensyRoute({required super.builder, super.settings});
+class NexoRoute<T> extends MaterialPageRoute<T> {
+  NexoRoute({required super.builder, super.settings});
 }
 
-class ExpensySlideUpRoute<T> extends PageRouteBuilder<T> {
-  ExpensySlideUpRoute({required WidgetBuilder builder, super.settings})
+class NexoSlideUpRoute<T> extends PageRouteBuilder<T> {
+  NexoSlideUpRoute({required WidgetBuilder builder, super.settings})
       : super(
           pageBuilder: (context, animation, secondaryAnimation) =>
               builder(context),

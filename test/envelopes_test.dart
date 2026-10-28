@@ -1,7 +1,7 @@
-import 'package:expensy/models/models.dart';
-import 'package:expensy/models/transaction_metadata.dart';
-import 'package:expensy/screens/envelopes_sheet.dart';
-import 'package:expensy/services/envelopes.dart';
+import 'package:nexo/models/models.dart';
+import 'package:nexo/models/transaction_metadata.dart';
+import 'package:nexo/screens/envelopes_sheet.dart';
+import 'package:nexo/services/envelopes.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 

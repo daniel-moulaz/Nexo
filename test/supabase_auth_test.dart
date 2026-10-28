@@ -1,9 +1,9 @@
 import 'dart:convert';
 
-import 'package:expensy/sync/supabase_auth.dart';
-import 'package:expensy/sync/supabase_sync_transport.dart';
-import 'package:expensy/sync/sync_config.dart';
-import 'package:expensy/sync/sync_protocol.dart';
+import 'package:nexo/sync/supabase_auth.dart';
+import 'package:nexo/sync/supabase_sync_transport.dart';
+import 'package:nexo/sync/sync_config.dart';
+import 'package:nexo/sync/sync_protocol.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;

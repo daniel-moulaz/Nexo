@@ -103,19 +103,19 @@ Future<void> startNexo() async {
   runApp(
     ChangeNotifierProvider.value(
       value: provider,
-      child: const ExpensyApp(),
+      child: const NexoApp(),
     ),
   );
 }
 
-class ExpensyApp extends StatefulWidget {
-  const ExpensyApp({super.key});
+class NexoApp extends StatefulWidget {
+  const NexoApp({super.key});
 
   @override
-  State<ExpensyApp> createState() => _ExpensyAppState();
+  State<NexoApp> createState() => _NexoAppState();
 }
 
-class _ExpensyAppState extends State<ExpensyApp> {
+class _NexoAppState extends State<NexoApp> {
   StreamSubscription<String?>? _quickAddSub;
   StreamSubscription<String>? _reminderSub;
 
@@ -156,7 +156,7 @@ class _ExpensyAppState extends State<ExpensyApp> {
     if (!app.settings.onboarded) return;
 
     rootNavigatorKey.currentState?.push(
-      ExpensySlideUpRoute(builder: (_) => const AddTransactionScreen()),
+      NexoSlideUpRoute(builder: (_) => const AddTransactionScreen()),
     );
   }
 

@@ -55,7 +55,7 @@ As imagens abaixo são da versão 1.12.7, geradas com **dados fictícios** a par
 
 ## Estado do projeto
 
-Versão de referência: **1.12.9+46** (outubro de 2026). Detalhes em [CHANGELOG.md](CHANGELOG.md) e [docs/PLAN.md](docs/PLAN.md).
+Versão de referência: **1.12.10+47** (outubro de 2026). Detalhes em [CHANGELOG.md](CHANGELOG.md) e [docs/PLAN.md](docs/PLAN.md).
 
 | Área | Situação |
 | --- | --- |
@@ -142,7 +142,7 @@ node tool/test_pluggy.mjs         # Open Finance
 - **TypeScript (Deno):** Edge Functions do Open Finance e do assistente.
 - **Testes:** regras contábeis, persistência, sincronização, importação/exportação, segurança, navegação e layouts.
 
-Os identificadores técnicos `com.ma.expensy`, `expensy.db` e o nome do pacote Dart `expensy` são preservados para compatibilidade. O nome apresentado ao usuário é **Nexo**.
+O identificador Android `com.ma.expensy` é preservado para que o app instalado continue o mesmo, com os dados no lugar; é o único nome herdado que resta no código. O pacote Dart chama-se `nexo` e o banco local, `nexo.db` (renomeado sozinho na primeira abertura da 1.12.9).
 
 ## Documentação
 

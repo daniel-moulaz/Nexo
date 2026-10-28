@@ -5,13 +5,13 @@ import 'package:intl/date_symbol_data_local.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
-import 'package:expensy/database/db_helper.dart';
-import 'package:expensy/l10n/app_localizations.dart';
-import 'package:expensy/models/models.dart';
-import 'package:expensy/models/transaction_metadata.dart';
-import 'package:expensy/providers/app_provider.dart';
-import 'package:expensy/screens/budget_screen.dart';
-import 'package:expensy/services/budget_insights.dart';
+import 'package:nexo/database/db_helper.dart';
+import 'package:nexo/l10n/app_localizations.dart';
+import 'package:nexo/models/models.dart';
+import 'package:nexo/models/transaction_metadata.dart';
+import 'package:nexo/providers/app_provider.dart';
+import 'package:nexo/screens/budget_screen.dart';
+import 'package:nexo/services/budget_insights.dart';
 
 Budget _budget(double amount, {String period = 'monthly'}) => Budget(
     id: 'b',

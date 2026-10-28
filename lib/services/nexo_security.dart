@@ -36,7 +36,7 @@ class PinVerifier {
 
 class NexoSecurity extends ChangeNotifier {
   static final instance = NexoSecurity();
-  static const channel = MethodChannel('com.ma.expensy/automation');
+  static const channel = MethodChannel('nexo/privacy');
   static String get storageKey => DesktopProfile.isTest
       ? 'nexo_windows_qa${DesktopProfile.qaSuffix}_security_v1'
       : 'nexo_security_v1';

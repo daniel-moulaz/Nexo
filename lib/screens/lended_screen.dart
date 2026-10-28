@@ -164,7 +164,7 @@ class _PersonCard extends StatelessWidget {
       child: InkWell(
         borderRadius: BorderRadius.circular(16),
         onTap: () => Navigator.push(context,
-            ExpensyRoute(builder: (_) => LendedPersonScreen(person: person))),
+            NexoRoute(builder: (_) => LendedPersonScreen(person: person))),
         child: Padding(
           padding: const EdgeInsets.all(14),
           child: Row(children: [

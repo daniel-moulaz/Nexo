@@ -1,10 +1,10 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:expensy/models/models.dart';
-import 'package:expensy/services/cash_forecast.dart';
-import 'package:expensy/services/import_rules_service.dart';
-import 'package:expensy/services/transaction_filter.dart';
-import 'package:expensy/services/transaction_metadata_service.dart';
-import 'package:expensy/services/finance_export_service.dart';
+import 'package:nexo/models/models.dart';
+import 'package:nexo/services/cash_forecast.dart';
+import 'package:nexo/services/import_rules_service.dart';
+import 'package:nexo/services/transaction_filter.dart';
+import 'package:nexo/services/transaction_metadata_service.dart';
+import 'package:nexo/services/finance_export_service.dart';
 
 void main() {
   final bank = Account(
@@ -53,12 +53,25 @@ void main() {
           invoicePayments: payments,
           convert: (v, c) => v);
   test('Old skipped installment remains in forecast until explicitly paid', () {
-    final missed = RecurringHistoryEntry(id: 'old-skip', recurringId: 'r',
-        action: 'skipped', date: DateTime(2026, 9, 10), amount: 80, currency: 'BRL');
-    final r = RecurringPayment(id: 'r', name: 'Parcelada', accountId: 'bank',
-        categoryId: 'bills', amount: 100, freqVal: 1, freqUnit: 'months',
-        startDate: missed.date, nextDate: DateTime(2026, 10, 10),
-        endDate: missed.date, recurringType: 'installment',
+    final missed = RecurringHistoryEntry(
+        id: 'old-skip',
+        recurringId: 'r',
+        action: 'skipped',
+        date: DateTime(2026, 9, 10),
+        amount: 80,
+        currency: 'BRL');
+    final r = RecurringPayment(
+        id: 'r',
+        name: 'Parcelada',
+        accountId: 'bank',
+        categoryId: 'bills',
+        amount: 100,
+        freqVal: 1,
+        freqUnit: 'months',
+        startDate: missed.date,
+        nextDate: DateTime(2026, 10, 10),
+        endDate: missed.date,
+        recurringType: 'installment',
         skippedOccurrences: [missed]);
     final result = forecast(recurring: [r], accounts: [bank]);
     expect(result.projected, 920);

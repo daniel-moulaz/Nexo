@@ -1,7 +1,7 @@
-import 'package:expensy/models/models.dart';
-import 'package:expensy/models/transaction_metadata.dart';
-import 'package:expensy/services/budget_insights.dart';
-import 'package:expensy/services/spendable.dart';
+import 'package:nexo/models/models.dart';
+import 'package:nexo/models/transaction_metadata.dart';
+import 'package:nexo/services/budget_insights.dart';
+import 'package:nexo/services/spendable.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 /// The persona of the plan: R$ 1.500 salary + R$ 250 grant, fixed bills,

@@ -8,25 +8,25 @@ import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:excel/excel.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:intl/date_symbol_data_local.dart';
-import 'package:expensy/database/database_platform.dart';
-import 'package:expensy/database/db_helper.dart';
-import 'package:expensy/models/models.dart';
-import 'package:expensy/providers/app_provider.dart';
-import 'package:expensy/services/notification_service.dart';
-import 'package:expensy/services/lended_notification_service.dart';
-import 'package:expensy/services/loan_reminder_service.dart';
-import 'package:expensy/services/credit_reminder_service.dart';
-import 'package:expensy/services/daily_reminder_service.dart';
-import 'package:expensy/services/budget_notification_service.dart';
-import 'package:expensy/services/financial_reminders.dart';
-import 'package:expensy/services/quick_add_service.dart';
-import 'package:expensy/services/nexo_security.dart';
-import 'package:expensy/services/file_output.dart';
-import 'package:expensy/services/finance_export_service.dart';
-import 'package:expensy/services/transaction_metadata_service.dart';
-import 'package:expensy/services/financial_analysis.dart';
-import 'package:expensy/services/card_invoice_service.dart';
-import 'package:expensy/utils/finance_input.dart';
+import 'package:nexo/database/database_platform.dart';
+import 'package:nexo/database/db_helper.dart';
+import 'package:nexo/models/models.dart';
+import 'package:nexo/providers/app_provider.dart';
+import 'package:nexo/services/notification_service.dart';
+import 'package:nexo/services/lended_notification_service.dart';
+import 'package:nexo/services/loan_reminder_service.dart';
+import 'package:nexo/services/credit_reminder_service.dart';
+import 'package:nexo/services/daily_reminder_service.dart';
+import 'package:nexo/services/budget_notification_service.dart';
+import 'package:nexo/services/financial_reminders.dart';
+import 'package:nexo/services/quick_add_service.dart';
+import 'package:nexo/services/nexo_security.dart';
+import 'package:nexo/services/file_output.dart';
+import 'package:nexo/services/finance_export_service.dart';
+import 'package:nexo/services/transaction_metadata_service.dart';
+import 'package:nexo/services/financial_analysis.dart';
+import 'package:nexo/services/card_invoice_service.dart';
+import 'package:nexo/utils/finance_input.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -91,7 +91,7 @@ void main() {
 
   test('Windows opens schema 23 in configured user data and survives restart',
       () async {
-    expect((await DBHelper.database).path, endsWith('expensy.db'));
+    expect((await DBHelper.database).path, endsWith('nexo.db'));
     expect((await DBHelper.database).path, startsWith(directory.path));
     expect(
         await (await DBHelper.database).getVersion(), DBHelper.schemaVersion);

@@ -107,7 +107,7 @@ class _LoansScreenState extends State<LoansScreen> {
                               barColor: _barColor(app.loanProgress(l)),
                               onTap: () => Navigator.push(
                                 context,
-                                ExpensyRoute(
+                                NexoRoute(
                                     builder: (_) => LoanDetailScreen(loan: l)),
                               ),
                               onLongPress: () =>
@@ -136,7 +136,7 @@ class _LoansScreenState extends State<LoansScreen> {
                                 barColor: const Color(0xFF2E7D32),
                                 onTap: () => Navigator.push(
                                   context,
-                                  ExpensyRoute(
+                                  NexoRoute(
                                       builder: (_) =>
                                           LoanDetailScreen(loan: l)),
                                 ),

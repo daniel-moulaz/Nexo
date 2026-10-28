@@ -24,9 +24,8 @@ import io.flutter.plugin.common.MethodChannel
  *                  event instead, since Dart isn't calling anything at that
  *                  point.
  *
- * The "com.ma.expensy/automation" channel is kept for the privacy flags
- * (hide recents, block capture) that the security settings set; the bank
- * notification listener that used to share it was retired in 1.12.9.
+ * The "nexo/privacy" channel carries the privacy flags (hide recents,
+ * block capture) that the security settings set.
  */
 class MainActivity : FlutterFragmentActivity() {
     private fun privacy() {
@@ -39,13 +38,13 @@ class MainActivity : FlutterFragmentActivity() {
         super.onCreate(savedInstanceState)
         privacy()
     }
-    private val methodChannelName = "com.ma.expensy/quick_add"
-    private val eventChannelName = "com.ma.expensy/quick_add_stream"
+    private val methodChannelName = "nexo/quick_add"
+    private val eventChannelName = "nexo/quick_add_stream"
     private var eventSink: EventChannel.EventSink? = null
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
-        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "com.ma.expensy/automation")
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "nexo/privacy")
             .setMethodCallHandler { call, result ->
                 val p = getSharedPreferences("nexo_automation", 0)
                 try {

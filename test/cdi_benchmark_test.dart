@@ -1,7 +1,7 @@
 import 'dart:convert';
 
-import 'package:expensy/investments/cdi_benchmark.dart';
-import 'package:expensy/investments/investment_models.dart';
+import 'package:nexo/investments/cdi_benchmark.dart';
+import 'package:nexo/investments/investment_models.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';

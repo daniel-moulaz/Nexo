@@ -1,11 +1,11 @@
 import 'dart:convert';
 import 'dart:io';
 
-import 'package:expensy/models/models.dart';
-import 'package:expensy/services/finance_rules.dart';
-import 'package:expensy/services/transaction_metadata_service.dart';
-import 'package:expensy/sync/sync_protocol.dart';
-import 'package:expensy/sync/sync_store.dart';
+import 'package:nexo/models/models.dart';
+import 'package:nexo/services/finance_rules.dart';
+import 'package:nexo/services/transaction_metadata_service.dart';
+import 'package:nexo/sync/sync_protocol.dart';
+import 'package:nexo/sync/sync_store.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 

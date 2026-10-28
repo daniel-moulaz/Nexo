@@ -2,14 +2,14 @@ import 'dart:io';
 import 'dart:convert';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:expensy/database/database_platform.dart';
-import 'package:expensy/database/db_helper.dart';
-import 'package:expensy/models/models.dart';
-import 'package:expensy/services/transaction_metadata_service.dart';
-import 'package:expensy/investments/investment_models.dart';
-import 'package:expensy/investments/investment_repository.dart';
-import 'package:expensy/services/finance_rules.dart';
-import 'package:expensy/providers/app_provider.dart';
+import 'package:nexo/database/database_platform.dart';
+import 'package:nexo/database/db_helper.dart';
+import 'package:nexo/models/models.dart';
+import 'package:nexo/services/transaction_metadata_service.dart';
+import 'package:nexo/investments/investment_models.dart';
+import 'package:nexo/investments/investment_repository.dart';
+import 'package:nexo/services/finance_rules.dart';
+import 'package:nexo/providers/app_provider.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
