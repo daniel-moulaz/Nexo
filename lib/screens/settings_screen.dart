@@ -8,7 +8,6 @@ import '../widgets/shared_widgets.dart';
 import '../l10n/app_localizations.dart';
 import '../utils/haptics.dart';
 import 'package:package_info_plus/package_info_plus.dart';
-import 'automation_settings_screen.dart';
 import 'reminder_settings_screen.dart';
 import 'security_settings_screen.dart';
 import '../services/platform_capabilities.dart';
@@ -35,16 +34,6 @@ class SettingsScreen extends StatelessWidget {
             children: [
               Card(
                   child: Column(children: [
-                ListTile(
-                    leading: const Icon(Icons.auto_awesome_outlined),
-                    title: const Text('Automação'),
-                    subtitle: const Text(
-                        'Sugestões locais de notificações bancárias'),
-                    trailing: const Icon(Icons.chevron_right),
-                    onTap: () => Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                            builder: (_) => const AutomationSettingsScreen()))),
                 ListTile(
                     leading: const Icon(Icons.notifications_outlined),
                     title: const Text('Notificações'),

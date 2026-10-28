@@ -88,7 +88,7 @@ class _ReminderSettingsScreenState extends State<ReminderSettingsScreen> {
                 contentPadding: EdgeInsets.zero,
                 title: const Text('Fechamento semanal'),
                 subtitle: Text(
-                    'Domingo às ${prefs!['weeklyTime'] ?? '22:00'}. Abre a revisão dos últimos 7 dias, calculada no aparelho.'),
+                    'Domingo às ${prefs!['weeklyTime'] ?? '22:00'}. Abre o \"Mês em revisão\", calculado no aparelho.'),
                 value: prefs!['weekly'] == true,
                 onChanged: busy
                     ? null

@@ -27,13 +27,6 @@
         android:dataExtractionRules="@xml/data_extraction_rules"
         android:theme="@style/LaunchTheme">
 
-        <service android:name=".FinancialNotificationListener"
-            android:label="Sugestões financeiras do Nexo"
-            android:permission="android.permission.BIND_NOTIFICATION_LISTENER_SERVICE"
-            android:exported="true">
-            <intent-filter><action android:name="android.service.notification.NotificationListenerService" /></intent-filter>
-        </service>
-
         <activity
             android:name=".MainActivity"
             android:exported="true"
@@ -123,7 +116,6 @@
     </application>
 
     <queries>
-        <intent><action android:name="android.intent.action.MAIN" /><category android:name="android.intent.category.LAUNCHER" /></intent>
         <intent>
             <action android:name="android.intent.action.VIEW" />
             <data android:scheme="content" />

@@ -9,7 +9,6 @@ import '../services/recurring_projection.dart';
 import '../theme/app_theme.dart';
 import '../utils/finance_input.dart';
 import 'recurring_detail_screen.dart';
-import 'debt_overview_screen.dart';
 import 'agenda_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../services/subscription_detector.dart';
@@ -259,13 +258,6 @@ class _RecurringScreenState extends State<RecurringScreen>
             ],
             if (_view == 'active') ...[
               NexoChipRow(children: [
-                TextButton.icon(
-                    onPressed: () => Navigator.push(
-                        context,
-                        ExpensyRoute(
-                            builder: (_) => const DebtOverviewScreen())),
-                    icon: const Icon(Icons.account_balance_outlined),
-                    label: const Text('Dívidas e compromissos')),
                 TextButton.icon(
                     onPressed: () => Navigator.push(context,
                         ExpensyRoute(builder: (_) => const AgendaScreen())),

@@ -1,7 +1,4 @@
 import 'dart:io';
-import 'dart:convert';
-import 'package:flutter/foundation.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:expensy/database/db_helper.dart';
@@ -115,38 +112,5 @@ void main() {
         whereArgs: ['undo']);
     await NotificationInbox.undoIgnore('undo');
     expect(await NotificationInbox.pending(), isEmpty);
-  });
-  test('Concurrent sync waits for persistence and a failed ack safely replays',
-      () async {
-    debugDefaultTargetPlatformOverride = TargetPlatform.android;
-    final messenger =
-        TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
-    addTearDown(() {
-      debugDefaultTargetPlatformOverride = null;
-      messenger.setMockMethodCallHandler(NotificationInbox.channel, null);
-    });
-    var failAck = true;
-    var reads = 0;
-    final row = suggestion('concurrent', DateTime.now());
-    messenger.setMockMethodCallHandler(NotificationInbox.channel, (call) async {
-      if (call.method == 'queue') {
-        reads++;
-        return jsonEncode([row]);
-      }
-      if (call.method == 'ack' && failAck) {
-        throw PlatformException(code: 'ack_failed');
-      }
-      return null;
-    });
-    await expectLater(
-        NotificationInbox.sync(), throwsA(isA<PlatformException>()));
-    expect(await NotificationInbox.pending(), hasLength(1));
-    failAck = false;
-    final first = NotificationInbox.sync();
-    final second = NotificationInbox.sync();
-    await Future.wait([first, second]);
-    expect(reads, greaterThanOrEqualTo(3));
-    expect(await NotificationInbox.pending(), hasLength(1));
-    expect(await (await DBHelper.database).query('transactions'), isEmpty);
   });
 }

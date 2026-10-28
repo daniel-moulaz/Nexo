@@ -1,14 +1,11 @@
-import 'dart:convert';
-import 'platform_capabilities.dart';
-import 'package:flutter/services.dart';
 import 'package:sqflite/sqflite.dart';
 import '../database/db_helper.dart';
 
+/// The "Para revisar" inbox: suggestions that a person confirms or ignores.
+/// Since 1.12.9 the only source is Open Finance (`pluggy_inbox.dart`); the
+/// Android notification listener was retired. Rows from that listener may
+/// still exist as tombstones, so the old app ids stay readable.
 class NotificationInbox {
-  static const channel = MethodChannel('com.ma.expensy/automation');
-  static Future<void>? _syncing;
-  static bool _syncAgain = false;
-  static const events = EventChannel('com.ma.expensy/automation_events');
   static const knownApps = {
     'com.nu.production': 'Nubank',
     'com.mercadopago.wallet': 'Mercado Pago',
@@ -17,7 +14,7 @@ class NotificationInbox {
     'pluggy': 'Banco (Open Finance)',
   };
 
-  /// Notifications are reviewed within 7 days; Open Finance movements
+  /// Notifications were reviewed within 7 days; Open Finance movements
   /// arrive up to a day late and stay reviewable for 35.
   static Duration windowFor(String suggestionId) =>
       suggestionId.startsWith('pluggy:')
@@ -77,47 +74,12 @@ class NotificationInbox {
       await txn.rawUpdate(
           "UPDATE notification_suggestions SET status = CASE WHEN status = 'pending' THEN 'expired' ELSE status END, description = '', amount_cents = 0 WHERE app_id = 'pluggy' AND occurred_at < ?",
           [reference.subtract(windowFor('pluggy:')).millisecondsSinceEpoch]);
-      // Native intake already rejects notifications older than seven days. A
-      // 90-day tombstone window is therefore enough to bound DB growth while
+      // A 90-day tombstone window is enough to bound DB growth while
       // retaining a generous replay-protection horizon.
       await txn.delete('notification_suggestions',
           where: "status != 'pending' AND occurred_at < ?",
           whereArgs: [tombstoneCutoff]);
     });
-  }
-
-  static Future<void> sync() {
-    if (!PlatformCapabilities.bankNotifications) return Future.value();
-    if (_syncing != null) {
-      _syncAgain = true;
-      return _syncing!;
-    }
-    return _syncing = _drain().whenComplete(() => _syncing = null);
-  }
-
-  static Future<void> _drain() async {
-    do {
-      _syncAgain = false;
-      await _sync();
-    } while (_syncAgain);
-  }
-
-  static Future<void> _sync() async {
-    try {
-      final text = await channel.invokeMethod<String>('queue');
-      final rows = text == null ? <dynamic>[] : jsonDecode(text) as List;
-      await ingest(rows);
-      await channel.invokeMethod('ack', {
-        'ids': rows
-            .whereType<Map>()
-            .map((r) => r['id'])
-            .whereType<String>()
-            .toList()
-      });
-    } on PlatformException {
-      // Leave the native queue intact; the next sync can safely replay it.
-      rethrow;
-    }
   }
 
   static Future<List<Map<String, dynamic>>> pending() async {

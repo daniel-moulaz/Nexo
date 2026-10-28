@@ -18,8 +18,6 @@ import 'package:expensy/screens/add_transaction_screen.dart';
 import 'package:expensy/screens/budget_screen.dart';
 import 'package:expensy/screens/recurring_screen.dart';
 import 'package:expensy/screens/finance_home_screen.dart';
-import 'package:expensy/screens/incomes_screen.dart';
-import 'package:expensy/screens/expenses_v2_screen.dart';
 import 'package:expensy/screens/more_screen.dart';
 import 'package:expensy/screens/agenda_screen.dart';
 
@@ -51,8 +49,6 @@ void main() {
     'recurring': const RecurringScreen(),
     'expense_form': const AddTransactionScreen(),
     'income_form': const AddTransactionScreen(initialType: 'income'),
-    'expenses': const ExpensesScreen(),
-    'incomes': const IncomesScreen(),
     'more': const MoreScreen(),
     'agenda': const AgendaScreen(),
   }.entries) {

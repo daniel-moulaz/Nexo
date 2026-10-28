@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/app_provider.dart';
 import 'finance_home_screen.dart';
-import 'expenses_v2_screen.dart';
 import 'recurring_screen.dart';
 import 'accounts_screen.dart';
 import 'budget_screen.dart';
@@ -46,7 +45,9 @@ class _MainShellState extends State<MainShell> with WidgetsBindingObserver {
 
   List<Widget> get _screens => [
         FinanceHomeScreen(),
-        ExpensesScreen(),
+        // Slot 1 was the legacy Despesas list; it stays so the other tab
+        // numbers keep their meaning. Nothing navigates here.
+        SizedBox.shrink(),
         RecurringScreen(),
         AccountsScreen(),
         BudgetScreen(),

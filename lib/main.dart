@@ -24,7 +24,7 @@ import 'services/nexo_security.dart';
 import 'services/financial_reminders.dart';
 import 'widgets/security_gate.dart';
 import 'services/desktop_profile.dart';
-import 'screens/financial_checkup_screen.dart';
+import 'screens/month_review_screen.dart';
 import 'sync/supabase_auth.dart';
 import 'sync/sync_config.dart';
 import 'sync/sync_controller.dart';
@@ -160,12 +160,12 @@ class _ExpensyAppState extends State<ExpensyApp> {
     );
   }
 
-  /// The review is generated on screen from local data; the notification
+  /// The review is computed on screen from local data; the notification
   /// itself never carries amounts. The security gate still applies.
   void _pushWeeklyReview() {
     if (!mounted || !context.read<AppProvider>().settings.onboarded) return;
-    rootNavigatorKey.currentState?.push(
-        MaterialPageRoute(builder: (_) => const FinancialCheckupScreen()));
+    rootNavigatorKey.currentState
+        ?.push(MaterialPageRoute(builder: (_) => const MonthReviewScreen()));
   }
 
   void _pushInbox() {

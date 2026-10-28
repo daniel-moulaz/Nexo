@@ -18,7 +18,7 @@ void main() {
         isEmpty);
   });
 
-  test('next four Sundays at 22:00, routed to the 7-day review', () {
+  test('next four Sundays at 22:00, routed to the month review', () {
     final plans =
         ReminderPlanner.build(forecast, prefs(), DateTime(2026, 10, 20, 9));
     expect(plans.map((p) => p.at), [

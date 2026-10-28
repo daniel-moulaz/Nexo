@@ -11,7 +11,6 @@ import '../services/card_commitment.dart';
 import '../services/current_invoice_summary.dart';
 import '../services/financial_analysis.dart';
 import '../services/finance_rules.dart';
-import '../services/platform_capabilities.dart';
 import '../services/transaction_metadata_service.dart';
 import '../services/week_summary.dart';
 import '../services/spendable.dart';
@@ -32,14 +31,12 @@ import 'add_transaction_screen.dart';
 import 'agenda_screen.dart';
 import 'budget_screen.dart';
 import 'card_invoice_screen.dart';
-import 'debt_overview_screen.dart';
-import 'financial_checkup_screen.dart';
+import 'loans_screen.dart';
 import 'notification_inbox_screen.dart';
 import 'recurring_detail_screen.dart';
 import 'recurring_screen.dart';
 import 'transaction_search_screen.dart';
 import 'transfer_screen.dart';
-import 'statement_import_screen.dart';
 import 'month_review_screen.dart';
 import 'net_worth_screen.dart';
 
@@ -217,15 +214,9 @@ class _FinanceHomeScreenState extends State<FinanceHomeScreen>
                     ? Icons.visibility_off_outlined
                     : Icons.visibility_outlined)),
             IconButton(
-                tooltip: PlatformCapabilities.bankNotifications
-                    ? 'Revisar compras detectadas'
-                    : 'Importar extrato',
-                onPressed: () => _open(PlatformCapabilities.bankNotifications
-                    ? const NotificationInboxScreen()
-                    : const StatementImportScreen()),
-                icon: Icon(PlatformCapabilities.bankNotifications
-                    ? Icons.inbox_outlined
-                    : Icons.upload_file_outlined)),
+                tooltip: 'Para revisar',
+                onPressed: () => _open(const NotificationInboxScreen()),
+                icon: const Icon(Icons.inbox_outlined)),
           ]),
       body: FutureBuilder<List<Map<String, dynamic>>>(
           future: _payments,
@@ -331,7 +322,7 @@ class _FinanceHomeScreenState extends State<FinanceHomeScreen>
                       child: NexoStatPill(
                           label: 'Cartões',
                           value: money(commitment.outstanding),
-                          onTap: () => _open(const DebtOverviewScreen()))),
+                          onTap: () => _open(const AccountsScreen()))),
                   const SizedBox(width: 8),
                   Expanded(
                       child: NexoStatPill(
@@ -626,11 +617,7 @@ class _FinanceHomeScreenState extends State<FinanceHomeScreen>
                   Icons.inbox_outlined,
                   const NotificationInboxScreen()
                 ),
-                (
-                  'Dívidas',
-                  Icons.account_balance_outlined,
-                  const DebtOverviewScreen()
-                ),
+                ('Agenda', Icons.event_note, const AgendaScreen()),
                 ('Recorrentes', Icons.event_repeat, const RecurringScreen()),
               ])
                 Expanded(
@@ -1001,7 +988,7 @@ class _FinanceHomeScreenState extends State<FinanceHomeScreen>
                     children: [
                   _Heading('Cartões e compromissos',
                       action: 'Ver tudo',
-                      onTap: () => _open(const DebtOverviewScreen())),
+                      onTap: () => _open(const AccountsScreen())),
                   if (cardRows.isEmpty)
                     const Padding(
                         padding: EdgeInsets.symmetric(vertical: 12),
@@ -1019,7 +1006,7 @@ class _FinanceHomeScreenState extends State<FinanceHomeScreen>
                         onTap: () => _open(CardInvoiceScreen(cardId: card.id))),
                   if (app.loans.any((l) => !l.isSettled))
                     TextButton.icon(
-                        onPressed: () => _open(const DebtOverviewScreen()),
+                        onPressed: () => _open(const LoansScreen()),
                         icon: const Icon(Icons.account_balance),
                         label: Text(
                             '${app.loans.where((l) => !l.isSettled).length} empréstimos em aberto')),
@@ -1100,7 +1087,7 @@ class _FinanceHomeScreenState extends State<FinanceHomeScreen>
                     money: money,
                     categoryName: (id) =>
                         app.categoryById(id)?.name ?? 'Categoria',
-                    onReview: () => _open(const FinancialCheckupScreen())));
+                    onReview: () => _open(const MonthReviewScreen())));
 
             final recent = app.transactions
                 .where((t) => !t.date.isAfter(now))
@@ -1207,12 +1194,6 @@ class _FinanceHomeScreenState extends State<FinanceHomeScreen>
                       'Análises',
                       Icons.bar_chart,
                       AnalysisScreen(initialMonth: month)
-                    ),
-                    ('Agenda', Icons.event_note, const AgendaScreen()),
-                    (
-                      'Revisão de 3 ou 7 dias',
-                      Icons.fact_check_outlined,
-                      const FinancialCheckupScreen()
                     ),
                     (
                       'Contas e cartões',
@@ -1328,14 +1309,6 @@ class _FinanceHomeScreenState extends State<FinanceHomeScreen>
                                   ],
                                   gap,
                                   activity,
-                                  gap,
-                                  OutlinedButton.icon(
-                                      onPressed: () =>
-                                          _open(const FinancialCheckupScreen()),
-                                      icon: const Icon(
-                                          Icons.description_outlined),
-                                      label: const Text(
-                                          'Minha revisão de 3 ou 7 dias')),
                                 ])))),
               );
             });

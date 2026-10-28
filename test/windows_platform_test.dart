@@ -12,7 +12,6 @@ import 'package:expensy/database/database_platform.dart';
 import 'package:expensy/database/db_helper.dart';
 import 'package:expensy/models/models.dart';
 import 'package:expensy/providers/app_provider.dart';
-import 'package:expensy/services/platform_capabilities.dart';
 import 'package:expensy/services/notification_service.dart';
 import 'package:expensy/services/lended_notification_service.dart';
 import 'package:expensy/services/loan_reminder_service.dart';
@@ -20,7 +19,6 @@ import 'package:expensy/services/credit_reminder_service.dart';
 import 'package:expensy/services/daily_reminder_service.dart';
 import 'package:expensy/services/budget_notification_service.dart';
 import 'package:expensy/services/financial_reminders.dart';
-import 'package:expensy/services/notification_inbox.dart';
 import 'package:expensy/services/quick_add_service.dart';
 import 'package:expensy/services/nexo_security.dart';
 import 'package:expensy/services/file_output.dart';
@@ -95,7 +93,8 @@ void main() {
       () async {
     expect((await DBHelper.database).path, endsWith('expensy.db'));
     expect((await DBHelper.database).path, startsWith(directory.path));
-    expect(await (await DBHelper.database).getVersion(), DBHelper.schemaVersion);
+    expect(
+        await (await DBHelper.database).getVersion(), DBHelper.schemaVersion);
     await app.addTransaction(tx('one'));
     await DBHelper.close();
     expect((await DBHelper.getTransactions()).single.id, 'one');
@@ -111,7 +110,8 @@ void main() {
     await db.execute('DROP TABLE notification_suggestions');
     await db.setVersion(22);
     await DBHelper.close();
-    expect(await (await DBHelper.database).getVersion(), DBHelper.schemaVersion);
+    expect(
+        await (await DBHelper.database).getVersion(), DBHelper.schemaVersion);
     expect(
         (await DBHelper.getAccounts())
             .firstWhere((a) => a.id == 'bank')
@@ -296,11 +296,11 @@ void main() {
             .firstWhere((a) => a.id == 'bank')
             .balance,
         967.1);
-    expect(await (await DBHelper.database).getVersion(), DBHelper.schemaVersion);
+    expect(
+        await (await DBHelper.database).getVersion(), DBHelper.schemaVersion);
   });
   test('Android integrations are safe no-ops on Windows without native mocks',
       () async {
-    expect(PlatformCapabilities.bankNotifications, false);
     await NotificationService().initialize();
     await NotificationService().cancelReminder('x');
     await BudgetNotificationService().initialize();
@@ -312,7 +312,6 @@ void main() {
     await CreditReminderService().cancelReminder('x');
     await DailyReminderService().initialize();
     await DailyReminderService().cancelDailyReminder();
-    await NotificationInbox.sync();
     await app.updateHomeWidgets();
     await FinancialReminders.instance.refresh(app);
     expect(await QuickAddService.instance.getInitialRoute(), null);

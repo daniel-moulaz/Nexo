@@ -120,8 +120,6 @@ void main() {
     expect(find.text('Sem base no período anterior para comparar'),
         findsOneWidget);
     expect(find.widgetWithText(ActionChip, 'Análises'), findsOneWidget);
-    expect(find.widgetWithText(ActionChip, 'Revisão de 3 ou 7 dias'),
-        findsOneWidget);
     await tester.ensureVisible(find.widgetWithText(ActionChip, 'Análises'));
     await tester.tap(find.widgetWithText(ActionChip, 'Análises'));
     await tester.pumpAndSettle();

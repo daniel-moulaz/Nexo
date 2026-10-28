@@ -16,10 +16,8 @@ import 'package:expensy/screens/agenda_screen.dart';
 import 'package:expensy/screens/import_rules_screen.dart';
 import 'package:expensy/screens/transaction_search_screen.dart';
 import 'package:expensy/screens/finance_export_screen.dart';
-import 'package:expensy/screens/financial_planning_screen.dart';
 import 'package:expensy/screens/recurring_screen.dart';
 import 'package:expensy/screens/recurring_detail_screen.dart';
-import 'package:expensy/screens/automation_settings_screen.dart';
 import 'package:expensy/screens/reminder_settings_screen.dart';
 import 'package:expensy/screens/security_settings_screen.dart';
 import 'package:expensy/screens/notification_inbox_screen.dart';
@@ -28,20 +26,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
   setUpAll(() async {
-    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
-        .setMockMethodCallHandler(
-            const MethodChannel('com.ma.expensy/automation_events'),
-            (_) async => null);
     SharedPreferences.setMockInitialValues({});
-    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
-        .setMockMethodCallHandler(
-            const MethodChannel('com.ma.expensy/automation'), (call) async {
-      if (call.method == 'status')
-        return {'enabled': false, 'access': false, 'apps': <String>[]};
-      if (call.method == 'apps') return <Map<String, String>>[];
-      if (call.method == 'queue') return '[]';
-      return null;
-    });
     sqfliteFfiInit();
     databaseFactory = databaseFactoryFfi;
     await databaseFactory.setDatabasesPath(
@@ -116,8 +101,6 @@ void main() {
   for (final scenario in ['empty', 'many', 'dark']) {
     for (final entry in <String, Widget>{
       'forecast': const AgendaScreen(),
-      'planning': const FinancialPlanningScreen(),
-      'automation': const AutomationSettingsScreen(),
       'notifications': const ReminderSettingsScreen(),
       'security': const SecuritySettingsScreen(),
       'suggestions': const NotificationInboxScreen(),

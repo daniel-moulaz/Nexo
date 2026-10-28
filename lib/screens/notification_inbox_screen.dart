@@ -1,4 +1,3 @@
-import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
@@ -10,8 +9,6 @@ import '../services/transaction_metadata_service.dart';
 import '../utils/finance_input.dart';
 import '../theme/app_theme.dart';
 import '../services/notification_preferences.dart';
-import 'automation_settings_screen.dart';
-import '../services/platform_capabilities.dart';
 import '../services/pluggy_inbox.dart';
 import '../services/inbox_reconciler.dart';
 import '../services/reconciliation.dart';
@@ -33,27 +30,16 @@ class _NotificationInboxScreenState extends State<NotificationInboxScreen>
   /// "Os dados de hoje ainda não chegaram…" (Open Finance is daily).
   String? _freshness;
   bool _showResolved = false;
-  StreamSubscription<dynamic>? _events;
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    if (PlatformCapabilities.bankNotifications) {
-      _events = NotificationInbox.events
-          .receiveBroadcastStream()
-          .listen((_) => reload(), onError: (_) {
-        if (mounted)
-          setState(() => error =
-              'Atualização automática indisponível. Toque em Atualizar.');
-      });
-    }
     reload();
   }
 
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
-    _events?.cancel();
     super.dispose();
   }
 
@@ -62,21 +48,12 @@ class _NotificationInboxScreenState extends State<NotificationInboxScreen>
     if (state == AppLifecycleState.resumed) reload();
   }
 
-  static bool get _available =>
-      PlatformCapabilities.bankNotifications || PluggyInbox.instance != null;
+  static bool get _available => PluggyInbox.instance != null;
 
   Future<void> reload({bool force = false}) async {
     if (!_available) return;
     try {
       String? syncError;
-      if (PlatformCapabilities.bankNotifications) {
-        try {
-          await NotificationInbox.sync();
-        } catch (_) {
-          syncError =
-              'Não foi possível buscar novas sugestões. As já salvas continuam disponíveis. Tente atualizar.';
-        }
-      }
       String? freshness;
       if (PluggyInbox.instance case final pluggy?) {
         final problem = await pluggy.sync(force: force);
@@ -278,12 +255,11 @@ class _NotificationInboxScreenState extends State<NotificationInboxScreen>
                       !await InboxReconciler.automatic());
                   await reload();
                 }
-                if (v == 'detect' && context.mounted) {
-                  await Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                          builder: (_) => const AutomationSettingsScreen()));
-                  await reload();
+                if (v == 'forget') {
+                  await NotificationPreferences.clear();
+                  if (context.mounted)
+                    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+                        content: Text('Contas sugeridas esquecidas.')));
                 }
               },
               itemBuilder: (_) => [
@@ -292,9 +268,9 @@ class _NotificationInboxScreenState extends State<NotificationInboxScreen>
                     const PopupMenuItem(
                         value: 'auto',
                         child: Text('Ligar/desligar conciliação automática')),
-                    if (PlatformCapabilities.bankNotifications)
-                      const PopupMenuItem(
-                          value: 'detect', child: Text('Configurar detecção')),
+                    const PopupMenuItem(
+                        value: 'forget',
+                        child: Text('Esquecer contas sugeridas')),
                   ]),
           IconButton(
               onPressed: () => reload(force: true),

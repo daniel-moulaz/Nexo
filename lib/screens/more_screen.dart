@@ -9,7 +9,6 @@ import 'recurring_screen.dart';
 import 'backup_screen.dart';
 import 'categories_screen.dart';
 import 'finance_export_screen.dart';
-import 'financial_planning_screen.dart';
 import 'analysis_screen.dart';
 import 'lended_screen.dart';
 import 'loans_screen.dart';
@@ -21,8 +20,6 @@ import 'wishlist_screen.dart';
 
 import 'agenda_screen.dart';
 import 'notification_inbox_screen.dart';
-import 'debt_overview_screen.dart';
-import 'financial_checkup_screen.dart';
 import 'accounts_screen.dart';
 import 'month_review_screen.dart';
 import 'balance_check_screen.dart';
@@ -67,16 +64,6 @@ class MoreScreen extends StatelessWidget {
           sub: 'Destaques do mês e comparação com o anterior',
           screen: MonthReviewScreen()),
       const _Item(
-          icon: Icons.fact_check_outlined,
-          label: 'Revisão financeira',
-          sub: 'Resumo de 3 ou 7 dias e próximos compromissos',
-          screen: FinancialCheckupScreen()),
-      const _Item(
-          icon: Icons.account_balance_outlined,
-          label: 'Dívidas e compromissos',
-          sub: 'Cartões, empréstimos, parcelas e despesas pendentes',
-          screen: DebtOverviewScreen()),
-      const _Item(
           icon: Icons.inbox_outlined,
           label: 'Sugestões de lançamentos',
           sub: 'Revisar notificações financeiras, sem registro automático',
@@ -86,12 +73,6 @@ class MoreScreen extends StatelessWidget {
           label: 'Agenda financeira',
           sub: 'Próximos vencimentos, receitas, parcelas e faturas',
           screen: AgendaScreen()),
-      const _Item(
-        icon: Icons.auto_graph_rounded,
-        label: 'Previsão detalhada',
-        sub: 'Previsão de caixa, assinaturas, reserva e alertas',
-        screen: FinancialPlanningScreen(),
-      ),
       const _Item(
         icon: Icons.upload_file_rounded,
         label: 'Importar extrato',
@@ -184,10 +165,8 @@ class MoreScreen extends StatelessWidget {
                 'Agenda financeira',
                 'Contas e cartões',
                 'Recorrentes e assinaturas',
-                'Dívidas e compromissos',
                 'Análises',
                 'Mês em revisão',
-                'Revisão financeira',
               ],
               'Organizar e proteger': [
                 'Sugestões de lançamentos',
@@ -205,7 +184,6 @@ class MoreScreen extends StatelessWidget {
                 'Dinheiro emprestado',
                 'Bens e patrimônio',
                 'Lista de desejos',
-                'Previsão detalhada',
               ],
             }.entries) ...[
               _Group(

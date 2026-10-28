@@ -48,7 +48,7 @@ As imagens abaixo são da versão 1.12.7, geradas com **dados fictícios** a par
 - Despesas pendentes não reduzem o saldo atual.
 - Transferências, reservas e aportes não viram consumo.
 - Compras no cartão entram na fatura; compra feita no dia do fechamento vai para a fatura seguinte, como no banco; pagar a fatura não cria uma segunda despesa.
-- Sugestões de notificações e do Open Finance exigem revisão (ou conciliação segura) antes de virar lançamento. Nada cria ou apaga dinheiro sozinho.
+- Sugestões do Open Finance exigem revisão (ou conciliação segura) antes de virar lançamento. Nada cria ou apaga dinheiro sozinho.
 - Diferença de saldo com o banco se corrige com **ajuste neutro**, que não conta como gasto nem receita.
 - A fatura do banco é mostrada como conferência; nada é lançado ou pago a partir dela.
 - A previsão usa compromissos cadastrados. Não presume salário nem gastos futuros desconhecidos.
@@ -138,7 +138,7 @@ node tool/test_pluggy.mjs         # Open Finance
 - **SQLite:** armazenamento local; `sqflite` no Android e `sqflite_common_ffi` no Windows. Toda gravação passa por uma operação de domínio atômica.
 - **Sincronização:** diário de operações por aparelho, enviado ao Supabase e aplicado nos outros aparelhos; o servidor guarda o diário e um espelho, não aplica regras financeiras.
 - **Provider:** estado do aplicativo.
-- **Kotlin:** integrações Android, incluindo análise conservadora de notificações autorizadas.
+- **Kotlin:** integrações Android (widgets da tela inicial, abertura por atalho, privacidade da janela).
 - **TypeScript (Deno):** Edge Functions do Open Finance e do assistente.
 - **Testes:** regras contábeis, persistência, sincronização, importação/exportação, segurança, navegação e layouts.
 

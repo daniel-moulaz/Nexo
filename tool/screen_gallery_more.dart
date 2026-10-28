@@ -14,9 +14,7 @@ import 'package:expensy/providers/app_provider.dart';
 import 'package:expensy/screens/agenda_screen.dart';
 import 'package:expensy/screens/analysis_screen.dart';
 import 'package:expensy/screens/recurring_screen.dart';
-import 'package:expensy/screens/debt_overview_screen.dart';
 import 'package:expensy/screens/month_review_screen.dart';
-import 'package:expensy/screens/financial_checkup_screen.dart';
 import 'package:expensy/screens/notification_inbox_screen.dart';
 import 'package:expensy/screens/balance_check_screen.dart';
 import 'package:expensy/screens/categories_screen.dart';
@@ -26,7 +24,6 @@ import 'package:expensy/screens/wishlist_screen.dart';
 import 'package:expensy/screens/loans_screen.dart';
 import 'package:expensy/screens/lended_screen.dart';
 import 'package:expensy/screens/assets_screen.dart';
-import 'package:expensy/screens/financial_planning_screen.dart';
 import 'package:expensy/screens/statement_import_screen.dart';
 import 'package:expensy/screens/add_transaction_screen.dart';
 import 'package:expensy/screens/card_invoice_screen.dart';
@@ -238,9 +235,7 @@ void main() {
     'agenda': const AgendaScreen(),
     'analises': const AnalysisScreen(),
     'recorrentes': const RecurringScreen(),
-    'dividas': const DebtOverviewScreen(),
     'mes-em-revisao': const MonthReviewScreen(),
-    'revisao': const FinancialCheckupScreen(),
     'para-revisar': const NotificationInboxScreen(),
     'conferir-banco': const BalanceCheckScreen(),
     'categorias': const CategoriesScreen(),
@@ -250,7 +245,6 @@ void main() {
     'emprestimos': const LoansScreen(),
     'emprestado': const LendedScreen(),
     'bens': const AssetsScreen(),
-    'previsao': const FinancialPlanningScreen(),
     'importar': const StatementImportScreen(),
     'novo-lancamento': const AddTransactionScreen(initialType: 'expense'),
     'fatura': const CardInvoiceScreen(cardId: 'card'),

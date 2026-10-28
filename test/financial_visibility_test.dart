@@ -14,9 +14,7 @@ import 'package:expensy/providers/app_provider.dart';
 import 'package:expensy/l10n/app_localizations.dart';
 import 'package:expensy/screens/recurring_screen.dart';
 import 'package:expensy/screens/recurring_detail_screen.dart';
-import 'package:expensy/screens/debt_overview_screen.dart';
 import 'package:expensy/screens/loans_screen.dart';
-import 'package:expensy/screens/financial_checkup_screen.dart';
 import 'package:expensy/services/transaction_metadata_service.dart';
 
 void main() {
@@ -135,7 +133,7 @@ void main() {
   }
 
   for (final width in [360.0, 412.0, 1280.0]) {
-    for (final page in ['recurring', 'detail', 'debts', 'loans', 'checkup']) {
+    for (final page in ['recurring', 'detail', 'loans']) {
       testWidgets('$page visibility at $width with scaled text',
           (tester) async {
         final app = fixture();
@@ -144,8 +142,6 @@ void main() {
           'recurring' => const RecurringScreen(),
           'detail' => RecurringDetailScreen(
               recurring: app.recurring.first, fmt: (v) => '$v'),
-          'debts' => const DebtOverviewScreen(),
-          'checkup' => const FinancialCheckupScreen(),
           _ => const LoansScreen()
         };
         await open(tester, app, screen,
@@ -215,11 +211,7 @@ void main() {
   });
   testWidgets('Privacy hides all amounts in recurring and debt views',
       (tester) async {
-    for (final screen in [
-      const RecurringScreen(),
-      const DebtOverviewScreen(),
-      const LoansScreen()
-    ]) {
+    for (final screen in [const RecurringScreen(), const LoansScreen()]) {
       final app = fixture()..settings.hideBalance = true;
       await open(tester, app, screen, width: 1280);
       expect(find.textContaining('R\$'), findsNothing);
@@ -227,29 +219,5 @@ void main() {
       await tester.pumpWidget(const SizedBox());
       app.dispose();
     }
-  });
-  testWidgets('Checkup generates locally and private mode blocks exports',
-      (tester) async {
-    final app = fixture();
-    await open(tester, app, const FinancialCheckupScreen(), width: 412);
-    await tester.tap(find.text('Gerar revisão'));
-    await tester.pump();
-    await tester.runAsync(
-        () => Future<void>.delayed(const Duration(milliseconds: 200)));
-    await tester.pumpAndSettle();
-    expect(find.text('O que aconteceu'), findsOneWidget);
-    expect(tester.takeException(), isNull);
-    expect(app.accounts.first.balance, 1000);
-    await tester.tap(find.text('Últimos 3 dias'));
-    await tester.pumpAndSettle();
-    expect(find.text('O que aconteceu'), findsNothing);
-    await tester.pumpWidget(const SizedBox());
-    app.settings.hideBalance = true;
-    await open(tester, app, const FinancialCheckupScreen());
-    expect(tester.widget<FilledButton>(find.byType(FilledButton)).onPressed,
-        isNull);
-    expect(find.text('Salvar relatório .txt'), findsNothing);
-    await tester.pumpWidget(const SizedBox());
-    app.dispose();
   });
 }
