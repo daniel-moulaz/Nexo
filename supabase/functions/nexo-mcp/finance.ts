@@ -26,6 +26,11 @@ export interface Ledger {
   assets?: Row[];
   wishlist?: Row[];
   invoicePayments?: Row[];
+  importRules?: Row[];
+  /// Synced settings (key, value as JSON text), same on every device.
+  sharedSettings?: Row[];
+  /// What each device reported: app_version, kinds, settings, seen_at.
+  devices?: Row[];
 }
 
 export interface Meta {

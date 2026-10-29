@@ -205,7 +205,8 @@ EnvelopeReport envelopeReport({
     if (def.id == 'freedom') spent += investedCents / 100;
     if (def.id == 'goals') {
       spent += contributions
-          .where((c) => c.type != 'withdraw' && inMonth(c.date))
+          // Deposits only: a withdrawal ('withdrawal') is not goal use.
+          .where((c) => c.type == 'contribution' && inMonth(c.date))
           .fold<double>(0, (s, c) => s + c.amount);
     }
     final share = shares[def.id] ?? def.defaultShare;

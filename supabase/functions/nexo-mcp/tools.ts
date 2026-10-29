@@ -37,14 +37,15 @@ export const tools: ToolDefinition[] = [
   {
     name: "get_categories",
     title: "Categorias",
-    description: "Lista as categorias de despesa e receita com seus ids, para lançar ou corrigir.",
+    description: "Lista as categorias de despesa e receita com ids, tipo de gasto (Custos fixos, Conforto…), cor, ícone e quantos lançamentos, recorrentes e orçamento usam cada uma.",
     inputSchema: { type: "object", properties: {}, additionalProperties: false },
   },
   {
     name: "list_transactions",
     title: "Lançamentos",
     description:
-      "Lista lançamentos com filtros. Datas AAAA-MM-DD inclusivas. Cada item informa se conta como consumo e se está pendente.",
+      "Lista lançamentos com filtros. Datas AAAA-MM-DD inclusivas. Cada item informa se conta como consumo e se está pendente. " +
+      "Use offset para as páginas seguintes.",
     inputSchema: {
       type: "object",
       properties: {
@@ -54,7 +55,13 @@ export const tools: ToolDefinition[] = [
         category_id: { type: "string" },
         type: { type: "string", enum: ["income", "expense"] },
         search: { type: "string", maxLength: 80, description: "Trecho da descrição ou observação" },
+        status: { type: "string", enum: ["paid", "pending"] },
+        subcategory: { type: "string", maxLength: 60 },
+        min_amount: { type: "number", minimum: 0 },
+        max_amount: { type: "number", minimum: 0 },
+        counts_as_spending: { type: "boolean" },
         limit: { type: "integer", minimum: 1, maximum: 100 },
+        offset: { type: "integer", minimum: 0, maximum: 10000 },
       },
       additionalProperties: false,
     },
@@ -228,16 +235,27 @@ export function callTool(name: string, rawArgs: unknown, l: Ledger, today: strin
     }
     case "get_categories": {
       only(args, []);
+      const kinds: Record<string, string> = { fixed: "Custos fixos", comfort: "Conforto", goals: "Metas", pleasures: "Prazeres",
+        knowledge: "Conhecimento", freedom: "Liberdade financeira" };
+      const count = (rows: Row[], id: unknown) => rows.filter((r) => r.category_id === id).length;
       return {
         categories: l.categories.map((c) => ({
           id: text(c.id),
           name: text(c.name),
           type: text(c.type) === "income" ? "income" : "expense",
+          spending_type: typeof c.envelope === "string" && kinds[c.envelope] ? c.envelope : null,
+          spending_type_name: typeof c.envelope === "string" ? kinds[c.envelope] : undefined,
+          color: typeof c.color_value === "number" ? `#${(c.color_value & 0xFFFFFF).toString(16).padStart(6, "0").toUpperCase()}` : undefined,
+          icon: typeof c.icon_code_point === "number" && c.icon_code_point > 0 ? c.icon_code_point : undefined,
+          transactions: count(l.transactions, c.id),
+          recurring: count(l.recurring, c.id),
+          has_budget: (l.budgets ?? []).some((b) => b.category_id === c.id),
         })),
       };
     }
     case "list_transactions": {
-      only(args, ["from", "to", "account_id", "category_id", "type", "search", "limit"]);
+      only(args, ["from", "to", "account_id", "category_id", "type", "search", "status", "subcategory", "min_amount", "max_amount",
+        "counts_as_spending", "limit", "offset"]);
       const to = date(args, "to", today);
       const from = date(args, "from", shift(to, -30));
       if (from > to) throw new ToolInputError("from deve ser anterior a to.");
@@ -246,7 +264,20 @@ export function callTool(name: string, rawArgs: unknown, l: Ledger, today: strin
       const account = optionalString(args, "account_id");
       const category = optionalString(args, "category_id");
       const search = optionalString(args, "search", 80)?.toLowerCase();
+      const status = optionalString(args, "status");
+      if (status !== undefined && status !== "paid" && status !== "pending") throw new ToolInputError("status inválido.");
+      const subcategory = optionalString(args, "subcategory", 60);
+      const amount = (key: string) => {
+        const v = args[key];
+        if (v === undefined) return undefined;
+        if (typeof v !== "number" || !isFinite(v) || v < 0) throw new ToolInputError(`${key} inválido.`);
+        return Math.round(v * 100);
+      };
+      const min = amount("min_amount"), max = amount("max_amount");
+      const spending = args.counts_as_spending;
+      if (spending !== undefined && typeof spending !== "boolean") throw new ToolInputError("counts_as_spending deve ser verdadeiro ou falso.");
       const limit = integer(args, "limit", 1, 100, 50);
+      const offset = integer(args, "offset", 0, 10000, 0);
       const rows = l.transactions
         .filter((t) => {
           const d = day(text(t.date));
@@ -257,12 +288,21 @@ export function callTool(name: string, rawArgs: unknown, l: Ledger, today: strin
             (search === undefined ||
               `${text(t.description)} ${text(t.note)}`.toLowerCase().includes(search));
         })
+        .filter((t) => {
+          const m = meta(metas.get(text(t.id)));
+          const v = cents(num(t.amount));
+          return (status === undefined || m.status === status) &&
+            (subcategory === undefined || m.subcategory === subcategory) &&
+            (min === undefined || v >= min) && (max === undefined || v <= max) &&
+            (spending === undefined || (t.type === "expense" && m.status !== "pending" && !isNeutral(t, m)) === spending);
+        })
         .sort((a, b) => text(b.date).localeCompare(text(a.date)));
       return {
         from, to,
         total_found: rows.length,
-        truncated: rows.length > limit,
-        transactions: rows.slice(0, limit).map((t) => describeTx(l, t, metas)),
+        offset,
+        truncated: rows.length > offset + limit,
+        transactions: rows.slice(offset, offset + limit).map((t) => describeTx(l, t, metas)),
       };
     }
     case "get_transaction": {

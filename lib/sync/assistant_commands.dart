@@ -13,23 +13,59 @@ import '../services/pluggy_inbox.dart';
 import '../services/billing_cycle.dart';
 import '../services/finance_rules.dart';
 import 'assistant_more_commands.dart';
+import 'assistant_parity_commands.dart';
+import 'assistant_settings.dart';
+import 'ledger_capture.dart';
+import 'ledger_undo.dart';
 import 'supabase_auth.dart';
 import 'sync_config.dart';
 
 /// A request from the AI assistant, as claimed by this device.
 class AssistantCommand {
-  const AssistantCommand(this.id, this.kind, this.args);
+  const AssistantCommand(this.id, this.kind, this.args, {this.createdAt});
   final String id, kind;
   final Map<String, dynamic> args;
+
+  /// When the assistant asked (server time); stable across retries.
+  final DateTime? createdAt;
+}
+
+/// One entry of the "Feito pelo Claude" list.
+class AssistantHistoryItem {
+  const AssistantHistoryItem(
+      {required this.id,
+      required this.kind,
+      required this.status,
+      required this.createdAt,
+      this.message,
+      this.reason,
+      this.undoable = false,
+      this.undoneAt});
+  final String id, kind, status;
+  final DateTime createdAt;
+  final String? message, reason;
+  final bool undoable;
+  final DateTime? undoneAt;
 }
 
 abstract interface class AssistantRemote {
   Future<AssistantCommand?> claim(String datasetId, String deviceId);
   Future<void> finish(String id, String status, Map<String, Object?> result);
 
-  /// Tells the server which requests this app version can apply.
-  Future<void> report(
-      String datasetId, String deviceId, String version, List<String> kinds);
+  /// Tells the server which requests this app version can apply and the
+  /// settings of this device (the shared ones travel with the ledger).
+  Future<void> report(String datasetId, String deviceId, String version,
+      List<String> kinds, Map<String, Object?> settings);
+
+  /// Records on the server that request [id] was undone by [by].
+  Future<void> markUndone(String id, String by);
+
+  /// The assistant's latest requests of this dataset.
+  Future<List<AssistantHistoryItem>> history(String datasetId,
+      {int limit = 50});
+
+  /// What request [id] changed, or null when it cannot be undone.
+  Future<Map<String, Object?>?> undoData(String id);
 }
 
 class SupabaseAssistantRemote implements AssistantRemote {
@@ -61,7 +97,8 @@ class SupabaseAssistantRemote implements AssistantRemote {
         'nexo_mcp_claim', {'p_dataset_id': datasetId, 'p_device_id': deviceId});
     if (r is! Map) return null;
     return AssistantCommand(r['id'] as String, r['kind'] as String,
-        (r['args'] as Map).cast<String, dynamic>());
+        (r['args'] as Map).cast<String, dynamic>(),
+        createdAt: DateTime.tryParse(r['created_at'] as String? ?? ''));
   }
 
   @override
@@ -71,13 +108,56 @@ class SupabaseAssistantRemote implements AssistantRemote {
 
   @override
   Future<void> report(String datasetId, String deviceId, String version,
-          List<String> kinds) =>
-      _rpc('nexo_mcp_report_capabilities', {
+      List<String> kinds, Map<String, Object?> settings) async {
+    try {
+      await _rpc('nexo_mcp_report_device', {
+        'p_dataset_id': datasetId,
+        'p_device_id': deviceId,
+        'p_version': version,
+        'p_kinds': kinds,
+        'p_settings': settings,
+      });
+    } on StateError catch (e) {
+      // A server without the newer call still learns the kinds.
+      if (e.message != 'assistant_http_404') rethrow;
+      await _rpc('nexo_mcp_report_capabilities', {
         'p_dataset_id': datasetId,
         'p_device_id': deviceId,
         'p_version': version,
         'p_kinds': kinds,
       });
+    }
+  }
+
+  @override
+  Future<void> markUndone(String id, String by) =>
+      _rpc('nexo_mcp_mark_undone', {'p_id': id, 'p_by': by});
+
+  @override
+  Future<List<AssistantHistoryItem>> history(String datasetId,
+      {int limit = 50}) async {
+    final rows = await _rpc(
+        'nexo_mcp_history', {'p_dataset_id': datasetId, 'p_limit': limit});
+    return [
+      for (final r in (rows as List? ?? const []).cast<Map>())
+        AssistantHistoryItem(
+            id: r['id'] as String,
+            kind: r['kind'] as String,
+            status: r['status'] as String,
+            createdAt: DateTime.parse(r['created_at'] as String).toLocal(),
+            message: r['message'] as String?,
+            reason: r['reason'] as String?,
+            undoable: r['undoable'] == true,
+            undoneAt:
+                DateTime.tryParse(r['undone_at'] as String? ?? '')?.toLocal())
+    ];
+  }
+
+  @override
+  Future<Map<String, Object?>?> undoData(String id) async {
+    final r = await _rpc('nexo_mcp_undo_data', {'p_id': id});
+    return r is Map ? r.cast<String, Object?>() : null;
+  }
 }
 
 /// Applies the assistant's requests on this device through the same
@@ -93,6 +173,7 @@ class AssistantCommands {
   static const _appliedKey = 'nexo_assistant_applied_v1';
   Future<int>? _running;
   DateTime? _reportedAt;
+  String? _deviceId;
 
   /// Every request this version applies (see [_do] and
   /// [AssistantMoreCommands]); a test keeps it equal to the server's list.
@@ -107,7 +188,17 @@ class AssistantCommands {
     'investment.operation', 'investment.price', 'loan.pay', 'loan.skip',
     'lended.add', 'lended.settle', 'asset.add', 'asset.update',
     'asset.delete', 'wishlist.add', 'wishlist.update', 'wishlist.delete',
+    ...AssistantParityCommands.kinds, 'request.undo',
   ];
+
+  /// This device's own settings, for the assistant to read.
+  Map<String, Object?> _deviceSettings() {
+    final all = app.settings.toJson();
+    return {
+      for (final s in assistantSettings)
+        if (!s.shared) s.key: all[s.key]
+    };
+  }
 
   /// Hourly at most; a server without the call (or offline) changes nothing.
   Future<void> _report(String datasetId, String deviceId) async {
@@ -116,8 +207,12 @@ class AssistantCommands {
     _reportedAt = DateTime.now();
     try {
       final info = await PackageInfo.fromPlatform();
-      await remote.report(datasetId, deviceId,
-          '${info.version}+${info.buildNumber}', supportedKinds);
+      await remote.report(
+          datasetId,
+          deviceId,
+          '${info.version}+${info.buildNumber}',
+          supportedKinds,
+          _deviceSettings());
     } catch (_) {}
   }
 
@@ -130,6 +225,7 @@ class AssistantCommands {
           _run(datasetId, deviceId, max).whenComplete(() => _running = null);
 
   Future<int> _run(String datasetId, String deviceId, int max) async {
+    _deviceId = deviceId;
     await _report(datasetId, deviceId);
     var count = 0;
     for (; count < max; count++) {
@@ -160,10 +256,18 @@ class AssistantCommands {
   }
 
   Future<void> _remember(Map<String, Map<String, dynamic>> applied) async {
-    // Bounded: requests older than the last 300 are long finished.
+    // Bounded: requests older than the last 300 are long finished, and only
+    // the latest 20 keep their (possibly large) undo data for a resend.
     final keep = applied.entries.toList();
-    final trimmed = Map.fromEntries(
-        keep.length > 300 ? keep.sublist(keep.length - 300) : keep);
+    final recent = keep.length > 300 ? keep.sublist(keep.length - 300) : keep;
+    final trimmed = <String, Map<String, dynamic>>{};
+    for (var i = 0; i < recent.length; i++) {
+      final e = recent[i];
+      final result = (e.value['result'] as Map?)?.cast<String, Object?>();
+      trimmed[e.key] = i < recent.length - 20 && result != null
+          ? {...e.value, 'result': Map.of(result)..remove('undo')}
+          : e.value;
+    }
     await (await SharedPreferences.getInstance())
         .setString(_appliedKey, jsonEncode(trimmed));
   }
@@ -178,7 +282,15 @@ class AssistantCommands {
 
   Future<(String, Map<String, Object?>)> _apply(AssistantCommand c) async {
     try {
-      final message = await _do(c);
+      // Every ledger operation the request commits is collected, so what it
+      // changed can be undone later (from Claude or from the app).
+      final operations = <String>[];
+      final message = await runZoned(() => _do(c),
+          zoneValues: {ledgerOperationsZoneKey: operations});
+      final undo =
+          await LedgerUndo.capture(await DBHelper.database, operations);
+      if (undo != null) message['undo'] = undo;
+      if (c.kind == 'settings.set') _reportedAt = null; // report them again
       return ('done', message);
     } on FormatException catch (e) {
       return ('rejected', {'reason': e.message});
@@ -419,10 +531,40 @@ class AssistantCommands {
         };
       case 'invoice.pay':
         return _payInvoice(a);
+      case 'request.undo':
+        return _undo(a['request_id'] as String?,
+            (a['undo'] as Map?)?.cast<String, Object?>());
       default:
         return await AssistantMoreCommands(app).handle(c.id, c.kind, a) ??
+            await AssistantParityCommands(app).handle(c.id, c.kind, a) ??
             (throw StateError('Pedido desconhecido.'));
     }
+  }
+
+  /// Undoes request [requestId] with what it recorded. Used by Claude's
+  /// undo_request and by the "Desfazer" button of the app's list.
+  Future<Map<String, Object?>> _undo(
+      String? requestId, Map<String, Object?>? undo) async {
+    if (requestId == null || undo == null || !LedgerUndo.usable(undo)) {
+      throw StateError(undo?['too_large'] == true
+          ? 'Este pedido mexeu em dados demais para desfazer sozinho. Desfaça pelo app.'
+          : 'Este pedido não guardou como ser desfeito (feito por uma versão anterior do app ou sem sincronização).');
+    }
+    await LedgerUndo.apply(await DBHelper.database, undo);
+    await app.reloadFromStorage();
+    try {
+      await remote.markUndone(requestId, _deviceId ?? 'app');
+    } catch (_) {
+      // The server learns it on the next undo attempt (which then refuses).
+    }
+    return {'undone_request_id': requestId, 'message': 'Pedido desfeito.'};
+  }
+
+  /// The app's own "Desfazer" for one request of the list.
+  Future<String> undoFromApp(String requestId) async {
+    final data = await remote.undoData(requestId);
+    final result = await _undo(requestId, data);
+    return result['message'] as String;
   }
 
   static const _palette = [

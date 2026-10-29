@@ -112,10 +112,13 @@ class SavingsGoalDetailScreen extends StatelessWidget {
                 ),
                 const SizedBox(height: 12),
                 Wrap(
-                  spacing: 16, runSpacing: 8,
+                  spacing: 16,
+                  runSpacing: 8,
                   children: [
-                    if (currentGoal.targetDate != null && currentGoal.currentAmount < currentGoal.targetAmount)
-                      Text('Recomendado por mês: ${formatAmount((currentGoal.targetAmount - currentGoal.currentAmount) / ((currentGoal.targetDate!.difference(DateTime.now()).inDays / 30).ceil().clamp(1, 1200)), currentGoal.currency)}'),
+                    if (currentGoal.targetDate != null &&
+                        currentGoal.currentAmount < currentGoal.targetAmount)
+                      Text(
+                          'Recomendado por mês: ${formatAmount((currentGoal.targetAmount - currentGoal.currentAmount) / ((currentGoal.targetDate!.difference(DateTime.now()).inDays / 30).ceil().clamp(1, 1200)), currentGoal.currency)}'),
                     Text('${(progress * 100).toStringAsFixed(1)}%',
                         style: TextStyle(
                             fontSize: 14,
@@ -123,8 +126,8 @@ class SavingsGoalDetailScreen extends StatelessWidget {
                             color: color)),
                     if (currentGoal.targetDate != null)
                       Text(
-                          l10n.savings_targetDate(
-                              DateFormat('dd/MM/yyyy').format(currentGoal.targetDate!)),
+                          l10n.savings_targetDate(DateFormat('dd/MM/yyyy')
+                              .format(currentGoal.targetDate!)),
                           style: TextStyle(
                               fontSize: 13,
                               color: cs.onSurface.withValues(alpha: 0.6))),
@@ -195,7 +198,7 @@ class SavingsGoalDetailScreen extends StatelessWidget {
                       title: Text(isContrib ? 'Aporte' : 'Retirada',
                           style: const TextStyle(fontWeight: FontWeight.w600)),
                       subtitle: Text(
-                          '${DateFormat('dd/MM/yyyy').format(c.date)} • ${acc?.name ?? 'Conta desconhecida'}',
+                          '${DateFormat('dd/MM/yyyy').format(c.date)} • ${acc?.name ?? (c.accountId.isEmpty ? 'Só no objetivo' : 'Conta desconhecida')}',
                           style: TextStyle(
                               fontSize: 12,
                               color: cs.onSurface.withValues(alpha: 0.6))),
@@ -256,8 +259,8 @@ class _ContributionSheetState extends State<_ContributionSheet> {
   void initState() {
     super.initState();
     // Preselect the primary account or the first one with matching currency
-    final matches =
-        widget.app.cashAccounts.where((a) => a.currency == widget.goal.currency);
+    final matches = widget.app.cashAccounts
+        .where((a) => a.currency == widget.goal.currency);
     if (matches.isNotEmpty) {
       _selectedAccountId = matches.first.id;
     } else if (widget.app.cashAccounts.isNotEmpty) {
@@ -278,29 +281,33 @@ class _ContributionSheetState extends State<_ContributionSheet> {
     final amt = parseMoney(_amountCtrl.text) ?? 0.0;
     if (amt <= 0 || _selectedAccountId == null) return;
     if (!widget.isContribution && amt > widget.goal.currentAmount) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('A retirada não pode superar o valor guardado.')));
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text('A retirada não pode superar o valor guardado.')));
       return;
     }
 
     setState(() => _saving = true);
     try {
-    if (widget.isContribution) {
-      await widget.app.contributeToGoal(
-        goalId: widget.goal.id,
-        fromAccountId: _selectedAccountId!,
-        amount: amt, // Amount entered in account currency
-        note: _noteCtrl.text.trim(),
-      );
-    } else {
-      await widget.app.withdrawFromGoal(
-        goalId: widget.goal.id,
-        toAccountId: _selectedAccountId!,
-        amount: amt, // Amount entered in goal currency
-        note: _noteCtrl.text.trim(),
-      );
-    }
+      if (widget.isContribution) {
+        await widget.app.contributeToGoal(
+          goalId: widget.goal.id,
+          fromAccountId: _selectedAccountId!,
+          amount: amt, // Amount entered in account currency
+          note: _noteCtrl.text.trim(),
+        );
+      } else {
+        await widget.app.withdrawFromGoal(
+          goalId: widget.goal.id,
+          toAccountId: _selectedAccountId!,
+          amount: amt, // Amount entered in goal currency
+          note: _noteCtrl.text.trim(),
+        );
+      }
     } catch (_) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Não foi possível concluir. Confira a conta e o valor e tente novamente.')));
+      if (mounted)
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+            content: Text(
+                'Não foi possível concluir. Confira a conta e o valor e tente novamente.')));
       return;
     } finally {
       if (mounted) setState(() => _saving = false);
@@ -318,7 +325,9 @@ class _ContributionSheetState extends State<_ContributionSheet> {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Text(
-              widget.isContribution ? 'Adicionar aporte' : 'Retirar do objetivo',
+              widget.isContribution
+                  ? 'Adicionar aporte'
+                  : 'Retirar do objetivo',
               style:
                   const TextStyle(fontSize: 20, fontWeight: FontWeight.w800)),
           const SizedBox(height: 20),
@@ -329,8 +338,9 @@ class _ContributionSheetState extends State<_ContributionSheet> {
               isExpanded: true,
               initialValue: _selectedAccountId,
               decoration: InputDecoration(
-                labelText:
-                    widget.isContribution ? 'Conta de origem' : 'Conta de destino',
+                labelText: widget.isContribution
+                    ? 'Conta de origem'
+                    : 'Conta de destino',
                 border:
                     OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
               ),
@@ -352,13 +362,10 @@ class _ContributionSheetState extends State<_ContributionSheet> {
                 border:
                     OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                 prefixIcon: const Icon(Icons.monetization_on_outlined),
-                errorText: _submitted &&
-                        (parseMoney(
-                                    _amountCtrl.text) ??
-                                0.0) <=
-                            0
-                    ? 'Informe um valor válido'
-                    : null,
+                errorText:
+                    _submitted && (parseMoney(_amountCtrl.text) ?? 0.0) <= 0
+                        ? 'Informe um valor válido'
+                        : null,
               ),
             ),
             const SizedBox(height: 16),

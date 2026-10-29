@@ -66,7 +66,9 @@ const helpTopics = [
       'Um aviso para descrições que parecem tarifa, seguro, anuidade, proteção, capitalização ou serviço do banco. O aviso olha só a descrição: se você contratou, toque em "Reconheço"; se não, peça o detalhamento ao banco. O Nexo não contesta nem cancela nada.'),
   // ── Assistente ──────────────────────────────────────────────────────
   HelpTopic('Assistente', 'O que o assistente (Claude) pode fazer no Nexo?',
-      'O mesmo que você no app: consultar, lançar, corrigir, apagar, transferir, pagar fatura, mexer em recorrentes, orçamentos, categorias, objetivos, investimentos, empréstimos, dinheiro emprestado, bens e desejos. Cada pedido vira uma solicitação que o app grava com as próprias regras; o assistente só diz "feito" depois que o Nexo confirma.'),
+      'O mesmo que você no app: consultar, lançar, corrigir, apagar, transferir, pagar fatura, mexer em recorrentes, orçamentos e tipos de gasto, categorias, objetivos, investimentos, empréstimos, dinheiro emprestado, bens, desejos, regras de categoria e configurações. Cada pedido vira uma solicitação que o app grava com as próprias regras, uma de cada vez; o assistente só diz "feito" depois que o Nexo confirma. Tudo aparece em Sincronizar dispositivos → Feito pelo Claude, com Desfazer.'),
+  HelpTopic('Assistente', 'Como desfazer algo que o Claude fez?',
+      'Peça a ele ("desfaz o último lançamento") ou abra Sincronizar dispositivos → Feito pelo Claude e toque em Desfazer. Os dados e os saldos voltam ao que eram antes do pedido. Se você mudou algo depois, o Nexo não desfaz nada e avisa, para não apagar a sua mudança.'),
   HelpTopic(
       'Assistente',
       'Como conectar outro assistente (Claude Code, Cursor, VS Code)?',

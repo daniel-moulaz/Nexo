@@ -641,6 +641,112 @@ try {
     await denies(() => service('nexo_pluggy_store_bills', [B, 'acc-card', JSON.stringify(
       Array.from({ length: 25 }, (_, i) => bill(`b${i}`, '2026-10-26', 1)))]), '22023');
   });
+  // ── Parity with the app (29/10/2026) ─────────────────────────────────
+  await db.exec(await readFile(new URL('../supabase/migrations/202610290001_mcp_parity.sql', import.meta.url), 'utf8'));
+  const parity = {};
+  await test('parity: kinds by shape and capability; idempotency key and retried calls', async () => {
+    await db.query(`update nexo_mcp_private.connectors set revoked_at = now() where owner_id = $1`, [A]);
+    const writer = await user(A, tx => rpc(tx, 'nexo_mcp_create_connector', [ds2, 'Claude paridade']));
+    parity.conn = (await db.query(`select id, dataset_id from nexo_mcp_private.connectors
+      where token_hash = encode(sha256(convert_to($1, 'UTF8')), 'hex')`, [writer.token])).rows[0];
+    const conn = parity.conn;
+    // Earlier tests left requests behind; this block starts from an idle queue.
+    await db.query(`update nexo_mcp_private.commands set status = 'done' where owner_id = $1`, [A]);
+    parity.device = randomUUID();
+    await user(A, tx => rpc(tx, 'nexo_mcp_report_device', [conn.dataset_id, parity.device, '1.13.0',
+      ['transaction.add', 'category.merge', 'request.undo'], JSON.stringify({ themeMode: 'dark' })]));
+    // A kind no app listed is refused; a new one some app listed needs no migration.
+    await denies(() => service('nexo_mcp_enqueue_v2', [conn.id, 'money.send', '{}', null]), '22023');
+    const merge = await service('nexo_mcp_enqueue_v2', [conn.id, 'category.merge', JSON.stringify({ from_id: 'a', into_id: 'b' }), null]);
+    assert.equal(merge.deduplicated, false);
+    // The same call again within minutes is the same request.
+    const again = await service('nexo_mcp_enqueue_v2', [conn.id, 'category.merge', JSON.stringify({ into_id: 'b', from_id: 'a' }), null]);
+    assert.deepEqual([again.id, again.deduplicated], [merge.id, true]);
+    // An explicit key: two equal purchases are two requests, each key once.
+    const one = await service('nexo_mcp_enqueue_v2', [conn.id, 'transaction.add', JSON.stringify({ amount_cents: 500 }), 'cafe-1']);
+    const two = await service('nexo_mcp_enqueue_v2', [conn.id, 'transaction.add', JSON.stringify({ amount_cents: 500 }), 'cafe-2']);
+    assert.notEqual(one.id, two.id);
+    const retry = await service('nexo_mcp_enqueue_v2', [conn.id, 'transaction.add', JSON.stringify({ amount_cents: 500 }), 'cafe-1']);
+    assert.deepEqual([retry.id, retry.deduplicated], [one.id, true]);
+    await denies(() => service('nexo_mcp_enqueue_v2', [conn.id, 'transaction.add', JSON.stringify({ amount_cents: 900 }), 'cafe-1']), '22023');
+    // A refused request does not block asking again.
+    await db.query(`update nexo_mcp_private.commands set status = 'rejected' where id = $1`, [merge.id]);
+    const fresh = await service('nexo_mcp_enqueue_v2', [conn.id, 'category.merge', JSON.stringify({ from_id: 'a', into_id: 'b' }), null]);
+    assert.notEqual(fresh.id, merge.id);
+    await denies(() => user(A, tx => rpc(tx, 'nexo_mcp_enqueue_v2', [conn.id, 'transaction.add', '{}', null])), '42501');
+    parity.ids = [one.id, two.id, fresh.id];
+  });
+  await test('parity: one request applied at a time across devices, oldest first', async () => {
+    const { conn } = parity;
+    const phoneDevice = randomUUID(), pcDevice = randomUUID();
+    const first = await user(A, tx => rpc(tx, 'nexo_mcp_claim', [conn.dataset_id, phoneDevice]));
+    assert.equal(first.id, parity.ids[0]);
+    assert.equal(await user(A, tx => rpc(tx, 'nexo_mcp_claim', [conn.dataset_id, pcDevice])), null,
+      'the PC waits while the phone applies');
+    await user(A, tx => rpc(tx, 'nexo_mcp_finish', [first.id, 'done', JSON.stringify({ message: 'ok' })]));
+    assert.equal((await user(A, tx => rpc(tx, 'nexo_mcp_claim', [conn.dataset_id, pcDevice]))).id, parity.ids[1]);
+    // A device that stopped mid-way frees the queue after five minutes.
+    await db.query(`update nexo_mcp_private.commands set claimed_at = now() - interval '6 minutes' where id = $1`, [parity.ids[1]]);
+    assert.equal((await user(A, tx => rpc(tx, 'nexo_mcp_claim', [conn.dataset_id, phoneDevice]))).id, parity.ids[1]);
+    await user(A, tx => rpc(tx, 'nexo_mcp_finish', [parity.ids[1], 'done', '{}']));
+  });
+  await test('parity: undo data, history in the app, marked undone once', async () => {
+    const { conn } = parity;
+    const claimed = await user(A, tx => rpc(tx, 'nexo_mcp_claim', [conn.dataset_id, parity.device]));
+    assert.equal(claimed.id, parity.ids[2]);
+    const undo = { format: 1, entities: [{ table: 'categories', key: 'a', before: { id: 'a' }, after: null }], balances: [] };
+    await user(A, tx => rpc(tx, 'nexo_mcp_finish', [claimed.id, 'done', JSON.stringify({ message: 'Mescladas.', undo })]));
+    const history = await user(A, tx => rpc(tx, 'nexo_mcp_history', [conn.dataset_id, 10]));
+    const item = history.find(h => h.id === claimed.id);
+    assert.deepEqual([item.undoable, item.message, item.connector], [true, 'Mescladas.', 'Claude paridade']);
+    assert.equal(history.find(h => h.id === parity.ids[1]).undoable, false, 'nothing to undo');
+    assert.deepEqual(await user(A, tx => rpc(tx, 'nexo_mcp_undo_data', [claimed.id])), undo);
+    assert.equal(await user(B, tx => rpc(tx, 'nexo_mcp_undo_data', [claimed.id])), null, 'only the owner');
+    assert.deepEqual(await user(B, tx => rpc(tx, 'nexo_mcp_history', [conn.dataset_id, 10])), []);
+    const recent = await service('nexo_mcp_recent', [conn.id, 5]);
+    assert.equal(recent[0].id, claimed.id);
+    assert.equal(recent[0].undoable, true);
+    await user(B, tx => rpc(tx, 'nexo_mcp_mark_undone', [claimed.id, randomUUID()]));
+    assert.equal((await service('nexo_mcp_command', [conn.id, claimed.id])).result.undone_at, undefined, 'B changes nothing');
+    await user(A, tx => rpc(tx, 'nexo_mcp_mark_undone', [claimed.id, randomUUID()]));
+    const marked = (await service('nexo_mcp_command', [conn.id, claimed.id])).result;
+    assert.ok(marked.undone_at);
+    assert.equal(marked.message, 'Mescladas.', 'the result is kept');
+    assert.equal(await user(A, tx => rpc(tx, 'nexo_mcp_undo_data', [claimed.id])), null, 'undone once');
+    assert.equal((await service('nexo_mcp_recent', [conn.id, 5]))[0].undoable, false);
+    for (const role of ['anon', 'authenticated']) {
+      await denies(() => user(A, tx => rpc(tx, 'nexo_mcp_recent', [conn.id, 5]), role), '42501');
+    }
+  });
+  await test('parity: device reports and the mirror carries settings and capabilities', async () => {
+    const { conn } = parity;
+    await denies(() => user(A, tx => rpc(tx, 'nexo_mcp_report_device',
+      [conn.dataset_id, randomUUID(), '1.13.0', ['transaction.add'], '[1, 2]'])), '22023');
+    await denies(() => user(null, tx => rpc(tx, 'nexo_mcp_report_device',
+      [conn.dataset_id, randomUUID(), '1.13.0', ['transaction.add'], '{}']), 'anon'));
+    const ledger = await service('nexo_mcp_ledger', [conn.id]);
+    const device = ledger.devices.find(d => d.app_version === '1.13.0');
+    assert.deepEqual(device.settings, { themeMode: 'dark' });
+    assert.ok(device.kinds.includes('category.merge'));
+    // Arguments up to 256 KiB (undo of a batch) fit; beyond that, refused.
+    await service('nexo_mcp_enqueue_v2', [conn.id, 'request.undo', JSON.stringify({ blob: 'x'.repeat(200000) }), null]);
+    await denies(() => service('nexo_mcp_enqueue_v2', [conn.id, 'request.undo', JSON.stringify({ blob: 'x'.repeat(270000) }), null]), '23514');
+  });
+  await test('parity: bank balances and official invoices for the assistant; linking an account', async () => {
+    const bConn = (await db.query(`select id from nexo_mcp_private.connectors
+      where owner_id = $1 and revoked_at is null and scope = 'write' limit 1`, [B])).rows[0];
+    const accounts = await service('nexo_mcp_bank_accounts', [bConn.id]);
+    const card = accounts.find((a) => a.account_id === 'acc-card');
+    assert.deepEqual([card.type, card.credit_limit_cents, card.bills[0].total_cents], ['CREDIT', 65000, 42100]);
+    assert.equal(accounts.find((a) => a.account_id === 'acc-bank').nexo_account_id, 'nexo-mp');
+    assert.deepEqual(await service('nexo_mcp_bank_accounts', [parity.conn.id]), [], 'another person sees nothing');
+    assert.equal(await service('nexo_mcp_link_bank_account', [bConn.id, 'acc-bank', 'nexo-main']), 1);
+    assert.equal((await service('nexo_mcp_bank_accounts', [bConn.id])).find((a) => a.account_id === 'acc-bank').nexo_account_id, 'nexo-main');
+    assert.equal(await service('nexo_mcp_link_bank_account', [parity.conn.id, 'acc-bank', 'x']), 0, 'only the owner');
+    assert.equal(await service('nexo_mcp_link_bank_account', [bConn.id, 'acc-bank', null]), 1, 'unlinking');
+    await denies(() => user(B, tx => rpc(tx, 'nexo_mcp_bank_accounts', [bConn.id])), '42501');
+    await denies(() => user(B, tx => rpc(tx, 'nexo_mcp_link_bank_account', [bConn.id, 'acc-bank', 'y'])), '42501');
+  });
   console.log(`SQL LAB: ${passed} tests passed; synthetic local data only.`);
 } finally {
   await db.close();

@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:collection';
 import 'dart:convert';
 
@@ -31,6 +32,7 @@ const ledgerTables = <String, String>{
   'investments': 'id',
   'investment_operations': 'id',
   'import_rules': 'id',
+  'shared_settings': 'key',
 };
 
 /// Device-local or derived state: bank notification inbox of this phone,
@@ -60,6 +62,11 @@ class LedgerConflict implements Exception {
 
 final _installed = Expando<bool>('ledgerCapture');
 
+/// Zone key of a `List<String>` that receives the id of every user operation
+/// committed inside that zone (the assistant uses it to know what a request
+/// changed, so the request can be undone).
+const ledgerOperationsZoneKey = #nexoLedgerOperations;
+
 /// Runs [body] as one SQLite transaction and one named domain operation.
 /// Without installed capture (every production database today) this is a
 /// plain transaction: no table, trigger or journal row is created.
@@ -70,8 +77,8 @@ Future<T> ledgerTransaction<T>(
   LedgerScope scope = LedgerScope.user,
 }) async {
   if (!await LedgerCapture.isInstalled(db)) return db.transaction(body);
+  final id = const Uuid().v4();
   final result = await db.transaction((txn) async {
-    final id = const Uuid().v4();
     // A second context row fails the CHECK: nested operations are a bug.
     await txn.insert('sync_capture_context',
         {'singleton': 1, 'operation_id': id, 'kind': kind});
@@ -81,7 +88,10 @@ Future<T> ledgerTransaction<T>(
     return result;
   });
   // After the commit: a decision of the person may need to be sent.
-  if (scope == LedgerScope.user) LedgerCapture.changes.value++;
+  if (scope == LedgerScope.user) {
+    (Zone.current[ledgerOperationsZoneKey] as List<String>?)?.add(id);
+    LedgerCapture.changes.value++;
+  }
   return result;
 }
 
@@ -135,50 +145,7 @@ abstract final class LedgerCapture {
         await txn.insert('sync_capture_state',
             {'singleton': 1, 'format': ledgerJournalFormat});
       }
-      const context = '(SELECT operation_id FROM sync_capture_context)';
-      for (final entry in ledgerTables.entries) {
-        final t = entry.key, k = entry.value;
-        await txn.execute('''CREATE TRIGGER IF NOT EXISTS sync_capture_${t}_ins
-          AFTER INSERT ON $t BEGIN
-            INSERT INTO sync_capture_log(operation_id, table_name, row_key, action)
-            VALUES ($context, '$t', NEW.$k, 'upsert');
-          END''');
-        await txn.execute('''CREATE TRIGGER IF NOT EXISTS sync_capture_${t}_upd
-          AFTER UPDATE ON $t BEGIN
-            INSERT INTO sync_capture_log(operation_id, table_name, row_key, action)
-            SELECT $context, '$t', OLD.$k, 'delete' WHERE OLD.$k IS NOT NEW.$k;
-            INSERT INTO sync_capture_log(operation_id, table_name, row_key, action)
-            VALUES ($context, '$t', NEW.$k, 'upsert');
-          END''');
-        await txn.execute('''CREATE TRIGGER IF NOT EXISTS sync_capture_${t}_del
-          AFTER DELETE ON $t BEGIN
-            INSERT INTO sync_capture_log(operation_id, table_name, row_key, action)
-            VALUES ($context, '$t', OLD.$k, 'delete');
-          END''');
-      }
-      // Balance is materialized: record what changed, never the total. The
-      // shadow also covers INSERT OR REPLACE, which skips delete triggers.
-      const shadow =
-          'COALESCE((SELECT balance FROM sync_balance_shadow WHERE account_id = NEW.id), 0)';
-      const record = '''
-            INSERT INTO sync_capture_balance(operation_id, account_id, delta)
-            SELECT $context, NEW.id, NEW.balance - $shadow
-              WHERE NEW.balance IS NOT $shadow;
-            INSERT OR REPLACE INTO sync_balance_shadow(account_id, balance)
-            VALUES (NEW.id, NEW.balance);''';
-      await txn.execute('''CREATE TRIGGER IF NOT EXISTS sync_capture_balance_ins
-          AFTER INSERT ON accounts BEGIN $record END''');
-      await txn.execute('''CREATE TRIGGER IF NOT EXISTS sync_capture_balance_upd
-          AFTER UPDATE OF balance ON accounts BEGIN $record END''');
-      // Deleting an account removes its money too; recording that lets the
-      // operation be reverted (rebase, conflict) without losing the balance.
-      await txn.execute('''CREATE TRIGGER IF NOT EXISTS sync_capture_balance_del
-          AFTER DELETE ON accounts BEGIN
-            INSERT INTO sync_capture_balance(operation_id, account_id, delta)
-            SELECT $context, OLD.id, -balance FROM sync_balance_shadow
-              WHERE account_id = OLD.id AND balance != 0;
-            DELETE FROM sync_balance_shadow WHERE account_id = OLD.id;
-          END''');
+      await _triggers(txn);
       // Existing rows form the checkpoint: revision 1, never re-journaled.
       await txn.execute(
           'INSERT OR IGNORE INTO sync_balance_shadow SELECT id, balance FROM accounts');
@@ -191,6 +158,77 @@ abstract final class LedgerCapture {
       }
     });
     _installed[db] = true;
+  }
+
+  /// Adds capture to tables created after [install] (a later schema
+  /// version). Such a table is created empty, so it needs no checkpoint;
+  /// rows it already has are recorded as revision 1, like at install.
+  static Future<void> ensureTriggers(Database db) async {
+    final missing = <String>[];
+    for (final t in ledgerTables.keys) {
+      final rows = await db.rawQuery(
+          "SELECT 1 FROM sqlite_master WHERE type = 'trigger' AND name = ?",
+          ['sync_capture_${t}_ins']);
+      if (rows.isEmpty) missing.add(t);
+    }
+    if (missing.isEmpty) return;
+    await db.transaction((txn) async {
+      await _triggers(txn);
+      for (final t in missing) {
+        for (final row in await txn.query(t)) {
+          final key = '${row[ledgerTables[t]]}';
+          if ((await _entity(txn, t, key)) != null) continue;
+          await _setEntity(txn, t, key, 1, value(t, row));
+        }
+      }
+    });
+  }
+
+  static Future<void> _triggers(DatabaseExecutor txn) async {
+    const context = '(SELECT operation_id FROM sync_capture_context)';
+    for (final entry in ledgerTables.entries) {
+      final t = entry.key, k = entry.value;
+      await txn.execute('''CREATE TRIGGER IF NOT EXISTS sync_capture_${t}_ins
+          AFTER INSERT ON $t BEGIN
+            INSERT INTO sync_capture_log(operation_id, table_name, row_key, action)
+            VALUES ($context, '$t', NEW.$k, 'upsert');
+          END''');
+      await txn.execute('''CREATE TRIGGER IF NOT EXISTS sync_capture_${t}_upd
+          AFTER UPDATE ON $t BEGIN
+            INSERT INTO sync_capture_log(operation_id, table_name, row_key, action)
+            SELECT $context, '$t', OLD.$k, 'delete' WHERE OLD.$k IS NOT NEW.$k;
+            INSERT INTO sync_capture_log(operation_id, table_name, row_key, action)
+            VALUES ($context, '$t', NEW.$k, 'upsert');
+          END''');
+      await txn.execute('''CREATE TRIGGER IF NOT EXISTS sync_capture_${t}_del
+          AFTER DELETE ON $t BEGIN
+            INSERT INTO sync_capture_log(operation_id, table_name, row_key, action)
+            VALUES ($context, '$t', OLD.$k, 'delete');
+          END''');
+    }
+    // Balance is materialized: record what changed, never the total. The
+    // shadow also covers INSERT OR REPLACE, which skips delete triggers.
+    const shadow =
+        'COALESCE((SELECT balance FROM sync_balance_shadow WHERE account_id = NEW.id), 0)';
+    const record = '''
+            INSERT INTO sync_capture_balance(operation_id, account_id, delta)
+            SELECT $context, NEW.id, NEW.balance - $shadow
+              WHERE NEW.balance IS NOT $shadow;
+            INSERT OR REPLACE INTO sync_balance_shadow(account_id, balance)
+            VALUES (NEW.id, NEW.balance);''';
+    await txn.execute('''CREATE TRIGGER IF NOT EXISTS sync_capture_balance_ins
+          AFTER INSERT ON accounts BEGIN $record END''');
+    await txn.execute('''CREATE TRIGGER IF NOT EXISTS sync_capture_balance_upd
+          AFTER UPDATE OF balance ON accounts BEGIN $record END''');
+    // Deleting an account removes its money too; recording that lets the
+    // operation be reverted (rebase, conflict) without losing the balance.
+    await txn.execute('''CREATE TRIGGER IF NOT EXISTS sync_capture_balance_del
+          AFTER DELETE ON accounts BEGIN
+            INSERT INTO sync_capture_balance(operation_id, account_id, delta)
+            SELECT $context, OLD.id, -balance FROM sync_balance_shadow
+              WHERE account_id = OLD.id AND balance != 0;
+            DELETE FROM sync_balance_shadow WHERE account_id = OLD.id;
+          END''');
   }
 
   /// Row changes made outside any [ledgerTransaction]. Sync must refuse to
@@ -305,8 +343,19 @@ abstract final class LedgerCapture {
       final revision = (state?['revision'] as int?) ?? 0;
       edits.add(LedgerEdit(table, key, revision, value));
       final before = state?['value_json'] as String?;
-      base.add(LedgerEdit(table, key, revision,
-          before == null ? null : jsonDecode(before) as Map<String, Object?>));
+      final previous =
+          before == null ? null : jsonDecode(before) as Map<String, Object?>;
+      // A column added by a later schema is missing from a value recorded
+      // before it; no journaled write touched the row since, so it still
+      // holds the column default. Without it, reverting would keep the new
+      // value of that column.
+      if (previous != null && value != null) {
+        final defaults = await _columnDefaults(txn, table);
+        for (final k in value.keys) {
+          if (!previous.containsKey(k)) previous[k] = defaults[k];
+        }
+      }
+      base.add(LedgerEdit(table, key, revision, previous));
       await _setEntity(txn, table, key, revision + 1, value);
     }
     final balances = <LedgerBalanceDelta>[];
@@ -335,6 +384,31 @@ abstract final class LedgerCapture {
       'base_payload': canonicalSyncJson(base.map((e) => e.toJson()).toList()),
     });
   }
+
+  /// Default value of each column of [table], as SQLite would fill it.
+  static Future<Map<String, Object?>> _columnDefaults(
+      DatabaseExecutor txn, String table) async {
+    final out = <String, Object?>{};
+    for (final c in await txn.rawQuery('PRAGMA table_info($table)')) {
+      final raw = c['dflt_value'] as String?;
+      Object? v;
+      if (raw == null || raw.toUpperCase() == 'NULL') {
+        v = null;
+      } else if (raw.length >= 2 && raw.startsWith("'") && raw.endsWith("'")) {
+        v = raw.substring(1, raw.length - 1).replaceAll("''", "'");
+      } else {
+        v = int.tryParse(raw) ?? double.tryParse(raw) ?? raw;
+      }
+      out[c['name'] as String] = v;
+    }
+    return out;
+  }
+
+  /// Writes [value] (null deletes) as the row [key] of [table]; a created
+  /// account starts at zero, since balances only move as deltas.
+  static Future<void> writeRow(DatabaseExecutor txn, String table, String key,
+          Map<String, Object?>? value) =>
+      _write(txn, table, key, value);
 
   static Future<void> _write(DatabaseExecutor txn, String table, String key,
       Map<String, Object?>? value) async {

@@ -1,4 +1,6 @@
 // lib/database/db_helper.dart
+import 'dart:convert';
+
 import 'package:sqflite/sqflite.dart' hide Transaction;
 import 'package:intl/intl.dart';
 import 'package:flutter/foundation.dart';
@@ -10,7 +12,7 @@ import '../services/notification_inbox.dart' show NotificationInbox;
 
 class DBHelper {
   static Database? _db;
-  static const int _version = 26;
+  static const int _version = 27;
 
   /// Public accessor for the current DB/backup schema version, so UI code
   /// (e.g. the Backup screen) never has to hardcode a copy that can drift
@@ -36,8 +38,14 @@ class DBHelper {
 
   static Future<Database> _open() async {
     final path = await DatabasePlatform.path;
-    return openDatabase(path,
+    final db = await openDatabase(path,
         version: _version, onCreate: _onCreate, onUpgrade: _onUpgrade);
+    // A synced device must capture tables added by later schema versions
+    // (CREATE TRIGGER IF NOT EXISTS: nothing changes when already present).
+    if (await LedgerCapture.isInstalled(db)) {
+      await LedgerCapture.ensureTriggers(db);
+    }
+    return db;
   }
 
   static Future<void> _onUpgrade(Database db, int oldV, int newV) async {
@@ -486,6 +494,7 @@ class DBHelper {
     if (oldV < 22) await _createImportRules(db);
     if (oldV < 23) await _createSuggestions(db);
     if (oldV < 24) await InvestmentRepository.createSchema(db);
+    if (oldV < 27) await createSharedSettings(db);
     if (oldV < 26) {
       // Kind of spending of a category (envelopes by share of income).
       final columns = await db.rawQuery('PRAGMA table_info(categories)');
@@ -589,6 +598,38 @@ class DBHelper {
         ]);
     if (changed != 1) throw StateError('Sugestão já resolvida ou expirada.');
   }
+
+  /// Planning settings that are the same on every device (reference
+  /// income, shares per kind of spending, week start, set-aside goals).
+  /// Synced like any ledger table; each row is one setting as JSON.
+  static Future<void> createSharedSettings(DatabaseExecutor db) =>
+      db.execute('''CREATE TABLE IF NOT EXISTS shared_settings (
+        key TEXT PRIMARY KEY, value TEXT NOT NULL, updated_at TEXT NOT NULL
+      )''');
+
+  /// key → JSON text of each shared setting this ledger has.
+  static Future<Map<String, String>> getSharedSettings() async {
+    final rows = await (await database).query('shared_settings');
+    return {for (final r in rows) r['key'] as String: r['value'] as String};
+  }
+
+  /// Writes several shared settings as one operation [kind].
+  static Future<void> saveSharedSettings(
+          Map<String, Object?> values, String kind) =>
+      operation(kind, (txn) async {
+        final now = DateTime.now().toUtc().toIso8601String();
+        for (final e in values.entries) {
+          final row = {
+            'value': jsonEncode(e.value),
+            'updated_at': now,
+          };
+          final changed = await txn.update('shared_settings', row,
+              where: 'key = ?', whereArgs: [e.key]);
+          if (changed == 0) {
+            await txn.insert('shared_settings', {'key': e.key, ...row});
+          }
+        }
+      });
 
   static Future<void> _createImportRules(Database db) async {
     await db.execute('''CREATE TABLE IF NOT EXISTS import_rules (
@@ -761,6 +802,7 @@ class DBHelper {
     await _createImportRules(db);
     await _createSuggestions(db);
     await InvestmentRepository.createSchema(db);
+    await createSharedSettings(db);
     await _insertDefaults(db);
   }
 
@@ -1210,6 +1252,7 @@ class DBHelper {
       db.query('notification_suggestions'),
       db.query('investments'),
       db.query('investment_operations'),
+      db.query('shared_settings'),
     ]);
     return {
       'accounts': results[0],
@@ -1233,6 +1276,7 @@ class DBHelper {
       'notification_suggestions': results[18],
       'investments': results[19],
       'investment_operations': results[20],
+      'shared_settings': results[21],
       'version': _version,
     };
   }
@@ -1279,6 +1323,7 @@ class DBHelper {
         'notification_suggestions',
         'investments',
         'investment_operations',
+        'shared_settings',
       ]) {
         await txn.delete(table);
         final rows = (data[table] as List?)?.cast<Map<String, dynamic>>() ?? [];
@@ -1323,11 +1368,13 @@ class DBHelper {
       'notification_suggestions',
       'investments',
       'investment_operations',
+      'shared_settings',
     ];
     for (final table in tables) {
       final required = version == _version ||
           (version >= 23 &&
-              !['investments', 'investment_operations'].contains(table)) ||
+              !['investments', 'investment_operations', 'shared_settings']
+                  .contains(table)) ||
           const ['accounts', 'categories', 'transactions'].contains(table);
       if (!data.containsKey(table) && !required) continue;
       final rows = data[table];
@@ -1478,6 +1525,9 @@ class DBHelper {
       row.putIfAbsent('icon_code_point', () => 0);
       row.putIfAbsent('order_index', () => 0);
     }
+
+    // v27: planning settings shared by the devices.
+    data.putIfAbsent('shared_settings', () => <dynamic>[]);
 
     // v8: budgets and recurring_history
     data.putIfAbsent('budgets', () => <dynamic>[]);

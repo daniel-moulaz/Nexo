@@ -3,6 +3,7 @@
 // app with its own rules; reads come from the synced ledger.
 import { cents, currencyOf, day, isNeutral, type Ledger, meta, metadataIndex, money, num, type Row, text } from "./finance.ts";
 import { ToolInputError, type ToolDefinition } from "./tools.ts";
+import { sharedSettings } from "./settings.ts";
 
 type Args = Record<string, unknown>;
 type Enqueue = (kind: string, args: Record<string, unknown>) => Promise<{ id: string; status: string }>;
@@ -73,7 +74,9 @@ export const moreActions: (ToolDefinition & { destructive?: boolean })[] = [
   {
     name: "update_recurring",
     title: "Alterar recorrente",
-    description: "Muda nome, valor, conta, categoria, próxima data ou data final de uma recorrente.",
+    description:
+      "Muda nome, valor, conta, categoria, próxima data, data final (null: sem fim), frequência, tipo (fixa ou parcelamento), " +
+      "observação e lembrete de uma recorrente.",
     destructive: true,
     inputSchema: {
       type: "object",
@@ -84,7 +87,13 @@ export const moreActions: (ToolDefinition & { destructive?: boolean })[] = [
         account_id: idField,
         category_id: idField,
         next_date: dateField,
-        end_date: dateField,
+        end_date: { type: ["string", "null"], description: "AAAA-MM-DD ou null" },
+        frequency: { type: "string", enum: ["daily", "weekly", "monthly", "yearly"] },
+        every: { type: "integer", minimum: 1, maximum: 12 },
+        kind: { type: "string", enum: ["subscription", "installment"] },
+        notes: { type: "string", maxLength: 200 },
+        reminder_enabled: { type: "boolean" },
+        reminder_time: { type: "string", pattern: "^\\d{2}:\\d{2}$" },
       },
       required: ["id"],
       additionalProperties: false,
@@ -112,13 +121,17 @@ export const moreActions: (ToolDefinition & { destructive?: boolean })[] = [
   {
     name: "set_budget",
     title: "Definir orçamento",
-    description: "Cria ou altera o limite de gasto de uma categoria de despesa (mensal ou semanal).",
+    description:
+      "Cria ou altera o limite de gasto de uma categoria de despesa (mensal ou semanal). full_period true: o limite vale cheio " +
+      "no período atual, contando desde o 1º dia; false: conta só a partir de hoje, com limite proporcional (padrão do app para " +
+      "orçamento novo no meio do mês).",
     inputSchema: {
       type: "object",
       properties: {
         category_id: idField,
         amount: amountField,
         period: { type: "string", enum: ["monthly", "weekly"], description: "Padrão monthly" },
+        full_period: { type: "boolean" },
       },
       required: ["category_id", "amount"],
       additionalProperties: false,
@@ -165,7 +178,10 @@ export const moreActions: (ToolDefinition & { destructive?: boolean })[] = [
   {
     name: "move_goal",
     title: "Guardar ou retirar de objetivo",
-    description: "Guarda dinheiro de uma conta num objetivo, ou retira de volta para a conta. Não é gasto nem receita.",
+    description:
+      "Guarda dinheiro de uma conta num objetivo, ou retira de volta para a conta. Não é gasto nem receita. " +
+      "move_money false: só muda o valor do objetivo, sem mexer em conta (reserva só contábil, o dinheiro nunca saiu da conta); " +
+      "pergunte à pessoa quando não souber.",
     inputSchema: {
       type: "object",
       properties: {
@@ -174,8 +190,9 @@ export const moreActions: (ToolDefinition & { destructive?: boolean })[] = [
         amount: amountField,
         direction: { type: "string", enum: ["deposit", "withdraw"] },
         note: { type: "string", maxLength: 120 },
+        move_money: { type: "boolean", description: "Padrão true (movimenta account_id)" },
       },
-      required: ["goal_id", "account_id", "amount", "direction"],
+      required: ["goal_id", "amount", "direction"],
       additionalProperties: false,
     },
   },
@@ -266,14 +283,15 @@ function nextOf(r: Row): string {
 
 /// Period of a budget now; created mid-period it counts from its creation
 /// day with a proportional limit (same rule as the app's budgetWindow).
-function budgetWindow(b: Row, today: string): { from: string; to: string; limitCents: number; partial: boolean } {
+function budgetWindow(b: Row, today: string, weekStart = "monday"): { from: string; to: string; limitCents: number; partial: boolean } {
   const [y, m, d] = today.split("-").map(Number);
   let from: string, to: string;
   if (text(b.period) === "weekly") {
-    // The app's week start is a per-device setting; Sunday is its default.
+    // Same as the app: the shared week start (Monday by default).
     const now = new Date(Date.UTC(y, m - 1, d));
     const start = new Date(now);
-    start.setUTCDate(now.getUTCDate() - now.getUTCDay());
+    const offset = weekStart === "monday" ? (now.getUTCDay() + 6) % 7 : now.getUTCDay();
+    start.setUTCDate(now.getUTCDate() - offset);
     const end = new Date(start);
     end.setUTCDate(start.getUTCDate() + 7);
     from = start.toISOString().slice(0, 10);
@@ -290,8 +308,8 @@ function budgetWindow(b: Row, today: string): { from: string; to: string; limitC
   return { from: created, to, limitCents: Math.round(full * span(created, to) / span(from, to)), partial: true };
 }
 
-function budgetSpentCents(l: Ledger, b: Row, today: string): number {
-  const { from, to } = budgetWindow(b, today);
+function budgetSpentCents(l: Ledger, b: Row, today: string, weekStart: string): number {
+  const { from, to } = budgetWindow(b, today, weekStart);
   const metas = metadataIndex(l);
   let total = 0;
   for (const tx of l.transactions) {
@@ -375,8 +393,49 @@ export async function callMoreAction(name: string, rawArgs: unknown, l: Ledger, 
       return pending(q.id, "Nova recorrente");
     }
     case "update_recurring": {
-      only(args, ["id", "name", "amount", "account_id", "category_id", "next_date", "end_date"]);
+      only(args, ["id", "name", "amount", "account_id", "category_id", "next_date", "end_date", "frequency", "every", "kind",
+        "notes", "reminder_enabled", "reminder_time"]);
       const r = recurring(l, str(args, "id", 256));
+      const extended = ["frequency", "every", "kind", "notes", "reminder_enabled", "reminder_time"].some((k) => args[k] !== undefined) ||
+        args.end_date === null;
+      if (extended) {
+        const body: Args = { id: text(r.id) };
+        const nm = str(args, "name", 80, false);
+        if (nm) body.name = nm;
+        const c = amountCents(args, false);
+        if (c !== undefined) body.amount_cents = c;
+        if (args.account_id !== undefined) body.account_id = text(account(l, str(args, "account_id", 256)).id);
+        if (args.category_id !== undefined) {
+          category(l, str(args, "category_id", 256), text(r.payment_type) || "expense");
+          body.category_id = args.category_id;
+        }
+        const nd = dateArg(args, "next_date");
+        if (nd) body.next_date = nd;
+        if (args.end_date !== undefined) body.end_date = args.end_date === null ? null : dateArg(args, "end_date");
+        if (args.frequency !== undefined) body.freq_unit = unit[enumArg(args, "frequency", ["daily", "weekly", "monthly", "yearly"], "monthly")];
+        if (args.every !== undefined) {
+          if (typeof args.every !== "number" || !Number.isInteger(args.every) || args.every < 1 || args.every > 12) {
+            throw new ToolInputError("every deve ser um inteiro entre 1 e 12.");
+          }
+          body.freq_val = args.every;
+        }
+        if (args.kind !== undefined) body.kind = enumArg(args, "kind", ["subscription", "installment"], "subscription");
+        const kind = body.kind ?? text(r.recurring_type);
+        const end = args.end_date === undefined ? r.end_date : body.end_date;
+        if (kind === "installment" && !end) throw new ToolInputError("Parcelamento precisa de end_date.");
+        if (args.notes !== undefined) body.notes = typeof args.notes === "string" ? args.notes.slice(0, 200) : "";
+        if (args.reminder_enabled !== undefined) {
+          if (typeof args.reminder_enabled !== "boolean") throw new ToolInputError("reminder_enabled deve ser verdadeiro ou falso.");
+          body.reminder_enabled = args.reminder_enabled;
+        }
+        if (args.reminder_time !== undefined) {
+          if (typeof args.reminder_time !== "string" || !/^([01]\d|2[0-3]):[0-5]\d$/.test(args.reminder_time)) {
+            throw new ToolInputError("reminder_time deve ser HH:mm.");
+          }
+          body.reminder_time = args.reminder_time;
+        }
+        return pending((await enqueue("recurring.edit", body)).id, "Alteração da recorrente");
+      }
       const change: Args = { id: text(r.id) };
       const nm = str(args, "name", 80, false);
       if (nm) change.name = nm;
@@ -412,10 +471,11 @@ export async function callMoreAction(name: string, rawArgs: unknown, l: Ledger, 
     }
     case "get_budgets": {
       only(args, []);
+      const weekStart = String(sharedSettings(l).weekStart ?? "monday");
       return {
         budgets: (l.budgets ?? []).map((b) => {
-          const spent = budgetSpentCents(l, b, today);
-          const window = budgetWindow(b, today);
+          const spent = budgetSpentCents(l, b, today, weekStart);
+          const window = budgetWindow(b, today, weekStart);
           const limit = window.limitCents;
           return {
             id: text(b.id),
@@ -427,18 +487,27 @@ export async function callMoreAction(name: string, rawArgs: unknown, l: Ledger, 
             remaining: money(limit - spent),
             used_percent: limit > 0 ? Math.round((spent / limit) * 100) : null,
             counts_from: window.partial ? window.from : undefined,
+            full_limit: window.partial ? money(cents(num(b.amount))) : undefined,
+            prorated: window.partial,
           };
         }),
-        note: "Inclui gastos pendentes do período, como no app. Semana começando no domingo. Orçamento criado no meio do período conta desde a criação, com limite proporcional (counts_from).",
+        week_starts_on: weekStart === "sunday" ? "domingo" : "segunda",
+        note: "Inclui gastos pendentes do período, como no app. Orçamento criado no meio do período conta desde a criação, com limite proporcional (counts_from, full_limit). Para valer cheio, use update_budget com full_period true.",
       };
     }
     case "set_budget": {
-      only(args, ["category_id", "amount", "period"]);
+      only(args, ["category_id", "amount", "period", "full_period"]);
       const c = category(l, str(args, "category_id", 256), "expense");
-      const q = await enqueue("budget.set", {
+      const body: Args = {
         category_id: text(c.id), amount_cents: amountCents(args),
         period: enumArg(args, "period", ["monthly", "weekly"], "monthly"),
-      });
+      };
+      if (args.full_period !== undefined) {
+        if (typeof args.full_period !== "boolean") throw new ToolInputError("full_period deve ser verdadeiro ou falso.");
+        // Older apps do not know full_period: the newer request kind carries it.
+        return pending((await enqueue("budget.save", { ...body, full_period: args.full_period })).id, "Orçamento");
+      }
+      const q = await enqueue("budget.set", body);
       return pending(q.id, "Orçamento");
     }
     case "delete_budget": {
@@ -479,9 +548,21 @@ export async function callMoreAction(name: string, rawArgs: unknown, l: Ledger, 
       };
     }
     case "move_goal": {
-      only(args, ["goal_id", "account_id", "amount", "direction", "note"]);
+      only(args, ["goal_id", "account_id", "amount", "direction", "note", "move_money"]);
       const g = find(l.goals ?? [], args.goal_id);
       if (!g) throw new ToolInputError("Objetivo não encontrado. Use get_goals.");
+      if (args.move_money !== undefined && typeof args.move_money !== "boolean") {
+        throw new ToolInputError("move_money deve ser verdadeiro ou falso.");
+      }
+      if (args.move_money === false) {
+        const direction = enumArg(args, "direction", ["deposit", "withdraw"], "deposit");
+        const c = amountCents(args)!;
+        if (direction === "withdraw" && c > cents(num(g.current_amount))) {
+          throw new ToolInputError("O valor supera o que o objetivo guarda.");
+        }
+        const q = await enqueue("goal.adjust", { goal_id: text(g.id), amount_cents: c, direction, note: str(args, "note", 120, false) ?? "" });
+        return { ...pending(q.id, "Ajuste do objetivo"), note: "Só o objetivo muda; nenhuma conta é movimentada." };
+      }
       const a = account(l, str(args, "account_id", 256));
       if (text(a.type) === "credit") throw new ToolInputError("Use uma conta, não um cartão de crédito.");
       const q = await enqueue("goal.move", {

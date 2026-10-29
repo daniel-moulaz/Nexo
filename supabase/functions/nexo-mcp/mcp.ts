@@ -6,9 +6,10 @@ import type { Ledger } from "./finance.ts";
 import { type ActionDeps, actions, callAction } from "./actions.ts";
 import { readOnlyMore } from "./more_actions.ts";
 import { readOnlyAll } from "./all_actions.ts";
+import { readOnlyParity } from "./parity_actions.ts";
 import { callTool, ToolInputError, tools } from "./tools.ts";
 
-export const serverInfo = { name: "nexo", title: "Nexo", version: "0.1.0" };
+export const serverInfo = { name: "nexo", title: "Nexo", version: "0.2.0" };
 const supported = ["2025-11-25", "2025-06-18", "2025-03-26"];
 
 export interface Connector {
@@ -27,7 +28,34 @@ export interface Deps {
   actions?(connector: Connector): ActionDeps;
 }
 
-const readOnlyActions = new Set(["list_suggestions", "get_request_status", "get_bank_sync_status", "get_daily_digest", ...readOnlyMore, ...readOnlyAll]);
+export const readOnlyActions = new Set(["list_suggestions", "get_request_status", "get_bank_sync_status", "get_daily_digest",
+  ...readOnlyMore, ...readOnlyAll, ...readOnlyParity]);
+
+/// Every change tool accepts a key that makes resending it safe.
+const idempotencyKey = {
+  type: "string", minLength: 1, maxLength: 120,
+  description: "Opcional. Chave única deste pedido: reenviar com a mesma chave não duplica. Sem chave, o mesmo pedido repetido em 10 minutos também não duplica; para dois pedidos iguais de propósito, use chaves diferentes.",
+};
+const withKey = (schema: Record<string, unknown>) => ({
+  ...schema,
+  properties: { ...(schema.properties as Record<string, unknown> ?? {}), idempotency_key: idempotencyKey },
+});
+
+export const instructions =
+  "Dados financeiros pessoais do Nexo. Você pode fazer no Nexo tudo o que a pessoa faz no app; se não souber se algo é possível, " +
+  "consulte describe_app_capabilities. Valores vêm da última sincronização do app. Não invente valores: se uma ferramenta não " +
+  "trouxer o dado, diga que ele não está disponível. Transferências, reservas/objetivos, pagamentos de fatura, ajustes de saldo e " +
+  "aportes não contam como consumo. " +
+  "Lançar, corrigir e apagar viram pedidos que o app grava com as próprias regras, um de cada vez e na ordem em que foram feitos: " +
+  "só diga que foi feito depois que get_request_status disser 'gravado no Nexo'. Um pedido pode usar o new_id de algo criado num " +
+  "pedido anterior ainda pendente. Antes de lançar, confira se já não existe o mesmo lançamento; reenviar o mesmo pedido não " +
+  "duplica (idempotency_key). Todo pedido gravado pode ser desfeito com undo_request; list_requests mostra o que foi feito. " +
+  "Em mudanças em lote (update_transactions, delete_transactions, convert_to_balance_adjustment, merge_categories) rode antes " +
+  "com dry_run e mostre o resultado. Para acertar um saldo com o extrato use adjust_account_balance, nunca uma despesa ou " +
+  "receita de ajuste; acertos antigos lançados como receita viram ajuste neutro com convert_to_balance_adjustment. " +
+  "Retirar de um objetivo devolve dinheiro à conta; se a reserva era só contábil, use move_goal com move_money false. " +
+  "Orçamento por tipo de gasto: get_spending_types, set_category_type e set_spending_targets. Orçamento criado no meio do mês " +
+  "fica proporcional, a menos que full_period seja true.";
 
 type Json = Record<string, unknown>;
 const rpcError = (id: unknown, code: number, message: string) => ({
@@ -49,16 +77,7 @@ async function dispatch(message: Json, connector: Connector, deps: Deps): Promis
           protocolVersion: typeof requested === "string" && supported.includes(requested) ? requested : supported[1],
           capabilities: { tools: { listChanged: false } },
           serverInfo,
-          instructions:
-            "Dados financeiros pessoais do Nexo. Valores vêm da última sincronização do app. " +
-            "Transferências, reservas e pagamentos de fatura não contam como consumo. Não invente valores: " +
-            "se uma ferramenta não trouxer o dado, diga que ele não está disponível. " +
-            "Lançar, corrigir e apagar viram pedidos que o app grava com as próprias regras: só diga que foi " +
-            "feito depois que get_request_status disser 'gravado no Nexo'. Antes de lançar, confira se já não " +
-            "existe o mesmo lançamento. Para acertar um saldo com o extrato use adjust_account_balance, nunca " +
-            "uma despesa ou receita de ajuste (isso distorceria gastos e receitas). Você pode fazer no Nexo o " +
-            "mesmo que a pessoa faz no app: contas, categorias, recorrentes, orçamentos, objetivos, investimentos, " +
-            "empréstimos, bens e lista de desejos.",
+          instructions,
         },
       };
     }
@@ -72,6 +91,7 @@ async function dispatch(message: Json, connector: Connector, deps: Deps): Promis
             ...tools.map((t) => ({ ...t, annotations: { readOnlyHint: true, openWorldHint: false } })),
             ...(deps.actions ? actions : []).map(({ destructive, ...t }) => ({
               ...t,
+              inputSchema: readOnlyActions.has(t.name) ? t.inputSchema : withKey(t.inputSchema),
               annotations: {
                 readOnlyHint: readOnlyActions.has(t.name),
                 destructiveHint: destructive === true,

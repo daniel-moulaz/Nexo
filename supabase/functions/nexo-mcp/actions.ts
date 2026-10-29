@@ -6,6 +6,7 @@ import { analyze, cents, day, isNeutral, type Ledger, meta, metadataIndex, money
 import { callTool, ToolInputError, type ToolDefinition } from "./tools.ts";
 import { callMoreAction, moreActions } from "./more_actions.ts";
 import { allActions, callAllAction } from "./all_actions.ts";
+import { callParityAction, extendedTransactionEdit, parityActions } from "./parity_actions.ts";
 
 export interface Request {
   id: string;
@@ -16,8 +17,14 @@ export interface Request {
 }
 
 export interface ActionDeps {
-  enqueue(kind: string, args: Record<string, unknown>): Promise<{ id: string; status: string }>;
+  /// Queues a request. The same [key] (or, without one, the same request a
+  /// few minutes later) returns the first request: `deduplicated` is true.
+  enqueue(kind: string, args: Record<string, unknown>, key?: string): Promise<{ id: string; status: string; deduplicated?: boolean }>;
   request(id: string): Promise<Request | null>;
+  /// The connector's latest requests (absent on older servers).
+  recent?(limit: number): Promise<Record<string, unknown>[]>;
+  bankAccounts?(): Promise<Record<string, unknown>[]>;
+  linkBankAccount?(accountId: string, nexoAccountId: string | null): Promise<number>;
   suggestions(limit: number): Promise<Record<string, unknown>[]>;
   ignoreSuggestions(ids: string[] | null, beforeMs: number | null): Promise<number>;
   /// When each bank was last refreshed (absent on older servers).
@@ -63,7 +70,8 @@ const baseActions: (ToolDefinition & { destructive?: boolean })[] = [
     name: "add_transaction",
     title: "Lançar despesa ou receita",
     description:
-      "Registra uma despesa ou receita numa conta. Use get_accounts e get_categories para os ids. " +
+      "Registra uma despesa ou receita numa conta. Use get_accounts e get_categories para os ids. Opcional: subcategoria, " +
+      "pendente com vencimento (ainda não sai do saldo), gasto pontual e parcelas (o valor total dividido em N meses). " +
       "O Nexo grava pelo app (celular ou PC aberto) com as regras normais; confira com get_request_status antes de dizer que foi lançado.",
     inputSchema: {
       type: "object",
@@ -75,6 +83,11 @@ const baseActions: (ToolDefinition & { destructive?: boolean })[] = [
         category_id: { type: "string" },
         date: { ...dateField, description: "AAAA-MM-DD; padrão: hoje" },
         note: { type: "string", maxLength: 200 },
+        subcategory: { type: "string", maxLength: 60 },
+        status: { type: "string", enum: ["paid", "pending"], description: "pending: conta a pagar/receber, não sai do saldo" },
+        due_date: { ...dateField, description: "Vencimento (pendentes); padrão: a data" },
+        kind: { type: "string", enum: ["normal", "extraordinary"], description: "extraordinary = gasto pontual" },
+        installments: { type: "integer", minimum: 2, maximum: 120, description: "Divide o valor total em N parcelas mensais" },
       },
       required: ["type", "amount", "description", "account_id", "category_id"],
       additionalProperties: false,
@@ -100,8 +113,11 @@ const baseActions: (ToolDefinition & { destructive?: boolean })[] = [
   },
   {
     name: "update_transaction",
-    title: "Corrigir lançamento",
-    description: "Corrige valor, descrição, categoria, conta, data ou observação de um lançamento existente.",
+    title: "Editar lançamento",
+    description:
+      "Edita qualquer campo de um lançamento: valor, descrição, categoria, conta, data, observação, tipo (despesa/receita), " +
+      "subcategoria, situação (paid/pending), vencimento, gasto pontual (kind extraordinary) e se é a renda do mês " +
+      "(recurring_income_id). Transferências e investimentos têm ferramentas próprias.",
     destructive: true,
     inputSchema: {
       type: "object",
@@ -113,6 +129,12 @@ const baseActions: (ToolDefinition & { destructive?: boolean })[] = [
         account_id: { type: "string" },
         date: dateField,
         note: { type: "string", maxLength: 200 },
+        type: { type: "string", enum: ["expense", "income"] },
+        subcategory: { type: "string", maxLength: 60 },
+        status: { type: "string", enum: ["paid", "pending"], description: "pending: ainda não saiu do saldo" },
+        due_date: { type: ["string", "null"], description: "Vencimento AAAA-MM-DD (pendentes); null tira" },
+        kind: { type: "string", enum: ["normal", "extraordinary"], description: "extraordinary = gasto pontual, fora das médias" },
+        recurring_income_id: { type: "string", description: "Conta esta receita como a ocorrência desta receita recorrente (\"é a renda do mês\")" },
       },
       required: ["id"],
       additionalProperties: false,
@@ -154,6 +176,8 @@ const baseActions: (ToolDefinition & { destructive?: boolean })[] = [
         category_id: { type: "string" },
         type: { type: "string", enum: ["expense", "income"], description: "Padrão: o tipo sugerido pelo banco" },
         description: { type: "string", minLength: 1, maxLength: 80 },
+        subcategory: { type: "string", maxLength: 60 },
+        note: { type: "string", maxLength: 200 },
       },
       required: ["id", "account_id", "category_id"],
       additionalProperties: false,
@@ -279,17 +303,58 @@ const statusText: Record<string, string> = {
   rejected: "recusado pelo Nexo",
 };
 
-export const actions: (ToolDefinition & { destructive?: boolean })[] = [...baseActions, ...moreActions, ...allActions];
+export const actions: (ToolDefinition & { destructive?: boolean })[] = [
+  ...baseActions, ...moreActions, ...allActions, ...parityActions,
+];
+
+/// Ids the app gives to what a request creates, so a later request can use
+/// it before the first one is recorded (requests are applied in order).
+export const createdIdPrefix: Record<string, string> = {
+  "transaction.add": "assistant:", "transaction.create": "assistant:", "category.add": "assistant-cat:", "account.add": "assistant-acc:",
+  "goal.add": "assistant-goal:", "recurring.add": "assistant-rec:", "investment.add": "assistant-inv:",
+  "loan.add": "assistant-loan:", "lended.add": "assistant-lend:", "asset.add": "assistant-asset:",
+  "wishlist.add": "assistant-wish:", "rule.save": "assistant-rule:",
+};
+
+/// Ledger with placeholders for things that pending requests will create,
+/// so tools accept their ids (e.g. a category created a moment ago).
+async function withPending(l: Ledger, args: Record<string, unknown>, deps: ActionDeps): Promise<Ledger> {
+  const refs = new Set<string>();
+  const scan = (v: unknown) => {
+    if (typeof v === "string" && /^assistant-(cat|acc|goal):[0-9a-f-]{36}$/.test(v)) refs.add(v);
+    else if (Array.isArray(v)) v.forEach(scan);
+    else if (v && typeof v === "object") Object.values(v).forEach(scan);
+  };
+  scan(args);
+  if (!refs.size) return l;
+  const out = { ...l, categories: [...l.categories], accounts: [...l.accounts], goals: [...(l.goals ?? [])] };
+  for (const ref of refs) {
+    const [prefix, id] = ref.split(":");
+    const known = prefix === "assistant-cat" ? out.categories : prefix === "assistant-acc" ? out.accounts : out.goals;
+    if (known.some((r) => r.id === ref)) continue;
+    const r = await deps.request(id);
+    const kind = { "assistant-cat": "category.add", "assistant-acc": "account.add", "assistant-goal": "goal.add" }[prefix];
+    if (!r || r.kind !== kind || r.status === "rejected") continue;
+    // Its type is unknown here; the app checks it when applying, in order.
+    known.push({ id: ref, name: "(sendo criado)", type: "", currency: l.mainCurrency });
+  }
+  return out;
+}
 
 /// Server refusals the assistant can act on, instead of a generic failure.
-function guarded(deps: ActionDeps): ActionDeps {
+function guarded(deps: ActionDeps, key?: string, seen?: { kind?: string; id?: string; deduplicated?: boolean }): ActionDeps {
   return {
     ...deps,
     enqueue: async (kind, args) => {
       try {
-        return await deps.enqueue(kind, args);
+        const r = await deps.enqueue(kind, args, key);
+        if (seen) Object.assign(seen, { kind, id: r.id, deduplicated: r.deduplicated === true });
+        return r;
       } catch (error) {
         const reason = error instanceof Error ? error.message : "";
+        if (reason.includes("idempotency_key_reused")) {
+          throw new ToolInputError("Esta idempotency_key já foi usada num pedido diferente. Use outra chave.");
+        }
         if (reason.includes("kind_unsupported")) {
           throw new ToolInputError(
             "O Nexo instalado no celular/PC ainda não sabe fazer isto. Atualize o app e abra-o uma vez; depois peça de novo.");
@@ -304,23 +369,67 @@ function guarded(deps: ActionDeps): ActionDeps {
   };
 }
 
-export async function callAction(name: string, rawArgs: unknown, l: Ledger, today: string,
+export async function callAction(name: string, rawArgs: unknown, ledger: Ledger, today: string,
   rawDeps: ActionDeps): Promise<Record<string, unknown>> {
-  const deps = guarded(rawDeps);
-  const args = (rawArgs ?? {}) as Args;
-  if (typeof args !== "object" || Array.isArray(args)) throw new ToolInputError("Argumentos inválidos.");
+  const given = (rawArgs ?? {}) as Args;
+  if (typeof given !== "object" || Array.isArray(given)) throw new ToolInputError("Argumentos inválidos.");
+  // A key per request makes resending it safe; it never reaches the app.
+  const { idempotency_key: key, ...args } = given;
+  if (key !== undefined && (typeof key !== "string" || !key.trim() || key.length > 120)) {
+    throw new ToolInputError("idempotency_key deve ter de 1 a 120 caracteres.");
+  }
+  const seen: { kind?: string; id?: string; deduplicated?: boolean } = {};
+  const deps = guarded(rawDeps, key as string | undefined, seen);
+  const l = await withPending(ledger, args, rawDeps);
+  const result = await dispatchAction(name, args, l, today, deps);
+  if (seen.id && typeof result.request_id === "string") {
+    const prefix = createdIdPrefix[seen.kind ?? ""];
+    if (prefix && !result.new_id) result.new_id = `${prefix}${seen.id}`;
+    if (seen.deduplicated) {
+      result.deduplicated = true;
+      result.message = "Este mesmo pedido já tinha sido enviado; nada foi duplicado. Situação: veja get_request_status.";
+    }
+  }
+  return result;
+}
+
+async function dispatchAction(name: string, args: Args, l: Ledger, today: string,
+  deps: ActionDeps): Promise<Record<string, unknown>> {
   switch (name) {
     case "add_transaction": {
-      only(args, ["type", "amount", "description", "account_id", "category_id", "date", "note"]);
+      only(args, ["type", "amount", "description", "account_id", "category_id", "date", "note", "subcategory", "status",
+        "due_date", "kind", "installments"]);
       const type = args.type;
       if (type !== "expense" && type !== "income") throw new ToolInputError("type deve ser expense ou income.");
       const a = account(l, str(args, "account_id", 256));
       category(l, str(args, "category_id", 256), type);
-      const r = await deps.enqueue("transaction.add", {
+      const body: Args = {
         type, amount_cents: amountCents(args), description: str(args, "description", 80),
         account_id: text(a.id), category_id: args.category_id, date: date(args, "date", today, true),
         note: str(args, "note", 200, false) ?? "",
-      });
+      };
+      // The newer fields travel in the newer request kind (older apps do not know them).
+      const extended = ["subcategory", "status", "due_date", "kind", "installments"].some((k) => args[k] !== undefined);
+      if (extended) {
+        if (args.subcategory !== undefined) body.subcategory = str(args, "subcategory", 60, false) ?? "";
+        if (args.status !== undefined) {
+          if (args.status !== "paid" && args.status !== "pending") throw new ToolInputError("status deve ser paid ou pending.");
+          body.status = args.status;
+        }
+        if (args.due_date !== undefined) body.due_date = date(args, "due_date", today);
+        if (args.kind !== undefined) {
+          if (args.kind !== "normal" && args.kind !== "extraordinary") throw new ToolInputError("kind deve ser normal ou extraordinary.");
+          body.expense_class = args.kind;
+        }
+        if (args.installments !== undefined) {
+          const n = args.installments;
+          if (typeof n !== "number" || !Number.isInteger(n) || n < 2 || n > 120) throw new ToolInputError("installments de 2 a 120.");
+          body.installments = n;
+        }
+        const r = await deps.enqueue("transaction.create", body);
+        return pending(r.id, type === "expense" ? "Despesa" : "Receita");
+      }
+      const r = await deps.enqueue("transaction.add", body);
       return pending(r.id, type === "expense" ? "Despesa" : "Receita");
     }
     case "add_transfer": {
@@ -335,9 +444,16 @@ export async function callAction(name: string, rawArgs: unknown, l: Ledger, toda
       return pending(r.id, "Transferência");
     }
     case "update_transaction": {
-      only(args, ["id", "amount", "description", "category_id", "account_id", "date", "note"]);
+      only(args, ["id", "amount", "description", "category_id", "account_id", "date", "note", "type", "subcategory",
+        "status", "due_date", "kind", "recurring_income_id"]);
       const id = str(args, "id", 256)!;
       const tx = editable(l, id);
+      if (meta(metadataIndex(l).get(id)).source.startsWith("transfer:")) {
+        throw new ToolInputError("Para mudar uma transferência, apague-a (as duas pontas) e registre de novo.");
+      }
+      // New fields use the newer request kind; old ones keep the old kind.
+      const extended = extendedTransactionEdit(l, args);
+      if (extended) return pending((await deps.enqueue("transaction.edit", extended)).id, "Edição");
       const change: Args = { id };
       const cents = amountCents(args, false);
       if (cents !== undefined) change.amount_cents = cents;
@@ -381,7 +497,7 @@ export async function callAction(name: string, rawArgs: unknown, l: Ledger, toda
       };
     }
     case "confirm_suggestion": {
-      only(args, ["id", "account_id", "category_id", "type", "description"]);
+      only(args, ["id", "account_id", "category_id", "type", "description", "subcategory", "note"]);
       const id = str(args, "id", 80)!;
       if (!/^pluggy:[0-9A-Za-z-]{1,64}$/.test(id)) throw new ToolInputError("id de sugestão inválido.");
       const type = args.type;
@@ -391,10 +507,14 @@ export async function callAction(name: string, rawArgs: unknown, l: Ledger, toda
       const a = account(l, str(args, "account_id", 256));
       const c = category(l, str(args, "category_id", 256), typeof type === "string" ? type : text(
         l.categories.find((x) => text(x.id) === args.category_id)?.type));
-      const r = await deps.enqueue("suggestion.confirm", {
+      const fields = {
         id, account_id: text(a.id), category_id: text(c.id), type: type ?? text(c.type),
         description: str(args, "description", 80, false),
-      });
+      };
+      const extra = args.subcategory !== undefined || args.note !== undefined;
+      const r = await deps.enqueue(extra ? "suggestion.accept" : "suggestion.confirm", extra
+        ? { ...fields, subcategory: str(args, "subcategory", 60, false), note: str(args, "note", 200, false) }
+        : fields);
       return pending(r.id, "Confirmação da sugestão");
     }
     case "ignore_suggestions": {
@@ -469,8 +589,14 @@ export async function callAction(name: string, rawArgs: unknown, l: Ledger, toda
       if (!r) throw new ToolInputError("Pedido não encontrado.");
       const waiting = r.status === "pending" || r.status === "applying";
       const minutes = waiting && r.created_at ? Math.max(0, Math.round((Date.now() - Date.parse(r.created_at)) / 60000)) : undefined;
+      // What the request changed stays on the server for undo_request.
+      const { undo, undone_at, undone_by: _by, ...shown } = (r.result ?? {}) as Record<string, unknown>;
       return {
-        request_id: r.id, kind: r.kind, status: statusText[r.status] ?? r.status, result: r.result ?? undefined,
+        request_id: r.id, kind: r.kind,
+        status: undone_at ? "gravado no Nexo e depois desfeito" : statusText[r.status] ?? r.status,
+        result: r.result ? shown : undefined,
+        undoable: r.status === "done" && !undone_at && !!undo && !(undo as Record<string, unknown>).too_large,
+        undone_at: undone_at ?? undefined,
         waiting_minutes: minutes,
         next_step: !waiting ? undefined : r.status === "applying"
           ? "Um aparelho está gravando agora; consulte de novo em alguns segundos."
@@ -479,7 +605,8 @@ export async function callAction(name: string, rawArgs: unknown, l: Ledger, toda
     }
     default: {
       const more = await callMoreAction(name, args, l, today, deps.enqueue) ??
-        await callAllAction(name, args, l, today, deps.enqueue);
+        await callAllAction(name, args, l, today, deps.enqueue) ??
+        await callParityAction(name, args, l, today, deps);
       if (more) return more;
       throw new ToolInputError("Ferramenta desconhecida.");
     }
