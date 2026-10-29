@@ -1,5 +1,18 @@
 # Changelog
 
+## [1.13.0] - 2026-10-29
+### Claude com o app na mão (paridade do conector)
+- **Por tipo de gasto pelo Claude:** ler a visão do Orçamento (renda de referência, % e meta de cada tipo, usado, sobra, categorias sem tipo), **Classificar** categorias e **Ajustar** renda e porcentagens.
+- **Configurações compartilhadas:** renda de referência, % por tipo, início da semana e objetivos travados passam a ser iguais no celular e no PC (sincronizados; antes cada aparelho tinha os seus). Schema **27** (`shared_settings`).
+- **Tudo o que a tela faz:** editar qualquer campo do lançamento (tipo, subcategoria, situação, vencimento, gasto pontual, "é a renda do mês"), dividir em parcelas, duplicar, alterar e apagar em lote com prévia, transformar acertos antigos lançados como receita em **ajuste de saldo neutro**, juntar categorias, cor e ícone, orçamento **cheio ou proporcional** no mês em que começa, conta de pagamento e pagamento mínimo do cartão, extrato de cada fatura, objetivo **só contábil** (retirar sem devolver dinheiro à conta), concluir objetivo, frequência e lembrete de recorrente, retirar da carteira, apagar e vincular operação de investimento, cadastrar/alterar/excluir empréstimo e pagamento, alterar/excluir empréstimo pessoal e pessoas, regras automáticas de categoria, sugestão do banco como transferência, pedir leitura dos bancos, tendência mensal, patrimônio líquido, projeção de caixa e consumo agrupado.
+- **Desfazer:** todo pedido gravado pelo Claude pode ser desfeito (pelo Claude ou pelo botão **Desfazer** em Sincronizar dispositivos › **Feito pelo Claude**), voltando dados e saldos; recusa se algo mudou depois.
+- **Sem duplicar:** chave por pedido e o mesmo pedido repetido em 10 minutos devolvem o primeiro; pedidos são gravados um de cada vez, na ordem, mesmo com celular e PC abertos.
+- **Catálogo:** `describe_app_capabilities` diz ao Claude o que dá para fazer; um teste falha quando uma ação nova do app não chega ao conector.
+### Correções
+- "Metas" em Por tipo de gasto contava retiradas de objetivo como uso (o tipo gravado é `withdrawal`); agora só depósitos.
+- O espelho do servidor assumia semana começando no domingo para orçamentos semanais; o app usa segunda por padrão (agora a configuração compartilhada).
+- Reverter uma operação em linhas gravadas antes de uma coluna existir (ex.: tipo de gasto da categoria, schema 26) deixava o valor novo dessa coluna; achado numa cópia do acervo real.
+
 ## [1.12.14] - 2026-10-28
 ### Novo
 - **Cupom pela câmera (Android):** o botão de câmera no formulário de lançamento, e "Escanear cupom" na paleta, fotografam o cupom ou comprovante e preenchem valor, data e estabelecimento com reconhecimento de texto no próprio aparelho (Google ML Kit, sem enviar a imagem a lugar nenhum). Nada é salvo sem confirmar. No Windows o botão não aparece.
