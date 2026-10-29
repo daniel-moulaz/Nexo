@@ -23,11 +23,11 @@ O Nexo reúne saldo, gastos, cartões, dívidas, investimentos e previsão de ca
 
 - **Hoje:** saldo, quanto ainda dá para gastar no dia e no mês, ritmo ideal do mês, resumo de ontem e da semana, alertas de vencimento e de cobrança.
 - **Extrato:** lançamentos por dia, busca, filtros, calendário de gastos e formulário rápido com lançamentos anteriores e atalhos de data.
-- **Orçamento e planejamento:** orçamentos por categoria (proporcionais quando criados no meio do mês), recorrentes, assinaturas, objetivos e "Mês em revisão".
+- **Orçamento e planejamento:** orçamentos por categoria (proporcionais ou cheios no mês em que começam), visão por tipo de gasto (Custos fixos, Conforto, Metas, Prazeres, Conhecimento, Liberdade financeira) em % de uma renda de referência, recorrentes, assinaturas, objetivos e "Mês em revisão".
 - **Contas e cartões:** transferências, faturas com a regra do fechamento do banco, pagamento de fatura sem duplicar gasto, empréstimos e dinheiro emprestado.
 - **Investimentos:** carteira, proventos, comparação com o CDI e prazos de liquidez (D+0, D+2 úteis) para saber quanto dá para resgatar até uma data.
 - **Open Finance (opcional):** movimentações dos bancos conectados chegam como sugestões na caixa "Para revisar", com conciliação automática; saldo do banco × saldo do Nexo com ajuste neutro; limite real e fatura oficial do cartão.
-- **Assistente (opcional):** conector MCP para o Claude consultar e registrar no Nexo com as mesmas regras do app.
+- **Assistente (opcional):** conector MCP com o qual o Claude faz no Nexo tudo o que a pessoa faz nas telas (98 ferramentas), com as mesmas regras do app. Cada pedido pode ser desfeito, repetir um pedido não duplica nada e tudo aparece em "Feito pelo Claude" no app. Matriz de cobertura em [docs/mcp-paridade.md](docs/mcp-paridade.md).
 - **Seus arquivos:** importação com revisão, exportação CSV/XLSX e backup/restauração.
 - **Proteção:** PIN, modo de privacidade que oculta valores e recursos de segurança de cada plataforma.
 
@@ -55,7 +55,7 @@ As imagens abaixo são da versão 1.12.7, geradas com **dados fictícios** a par
 
 ## Estado do projeto
 
-Versão de referência: **1.12.14+51** (outubro de 2026). Detalhes em [CHANGELOG.md](CHANGELOG.md) e [docs/PLAN.md](docs/PLAN.md).
+Versão de referência: **1.13.0+52** (outubro de 2026, schema 27). Detalhes em [CHANGELOG.md](CHANGELOG.md) e [docs/PLAN.md](docs/PLAN.md).
 
 | Área | Situação |
 | --- | --- |
@@ -64,7 +64,7 @@ Versão de referência: **1.12.14+51** (outubro de 2026). Detalhes em [CHANGELOG
 | Funcionamento offline | Registros e consultas são locais; sincronização, Open Finance e cotações dependem de conexão |
 | Sincronização celular ↔ PC | Ativa desde 20/10/2026, por um projeto Supabase próprio, com consentimento, backup e conferência com o servidor |
 | Open Finance | Leitura via Meu Pluggy (gratuito para uso pessoal); sem pagamentos, Pix ou transferências |
-| Assistente (Claude/MCP) | Ativo; o servidor só enfileira pedidos, quem grava é o app com as próprias regras |
+| Assistente (Claude/MCP) | Ativo; paridade com as telas desde a 1.13.0. O servidor só enfileira pedidos, um de cada vez; quem grava é o app com as próprias regras. Um teste falha se o app ganhar uma escrita sem ferramenta |
 | Telegram/WhatsApp | Proposta documentada; sem bot em produção |
 
 Não há publicação oficial do Nexo na Play Store. O repositório não inclui APKs, bancos pessoais, backups, credenciais de assinatura nem chaves de serviços. Dados no servidor de sincronização **não** têm criptografia de ponta a ponta (decisão consciente, ver [docs/SEGURANCA.md](docs/SEGURANCA.md)).
@@ -97,10 +97,10 @@ O app recusa chaves de serviço (`sb_secret_…`): elas nunca devem ir para o cl
 
 ```sh
 flutter run -d <id-do-dispositivo>
-flutter build apk --release
+flutter build apk --release --dart-define-from-file=tool/nexo_sync.local.json
 ```
 
-Para atualizar uma instalação existente sem perder dados, use `adb install -r` com o **mesmo certificado** de assinatura.
+Sem `--dart-define-from-file` o build sai "sem servidor configurado": funciona só local. Para atualizar uma instalação existente sem perder dados, use `adb install -r` com o **mesmo certificado** de assinatura.
 
 **Windows:** é necessário Visual Studio com **Desktop development with C++** e Windows SDK. Ative o Modo de Desenvolvedor do Windows se o Flutter solicitar suporte a links simbólicos.
 
@@ -108,7 +108,7 @@ Se `flutter pub get` resolver as dependências mas parar por falta de suporte a 
 
 ```sh
 flutter run -d windows
-flutter build windows --release
+flutter build windows --release --dart-define-from-file=tool/nexo_sync.local.json
 ```
 
 O bundle Windows fica em `build/windows/x64/runner/Release/`. Distribua a **pasta inteira**, incluindo DLLs e `data/`, e execute `Nexo.exe`. Para testar sem tocar nos seus dados, use o perfil de teste: `Nexo.exe --test-profile`.
@@ -122,7 +122,7 @@ Tudo em `supabase/`, para um projeto Supabase próprio (plano gratuito):
 - **Migrations** (`supabase/migrations/`): diário de sincronização, conectores do assistente, Open Finance (sugestões, saldos, faturas). Tabelas em esquemas privados, RLS ligada sem políticas e acesso só por funções que conferem o dono.
 - **Edge Functions:**
   - `pluggy-sync`: lê contas, transações e faturas do Meu Pluggy e grava sugestões. Segredos: `PLUGGY_CLIENT_ID`, `PLUGGY_CLIENT_SECRET`, `NEXO_PLUGGY_OWNER`.
-  - `nexo-mcp`: servidor MCP do assistente, autenticado por token do conector (só o hash fica no banco).
+  - `nexo-mcp`: servidor MCP do assistente, autenticado por token do conector (só o hash fica no banco). Publicação e ciclo dos pedidos em [supabase/functions/nexo-mcp/README.md](supabase/functions/nexo-mcp/README.md).
 
 Testes do servidor, sem rede e só com dados fictícios:
 
@@ -131,6 +131,8 @@ node tool/validate_sync_sql.mjs   # SQL em PGlite
 node tool/test_nexo_mcp.mjs       # servidor MCP
 node tool/test_pluggy.mjs         # Open Finance
 ```
+
+O teste `test/mcp_app_parity_test.dart` lê o código do app e do servidor e falha se uma escrita do app não tiver ferramenta do assistente (ou motivo registrado em `lib/sync/app_actions.dart`).
 
 ## Arquitetura e dados
 
@@ -147,6 +149,7 @@ O identificador Android `com.ma.expensy` é preservado para que o app instalado 
 ## Documentação
 
 **Estado atual**
+- [Paridade do assistente com o app (29/10/2026)](docs/mcp-paridade.md)
 - [Plano de evolução P0–P3 (28/10/2026)](docs/PLANO_EVOLUCAO_2026_11.md)
 - [Auditoria do produto e do código](docs/AUDITORIA_NEXO_2026_10.md)
 - [Pesquisa de referências, com fontes](docs/PESQUISA_REFERENCIAS_2026_10.md)
