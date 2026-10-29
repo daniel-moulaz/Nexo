@@ -65,6 +65,7 @@ class LedgerSync {
     'assets',
     'lended_people',
     'import_rules',
+    'shared_settings',
   };
 
   static const _pageSize = 100;
@@ -194,7 +195,12 @@ class LedgerSync {
     }
     await db.transaction((txn) async {
       for (final table in ledgerTables.keys) {
-        if (table == 'accounts' || table == 'categories') continue;
+        // Settings this device had are replaced by the dataset's.
+        if (table == 'accounts' ||
+            table == 'categories' ||
+            table == 'shared_settings') {
+          continue;
+        }
         if ((await txn.query(table, limit: 1)).isNotEmpty) {
           throw StateError(
               'Este aparelho já tem lançamentos. Escolha qual acervo manter antes de entrar.');
@@ -210,6 +216,7 @@ class LedgerSync {
       // Only untouched defaults remain; the dataset brings its own.
       await txn.delete('accounts');
       await txn.delete('categories');
+      await txn.delete('shared_settings');
     });
     await LedgerCapture.install(db);
     await db.transaction((txn) async {

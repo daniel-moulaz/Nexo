@@ -6,7 +6,9 @@ import '../providers/app_provider.dart';
 import '../services/file_output.dart';
 import '../services/mcp_recipes.dart';
 import '../services/pluggy_inbox.dart';
+import '../sync/assistant_commands.dart';
 import '../sync/mcp_connectors.dart';
+import 'assistant_history_screen.dart';
 import '../sync/supabase_auth.dart';
 import '../sync/supabase_sync_transport.dart';
 import '../sync/sync_config.dart';
@@ -178,7 +180,7 @@ class _SyncSettingsScreenState extends State<SyncSettingsScreen> {
         Text('Claude (IA)', style: theme.textTheme.titleMedium),
         const SizedBox(height: 8),
         const Text(
-            'Deixa o Claude consultar seus dados e fazer pedidos como "lança R\$ 32,90 de iFood no Nubank". Cada pedido é gravado pelo app aberto (celular ou PC) com as regras normais; o Claude pede sua permissão antes. Ele não movimenta dinheiro de verdade, só o seu registro. Você pode desconectar quando quiser.'),
+            'Deixa o Claude consultar seus dados e fazer no Nexo o mesmo que você faz no app, como "lança R\$ 32,90 de iFood no Nubank". Cada pedido é gravado pelo app aberto (celular ou PC) com as regras normais. Ele não movimenta dinheiro de verdade, só o seu registro. Tudo fica em "Feito pelo Claude", com Desfazer. Você pode desconectar quando quiser.'),
         for (final c
             in (_mcp ?? const <McpConnector>[]).where((c) => !c.revoked))
           ListTile(
@@ -192,6 +194,18 @@ class _SyncSettingsScreenState extends State<SyncSettingsScreen> {
                 tooltip: 'Desconectar',
                 onPressed: _busy ? null : () => _revokeMcp(c),
                 icon: const Icon(Icons.link_off)),
+          ),
+        if (AssistantCommands.instance != null && sync.datasetId != null)
+          ListTile(
+            contentPadding: EdgeInsets.zero,
+            leading: const Icon(Icons.history),
+            title: const Text('Feito pelo Claude'),
+            subtitle: const Text('Cada pedido, quando e o resultado; desfazer'),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => Navigator.of(context).push(MaterialPageRoute(
+                builder: (_) => AssistantHistoryScreen(
+                    assistant: AssistantCommands.instance!,
+                    datasetId: sync.datasetId!))),
           ),
         const SizedBox(height: 8),
         OutlinedButton.icon(

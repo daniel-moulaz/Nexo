@@ -24,8 +24,9 @@ export const allActions: (ToolDefinition & { destructive?: boolean })[] = [
     name: "get_card_invoices", title: "Faturas dos cartões",
     description:
       "Faturas de cada cartão: período de compras, fechamento, vencimento, total, pago, restante e situação " +
-      "(aberta, fechada, paga, atrasada) e quanto do limite está usado.",
-    inputSchema: obj({ card_id: idField }),
+      "(aberta, fechada, paga, atrasada) e quanto do limite está usado. include_transactions: o extrato de cada fatura " +
+      "(compras, estornos e pagamentos com id; apagar o pagamento com delete_transaction reabre a fatura).",
+    inputSchema: obj({ card_id: idField, include_transactions: { type: "boolean" } }),
   },
   {
     name: "add_account", title: "Nova conta ou cartão",
@@ -39,11 +40,17 @@ export const allActions: (ToolDefinition & { destructive?: boolean })[] = [
   },
   {
     name: "update_account", title: "Alterar conta",
-    description: "Muda nome, dia de fechamento/vencimento e limite (cartão) ou se a conta entra no saldo total. Para o saldo use adjust_account_balance.",
+    description:
+      "Muda nome, cor, se entra no saldo total ou no total dos bancos e, no cartão, fechamento, vencimento, limite, conta de " +
+      "pagamento, pagamento mínimo e lembrete (null tira o valor). Para o saldo use adjust_account_balance.",
     inputSchema: obj({
       id: idField, name: { type: "string", minLength: 1, maxLength: 60 },
-      statement_day: { type: "integer", minimum: 1, maximum: 31 }, due_day: { type: "integer", minimum: 1, maximum: 31 },
-      credit_limit: amountField, exclude_from_total: { type: "boolean" },
+      statement_day: { type: ["integer", "null"], minimum: 1, maximum: 31 }, due_day: { type: ["integer", "null"], minimum: 1, maximum: 31 },
+      credit_limit: { type: ["number", "null"], exclusiveMinimum: 0, maximum: 1000000000 }, exclude_from_total: { type: "boolean" },
+      exclude_from_bank_total: { type: "boolean" }, payment_account_id: { type: ["string", "null"], description: "Conta de onde a fatura costuma ser paga" },
+      min_payment: { type: ["number", "null"], minimum: 0 }, min_payment_percent: { type: ["number", "null"], minimum: 0, maximum: 100 },
+      color: { type: "string", pattern: "^#[0-9A-Fa-f]{6}$" }, reminder_enabled: { type: "boolean" },
+      reminder_time: { type: "string", pattern: "^\\d{2}:\\d{2}$" },
     }, ["id"]),
   },
   {
@@ -71,8 +78,12 @@ export const allActions: (ToolDefinition & { destructive?: boolean })[] = [
   },
   {
     name: "update_goal", title: "Alterar objetivo",
-    description: "Muda nome, meta ou prazo de um objetivo.",
-    inputSchema: obj({ id: idField, name: { type: "string", minLength: 1, maxLength: 60 }, target: amountField, target_date: dateField }, ["id"]),
+    description: "Muda nome, meta, prazo (null tira), cor ou marca como concluído/reaberto.",
+    inputSchema: obj({
+      id: idField, name: { type: "string", minLength: 1, maxLength: 60 }, target: amountField,
+      target_date: { type: ["string", "null"] }, completed: { type: "boolean" },
+      color: { type: "string", pattern: "^#[0-9A-Fa-f]{6}$" },
+    }, ["id"]),
   },
   {
     name: "delete_goal", title: "Excluir objetivo", destructive: true,
@@ -261,9 +272,12 @@ export async function callAllAction(name: string, rawArgs: unknown, l: Ledger, t
   if (typeof args !== "object" || Array.isArray(args)) throw new ToolInputError("Argumentos inválidos.");
   switch (name) {
     case "get_card_invoices": {
-      only(args, ["card_id"]);
+      only(args, ["card_id", "include_transactions"]);
       const id = args.card_id === undefined ? undefined : text(account(l, str(args, "card_id", 256)).id);
-      return cardInvoices(l, today, id);
+      if (args.include_transactions !== undefined && typeof args.include_transactions !== "boolean") {
+        throw new ToolInputError("include_transactions deve ser verdadeiro ou falso.");
+      }
+      return cardInvoices(l, today, id, args.include_transactions === true);
     }
     case "add_account": {
       only(args, ["name", "type", "balance", "statement_day", "due_day", "credit_limit"]);
@@ -280,10 +294,53 @@ export async function callAllAction(name: string, rawArgs: unknown, l: Ledger, t
       return pending((await enqueue("account.add", body)).id, "Nova conta");
     }
     case "update_account": {
-      only(args, ["id", "name", "statement_day", "due_day", "credit_limit", "exclude_from_total"]);
+      only(args, ["id", "name", "statement_day", "due_day", "credit_limit", "exclude_from_total", "exclude_from_bank_total",
+        "payment_account_id", "min_payment", "min_payment_percent", "color", "reminder_enabled", "reminder_time"]);
       const a = account(l, str(args, "id", 256));
       if (args.exclude_from_total !== undefined && typeof args.exclude_from_total !== "boolean") {
         throw new ToolInputError("exclude_from_total deve ser verdadeiro ou falso.");
+      }
+      const newer = ["exclude_from_bank_total", "payment_account_id", "min_payment", "min_payment_percent", "color",
+        "reminder_enabled", "reminder_time"].some((k) => args[k] !== undefined) ||
+        ["statement_day", "due_day", "credit_limit"].some((k) => args[k] === null);
+      if (newer) {
+        const credit = text(a.type) === "credit";
+        const cardOnly = ["statement_day", "due_day", "credit_limit", "payment_account_id", "min_payment", "min_payment_percent",
+          "reminder_enabled", "reminder_time"].filter((k) => args[k] !== undefined);
+        if (!credit && cardOnly.length) throw new ToolInputError(`Só cartão de crédito tem: ${cardOnly.join(", ")}.`);
+        const body: Args = { id: text(a.id) };
+        const nm = str(args, "name", 60, false);
+        if (nm) body.name = nm;
+        for (const k of ["statement_day", "due_day"]) {
+          if (args[k] !== undefined) body[k] = args[k] === null ? null : dayOfMonth(args, k);
+        }
+        if (args.credit_limit !== undefined) body.credit_limit_cents = args.credit_limit === null ? null : reais(args, "credit_limit");
+        if (args.min_payment !== undefined) {
+          body.min_payment_cents = args.min_payment === null ? null : reais(args, "min_payment");
+        }
+        if (args.min_payment_percent !== undefined) {
+          const v = args.min_payment_percent;
+          if (v !== null && (typeof v !== "number" || v < 0 || v > 100)) throw new ToolInputError("min_payment_percent de 0 a 100.");
+          body.min_payment_percent = v;
+        }
+        if (args.payment_account_id !== undefined) {
+          body.linked_account_id = args.payment_account_id === null ? null : text(account(l, str(args, "payment_account_id", 256), true).id);
+          if (body.linked_account_id === text(a.id)) throw new ToolInputError("A conta de pagamento deve ser outra conta.");
+        }
+        for (const k of ["exclude_from_total", "exclude_from_bank_total", "reminder_enabled"]) {
+          if (args[k] === undefined) continue;
+          if (typeof args[k] !== "boolean") throw new ToolInputError(`${k} deve ser verdadeiro ou falso.`);
+          body[k] = args[k];
+        }
+        if (args.reminder_time !== undefined) {
+          if (typeof args.reminder_time !== "string" || !/^([01]\d|2[0-3]):[0-5]\d$/.test(args.reminder_time)) throw new ToolInputError("reminder_time deve ser HH:mm.");
+          body.reminder_time = args.reminder_time;
+        }
+        if (args.color !== undefined) {
+          if (typeof args.color !== "string" || !/^#[0-9A-Fa-f]{6}$/.test(args.color)) throw new ToolInputError("color deve ser #RRGGBB.");
+          body.color = 0xFF000000 + parseInt(args.color.slice(1), 16);
+        }
+        return pending((await enqueue("account.edit", body)).id, "Alteração da conta");
       }
       const body = changes(args, { id: text(a.id) }, [
         ["name", (x) => str(x, "name", 60, false)],
@@ -329,9 +386,26 @@ export async function callAllAction(name: string, rawArgs: unknown, l: Ledger, t
       return pending(q.id, "Novo objetivo");
     }
     case "update_goal": {
-      only(args, ["id", "name", "target", "target_date"]);
+      only(args, ["id", "name", "target", "target_date", "completed", "color"]);
       const g = find(l.goals, args.id);
       if (!g) throw new ToolInputError("Objetivo não encontrado. Use get_goals.");
+      if (args.completed !== undefined || args.color !== undefined || args.target_date === null) {
+        const body: Args = { id: text(g.id) };
+        const nm = str(args, "name", 60, false);
+        if (nm) body.name = nm;
+        const t = reais(args, "target", { required: false });
+        if (t !== undefined) body.target_cents = t;
+        if (args.target_date !== undefined) body.target_date = args.target_date === null ? null : dateArg(args, "target_date");
+        if (args.completed !== undefined) {
+          if (typeof args.completed !== "boolean") throw new ToolInputError("completed deve ser verdadeiro ou falso.");
+          body.completed = args.completed;
+        }
+        if (args.color !== undefined) {
+          if (typeof args.color !== "string" || !/^#[0-9A-Fa-f]{6}$/.test(args.color)) throw new ToolInputError("color deve ser #RRGGBB.");
+          body.color = 0xFF000000 + parseInt(args.color.slice(1), 16);
+        }
+        return pending((await enqueue("goal.edit", body)).id, "Alteração do objetivo");
+      }
       const body = changes(args, { id: text(g.id) }, [
         ["name", (x) => str(x, "name", 60, false)],
         ["target_cents", (x) => reais(x, "target", { required: false })],
@@ -355,7 +429,11 @@ export async function callAllAction(name: string, rawArgs: unknown, l: Ledger, t
           return {
             id: text(i.id), name: text(i.name), ticker: text(i.ticker) || undefined, asset_class: text(i.asset_class),
             quantity: micros / 1e6, last_price: num(i.price_micros) / 1e6, price_date: day(text(i.price_at)),
-            archived: i.archived === 1, operations: ops.length,
+            archived: i.archived === 1,
+            operations: ops.map((o) => ({
+              id: text(o.id), kind: text(o.kind), date: day(text(o.date)), quantity: num(o.quantity) / 1e6,
+              total: money(num(o.cents)), cash_account_id: text(o.cash_account_id) || undefined,
+            })).sort((a, b) => a.date.localeCompare(b.date)),
           };
         }),
       };
@@ -411,6 +489,9 @@ export async function callAllAction(name: string, rawArgs: unknown, l: Ledger, t
             payments: paid.filter((p) => num(p.amount) > 0).length,
             skipped: paid.filter((p) => num(p.amount) === 0).length,
             settled: x.is_settled === 1, account_id: text(x.account_id) || undefined,
+            transfer_account_id: text(x.transfer_account_id) || undefined, notes: text(x.notes) || undefined,
+            payment_list: paid.map((p) => ({ id: text(p.id), date: day(text(p.date)), amount: money(cents(num(p.amount))),
+              skipped: num(p.amount) === 0 })).sort((a, b) => b.date.localeCompare(a.date)).slice(0, 24),
           };
         }),
       };
@@ -433,8 +514,10 @@ export async function callAllAction(name: string, rawArgs: unknown, l: Ledger, t
     case "get_lended": {
       only(args, []);
       return {
+        people: (l.lendedPeople ?? []).map((p) => ({ id: text(p.id), name: text(p.name), notes: text(p.notes) || undefined })),
         lended: (l.lended ?? []).map((x) => ({
-          id: text(x.id), person: text(find(l.lendedPeople, x.person_id)?.name) || "Pessoa",
+          id: text(x.id), person: text(find(l.lendedPeople, x.person_id)?.name) || "Pessoa", person_id: text(x.person_id),
+          account_id: text(x.account_id) || undefined, notes: text(x.notes) || undefined,
           type: text(x.type) === "borrowed" ? "peguei emprestado" : "emprestei",
           amount: money(cents(num(x.amount))), date: day(text(x.date)),
           due_date: x.due_date ? day(text(x.due_date)) : undefined, settled: x.is_settled === 1,

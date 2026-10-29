@@ -37,26 +37,39 @@ export function cycleFor(date: string, closingDay: number | null, dueDay: number
 }
 
 /// Recent and current invoices of each credit card, newest first.
-export function cardInvoices(l: Ledger, today: string, cardId?: string) {
+export function cardInvoices(l: Ledger, today: string, cardId?: string, withItems = false) {
   const metas = metadataIndex(l);
   const out = [];
+  type Item = { id: string; date: string; kind: string; description: string; amount: number; installment?: string };
   for (const card of l.accounts.filter((a) => a.type === "credit" && (!cardId || a.id === cardId))) {
     const closing = typeof card.statement_day === "number" ? card.statement_day : null;
     const dueDay = typeof card.due_day === "number" ? card.due_day : null;
-    const byEnd = new Map<string, { cycle: Cycle; total: number; paid: number }>();
-    const slot = (c: Cycle) => byEnd.get(c.end) ?? byEnd.set(c.end, { cycle: c, total: 0, paid: 0 }).get(c.end)!;
+    const byEnd = new Map<string, { cycle: Cycle; total: number; paid: number; items: Item[] }>();
+    const slot = (c: Cycle) => byEnd.get(c.end) ?? byEnd.set(c.end, { cycle: c, total: 0, paid: 0, items: [] }).get(c.end)!;
     for (const tx of l.transactions) {
       if (tx.account_id !== card.id) continue;
       const m = meta(metas.get(text(tx.id)));
       if (isNeutral(tx, m) && m.source !== "opening_balance") continue;
       const s = slot(cycleFor(day(text(tx.date)), closing, dueDay));
       s.total += (tx.type === "income" ? -1 : 1) * cents(num(tx.amount));
+      if (withItems) {
+        s.items.push({
+          id: text(tx.id), date: day(text(tx.date)),
+          kind: m.source === "opening_balance" ? "ajuste" : tx.type === "income" ? "estorno" : "compra",
+          description: text(tx.description), amount: money(cents(num(tx.amount))),
+          installment: m.installmentCurrent && m.installmentTotal ? `${m.installmentCurrent}/${m.installmentTotal}` : undefined,
+        });
+      }
     }
     for (const p of (l.invoicePayments ?? []) as Row[]) {
       if (p.card_id !== card.id) continue;
       const end = text(p.cycle_end).slice(0, 10);
       const s = byEnd.get(end) ?? slot({ ...cycleFor(addDays(end, -1), closing, dueDay) });
       s.paid += cents(num(p.amount));
+      if (withItems) {
+        s.items.push({ id: text(p.id), date: day(text(p.paid_at)), kind: "pagamento", description: "Pagamento da fatura",
+          amount: money(cents(num(p.amount))) });
+      }
     }
     const current = cycleFor(today, closing, dueDay);
     slot(current);
@@ -64,7 +77,7 @@ export function cardInvoices(l: Ledger, today: string, cardId?: string) {
       .filter((s) => s.cycle.end >= addDays(today, -100))
       .sort((a, b) => b.cycle.end.localeCompare(a.cycle.end))
       .slice(0, 4)
-      .map(({ cycle, total, paid }) => {
+      .map(({ cycle, total, paid, items }) => {
         const remaining = Math.max(total - paid, 0);
         const closed = today >= cycle.end;
         const status = !closed ? "aberta"
@@ -74,6 +87,7 @@ export function cardInvoices(l: Ledger, today: string, cardId?: string) {
           closing_date: cycle.end, due_date: cycle.due ?? undefined,
           purchases_from: cycle.start, purchases_until: addDays(cycle.end, -1),
           total: money(total), paid: money(paid), remaining: money(remaining), status,
+          transactions: withItems ? items.sort((a, b) => a.date.localeCompare(b.date)) : undefined,
         };
       });
     const limit = typeof card.credit_limit === "number" ? cents(card.credit_limit) : null;

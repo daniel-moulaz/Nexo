@@ -92,6 +92,8 @@ Future<void> startNexo() async {
       if (!sync.bound || sync.datasetId == null || sync.deviceId == null) {
         return;
       }
+      // After a round, the other device's settings are already here.
+      await provider.seedSharedSettings();
       await assistant.run(datasetId: sync.datasetId!, deviceId: sync.deviceId!);
     };
   }

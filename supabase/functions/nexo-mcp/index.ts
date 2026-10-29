@@ -56,6 +56,7 @@ const handler = createHandler({
     const data = await rpc("nexo_mcp_ledger", { p_connector_id: c.id }) as {
       entities: { kind: string; value: Row }[];
       balances: { account_id: string; micros: number }[];
+      devices?: Row[];
     };
     const of = (kind: string) => data.entities.filter((e) => e.kind === kind && e.value).map((e) => e.value);
     return {
@@ -79,6 +80,9 @@ const handler = createHandler({
       assets: of("assets"),
       wishlist: of("wishlist"),
       invoicePayments: of("card_invoice_payments"),
+      importRules: of("import_rules"),
+      sharedSettings: of("shared_settings"),
+      devices: data.devices ?? [],
     };
   },
   async audit(c, tool, ok) {
@@ -93,8 +97,20 @@ const handler = createHandler({
   },
   actions(c: Connector) {
     return {
-      enqueue: async (kind, args) =>
-        await rpc("nexo_mcp_enqueue", { p_connector_id: c.id, p_kind: kind, p_args: args }) as { id: string; status: string },
+      enqueue: async (kind, args, key) => {
+        try {
+          return await rpc("nexo_mcp_enqueue_v2", { p_connector_id: c.id, p_kind: kind, p_args: args, p_key: key ?? null }) as
+            { id: string; status: string; deduplicated?: boolean };
+        } catch (error) {
+          // Before the parity migration: the older queue, without keys.
+          if (!(error instanceof Error) || !error.message.startsWith("rpc_404")) throw error;
+          return await rpc("nexo_mcp_enqueue", { p_connector_id: c.id, p_kind: kind, p_args: args }) as { id: string; status: string };
+        }
+      },
+      recent: async (limit) => await rpc("nexo_mcp_recent", { p_connector_id: c.id, p_limit: limit }) as Record<string, unknown>[],
+      bankAccounts: async () => await rpc("nexo_mcp_bank_accounts", { p_connector_id: c.id }) as Record<string, unknown>[],
+      linkBankAccount: async (accountId, nexoAccountId) =>
+        await rpc("nexo_mcp_link_bank_account", { p_connector_id: c.id, p_account_id: accountId, p_nexo_account_id: nexoAccountId }) as number,
       request: async (id) => await rpc("nexo_mcp_command", { p_connector_id: c.id, p_id: id }) as never,
       suggestions: async (limit) =>
         await rpc("nexo_mcp_suggestions", { p_connector_id: c.id, p_limit: limit }) as Record<string, unknown>[],

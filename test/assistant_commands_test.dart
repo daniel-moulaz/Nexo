@@ -33,10 +33,26 @@ class _Queue implements AssistantRemote {
       finished[id] = (status, result);
 
   final reports = <List<String>>[];
+  final reportedSettings = <Map<String, Object?>>[];
   @override
   Future<void> report(String datasetId, String deviceId, String version,
-          List<String> kinds) async =>
-      reports.add(kinds);
+      List<String> kinds, Map<String, Object?> settings) async {
+    reports.add(kinds);
+    reportedSettings.add(settings);
+  }
+
+  final undone = <String>[];
+  @override
+  Future<void> markUndone(String id, String by) async => undone.add(id);
+
+  @override
+  Future<List<AssistantHistoryItem>> history(String datasetId,
+          {int limit = 50}) async =>
+      const [];
+
+  @override
+  Future<Map<String, Object?>?> undoData(String id) async =>
+      (finished[id]?.$2['undo'] as Map?)?.cast<String, Object?>();
 }
 
 void main() {
@@ -500,17 +516,9 @@ void main() {
     });
   });
 
-  test('the app knows exactly the server list, and every kind is handled',
+  // The list itself is compared with the server in mcp_app_parity_test.
+  test('every kind the app reports is handled, never "Pedido desconhecido"',
       () async {
-    final sql = File('supabase/migrations/202610210005_mcp_all_actions.sql')
-        .readAsStringSync()
-        .split('create or replace')
-        .first;
-    final server = RegExp(r"'([a-z]+\.[a-z_]+)'")
-        .allMatches(sql)
-        .map((m) => m.group(1)!)
-        .toSet();
-    expect(AssistantCommands.supportedKinds.toSet(), server);
     PackageInfo.setMockInitialValues(
         appName: 'Nexo',
         packageName: 'com.ma.expensy',
@@ -524,6 +532,10 @@ void main() {
       await run(); // at most 20 per round
     }
     expect(queue.reports.single, AssistantCommands.supportedKinds);
+    expect(
+        queue.reportedSettings.single.containsKey('referenceIncome'), isFalse,
+        reason: 'shared settings travel with the ledger, not the report');
+    expect(queue.reportedSettings.single['themeMode'], isNotNull);
     for (final kind in AssistantCommands.supportedKinds) {
       final (status, result) = queue.finished['k-$kind']!;
       // Empty arguments are refused, but never as an unknown request.

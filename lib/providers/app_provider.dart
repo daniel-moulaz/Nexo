@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:sqflite/sqflite.dart' show ConflictAlgorithm, DatabaseExecutor;
 import 'package:uuid/uuid.dart';
 import 'package:file_picker/file_picker.dart';
 import '../models/models.dart';
@@ -109,9 +110,9 @@ class AppSettings {
         'homeCards': homeCards,
       };
 
-  static const _validThemeModes = {'system', 'light', 'dark'};
+  static const validThemeModes = {'system', 'light', 'dark'};
   // 'amoled' is legacy — migrated to themeMode:'dark' + amoledSurfaces:true
-  static const _validSeeds = {
+  static const validSeeds = {
     'violet',
     'blue',
     'green',
@@ -142,7 +143,7 @@ class AppSettings {
     'brown',
     'lavender',
   };
-  static const _validFonts = {
+  static const validFonts = {
     'default',
     'plus_jakarta_sans',
     'dm_sans',
@@ -163,7 +164,7 @@ class AppSettings {
     String seed = (j['themeSeed'] as String?) ?? 'violet';
     bool wasAmoled = seed == 'pitch_black';
     if (wasAmoled) seed = 'midnight';
-    if (!_validSeeds.contains(seed)) seed = 'violet';
+    if (!validSeeds.contains(seed)) seed = 'violet';
 
     String mode;
     bool legacyAmoled = false;
@@ -173,7 +174,7 @@ class AppSettings {
       if (mode == 'amoled') {
         mode = 'dark';
         legacyAmoled = true;
-      } else if (!_validThemeModes.contains(mode)) mode = 'dark';
+      } else if (!validThemeModes.contains(mode)) mode = 'dark';
     } else {
       mode = (j['darkMode'] as bool? ?? false) ? 'dark' : 'system';
     }
@@ -184,7 +185,7 @@ class AppSettings {
         (j['amoledSurfaces'] as bool?) ?? (wasAmoled || legacyAmoled);
 
     String font = (j['appFont'] as String?) ?? 'default';
-    if (!_validFonts.contains(font)) font = 'default';
+    if (!validFonts.contains(font)) font = 'default';
 
     String lang = (j['languageCode'] as String?) ?? 'system';
     if (!_validLanguages.contains(lang)) lang = 'system';
@@ -276,6 +277,13 @@ class AppProvider extends ChangeNotifier {
     if (raw != null) {
       settings = AppSettings.fromJson(jsonDecode(raw) as Map<String, dynamic>);
     }
+    // With sync active the seed waits for the first sync round, so the
+    // other device's values arrive before this one writes its own.
+    if (await LedgerCapture.isInstalled(await DBHelper.database)) {
+      await _applySharedSettings();
+    } else {
+      await seedSharedSettings();
+    }
     accounts = await DBHelper.getAccounts();
     categories = await DBHelper.getCategories();
     transactions = await DBHelper.getTransactions();
@@ -314,6 +322,7 @@ class AppProvider extends ChangeNotifier {
   /// Reloads what another device changed through synchronization. No
   /// reminders are rescheduled from scratch and no network is touched.
   Future<void> reloadFromStorage() async {
+    await _applySharedSettings();
     accounts = await DBHelper.getAccounts();
     categories = await DBHelper.getCategories();
     transactions = await DBHelper.getTransactions();
@@ -519,11 +528,110 @@ class AppProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> updateSetting(String key, dynamic value) async {
+  /// Planning settings that are the same on every device: they live in the
+  /// synced `shared_settings` table. Everything else stays on this device.
+  static const sharedSettingKeys = {
+    'referenceIncome',
+    'envelopeShares',
+    'weekStart',
+    'lockedGoalIds',
+  };
+
+  static const _sharedSeededKey = 'nexo_shared_settings_seeded_v1';
+
+  /// Takes the shared values stored in the ledger (from this device or,
+  /// through sync, from another one). Once this device seeded its own values,
+  /// the ledger is the truth: a missing row means the default (an undone
+  /// change, for instance). Before that, a missing row keeps the local value.
+  Future<void> _applySharedSettings() async {
+    final rows = await DBHelper.getSharedSettings();
+    final prefs = await SharedPreferences.getInstance();
+    final seeded = prefs.getBool(_sharedSeededKey) ?? false;
+    if (rows.isEmpty && !seeded) return;
+    final json = settings.toJson();
+    final defaults = AppSettings().toJson();
+    var changed = false;
+    for (final key in sharedSettingKeys) {
+      Object? value;
+      final raw = rows[key];
+      if (raw != null) {
+        try {
+          value = jsonDecode(raw);
+        } on FormatException {
+          continue; // A malformed row never breaks the app.
+        }
+      } else if (seeded) {
+        value = defaults[key];
+      } else {
+        continue;
+      }
+      if (jsonEncode(json[key]) == jsonEncode(value)) continue;
+      json[key] = value;
+      changed = true;
+    }
+    if (!changed) return;
+    settings = AppSettings.fromJson(json);
+    await prefs.setString('settings', jsonEncode(settings.toJson()));
+  }
+
+  /// Writes this device's shared settings that the ledger does not have yet
+  /// and that differ from the defaults. Called after a sync round (the other
+  /// device's values arrive first) or at start when sync is not active.
+  Future<void> seedSharedSettings() async {
+    final stored = await DBHelper.getSharedSettings();
+    final defaults = AppSettings().toJson();
+    final mine = settings.toJson();
+    final seed = <String, Object?>{
+      for (final k in sharedSettingKeys)
+        if (!stored.containsKey(k) &&
+            jsonEncode(mine[k]) != jsonEncode(defaults[k]))
+          k: mine[k]
+    };
+    if (seed.isNotEmpty) {
+      await DBHelper.saveSharedSettings(seed, 'setting.seed');
+    }
+    await (await SharedPreferences.getInstance())
+        .setBool(_sharedSeededKey, true);
+    await _applySharedSettings();
+    notifyListeners();
+  }
+
+  Future<void> updateSetting(String key, dynamic value) =>
+      updateSettings({key: value});
+
+  /// Several settings at once; the shared ones are one ledger operation.
+  Future<void> updateSettings(Map<String, dynamic> values) async {
+    final shared = {
+      for (final e in values.entries)
+        if (sharedSettingKeys.contains(e.key)) e.key: e.value
+    };
+    if (shared.isNotEmpty) {
+      await DBHelper.saveSharedSettings(shared, 'setting.update');
+    }
     final oldDailyEnabled = settings.dailyReminderEnabled;
     final oldDailyTime = settings.dailyReminderTime;
-    final oldLang = settings.languageCode;
+    for (final e in values.entries) {
+      _assignSetting(e.key, e.value);
+    }
 
+    _saveSettings();
+    notifyListeners();
+    if (values.containsKey('hideBalance') ||
+        values.containsKey('pinnedWidgetAccountIds')) {
+      await updateHomeWidgets();
+    }
+
+    if (oldDailyEnabled != settings.dailyReminderEnabled ||
+        oldDailyTime != settings.dailyReminderTime) {
+      if (settings.dailyReminderEnabled) {
+        await _dailyNotif.scheduleDailyReminder(settings.dailyReminderTime);
+      } else {
+        await _dailyNotif.cancelDailyReminder();
+      }
+    }
+  }
+
+  void _assignSetting(String key, dynamic value) {
     switch (key) {
       case 'currency':
         settings.currency = value as String;
@@ -580,26 +688,8 @@ class AppProvider extends ChangeNotifier {
         settings.homeCards = List<String>.from(value as List);
         break;
       case 'pinnedWidgetAccountIds':
-        settings.pinnedWidgetAccountIds = value as List<String>;
+        settings.pinnedWidgetAccountIds = List<String>.from(value as List);
         break;
-    }
-
-    _saveSettings();
-    notifyListeners();
-    if (key == 'hideBalance' || key == 'pinnedWidgetAccountIds')
-      await updateHomeWidgets();
-
-    if (oldLang != settings.languageCode) {
-      // Handled in main by restarting or notifying.
-    }
-
-    if (oldDailyEnabled != settings.dailyReminderEnabled ||
-        oldDailyTime != settings.dailyReminderTime) {
-      if (settings.dailyReminderEnabled) {
-        await _dailyNotif.scheduleDailyReminder(settings.dailyReminderTime);
-      } else {
-        await _dailyNotif.cancelDailyReminder();
-      }
     }
   }
 
@@ -994,6 +1084,277 @@ class AppProvider extends ChangeNotifier {
       }
     });
     await _reloadLedger();
+  }
+
+  // ── Batch changes (assistant and, later, multi-select screens) ─────────
+
+  /// Ids of [ids] that are plain entries: not transfers, investment cash or
+  /// balance adjustments, which have their own rules.
+  Future<void> _requirePlain(DatabaseExecutor txn, List<String> ids) async {
+    for (final id in ids) {
+      if (id.startsWith('investment:')) {
+        throw const FormatException(
+            'Movimentações de investimento são alteradas em Investir.');
+      }
+      final rows = await txn.query('transaction_metadata',
+          columns: ['source'], where: 'transaction_id = ?', whereArgs: [id]);
+      final source = rows.isEmpty ? '' : rows.single['source'] as String;
+      if (source.startsWith('transfer:') || source.startsWith('investment:')) {
+        throw const FormatException(
+            'Transferências e investimentos não entram em alterações em lote.');
+      }
+    }
+  }
+
+  Future<List<AppTransaction>> _stored(
+      DatabaseExecutor txn, List<String> ids) async {
+    final found = <AppTransaction>[];
+    for (final id in ids) {
+      final rows =
+          await txn.query('transactions', where: 'id = ?', whereArgs: [id]);
+      if (rows.isEmpty) throw StateError('Lançamento não encontrado: $id.');
+      found.add(AppTransaction.fromMap(rows.single));
+    }
+    return found;
+  }
+
+  Future<TransactionMetadata> _metaIn(DatabaseExecutor txn, String id) async {
+    final rows = await txn.query('transaction_metadata',
+        where: 'transaction_id = ?', whereArgs: [id]);
+    return rows.isEmpty
+        ? TransactionMetadata(transactionId: id)
+        : TransactionMetadata.fromMap(rows.single);
+  }
+
+  /// Category, subcategory or kind (normal/extraordinary) of many entries at
+  /// once. Amounts, accounts and status never change, so balances do not.
+  Future<int> updateTransactionsBulk(List<String> ids,
+      {String? categoryId, String? subcategory, String? expenseClass}) async {
+    if (ids.isEmpty) return 0;
+    if (expenseClass != null &&
+        !['normal', 'extraordinary'].contains(expenseClass)) {
+      throw ArgumentError('Tipo de gasto inválido.');
+    }
+    final db = await DBHelper.database;
+    await ledgerTransaction(db, 'transaction.bulk_update', (txn) async {
+      await _requirePlain(txn, ids);
+      final rows = await _stored(txn, ids);
+      if (categoryId != null) {
+        final cats = await txn
+            .query('categories', where: 'id = ?', whereArgs: [categoryId]);
+        if (cats.isEmpty) throw StateError('A categoria não existe mais.');
+        final type = cats.single['type'] as String;
+        if (rows.any((t) => t.type != type)) {
+          throw StateError(
+              'A categoria é de ${type == 'income' ? 'receita' : 'despesa'} e há lançamentos do outro tipo.');
+        }
+      }
+      for (final t in rows) {
+        if (categoryId != null) {
+          await txn.update('transactions', {'category_id': categoryId},
+              where: 'id = ?', whereArgs: [t.id]);
+        }
+        if (subcategory == null && expenseClass == null) continue;
+        final m = (await _metaIn(txn, t.id)).toMap();
+        if (subcategory != null) m['subcategory'] = subcategory.trim();
+        if (expenseClass != null) m['expense_class'] = expenseClass;
+        await txn.insert('transaction_metadata', m,
+            conflictAlgorithm: ConflictAlgorithm.replace);
+      }
+    });
+    await _reloadLedger();
+    return ids.length;
+  }
+
+  /// Old balance corrections recorded as income or expense become neutral
+  /// adjustments ("Ajuste de saldo"): the balance stays, but they no longer
+  /// count as income or spending.
+  Future<int> markAsBalanceAdjustment(List<String> ids) async {
+    if (ids.isEmpty) return 0;
+    final db = await DBHelper.database;
+    await ledgerTransaction(db, 'transaction.neutralize', (txn) async {
+      await _requirePlain(txn, ids);
+      final rows = await _stored(txn, ids);
+      for (final t in rows) {
+        final m = await _metaIn(txn, t.id);
+        if (m.isPending) {
+          throw StateError(
+              '"${t.description}" está pendente: um ajuste de saldo já aconteceu.');
+        }
+        await txn.insert(
+            'transaction_metadata',
+            {
+              ...m.toMap(),
+              'exclude_from_spending': 1,
+              'source': 'opening_balance',
+            },
+            conflictAlgorithm: ConflictAlgorithm.replace);
+      }
+    });
+    await _reloadLedger();
+    return ids.length;
+  }
+
+  /// Deletes several entries as one operation (each balance reversed as in
+  /// [deleteTransaction]; a transfer goes with its other side).
+  Future<int> deleteTransactions(List<String> ids) async {
+    if (ids.isEmpty) return 0;
+    if (ids.any((id) => id.startsWith('investment:'))) {
+      throw const FormatException(
+          'Exclua operações de investimento em Investir.');
+    }
+    final db = await DBHelper.database;
+    final all = <String>{};
+    for (final id in ids) {
+      final meta = await TransactionMetadataService.instance.getFor(id);
+      if (meta.source.startsWith('transfer:')) {
+        all.addAll((await db.query('transaction_metadata',
+                where: 'source = ?', whereArgs: [meta.source]))
+            .map((r) => r['transaction_id'] as String));
+      } else {
+        all.add(id);
+      }
+    }
+    await ledgerTransaction(db, 'transaction.bulk_delete', (txn) async {
+      for (final txId in all) {
+        final rows =
+            await txn.query('transactions', where: 'id = ?', whereArgs: [txId]);
+        if (rows.isEmpty) continue;
+        final t = AppTransaction.fromMap(rows.first);
+        final m = await _metaIn(txn, txId);
+        if (!m.isPending && m.affectsBalance) {
+          await txn.rawUpdate(
+              'UPDATE accounts SET balance = balance + ? WHERE id = ?',
+              [_txDelta(t, reverse: true), t.accountId]);
+        }
+        await txn.delete('card_invoice_payments',
+            where: 'id = ?', whereArgs: [txId]);
+        await txn.delete('transactions', where: 'id = ?', whereArgs: [txId]);
+      }
+    });
+    await _reloadLedger();
+    return all.length;
+  }
+
+  /// Turns one purchase into [count] monthly installments that add up to
+  /// the same total (the first carries the leftover cents). On a card they
+  /// are all on the card; elsewhere the later ones are pending bills.
+  Future<void> splitTransaction(String id, int count) async {
+    if (count < 2 || count > 120) {
+      throw ArgumentError('Informe de 2 a 120 parcelas.');
+    }
+    final db = await DBHelper.database;
+    await ledgerTransaction(db, 'transaction.split', (txn) async {
+      await _requirePlain(txn, [id]);
+      final t = (await _stored(txn, [id])).single;
+      final meta = await _metaIn(txn, id);
+      if (meta.installmentTotal != null) {
+        throw StateError('Este lançamento já é uma parcela.');
+      }
+      if (meta.source == 'opening_balance') {
+        throw StateError('Ajuste de saldo não se divide em parcelas.');
+      }
+      final credit = accountById(t.accountId)?.type == 'credit';
+      final totalCents = (t.amount * 100).round();
+      final each = totalCents ~/ count;
+      final first = each + totalCents - each * count;
+      for (var i = 1; i <= count; i++) {
+        final cents = i == 1 ? first : each;
+        final tx = i == 1
+            ? t.copyWith(amount: cents / 100)
+            : AppTransaction(
+                id: '${t.id}:installment:$i',
+                type: t.type,
+                amount: cents / 100,
+                description: t.description,
+                accountId: t.accountId,
+                categoryId: t.categoryId,
+                date: BillingCycle.date(
+                    t.date.year, t.date.month + i - 1, t.date.day),
+                note: t.note,
+                currency: t.currency);
+        final m = TransactionMetadata(
+            transactionId: tx.id,
+            subcategory: meta.subcategory,
+            status: i == 1 ? meta.status : (credit ? 'paid' : 'pending'),
+            dueDate: i == 1 ? meta.dueDate : (credit ? null : tx.date),
+            expenseClass: meta.expenseClass,
+            excludeFromSpending: meta.excludeFromSpending,
+            installmentCurrent: i,
+            installmentTotal: count,
+            source: i == 1 ? meta.source : 'installment',
+            affectsBalance: meta.affectsBalance);
+        if (i == 1) {
+          // Only the difference reaches the balance: the rest was applied.
+          if (!meta.isPending && meta.affectsBalance) {
+            await txn.rawUpdate(
+                'UPDATE accounts SET balance = balance + ? WHERE id = ?', [
+              _txDelta(tx) - _txDelta(t),
+              t.accountId,
+            ]);
+          }
+          await txn.update('transactions', tx.toMap(),
+              where: 'id = ?', whereArgs: [t.id]);
+        } else {
+          if ((await txn
+                  .query('transactions', where: 'id = ?', whereArgs: [tx.id]))
+              .isNotEmpty) {
+            throw StateError('Já existe uma parcela com este número.');
+          }
+          await txn.insert('transactions', tx.toMap());
+          if (!m.isPending && m.affectsBalance) {
+            await txn.rawUpdate(
+                'UPDATE accounts SET balance = balance + ? WHERE id = ?',
+                [_txDelta(tx), tx.accountId]);
+          }
+        }
+        await txn.insert('transaction_metadata', m.toMap(),
+            conflictAlgorithm: ConflictAlgorithm.replace);
+      }
+    });
+    await _reloadLedger();
+  }
+
+  /// Moves everything of category [fromId] to [intoId] (entries, recurring
+  /// items, import rules and its budget when [intoId] has none) and deletes
+  /// [fromId]. Money does not move.
+  Future<int> mergeCategory(String fromId, String intoId) async {
+    if (fromId == intoId) throw ArgumentError('Escolha categorias diferentes.');
+    final db = await DBHelper.database;
+    var moved = 0;
+    await ledgerTransaction(db, 'category.merge', (txn) async {
+      final from =
+          await txn.query('categories', where: 'id = ?', whereArgs: [fromId]);
+      final into =
+          await txn.query('categories', where: 'id = ?', whereArgs: [intoId]);
+      if (from.isEmpty || into.isEmpty) {
+        throw StateError('Uma das categorias não existe mais.');
+      }
+      if (from.single['type'] != into.single['type']) {
+        throw StateError('Só dá para juntar categorias do mesmo tipo.');
+      }
+      moved = await txn.update('transactions', {'category_id': intoId},
+          where: 'category_id = ?', whereArgs: [fromId]);
+      await txn.update('recurring_payments', {'category_id': intoId},
+          where: 'category_id = ?', whereArgs: [fromId]);
+      await txn.update('import_rules', {'category_id': intoId},
+          where: 'category_id = ?', whereArgs: [fromId]);
+      final kept = await txn
+          .query('budgets', where: 'category_id = ?', whereArgs: [intoId]);
+      if (kept.isEmpty) {
+        await txn.update('budgets', {'category_id': intoId},
+            where: 'category_id = ?', whereArgs: [fromId]);
+      } else {
+        await txn
+            .delete('budgets', where: 'category_id = ?', whereArgs: [fromId]);
+      }
+      await txn.delete('categories', where: 'id = ?', whereArgs: [fromId]);
+    });
+    categories = await DBHelper.getCategories();
+    recurring = await DBHelper.getRecurring();
+    budgets = await DBHelper.getBudgets();
+    await _reloadLedger();
+    return moved;
   }
 
   Future<void> addTransfer({
@@ -1555,6 +1916,58 @@ class AppProvider extends ChangeNotifier {
           required double amount,
           String note = ''}) =>
       _moveGoal(goalId, toAccountId, amount, note, false);
+
+  /// Changes what a goal holds without moving any account: for a reserve
+  /// that is only bookkeeping (the money never left the account), so taking
+  /// from it must not add money to an account either.
+  Future<void> adjustGoal(
+      {required String goalId,
+      required double amount,
+      required bool deposit,
+      String note = ''}) async {
+    if (!amount.isFinite || amount <= 0) {
+      throw ArgumentError('Informe um valor positivo.');
+    }
+    final db = await DBHelper.database;
+    await ledgerTransaction(db, 'goal.adjust', (txn) async {
+      final rows = await txn
+          .query('savings_goals', where: 'id = ?', whereArgs: [goalId]);
+      if (rows.isEmpty) throw StateError('Objetivo não encontrado.');
+      final goal = SavingsGoal.fromMap(rows.first);
+      if (!deposit && amount > goal.currentAmount + .005) {
+        throw StateError('O valor supera o saldo guardado.');
+      }
+      final newAmount = deposit
+          ? goal.currentAmount + amount
+          : (goal.currentAmount - amount).clamp(0.0, double.infinity);
+      final completed = newAmount >= goal.targetAmount;
+      await txn.insert(
+          'savings_contributions',
+          SavingsContribution(
+                  id: newId(),
+                  goalId: goalId,
+                  accountId: '',
+                  amount: amount,
+                  type: deposit ? 'contribution' : 'withdrawal',
+                  date: DateTime.now(),
+                  note: note)
+              .toMap());
+      await txn.update(
+          'savings_goals',
+          goal
+              .copyWith(
+                  currentAmount: newAmount,
+                  isCompleted: completed,
+                  completedAt: completed ? DateTime.now() : null,
+                  clearCompletedAt: !completed)
+              .toMap(),
+          where: 'id = ?',
+          whereArgs: [goalId]);
+    });
+    savingsGoals = await DBHelper.getSavingsGoals();
+    savingsContributions = await DBHelper.getAllSavingsContributions();
+    notifyListeners();
+  }
 
   Future<void> _moveGoal(String goalId, String accountId, double amount,
       String note, bool deposit) async {
