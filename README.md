@@ -55,7 +55,7 @@ As imagens abaixo são da versão 1.12.7, geradas com **dados fictícios** a par
 
 ## Estado do projeto
 
-Versão de referência: **1.13.0+52** (outubro de 2026, schema 27). Detalhes em [CHANGELOG.md](CHANGELOG.md) e [docs/PLAN.md](docs/PLAN.md).
+Versão de referência: **1.13.0+52** (outubro de 2026, schema 27). Detalhes em [CHANGELOG.md](CHANGELOG.md).
 
 | Área | Situação |
 | --- | --- |
@@ -148,39 +148,21 @@ O identificador Android `com.ma.expensy` é preservado para que o app instalado 
 
 ## Documentação
 
-**Estado atual**
-- [Paridade do assistente com o app (29/10/2026)](docs/mcp-paridade.md)
-- [Plano de evolução P0–P3 (28/10/2026)](docs/PLANO_EVOLUCAO_2026_11.md)
-- [Auditoria do produto e do código](docs/AUDITORIA_NEXO_2026_10.md)
-- [Pesquisa de referências, com fontes](docs/PESQUISA_REFERENCIAS_2026_10.md)
-- [Projeto independente: identificadores, migração do banco e histórico](docs/NEXO_PROJETO_INDEPENDENTE_2026_10.md)
-- [Plano anterior e andamento](docs/PLAN.md)
-- [Histórico de versões](CHANGELOG.md)
-- [Segurança: RLS, segredos e rotação](docs/SEGURANCA.md)
-- [APIs exploradas: Pluggy, Banco Central, brapi, BrasilAPI](docs/APIS_EXPLORACAO.md)
-
-**Sincronização e integrações**
-- [Fronteira de domínio e captura atômica](docs/NEXO_SYNC_DOMAIN_2026_10_20.md)
 - [Arquitetura da sincronização](docs/NEXO_SYNC_ARCHITECTURE.md)
-- [Sequência: sync, Claude e Pluggy](docs/NEXO_PLANO_SEQUENCIA_2026_10.md)
-- [Integrações: Claude (MCP), Pluggy e fechamento semanal](docs/NEXO_INTEGRATIONS_PLAN_2026_10.md)
+- [Fronteira de domínio e captura atômica](docs/NEXO_SYNC_DOMAIN_2026_10_20.md)
+- [Início da implementação da sincronização](docs/NEXO_SYNC_IMPLEMENTATION.md)
+- [Segurança: RLS, segredos e rotação](docs/SEGURANCA.md)
+- [Paridade do assistente (MCP) com o app](docs/mcp-paridade.md)
+- [Servidor MCP: publicação e ciclo dos pedidos](supabase/functions/nexo-mcp/README.md)
+- [Widgets da tela inicial (Android)](HOMESCREEN_WIDGET.md)
+- [Histórico de versões](CHANGELOG.md)
 
-**Produto e histórico**
-- [Investimentos](docs/NEXO_INVESTMENTS.md)
-- [Home, pesquisa de UX e validação da 1.5.4](docs/NEXO_HOME_2026_10.md)
-- [Dívidas, recorrentes e revisão financeira](docs/NEXO_USABILITY_2026_10.md)
-- [Painel, análises e automação](docs/NEXO_EVOLUTION_2026.md)
-- [Windows nativo](docs/NEXO_DESKTOP.md)
-- [Proposta de lançamento por conversa](docs/NEXO_CONVERSATIONAL_ENTRY.md)
-- [Roadmap histórico](docs/NEXO_ROADMAP.md)
-- [Repositório e histórico](docs/NEXO_GITHUB.md)
-
-Os documentos registram diferentes etapas do desenvolvimento; consulte a data e a versão de cada um. Os que tratam de propostas indicam no topo o que já virou funcionalidade. Builds, capturas privadas e bases temporárias não fazem parte do código publicado.
+Os documentos registram etapas diferentes do desenvolvimento; consulte a data e a versão de cada um. Builds, capturas privadas e bases temporárias não fazem parte do código publicado.
 
 ## Desenvolvimento
 
-O Nexo é desenvolvido por [Daniel Moulaz](https://github.com/daniel-moulaz). Parte do código deriva de uma base sob licença MIT; o crédito exigido está em `LICENSE`.
+O Nexo é desenvolvido por [Daniel Moulaz](https://github.com/daniel-moulaz) e foi construído a partir de uma base open source sob licença MIT, o [Expensy](https://github.com/mina-android/Expensy), de Mina Android; os créditos estão em [`LICENSE`](LICENSE).
 
 Contribuições devem manter testes relevantes, compatibilidade dos dados e migrações explícitas quando necessárias. Nunca inclua bancos pessoais, notificações reais, extratos, PINs, tokens, chaves de serviço, keystores ou arquivos de configuração locais em commits ou issues.
 
-Licença [MIT](LICENSE), com os avisos de autoria originais preservados.
+Licença [MIT](LICENSE).
