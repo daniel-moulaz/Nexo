@@ -30,3 +30,42 @@ tool/nexo_sync.local.json
 
 # Supabase CLI cache
 supabase/.temp/
+
+# Notas internas de desenvolvimento (auditorias, planos, pesquisas, handoffs).
+# Ficam só na máquina do dono, fora do repositório público.
+/CLAUDE.md
+/docs/NEXO_HANDOFF_*
+/docs/APIS_EXPLORACAO.md
+/docs/AUDITORIA_NEXO_2026_10.md
+/docs/DESIGN_2026_10.md
+/docs/NEXO_AI_FUTURE.md
+/docs/NEXO_AUDIT.md
+/docs/NEXO_AUTOMATION_SECURITY.md
+/docs/NEXO_BENCHMARK_2026.md
+/docs/NEXO_BRAPI_NAVIGATION_2026_10.md
+/docs/NEXO_CARD_SUGGESTIONS_2026_10.md
+/docs/NEXO_CONVERSATIONAL_ENTRY.md
+/docs/NEXO_DESKTOP.md
+/docs/NEXO_EVOLUTION_2026.md
+/docs/NEXO_GITHUB.md
+/docs/NEXO_HOME_2026_10.md
+/docs/NEXO_INTEGRATIONS_PLAN_2026_10.md
+/docs/NEXO_INVESTMENTS.md
+/docs/NEXO_INVESTMENT_CASH_2026_10.md
+/docs/NEXO_INVESTMENT_CHARTS_2026_10.md
+/docs/NEXO_NATIVE_PROBE.md
+/docs/NEXO_OPEN_FINANCE_FUTURE.md
+/docs/NEXO_PLANO_SEQUENCIA_2026_10.md
+/docs/NEXO_PORTFOLIO_UX_2026_10.md
+/docs/NEXO_PROJETO_INDEPENDENTE_2026_10.md
+/docs/NEXO_ROADMAP.md
+/docs/NEXO_USABILITY_2026_10.md
+/docs/NEXO_UX_REVIEW_2026_10.md
+/docs/NEXO_WINDOWS_VALIDATION.md
+/docs/PESQUISA_REFERENCIAS_2026_10.md
+/docs/PLAN.md
+/docs/PLANO_EVOLUCAO_2026_11.md
+/docs/REFERENCIA_AUVP_FINANCAS_2026_10.md
+/docs/RELATORIO_EVOLUCAO_2026_10_28.md
+/docs/REVISAO_SOBREPOSICOES_2026_10.md
+/docs/ROADMAP_2026_11.md
