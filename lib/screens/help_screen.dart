@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import '../services/help_topics.dart';
 import '../utils/finance_input.dart';
 import '../services/diagnostics.dart';
-import '../theme/nexo_type.dart';
 
 /// Searchable answers about how the Nexo counts money and what each part
 /// does. The search looks in the whole answer, not only in the question.
@@ -33,10 +32,7 @@ class _HelpScreenState extends State<HelpScreen> {
     }
     return Scaffold(
       appBar: AppBar(
-          title: Text('Ajuda',
-              style: TextStyle(
-                  fontWeight:
-                      NexoType.weight(FontWeight.w900, FontWeight.w600)))),
+          title: Text('Ajuda', style: TextStyle(fontWeight: FontWeight.w600))),
       body: ListView(
         padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
         children: [
@@ -66,9 +62,8 @@ class _HelpScreenState extends State<HelpScreen> {
             ),
           for (final g in groups.entries) ...[
             Text(g.key,
-                style: theme.textTheme.titleMedium?.copyWith(
-                    fontWeight:
-                        NexoType.weight(FontWeight.w800, FontWeight.w600))),
+                style: theme.textTheme.titleMedium
+                    ?.copyWith(fontWeight: FontWeight.w600)),
             const SizedBox(height: 4),
             for (final t in g.value)
               Card(
@@ -76,9 +71,7 @@ class _HelpScreenState extends State<HelpScreen> {
                 child: ExpansionTile(
                     initiallyExpanded: _query.isNotEmpty,
                     title: Text(t.question,
-                        style: TextStyle(
-                            fontWeight: NexoType.weight(
-                                FontWeight.w700, FontWeight.w600))),
+                        style: TextStyle(fontWeight: FontWeight.w600)),
                     childrenPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
                     children: [Text(t.answer)]),
               ),
@@ -86,9 +79,8 @@ class _HelpScreenState extends State<HelpScreen> {
           ],
           if (_query.isEmpty) ...[
             Text('Diagnóstico',
-                style: theme.textTheme.titleMedium?.copyWith(
-                    fontWeight:
-                        NexoType.weight(FontWeight.w800, FontWeight.w600))),
+                style: theme.textTheme.titleMedium
+                    ?.copyWith(fontWeight: FontWeight.w600)),
             const SizedBox(height: 4),
             ValueListenableBuilder<int>(
                 valueListenable: Diagnostics.revision,

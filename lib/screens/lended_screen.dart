@@ -9,7 +9,6 @@ import '../widgets/shared_widgets.dart';
 import '../widgets/nexo_ui.dart';
 import 'lended_person_screen.dart';
 import '../utils/haptics.dart';
-import '../theme/nexo_type.dart';
 
 /// Color palette for [LendedPerson] avatars — same 10-color rotation used
 /// to auto-assign colors during the v9→v10 legacy backfill migration, kept
@@ -78,8 +77,7 @@ class LendedScreen extends StatelessWidget {
               }),
         ],
         title: Text(l10n.lended_lentMoney,
-            style: TextStyle(
-                fontWeight: NexoType.weight(FontWeight.w800, FontWeight.w600))),
+            style: TextStyle(fontWeight: FontWeight.w600)),
       ),
       body: Column(children: [
         if (app.lendedPeople.isNotEmpty)
@@ -153,9 +151,9 @@ class _PersonCard extends StatelessWidget {
     final overdue = app.personHasOverdue(person.id);
 
     final balColor = balance > 0
-        ? const Color(0xFF2E7D32)
+        ? NexoTones.income(context)
         : balance < 0
-            ? const Color(0xFFC62828)
+            ? NexoTones.expense(context)
             : cs.onSurface.withValues(alpha: 0.5);
     final balLabel = balance > 0
         ? l10n.lended_owesYou
@@ -182,10 +180,7 @@ class _PersonCard extends StatelessWidget {
                   child: Text(
                 person.name.isNotEmpty ? person.name[0].toUpperCase() : '?',
                 style: TextStyle(
-                    fontWeight:
-                        NexoType.weight(FontWeight.w800, FontWeight.w600),
-                    fontSize: 18,
-                    color: color),
+                    fontWeight: FontWeight.w600, fontSize: 18, color: color),
               )),
             ),
             const SizedBox(width: 12),
@@ -198,9 +193,7 @@ class _PersonCard extends StatelessWidget {
                         child: Text(person.name,
                             overflow: TextOverflow.ellipsis,
                             style: TextStyle(
-                                fontWeight: NexoType.weight(
-                                    FontWeight.w700, FontWeight.w600),
-                                fontSize: 15))),
+                                fontWeight: FontWeight.w600, fontSize: 15))),
                     if (overdue) ...[
                       const SizedBox(width: 6),
                       Container(
@@ -211,9 +204,8 @@ class _PersonCard extends StatelessWidget {
                             borderRadius: BorderRadius.circular(6)),
                         child: Text(l10n.lended_overdue,
                             style: TextStyle(
-                                fontSize: NexoType.size(9, 12),
-                                fontWeight: NexoType.weight(
-                                    FontWeight.w700, FontWeight.w500),
+                                fontSize: 12,
+                                fontWeight: FontWeight.w500,
                                 color: cs.onErrorContainer)),
                       ),
                     ],
@@ -224,7 +216,7 @@ class _PersonCard extends StatelessWidget {
                         ? l10n.lended_noActiveRecords
                         : l10n.lended_activeRecords(activeCount),
                     style: TextStyle(
-                        fontSize: NexoType.size(11, 12),
+                        fontSize: 12,
                         color: cs.onSurface.withValues(alpha: 0.5)),
                   ),
                 ])),
@@ -233,14 +225,12 @@ class _PersonCard extends StatelessWidget {
                   style: TextStyle(
                       fontFeatures: NexoTones.figures,
                       fontSize: 16,
-                      fontWeight:
-                          NexoType.weight(FontWeight.w800, FontWeight.w600),
+                      fontWeight: FontWeight.w600,
                       color: balColor)),
               Text(balLabel,
                   style: TextStyle(
-                      fontSize: NexoType.size(10, 12),
-                      fontWeight:
-                          NexoType.weight(FontWeight.w600, FontWeight.w500),
+                      fontSize: 12,
+                      fontWeight: FontWeight.w500,
                       color: balColor)),
             ]),
             const Icon(Icons.chevron_right_rounded),
@@ -320,9 +310,10 @@ class _PersonSheetState extends State<_PersonSheet> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(isEdit ? l10n.lended_editPerson : l10n.lended_addPerson,
-              style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                  fontWeight:
-                      NexoType.weight(FontWeight.w800, FontWeight.w600))),
+              style: Theme.of(context)
+                  .textTheme
+                  .titleLarge
+                  ?.copyWith(fontWeight: FontWeight.w600)),
           const SizedBox(height: 12),
           TextField(
             controller: _nameCtrl,
@@ -338,10 +329,7 @@ class _PersonSheetState extends State<_PersonSheet> {
           ),
           const SizedBox(height: 14),
           Text(l10n.lended_color,
-              style: Theme.of(context)
-                  .textTheme
-                  .labelMedium
-                  ?.copyWith(letterSpacing: NexoType.tracking(1))),
+              style: Theme.of(context).textTheme.labelMedium),
           const SizedBox(height: 8),
           Wrap(
               spacing: 10,

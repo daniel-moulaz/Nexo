@@ -10,7 +10,6 @@ import '../l10n/app_localizations.dart';
 import '../utils/snackbar.dart';
 import 'loans_screen.dart';
 import '../widgets/nexo_ui.dart';
-import '../theme/nexo_type.dart';
 
 class LoanDetailScreen extends StatefulWidget {
   final Loan loan;
@@ -85,7 +84,7 @@ class _LoanDetailScreenState extends State<LoanDetailScreen> {
                     ),
                     TextButton(
                       style: TextButton.styleFrom(
-                          foregroundColor: const Color(0xFFC62828)),
+                          foregroundColor: NexoTones.expense(context)),
                       onPressed: () async {
                         Navigator.pop(c); // close dialog
                         Navigator.pop(context); // go back to loans screen
@@ -128,9 +127,8 @@ class _LoanDetailScreenState extends State<LoanDetailScreen> {
                         Text(
                           l10n.loans_remaining,
                           style: TextStyle(
-                            fontSize: NexoType.size(11, 12),
-                            fontWeight: NexoType.weight(
-                                FontWeight.w700, FontWeight.w500),
+                            fontSize: 12,
+                            fontWeight: FontWeight.w500,
                             color: cs.onSurface.withValues(alpha: 0.5),
                           ),
                         ),
@@ -139,17 +137,16 @@ class _LoanDetailScreenState extends State<LoanDetailScreen> {
                             padding: const EdgeInsets.symmetric(
                                 horizontal: 8, vertical: 2),
                             decoration: BoxDecoration(
-                              color: const Color(0xFF2E7D32)
+                              color: NexoTones.income(context)
                                   .withValues(alpha: 0.15),
                               borderRadius: BorderRadius.circular(6),
                             ),
                             child: Text(
                               l10n.loans_settled.toUpperCase(),
                               style: TextStyle(
-                                fontSize: NexoType.size(9, 12),
-                                fontWeight: NexoType.weight(
-                                    FontWeight.bold, FontWeight.w500),
-                                color: Color(0xFF2E7D32),
+                                fontSize: 12,
+                                fontWeight: FontWeight.w500,
+                                color: NexoTones.income(context),
                               ),
                             ),
                           ),
@@ -161,11 +158,10 @@ class _LoanDetailScreenState extends State<LoanDetailScreen> {
                       style: TextStyle(
                         fontFeatures: NexoTones.figures,
                         fontSize: 24,
-                        fontWeight:
-                            NexoType.weight(FontWeight.w900, FontWeight.w600),
+                        fontWeight: FontWeight.w600,
                         color: remaining > 0
                             ? cs.primary
-                            : const Color(0xFF2E7D32),
+                            : NexoTones.income(context),
                       ),
                     ),
                     const SizedBox(height: 12),
@@ -175,16 +171,12 @@ class _LoanDetailScreenState extends State<LoanDetailScreen> {
                         Text(
                           '${l10n.loans_paid}: ${formatAmount(totalPaid, cur)}',
                           style: TextStyle(
-                              fontSize: NexoType.size(11, 12),
-                              fontWeight: NexoType.weight(
-                                  FontWeight.w600, FontWeight.w500)),
+                              fontSize: 12, fontWeight: FontWeight.w500),
                         ),
                         Text(
                           '${(progress * 100).toStringAsFixed(0)}%',
                           style: TextStyle(
-                              fontSize: NexoType.size(11, 12),
-                              fontWeight: NexoType.weight(
-                                  FontWeight.bold, FontWeight.w500)),
+                              fontSize: 12, fontWeight: FontWeight.w500),
                         ),
                       ],
                     ),
@@ -192,7 +184,7 @@ class _LoanDetailScreenState extends State<LoanDetailScreen> {
                     LinearProgressCard(
                       value: progress,
                       color: _loan.isSettled
-                          ? const Color(0xFF2E7D32)
+                          ? NexoTones.income(context)
                           : cs.primary,
                     ),
                   ],
@@ -271,9 +263,8 @@ class _LoanDetailScreenState extends State<LoanDetailScreen> {
                                 Text(
                                   l10n.loans_notes,
                                   style: TextStyle(
-                                    fontSize: NexoType.size(10, 12),
-                                    fontWeight: NexoType.weight(
-                                        FontWeight.w600, FontWeight.w500),
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w500,
                                     color: cs.onSurface.withValues(alpha: 0.5),
                                   ),
                                 ),
@@ -303,10 +294,8 @@ class _LoanDetailScreenState extends State<LoanDetailScreen> {
                   l10n.loans_paymentHistory,
                   style: TextStyle(
                     fontSize: 12,
-                    fontWeight:
-                        NexoType.weight(FontWeight.bold, FontWeight.w500),
+                    fontWeight: FontWeight.w500,
                     color: cs.onSurface.withValues(alpha: 0.6),
-                    letterSpacing: NexoType.tracking(0.5),
                   ),
                 ),
               ],
@@ -344,7 +333,7 @@ class _LoanDetailScreenState extends State<LoanDetailScreen> {
                             alignment: Alignment.centerRight,
                             padding: const EdgeInsets.only(right: 20),
                             decoration: BoxDecoration(
-                              color: const Color(0xFFC62828),
+                              color: NexoTones.expense(context),
                               borderRadius: BorderRadius.circular(12),
                             ),
                             child:
@@ -363,7 +352,7 @@ class _LoanDetailScreenState extends State<LoanDetailScreen> {
                                   TextButton(
                                     style: TextButton.styleFrom(
                                         foregroundColor:
-                                            const Color(0xFFC62828)),
+                                            NexoTones.expense(context)),
                                     onPressed: () => Navigator.pop(c, true),
                                     child: Text(l10n.shared_widgets_delete_),
                                   ),
@@ -397,8 +386,7 @@ class _LoanDetailScreenState extends State<LoanDetailScreen> {
                               formatAmount(p.amount, p.currency),
                               style: TextStyle(
                                   fontFeatures: NexoTones.figures,
-                                  fontWeight: NexoType.weight(
-                                      FontWeight.bold, FontWeight.w600),
+                                  fontWeight: FontWeight.w600,
                                   fontSize: 14),
                             ),
                             subtitle: Text(
@@ -408,7 +396,7 @@ class _LoanDetailScreenState extends State<LoanDetailScreen> {
                                 if (p.notes.trim().isNotEmpty) p.notes
                               ].join('  ·  '),
                               style: TextStyle(
-                                fontSize: NexoType.size(11, 12),
+                                fontSize: 12,
                                 color: cs.onSurface.withValues(alpha: 0.5),
                               ),
                             ),
@@ -444,8 +432,8 @@ class _DetailStat extends StatelessWidget {
         Text(
           label,
           style: TextStyle(
-            fontSize: NexoType.size(10, 12),
-            fontWeight: NexoType.weight(FontWeight.w600, FontWeight.w500),
+            fontSize: 12,
+            fontWeight: FontWeight.w500,
             color: cs.onSurface.withValues(alpha: 0.5),
           ),
         ),
@@ -454,7 +442,7 @@ class _DetailStat extends StatelessWidget {
           value,
           style: TextStyle(
             fontSize: 13,
-            fontWeight: NexoType.weight(FontWeight.w700, FontWeight.w600),
+            fontWeight: FontWeight.w600,
           ),
         ),
       ],
@@ -506,10 +494,7 @@ class _LogPaymentSheetState extends State<_LogPaymentSheet> {
             children: [
               Text(
                 l10n.loans_logPayment,
-                style: TextStyle(
-                    fontSize: 18,
-                    fontWeight:
-                        NexoType.weight(FontWeight.bold, FontWeight.w600)),
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
               ),
               const SizedBox(height: 16),
 
@@ -538,10 +523,7 @@ class _LogPaymentSheetState extends State<_LogPaymentSheet> {
               // Account Picker
               Text(
                 l10n.loans_account,
-                style: TextStyle(
-                    fontSize: 12,
-                    fontWeight:
-                        NexoType.weight(FontWeight.bold, FontWeight.w500)),
+                style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
               ),
               const SizedBox(height: 6),
               AccountCardPicker(

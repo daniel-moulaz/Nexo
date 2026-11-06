@@ -12,7 +12,7 @@ import 'package:package_info_plus/package_info_plus.dart';
 import 'reminder_settings_screen.dart';
 import 'security_settings_screen.dart';
 import '../services/platform_capabilities.dart';
-import '../theme/nexo_type.dart';
+import '../theme/nexo_tokens.dart';
 
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
@@ -27,8 +27,7 @@ class SettingsScreen extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(
         title: Text(l10n.settings_title,
-            style: TextStyle(
-                fontWeight: NexoType.weight(FontWeight.w800, FontWeight.w600))),
+            style: TextStyle(fontWeight: FontWeight.w600)),
       ),
       body: SafeArea(
           bottom: true,
@@ -75,8 +74,7 @@ class SettingsScreen extends StatelessWidget {
                               const SizedBox(width: 10),
                               Text(l10n.settings_theme,
                                   style: TextStyle(
-                                      fontWeight: NexoType.weight(
-                                          FontWeight.w700, FontWeight.w600),
+                                      fontWeight: FontWeight.w600,
                                       fontSize: 14)),
                             ]),
                             const SizedBox(height: 10),
@@ -124,9 +122,7 @@ class SettingsScreen extends StatelessWidget {
                           color: cs.primary, size: 20),
                       title: Text(l10n.settings_dynamicColor,
                           style: TextStyle(
-                              fontWeight: NexoType.weight(
-                                  FontWeight.w700, FontWeight.w600),
-                              fontSize: 14)),
+                              fontWeight: FontWeight.w600, fontSize: 14)),
                       subtitle: Text(l10n.settings_dynamicColorSubtitle,
                           style: TextStyle(
                               fontSize: 12,
@@ -147,9 +143,7 @@ class SettingsScreen extends StatelessWidget {
                             color: cs.primary, size: 20),
                         title: Text(l10n.settings_amoledTitle,
                             style: TextStyle(
-                                fontWeight: NexoType.weight(
-                                    FontWeight.w700, FontWeight.w600),
-                                fontSize: 14)),
+                                fontWeight: FontWeight.w600, fontSize: 14)),
                         subtitle: Text(l10n.settings_amoledSubtitle,
                             style: TextStyle(
                                 fontSize: 12,
@@ -182,9 +176,7 @@ class SettingsScreen extends StatelessWidget {
                                       children: [
                                         Text(l10n.settings_accentColor,
                                             style: TextStyle(
-                                                fontWeight: NexoType.weight(
-                                                    FontWeight.w700,
-                                                    FontWeight.w600),
+                                                fontWeight: FontWeight.w600,
                                                 fontSize: 14)),
                                         Text(
                                             kSeedLabels[s.themeSeed] ??
@@ -254,8 +246,7 @@ class SettingsScreen extends StatelessWidget {
                                 children: [
                                   Text(l10n.settings_appFont,
                                       style: TextStyle(
-                                          fontWeight: NexoType.weight(
-                                              FontWeight.w700, FontWeight.w600),
+                                          fontWeight: FontWeight.w600,
                                           fontSize: 14)),
                                   Text(
                                       PlatformCapabilities.windows
@@ -296,8 +287,7 @@ class SettingsScreen extends StatelessWidget {
                                         style: TextStyle(
                                           fontSize: 13,
                                           fontWeight: sel
-                                              ? NexoType.weight(FontWeight.w700,
-                                                  FontWeight.w600)
+                                              ? FontWeight.w600
                                               : FontWeight.w400,
                                           color:
                                               sel ? cs.onPrimary : cs.onSurface,
@@ -319,9 +309,7 @@ class SettingsScreen extends StatelessWidget {
                         Icon(Icons.monetization_on_outlined, color: cs.primary),
                     title: Text(l10n.settings_defaultCurrency,
                         style: TextStyle(
-                            fontWeight: NexoType.weight(
-                                FontWeight.w700, FontWeight.w600),
-                            fontSize: 14)),
+                            fontWeight: FontWeight.w600, fontSize: 14)),
                     subtitle: Text(
                         '${currencyInfo(s.currency).name} (${currencyInfo(s.currency).symbol})',
                         style: TextStyle(
@@ -351,9 +339,7 @@ class SettingsScreen extends StatelessWidget {
                           Icon(Icons.date_range_outlined, color: cs.primary),
                       title: Text(l10n.settings_weekStartsOn,
                           style: TextStyle(
-                              fontWeight: NexoType.weight(
-                                  FontWeight.w700, FontWeight.w600),
-                              fontSize: 14)),
+                              fontWeight: FontWeight.w600, fontSize: 14)),
                       trailing: DropdownButton<String>(
                         value: s.weekStart,
                         underline: const SizedBox(),
@@ -377,9 +363,7 @@ class SettingsScreen extends StatelessWidget {
                           color: cs.primary),
                       title: Text(l10n.settings_hideBalance,
                           style: TextStyle(
-                              fontWeight: NexoType.weight(
-                                  FontWeight.w700, FontWeight.w600),
-                              fontSize: 14)),
+                              fontWeight: FontWeight.w600, fontSize: 14)),
                       subtitle: Text(l10n.settings_hideBalanceSubtitle),
                       value: s.hideBalance,
                       onChanged: (v) {
@@ -393,9 +377,7 @@ class SettingsScreen extends StatelessWidget {
                           color: cs.primary),
                       title: Text(l10n.settings_budgetAlerts,
                           style: TextStyle(
-                              fontWeight: NexoType.weight(
-                                  FontWeight.w700, FontWeight.w600),
-                              fontSize: 14)),
+                              fontWeight: FontWeight.w600, fontSize: 14)),
                       subtitle: Text(PlatformCapabilities.scheduledNotifications
                           ? 'Avisar quando um orçamento ou objetivo atingir o limite'
                           : 'Disponível no Android'),
@@ -413,9 +395,7 @@ class SettingsScreen extends StatelessWidget {
                           Icon(Icons.access_time_rounded, color: cs.primary),
                       title: Text(l10n.settings_dailyReminder,
                           style: TextStyle(
-                              fontWeight: NexoType.weight(
-                                  FontWeight.w700, FontWeight.w600),
-                              fontSize: 14)),
+                              fontWeight: FontWeight.w600, fontSize: 14)),
                       subtitle: Text(PlatformCapabilities.scheduledNotifications
                           ? 'Lembrete diário para registrar lançamentos'
                           : 'Disponível no Android'),
@@ -436,8 +416,7 @@ class SettingsScreen extends StatelessWidget {
                         trailing: Text(s.dailyReminderTime,
                             style: TextStyle(
                                 color: cs.primary,
-                                fontWeight: NexoType.weight(
-                                    FontWeight.bold, FontWeight.w600))),
+                                fontWeight: FontWeight.w600)),
                         onTap: () async {
                           final initial = TimeOfDay(
                             hour: int.tryParse(
@@ -463,9 +442,7 @@ class SettingsScreen extends StatelessWidget {
                           Icon(Icons.vibration_rounded, color: cs.primary),
                       title: Text(l10n.settings_hapticFeedback,
                           style: TextStyle(
-                              fontWeight: NexoType.weight(
-                                  FontWeight.w700, FontWeight.w600),
-                              fontSize: 14)),
+                              fontWeight: FontWeight.w600, fontSize: 14)),
                       subtitle: const Text('Vibrate on interactions'),
                       value: s.hapticsEnabled,
                       onChanged: (v) {
@@ -491,9 +468,7 @@ class SettingsScreen extends StatelessWidget {
                         Icon(Icons.person_outline_rounded, color: cs.primary),
                     title: Text(l10n.settings_displayName,
                         style: TextStyle(
-                            fontWeight: NexoType.weight(
-                                FontWeight.w700, FontWeight.w600),
-                            fontSize: 14)),
+                            fontWeight: FontWeight.w600, fontSize: 14)),
                     subtitle: Text(
                         s.userName.isNotEmpty
                             ? s.userName
@@ -514,9 +489,7 @@ class SettingsScreen extends StatelessWidget {
                       leading:
                           Icon(Icons.info_outline_rounded, color: cs.primary),
                       title: Text(l10n.settings_version,
-                          style: TextStyle(
-                              fontWeight: NexoType.weight(
-                                  FontWeight.w700, FontWeight.w600))),
+                          style: TextStyle(fontWeight: FontWeight.w600)),
                       trailing: FutureBuilder<PackageInfo>(
                         future: PackageInfo.fromPlatform(),
                         builder: (context, snapshot) {
@@ -532,8 +505,7 @@ class SettingsScreen extends StatelessWidget {
                             child: Text(versionText,
                                 style: TextStyle(
                                     fontSize: 12,
-                                    fontWeight: NexoType.weight(
-                                        FontWeight.w700, FontWeight.w500),
+                                    fontWeight: FontWeight.w500,
                                     color: cs.primary)),
                           );
                         },
@@ -543,20 +515,16 @@ class SettingsScreen extends StatelessWidget {
                     ListTile(
                       leading: Icon(Icons.shield_outlined, color: cs.primary),
                       title: Text(l10n.settings_privacy,
-                          style: TextStyle(
-                              fontWeight: NexoType.weight(
-                                  FontWeight.w700, FontWeight.w600))),
+                          style: TextStyle(fontWeight: FontWeight.w600)),
                       subtitle: Text(l10n.settings_privacySubtitle),
-                      trailing: const Icon(Icons.check_circle_outline,
-                          color: Color(0xFF2E7D32)),
+                      trailing: Icon(Icons.check_circle_outline,
+                          color: NexoTones.income(context)),
                     ),
                     const Divider(height: 1, indent: 56),
                     ListTile(
                       leading: Icon(Icons.code_rounded, color: cs.primary),
                       title: Text(l10n.settings_github,
-                          style: TextStyle(
-                              fontWeight: NexoType.weight(
-                                  FontWeight.w700, FontWeight.w600))),
+                          style: TextStyle(fontWeight: FontWeight.w600)),
                       subtitle: Text(l10n.settings_githubSubtitle),
                       trailing: Icon(Icons.open_in_new_rounded,
                           size: 18, color: cs.onSurface.withValues(alpha: 0.4)),
@@ -574,9 +542,7 @@ class SettingsScreen extends StatelessWidget {
                       leading:
                           Icon(Icons.person_outline_rounded, color: cs.primary),
                       title: Text(l10n.settings_developer,
-                          style: TextStyle(
-                              fontWeight: NexoType.weight(
-                                  FontWeight.w700, FontWeight.w600))),
+                          style: TextStyle(fontWeight: FontWeight.w600)),
                       subtitle: Text(l10n.settings_developerSubtitle),
                       trailing: Icon(Icons.open_in_new_rounded,
                           size: 18, color: cs.onSurface.withValues(alpha: 0.4)),
@@ -585,9 +551,7 @@ class SettingsScreen extends StatelessWidget {
                           context: context,
                           builder: (ctx) => AlertDialog(
                             title: Text(l10n.settings_developer,
-                                style: TextStyle(
-                                    fontWeight: NexoType.weight(
-                                        FontWeight.w700, FontWeight.w600))),
+                                style: TextStyle(fontWeight: FontWeight.w600)),
                             contentPadding:
                                 const EdgeInsets.only(top: 16, bottom: 8),
                             content: Column(
@@ -700,15 +664,17 @@ class _ThemeCard extends StatelessWidget {
           child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
             Icon(icon,
                 size: 22,
-                color:
-                    sel ? Colors.white : cs.onSurface.withValues(alpha: 0.65)),
+                color: sel
+                    ? Theme.of(context).colorScheme.onPrimary
+                    : cs.onSurface.withValues(alpha: 0.65)),
             const SizedBox(height: 5),
             Text(label,
                 style: TextStyle(
                     fontSize: 12,
-                    fontWeight:
-                        NexoType.weight(FontWeight.w700, FontWeight.w500),
-                    color: sel ? Colors.white : cs.onSurface)),
+                    fontWeight: FontWeight.w500,
+                    color: sel
+                        ? Theme.of(context).colorScheme.onPrimary
+                        : cs.onSurface)),
           ]),
         ),
       ),

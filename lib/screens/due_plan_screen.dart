@@ -10,7 +10,6 @@ import '../services/balance_check.dart';
 import '../services/liquidity.dart';
 import '../widgets/analysis_widgets.dart';
 import '../widgets/nexo_ui.dart';
-import '../theme/nexo_type.dart';
 
 /// What to do before a bill the cash will not cover: how much is missing and
 /// the real options with their timing — reserves and investments that
@@ -72,15 +71,12 @@ class _DuePlanScreenState extends State<DuePlanScreen> {
             child:
                 Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
               Text('${s.event.title} · vence ${fmt.format(due)}',
-                  style: TextStyle(
-                      fontWeight:
-                          NexoType.weight(FontWeight.w700, FontWeight.w600))),
+                  style: TextStyle(fontWeight: FontWeight.w600)),
               const SizedBox(height: 6),
               Text('Faltam ${money(s.missing)}',
                   style: TextStyle(
                       fontSize: 26,
-                      fontWeight:
-                          NexoType.weight(FontWeight.w800, FontWeight.w600),
+                      fontWeight: FontWeight.w600,
                       color: NexoTones.expense(context),
                       fontFeatures: NexoTones.figures)),
               Text(
@@ -119,9 +115,7 @@ class _DuePlanScreenState extends State<DuePlanScreen> {
                   inTime >= s.missing
                       ? 'O que chega a tempo (${money(inTime)}) cobre a diferença.'
                       : 'O que chega a tempo soma ${money(inTime)}; ainda faltariam ${money(s.missing - inTime)}.',
-                  style: TextStyle(
-                      fontWeight:
-                          NexoType.weight(FontWeight.w700, FontWeight.w600))),
+                  style: TextStyle(fontWeight: FontWeight.w600)),
             if (options.any((o) =>
                 o.kind == 'Ações' || o.kind == 'FIIs' || o.kind == 'ETFs'))
               Padding(

@@ -212,8 +212,8 @@ void main() {
     expect(find.text('Último preço'), findsNWidgets(3));
     final gain = tester.widget<Text>(find.text('+50,00%'));
     final loss = tester.widget<Text>(find.text('−50,00%'));
-    expect(gain.style!.color, const Color(0xff146c43));
-    expect(loss.style!.color, const Color(0xffb3261e));
+    expect(gain.style!.color, const Color(0xFF3F6212));
+    expect(loss.style!.color, const Color(0xFFBE123C));
     expect(tester.getTopLeft(find.text('Empresa de demonstração')).dy,
         lessThan(tester.getTopLeft(find.text('Distribuição por classe')).dy));
     expect(find.textContaining('Não é o rendimento do dia.'), findsOneWidget);

@@ -15,7 +15,6 @@ import '../services/transaction_metadata_service.dart';
 import '../theme/app_theme.dart';
 import '../services/billing_cycle.dart';
 import '../utils/finance_input.dart';
-import '../theme/nexo_type.dart';
 
 class CardInvoiceScreen extends StatefulWidget {
   final String cardId;
@@ -300,10 +299,8 @@ class _CardInvoiceScreenState extends State<CardInvoiceScreen> {
 
         return Scaffold(
           appBar: AppBar(
-            title: Text(card.name,
-                style: TextStyle(
-                    fontWeight:
-                        NexoType.weight(FontWeight.w900, FontWeight.w600))),
+            title:
+                Text(card.name, style: TextStyle(fontWeight: FontWeight.w600)),
             actions: [
               IconButton(
                   tooltip: 'Fatura anterior',
@@ -348,8 +345,7 @@ class _CardInvoiceScreenState extends State<CardInvoiceScreen> {
                           : formatAmount(total, card.currency),
                       style:
                           Theme.of(context).textTheme.headlineLarge?.copyWith(
-                                fontWeight: NexoType.weight(
-                                    FontWeight.w900, FontWeight.w600),
+                                fontWeight: FontWeight.w600,
                               ),
                     ),
                     const SizedBox(height: 12),
@@ -368,9 +364,7 @@ class _CardInvoiceScreenState extends State<CardInvoiceScreen> {
                           : remaining <= 0
                               ? 'Situação: paga'
                               : 'Em aberto ${formatAmount(remaining, card.currency)}',
-                      style: TextStyle(
-                          fontWeight: NexoType.weight(
-                              FontWeight.w800, FontWeight.w600)),
+                      style: TextStyle(fontWeight: FontWeight.w600),
                     ),
                     if (freeLimit != null && !app.settings.hideBalance)
                       Text(
@@ -415,9 +409,10 @@ class _CardInvoiceScreenState extends State<CardInvoiceScreen> {
               const SizedBox(height: 24),
               Text(
                 'Compras e créditos da fatura',
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight:
-                        NexoType.weight(FontWeight.w900, FontWeight.w600)),
+                style: Theme.of(context)
+                    .textTheme
+                    .titleMedium
+                    ?.copyWith(fontWeight: FontWeight.w600),
               ),
               const SizedBox(height: 8),
               if (purchases.isEmpty)
@@ -453,9 +448,7 @@ class _CardInvoiceScreenState extends State<CardInvoiceScreen> {
                         app.settings.hideBalance
                             ? '••••'
                             : '${tx.type == 'income' ? '− ' : ''}${formatAmount(tx.amount, card.currency)}',
-                        style: TextStyle(
-                            fontWeight: NexoType.weight(
-                                FontWeight.w900, FontWeight.w600)),
+                        style: TextStyle(fontWeight: FontWeight.w600),
                       ),
                     ),
                   );
@@ -521,9 +514,7 @@ class _OfficialBill extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text('Fatura do banco ${money(bill.totalCents)}',
-                        style: TextStyle(
-                            fontWeight: NexoType.weight(
-                                FontWeight.w900, FontWeight.w600))),
+                        style: TextStyle(fontWeight: FontWeight.w600)),
                     Text([
                       'vence ${DateFormat('dd/MM').format(bill.dueDate)}',
                       if (bill.minimumCents != null)
@@ -540,8 +531,7 @@ class _OfficialBill extends StatelessWidget {
                             ? 'Bate com o Nexo.'
                             : 'O banco cobra ${money(diff.abs())} a ${diff > 0 ? 'mais' : 'menos'} que o Nexo. O valor do banco é o final: confira compras que faltam ou foram lançadas duas vezes.',
                         style: TextStyle(
-                            fontWeight: NexoType.weight(
-                                FontWeight.w700, FontWeight.w600),
+                            fontWeight: FontWeight.w600,
                             color: official.matches
                                 ? scheme.primary
                                 : scheme.error)),
@@ -585,10 +575,8 @@ class _BankLimit extends StatelessWidget {
                   padding: const EdgeInsets.only(top: 4),
                   child: Text(
                       '${(used * 100).round()}% do limite usado. Compras novas podem ser recusadas.',
-                      style: TextStyle(
-                          color: color,
-                          fontWeight: NexoType.weight(
-                              FontWeight.w700, FontWeight.w600))),
+                      style:
+                          TextStyle(color: color, fontWeight: FontWeight.w600)),
                 ),
             ]),
           );

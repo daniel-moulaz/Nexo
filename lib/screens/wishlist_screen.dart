@@ -10,7 +10,6 @@ import '../theme/app_theme.dart';
 import '../widgets/shared_widgets.dart';
 import '../utils/haptics.dart';
 import '../widgets/nexo_ui.dart';
-import '../theme/nexo_type.dart';
 
 class WishlistScreen extends StatelessWidget {
   const WishlistScreen({super.key});
@@ -33,8 +32,7 @@ class WishlistScreen extends StatelessWidget {
               }),
         ],
         title: Text(l10n.wishlist_wishlist,
-            style: TextStyle(
-                fontWeight: NexoType.weight(FontWeight.w800, FontWeight.w600))),
+            style: TextStyle(fontWeight: FontWeight.w600)),
       ),
       body: app.wishlist.isEmpty
           ? EmptyState(
@@ -70,7 +68,7 @@ class _WishCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    final pColor = _priorityColor(item.priority);
+    final pColor = _priorityColor(context, item.priority);
     return Card(
       margin: const EdgeInsets.only(bottom: 8),
       child: ListTile(
@@ -84,7 +82,7 @@ class _WishCard extends StatelessWidget {
               height: 40,
               decoration: BoxDecoration(
                   color: item.isPurchased
-                      ? const Color(0xFF2E7D32).withValues(alpha: 0.12)
+                      ? NexoTones.income(context).withValues(alpha: 0.12)
                       : cs.surfaceContainerHigh,
                   shape: BoxShape.circle),
               child: Icon(
@@ -92,13 +90,13 @@ class _WishCard extends StatelessWidget {
                     ? Icons.check_circle_outline_rounded
                     : Icons.circle_outlined,
                 color: item.isPurchased
-                    ? const Color(0xFF2E7D32)
+                    ? NexoTones.income(context)
                     : cs.onSurface.withValues(alpha: 0.3),
               )),
         ),
         title: Text(item.name,
             style: TextStyle(
-                fontWeight: NexoType.weight(FontWeight.w700, FontWeight.w600),
+                fontWeight: FontWeight.w600,
                 decoration:
                     item.isPurchased ? TextDecoration.lineThrough : null)),
         subtitle:
@@ -111,9 +109,8 @@ class _WishCard extends StatelessWidget {
                   borderRadius: BorderRadius.circular(8)),
               child: Text(item.priority.toUpperCase(),
                   style: TextStyle(
-                      fontSize: NexoType.size(9, 12),
-                      fontWeight:
-                          NexoType.weight(FontWeight.w700, FontWeight.w500),
+                      fontSize: 12,
+                      fontWeight: FontWeight.w500,
                       color: pColor)),
             ),
             const SizedBox(width: 8),
@@ -121,16 +118,14 @@ class _WishCard extends StatelessWidget {
                 style: TextStyle(
                     fontFeatures: NexoTones.figures,
                     fontSize: 12,
-                    fontWeight:
-                        NexoType.weight(FontWeight.w700, FontWeight.w500))),
+                    fontWeight: FontWeight.w500)),
           ]),
           if (item.notes.isNotEmpty)
             Text(item.notes,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(
-                    fontSize: NexoType.size(11, 12),
-                    color: cs.onSurface.withValues(alpha: 0.5))),
+                    fontSize: 12, color: cs.onSurface.withValues(alpha: 0.5))),
         ]),
         trailing: Row(mainAxisSize: MainAxisSize.min, children: [
           IconButton(
@@ -155,14 +150,14 @@ class _WishCard extends StatelessWidget {
     );
   }
 
-  Color _priorityColor(String p) {
+  Color _priorityColor(BuildContext context, String p) {
     switch (p) {
       case 'high':
-        return const Color(0xFFC62828);
+        return NexoTones.expense(context);
       case 'medium':
-        return const Color(0xFFE65100);
+        return NexoTones.warning(context);
       default:
-        return const Color(0xFF2E7D32);
+        return NexoTones.income(context);
     }
   }
 }
@@ -243,9 +238,10 @@ class _WishSheetState extends State<_WishSheet> {
                   isEdit
                       ? l10n.wishlist_editItem
                       : l10n.wishlist_addWishlistItem,
-                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                      fontWeight:
-                          NexoType.weight(FontWeight.w800, FontWeight.w600))),
+                  style: Theme.of(context)
+                      .textTheme
+                      .titleLarge
+                      ?.copyWith(fontWeight: FontWeight.w600)),
               const SizedBox(height: 16),
               TextField(
                 controller: _nameCtrl,
@@ -275,10 +271,7 @@ class _WishSheetState extends State<_WishSheet> {
               ),
               const SizedBox(height: 14),
               Text(l10n.wishlist_priority,
-                  style: Theme.of(context)
-                      .textTheme
-                      .labelMedium
-                      ?.copyWith(letterSpacing: NexoType.tracking(1))),
+                  style: Theme.of(context).textTheme.labelMedium),
               const SizedBox(height: 8),
               Row(children: [
                 for (final p in [
@@ -303,10 +296,11 @@ class _WishSheetState extends State<_WishSheet> {
                             child: Text(p.$2,
                                 style: TextStyle(
                                     fontSize: 12,
-                                    fontWeight: NexoType.weight(
-                                        FontWeight.w700, FontWeight.w500),
+                                    fontWeight: FontWeight.w500,
                                     color: _priority == p.$1
-                                        ? Colors.white
+                                        ? Theme.of(context)
+                                            .colorScheme
+                                            .onPrimary
                                         : Color(p.$3)))),
                       ),
                     ),

@@ -5,7 +5,6 @@ import 'package:provider/provider.dart';
 import '../investments/investment_quotes.dart';
 import '../providers/app_provider.dart';
 import 'analysis_widgets.dart';
-import '../theme/nexo_type.dart';
 
 /// Market changes are never presented as the user's portfolio return.
 class InvestmentMarketInfo extends StatefulWidget {
@@ -56,9 +55,7 @@ class _InvestmentMarketInfoState extends State<InvestmentMarketInfo> {
                 : (dark ? const Color(0xffffa4a4) : const Color(0xffb3261e));
         final fallback = Center(
             child: Text(widget.ticker.substring(0, 1),
-                style: TextStyle(
-                    fontWeight:
-                        NexoType.weight(FontWeight.bold, FontWeight.w600))));
+                style: TextStyle(fontWeight: FontWeight.w600)));
         final logo = market.logo;
         String amount(String key) {
           final value = market.value(key);

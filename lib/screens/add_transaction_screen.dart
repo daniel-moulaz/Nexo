@@ -14,7 +14,7 @@ import '../services/entry_defaults.dart';
 import '../services/category_memory.dart';
 import '../services/receipt_scan.dart';
 import '../utils/snackbar.dart';
-import '../theme/nexo_type.dart';
+import '../widgets/nexo_brand.dart';
 
 class AddTransactionScreen extends StatefulWidget {
   final AppTransaction? existing;
@@ -541,9 +541,7 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
                           ? 'Editar receita'
                           : 'Editar despesa')
                       : (_type == 'income' ? 'Nova receita' : 'Nova despesa'),
-                  style: TextStyle(
-                      fontWeight:
-                          NexoType.weight(FontWeight.w900, FontWeight.w600)),
+                  style: TextStyle(fontWeight: FontWeight.w600),
                 ),
                 actions: [
                   if (!isEdit && ReceiptScan.available)
@@ -630,76 +628,71 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
                             onSelectionChanged: (v) => _setType(v.first),
                           )),
                   const SizedBox(height: 16),
-                  Container(
-                    padding: const EdgeInsets.all(18),
-                    decoration: BoxDecoration(
-                      color: _type == 'expense'
-                          ? cs.errorContainer.withValues(alpha: .28)
-                          : cs.primaryContainer.withValues(alpha: .48),
-                      borderRadius: BorderRadius.circular(24),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text('Valor', style: theme.textTheme.labelLarge),
-                        const SizedBox(height: 4),
-                        Row(
-                          children: [
-                            Text(
-                              currencyInfo(effectiveCurrency).symbol,
-                              style: theme.textTheme.headlineSmall?.copyWith(
-                                fontWeight: NexoType.weight(
-                                    FontWeight.w900, FontWeight.w600),
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            Expanded(
-                              child: TextField(
-                                controller: _amountCtrl,
-                                autofocus: !isEdit,
-                                keyboardType:
-                                    const TextInputType.numberWithOptions(
-                                        decimal: true),
-                                decoration: const InputDecoration(
-                                  hintText: '0,00',
-                                  filled: false,
-                                  border: InputBorder.none,
-                                  enabledBorder: InputBorder.none,
-                                  focusedBorder: InputBorder.none,
-                                  contentPadding: EdgeInsets.zero,
+                  NexoInkPanel(
+                    padding: const EdgeInsets.all(NexoSpace.lg + NexoSpace.xs),
+                    child: Builder(builder: (context) {
+                      final theme = Theme.of(context);
+                      final cs = theme.colorScheme;
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text('Valor', style: theme.textTheme.labelLarge),
+                          const SizedBox(height: 4),
+                          Row(
+                            children: [
+                              Text(
+                                currencyInfo(effectiveCurrency).symbol,
+                                style: theme.textTheme.headlineSmall?.copyWith(
+                                  fontWeight: FontWeight.w600,
                                 ),
-                                style: theme.textTheme.headlineMedium?.copyWith(
-                                  fontWeight: NexoType.weight(
-                                      FontWeight.w900, FontWeight.w600),
-                                ),
-                                onChanged: (_) => setState(() {}),
                               ),
-                            ),
-                            TextButton.icon(
-                              onPressed: () async {
-                                final picked = await showCurrencyPicker(
-                                  context,
-                                  current: effectiveCurrency,
-                                );
-                                if (picked != null)
-                                  setState(() => _currency = picked);
-                              },
-                              icon: const Icon(Icons.expand_more_rounded),
-                              iconAlignment: IconAlignment.end,
-                              label: Text(effectiveCurrency),
-                            ),
-                          ],
-                        ),
-                        if (_submitted && (amount == null || amount <= 0))
-                          Text(
-                            'Informe um valor maior que zero.',
-                            style: TextStyle(
-                                color: cs.error,
-                                fontWeight: NexoType.weight(
-                                    FontWeight.w700, FontWeight.w600)),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: TextField(
+                                  controller: _amountCtrl,
+                                  autofocus: !isEdit,
+                                  keyboardType:
+                                      const TextInputType.numberWithOptions(
+                                          decimal: true),
+                                  decoration: const InputDecoration(
+                                    hintText: '0,00',
+                                    filled: false,
+                                    border: InputBorder.none,
+                                    enabledBorder: InputBorder.none,
+                                    focusedBorder: InputBorder.none,
+                                    contentPadding: EdgeInsets.zero,
+                                  ),
+                                  style:
+                                      theme.textTheme.headlineMedium?.copyWith(
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                  onChanged: (_) => setState(() {}),
+                                ),
+                              ),
+                              TextButton.icon(
+                                onPressed: () async {
+                                  final picked = await showCurrencyPicker(
+                                    context,
+                                    current: effectiveCurrency,
+                                  );
+                                  if (picked != null)
+                                    setState(() => _currency = picked);
+                                },
+                                icon: const Icon(Icons.expand_more_rounded),
+                                iconAlignment: IconAlignment.end,
+                                label: Text(effectiveCurrency),
+                              ),
+                            ],
                           ),
-                      ],
-                    ),
+                          if (_submitted && (amount == null || amount <= 0))
+                            Text(
+                              'Informe um valor maior que zero.',
+                              style: TextStyle(
+                                  color: cs.error, fontWeight: FontWeight.w600),
+                            ),
+                        ],
+                      );
+                    }),
                   ),
                   const SizedBox(height: 16),
                   TextField(
@@ -851,9 +844,8 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
                   if (subcategories.isNotEmpty) ...[
                     const SizedBox(height: 16),
                     Text('Subcategoria',
-                        style: theme.textTheme.titleSmall?.copyWith(
-                            fontWeight: NexoType.weight(
-                                FontWeight.w900, FontWeight.w600))),
+                        style: theme.textTheme.titleSmall
+                            ?.copyWith(fontWeight: FontWeight.w600)),
                     const SizedBox(height: 8),
                     Wrap(
                       spacing: 8,
@@ -1051,10 +1043,7 @@ class _SectionTitle extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(title,
-                  style: TextStyle(
-                      fontWeight:
-                          NexoType.weight(FontWeight.w900, FontWeight.w600))),
+              Text(title, style: TextStyle(fontWeight: FontWeight.w600)),
               const SizedBox(height: 2),
               Text(subtitle, style: Theme.of(context).textTheme.bodySmall),
             ],
@@ -1143,9 +1132,7 @@ class _DateTile extends StatelessWidget {
                   Text(title, style: Theme.of(context).textTheme.labelSmall),
                   const SizedBox(height: 2),
                   Text(ptDate(date),
-                      style: TextStyle(
-                          fontWeight: NexoType.weight(
-                              FontWeight.w900, FontWeight.w600))),
+                      style: TextStyle(fontWeight: FontWeight.w600)),
                 ],
               ),
             ),

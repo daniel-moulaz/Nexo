@@ -15,7 +15,7 @@ import 'savings_goal_detail_screen.dart';
 import '../utils/haptics.dart';
 import '../utils/finance_input.dart';
 import '../utils/snackbar.dart';
-import '../theme/nexo_type.dart';
+import '../widgets/nexo_brand.dart';
 
 class BudgetScreen extends StatefulWidget {
   const BudgetScreen({super.key});
@@ -80,10 +80,8 @@ class _BudgetScreenState extends State<BudgetScreen>
     final goals = app.savingsGoals;
     return Scaffold(
       appBar: AppBar(
-          title: Text('Orçamento',
-              style: TextStyle(
-                  fontWeight:
-                      NexoType.weight(FontWeight.w900, FontWeight.w600))),
+          title:
+              Text('Orçamento', style: TextStyle(fontWeight: FontWeight.w600)),
           actions: [
             // In the header, so no button floats over the list.
             AnimatedBuilder(
@@ -189,7 +187,6 @@ class _BudgetSummary extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
     final monthly = app.budgets.where((b) => b.period != 'weekly').toList();
     final over = app.budgets.where(app.budgetExceeded).length;
     final limit = monthly.fold(0.0, (s, b) => s + app.budgetLimit(b));
@@ -203,8 +200,9 @@ class _BudgetSummary extends StatelessWidget {
             createdAt: now),
         spent,
         now);
-    final onHero = cs.onSurface;
-    return NexoCard(
+    const onHero = NexoBrand.onInk;
+    return NexoInkPanel(
+      padding: const EdgeInsets.all(NexoSpace.lg + NexoSpace.xs),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Text(limit > 0 ? 'Orçado no mês' : 'Orçamentos da semana',
             style: TextStyle(
@@ -220,8 +218,7 @@ class _BudgetSummary extends StatelessWidget {
                   text: money(spent),
                   style: TextStyle(
                       fontSize: 28,
-                      fontWeight:
-                          NexoType.weight(FontWeight.w800, FontWeight.w600),
+                      fontWeight: FontWeight.w600,
                       color: onHero,
                       fontFeatures: NexoTones.figures)),
               TextSpan(
@@ -251,9 +248,7 @@ class _BudgetSummary extends StatelessWidget {
           Text(
               ptCount(app.budgets.length, 'limite semanal', 'limites semanais'),
               style: TextStyle(
-                  fontSize: 20,
-                  fontWeight: NexoType.weight(FontWeight.w700, FontWeight.w600),
-                  color: onHero)),
+                  fontSize: 20, fontWeight: FontWeight.w600, color: onHero)),
         if (over > 0) ...[
           const SizedBox(height: 12),
           Row(children: [
@@ -344,8 +339,7 @@ class _BudgetCard extends StatelessWidget {
                                   overflow: TextOverflow.ellipsis,
                                   style: TextStyle(
                                       fontSize: 16,
-                                      fontWeight: NexoType.weight(
-                                          FontWeight.w700, FontWeight.w600))),
+                                      fontWeight: FontWeight.w600)),
                               Text(
                                   budget.period == 'weekly'
                                       ? 'Esta semana'
@@ -376,20 +370,17 @@ class _BudgetCard extends StatelessWidget {
                             child: Text(status,
                                 maxLines: 2,
                                 style: TextStyle(
-                                    fontSize: NexoType.size(12.5, 13),
+                                    fontSize: 13,
                                     color: remaining < 0
                                         ? color
                                         : cs.onSurfaceVariant,
                                     fontWeight: remaining < 0
-                                        ? NexoType.weight(
-                                            FontWeight.w700, FontWeight.w600)
+                                        ? FontWeight.w600
                                         : FontWeight.w500))),
                         const SizedBox(width: 8),
                         Text('${(ratio * 100).toStringAsFixed(0)}%',
                             style: TextStyle(
-                                fontWeight: NexoType.weight(
-                                    FontWeight.w700, FontWeight.w600),
-                                color: color)),
+                                fontWeight: FontWeight.w600, color: color)),
                       ]),
                     ]))));
   }
@@ -413,7 +404,7 @@ class _Amounts extends StatelessWidget {
           Text(top,
               style: TextStyle(
                   fontSize: 16,
-                  fontWeight: NexoType.weight(FontWeight.w800, FontWeight.w600),
+                  fontWeight: FontWeight.w600,
                   color: color ?? cs.onSurface,
                   fontFeatures: NexoTones.figures)),
           Text(bottom,
@@ -432,15 +423,15 @@ class _GoalsSummary extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
     final open = app.savingsGoals.where((g) => !g.isCompleted).toList();
     final target = open.fold(
         0.0, (s, g) => s + app.convertToMain(g.targetAmount, g.currency));
     final saved = open.fold(
         0.0, (s, g) => s + app.convertToMain(g.currentAmount, g.currency));
     final done = app.savingsGoals.length - open.length;
-    final onHero = cs.onSurface;
-    return NexoCard(
+    const onHero = NexoBrand.onInk;
+    return NexoInkPanel(
+      padding: const EdgeInsets.all(NexoSpace.lg + NexoSpace.xs),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Text('Total guardado',
             style: TextStyle(
@@ -453,8 +444,7 @@ class _GoalsSummary extends StatelessWidget {
             child: Text(money(app.totalSaved),
                 style: TextStyle(
                     fontSize: 28,
-                    fontWeight:
-                        NexoType.weight(FontWeight.w800, FontWeight.w600),
+                    fontWeight: FontWeight.w600,
                     color: onHero,
                     fontFeatures: NexoTones.figures))),
         if (target > 0) ...[
@@ -566,10 +556,8 @@ class _GoalCard extends StatelessWidget {
                 child: Text(goal.name,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                        fontWeight:
-                            NexoType.weight(FontWeight.w700, FontWeight.w600),
-                        fontSize: 16)),
+                    style:
+                        TextStyle(fontWeight: FontWeight.w600, fontSize: 16)),
               ),
               IconButton(
                   tooltip: locked
@@ -597,19 +585,16 @@ class _GoalCard extends StatelessWidget {
                   child: Text(line,
                       maxLines: 2,
                       style: TextStyle(
-                          fontSize: NexoType.size(12.5, 13),
+                          fontSize: 13,
                           color: late
                               ? NexoTones.warning(context)
                               : isCompleted
                                   ? done
                                   : cs.onSurfaceVariant,
-                          fontWeight: NexoType.weight(
-                              FontWeight.w600, FontWeight.w500)))),
+                          fontWeight: FontWeight.w500))),
               const SizedBox(width: 8),
               Text('${(progress * 100).clamp(0, 100).toStringAsFixed(0)}%',
-                  style: TextStyle(
-                      fontWeight:
-                          NexoType.weight(FontWeight.w700, FontWeight.w600))),
+                  style: TextStyle(fontWeight: FontWeight.w600)),
             ]),
           ]),
         ),
@@ -719,9 +704,10 @@ class _BudgetSheetState extends State<_BudgetSheet> {
           children: [
             Text(
               isEdit ? l10n.budget_editBudget : l10n.budget_setBudget,
-              style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                  fontWeight:
-                      NexoType.weight(FontWeight.w800, FontWeight.w600)),
+              style: Theme.of(context)
+                  .textTheme
+                  .titleLarge
+                  ?.copyWith(fontWeight: FontWeight.w600),
             ),
             const SizedBox(height: 16),
 
@@ -745,10 +731,7 @@ class _BudgetSheetState extends State<_BudgetSheet> {
 
             // Period selector
             Text(l10n.budget_period,
-                style: Theme.of(context)
-                    .textTheme
-                    .labelMedium
-                    ?.copyWith(letterSpacing: NexoType.tracking(1))),
+                style: Theme.of(context).textTheme.labelMedium),
             const SizedBox(height: 8),
             Row(children: [
               Expanded(
@@ -766,8 +749,7 @@ class _BudgetSheetState extends State<_BudgetSheet> {
                     child: Center(
                       child: Text(l10n.budget_monthly,
                           style: TextStyle(
-                              fontWeight: NexoType.weight(
-                                  FontWeight.w700, FontWeight.w600),
+                              fontWeight: FontWeight.w600,
                               color: _period == 'monthly'
                                   ? cs.onPrimary
                                   : cs.primary)),
@@ -791,8 +773,7 @@ class _BudgetSheetState extends State<_BudgetSheet> {
                     child: Center(
                       child: Text(l10n.budget_weekly,
                           style: TextStyle(
-                              fontWeight: NexoType.weight(
-                                  FontWeight.w700, FontWeight.w600),
+                              fontWeight: FontWeight.w600,
                               color: _period == 'weekly'
                                   ? cs.onSecondary
                                   : cs.secondary)),
@@ -806,10 +787,7 @@ class _BudgetSheetState extends State<_BudgetSheet> {
             // Category
             if (expCats.isNotEmpty) ...[
               Text(l10n.budget_category,
-                  style: Theme.of(context)
-                      .textTheme
-                      .labelMedium
-                      ?.copyWith(letterSpacing: NexoType.tracking(1))),
+                  style: Theme.of(context).textTheme.labelMedium),
               const SizedBox(height: 8),
               CategoryChipPicker(
                 categories: expCats,
@@ -845,7 +823,7 @@ class _BudgetSheetState extends State<_BudgetSheet> {
                       children: [
                         Text(l10n.budget_previewFor(catName),
                             style: TextStyle(
-                                fontSize: NexoType.size(11, 12),
+                                fontSize: 12,
                                 color: cs.onSurface.withValues(alpha: 0.6))),
                         const SizedBox(height: 6),
                         Wrap(spacing: 12, runSpacing: 4, children: [
@@ -853,9 +831,7 @@ class _BudgetSheetState extends State<_BudgetSheet> {
                               l10n.budget_spentAmount(
                                   formatAmount(spent, app.settings.currency)),
                               style: TextStyle(
-                                  fontSize: 13,
-                                  fontWeight: NexoType.weight(
-                                      FontWeight.w700, FontWeight.w600))),
+                                  fontSize: 13, fontWeight: FontWeight.w600)),
                           Text(
                               l10n.budget_ofAmount(formatAmount(
                                   budgetAmt, app.settings.currency)),
@@ -873,7 +849,7 @@ class _BudgetSheetState extends State<_BudgetSheet> {
                             valueColor: AlwaysStoppedAnimation<Color>(pct >= 1.0
                                 ? cs.error
                                 : pct >= 0.75
-                                    ? Colors.orange
+                                    ? NexoTones.warning(context)
                                     : cs.primary),
                           ),
                         ),

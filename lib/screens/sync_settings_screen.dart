@@ -17,6 +17,7 @@ import '../sync/sync_protocol.dart' show SyncUnavailable;
 import '../sync/sync_controller.dart';
 import '../services/desktop_profile.dart';
 import 'package:intl/intl.dart';
+import '../theme/nexo_tokens.dart';
 
 /// Account, synchronization and remote laboratory. Real activation always
 /// goes through consent, a saved backup, a local rehearsal and a final
@@ -871,7 +872,7 @@ class _SyncSettingsScreenState extends State<SyncSettingsScreen> {
               leading: Icon(
                   step.passed ? Icons.check_circle : Icons.error_outline,
                   color: step.passed
-                      ? Colors.green.shade700
+                      ? NexoTones.income(context)
                       : theme.colorScheme.error),
               title: Text(step.label),
               subtitle: step.detail == null ? null : Text(step.detail!),

@@ -10,7 +10,6 @@ import '../utils/finance_input.dart';
 import '../widgets/shared_widgets.dart';
 import '../widgets/nexo_ui.dart';
 import 'card_invoice_screen.dart';
-import '../theme/nexo_type.dart';
 
 class AccountsScreen extends StatelessWidget {
   const AccountsScreen({super.key});
@@ -49,9 +48,7 @@ class AccountsScreen extends StatelessWidget {
         appBar: AppBar(
           automaticallyImplyLeading: false,
           title: Text('Contas e cartões',
-              style: TextStyle(
-                  fontWeight:
-                      NexoType.weight(FontWeight.w900, FontWeight.w600))),
+              style: TextStyle(fontWeight: FontWeight.w600)),
           actions: [
             IconButton(
                 tooltip: 'Adicionar conta ou cartão',
@@ -84,8 +81,7 @@ class AccountsScreen extends StatelessWidget {
                             : formatAmount(
                                 app.totalBalanceAll, app.settings.currency),
                         style: TextStyle(
-                            fontWeight: NexoType.weight(
-                                FontWeight.w900, FontWeight.w600),
+                            fontWeight: FontWeight.w600,
                             fontFeatures: NexoTones.figures),
                       ),
                     ],
@@ -123,9 +119,7 @@ class AccountsScreen extends StatelessWidget {
             children: [
               ListTile(
                 title: Text('O que você quer adicionar?',
-                    style: TextStyle(
-                        fontWeight:
-                            NexoType.weight(FontWeight.w900, FontWeight.w600))),
+                    style: TextStyle(fontWeight: FontWeight.w600)),
                 subtitle: Text(
                     'Separe contas do dia a dia e cartões de crédito/débito.'),
               ),
@@ -133,9 +127,7 @@ class AccountsScreen extends StatelessWidget {
                 leading: const CircleAvatar(
                     child: Icon(Icons.account_balance_wallet_outlined)),
                 title: Text('Conta',
-                    style: TextStyle(
-                        fontWeight:
-                            NexoType.weight(FontWeight.w800, FontWeight.w600))),
+                    style: TextStyle(fontWeight: FontWeight.w600)),
                 subtitle: const Text('Banco, dinheiro, poupança ou carteira'),
                 onTap: () => Navigator.pop(sheetContext, 'account'),
               ),
@@ -143,9 +135,7 @@ class AccountsScreen extends StatelessWidget {
                 leading:
                     const CircleAvatar(child: Icon(Icons.credit_card_rounded)),
                 title: Text('Cartão',
-                    style: TextStyle(
-                        fontWeight:
-                            NexoType.weight(FontWeight.w800, FontWeight.w600))),
+                    style: TextStyle(fontWeight: FontWeight.w600)),
                 subtitle: const Text('Crédito ou débito com limite e fatura'),
                 onTap: () => Navigator.pop(sheetContext, 'card'),
               ),
@@ -209,9 +199,8 @@ class _AccountTile extends StatelessWidget {
           backgroundColor: color.withValues(alpha: .15),
           child: Icon(_accountIcon(account.type), color: color),
         ),
-        title: Text(account.name,
-            style: TextStyle(
-                fontWeight: NexoType.weight(FontWeight.w900, FontWeight.w600))),
+        title:
+            Text(account.name, style: TextStyle(fontWeight: FontWeight.w600)),
         subtitle: Text([
           _typeLabel(),
           account.currency,
@@ -230,8 +219,7 @@ class _AccountTile extends StatelessWidget {
                       ? '••••'
                       : formatAmount(balance, account.currency),
                   style: TextStyle(
-                      fontWeight:
-                          NexoType.weight(FontWeight.w900, FontWeight.w600),
+                      fontWeight: FontWeight.w600,
                       fontFeatures: NexoTones.figures,
                       color: balance < 0
                           ? Theme.of(context).colorScheme.error
@@ -341,8 +329,7 @@ class _CardTile extends StatelessWidget {
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
                                   style: TextStyle(
-                                      fontWeight: NexoType.weight(
-                                          FontWeight.w900, FontWeight.w600),
+                                      fontWeight: FontWeight.w600,
                                       fontSize: 17)),
                               Text(
                                   card.type == 'credit'
@@ -381,8 +368,7 @@ class _CardTile extends StatelessWidget {
                           alignment: Alignment.centerLeft,
                           child: Text(money(used),
                               style: TextStyle(
-                                  fontWeight: NexoType.weight(
-                                      FontWeight.w900, FontWeight.w600),
+                                  fontWeight: FontWeight.w600,
                                   fontSize: 26,
                                   fontFeatures: NexoTones.figures)),
                         ),
@@ -422,9 +408,7 @@ class _CardTile extends StatelessWidget {
                       ]),
                     ] else
                       Text('Saldo ${money(card.balance)}',
-                          style: TextStyle(
-                              fontWeight: NexoType.weight(
-                                  FontWeight.w800, FontWeight.w600))),
+                          style: TextStyle(fontWeight: FontWeight.w600)),
                   ],
                 ),
               ),
@@ -690,9 +674,8 @@ class _AccountEditorState extends State<_AccountEditor> {
                       isEdit
                           ? (isCard ? 'Editar cartão' : 'Editar conta')
                           : (isCard ? 'Novo cartão' : 'Nova conta'),
-                      style: theme.textTheme.titleLarge?.copyWith(
-                          fontWeight: NexoType.weight(
-                              FontWeight.w900, FontWeight.w600)),
+                      style: theme.textTheme.titleLarge
+                          ?.copyWith(fontWeight: FontWeight.w600),
                     ),
                   ),
                   IconButton(
@@ -721,9 +704,8 @@ class _AccountEditorState extends State<_AccountEditor> {
                   ),
                   const SizedBox(height: 14),
                   Text('Tipo',
-                      style: theme.textTheme.titleSmall?.copyWith(
-                          fontWeight: NexoType.weight(
-                              FontWeight.w900, FontWeight.w600))),
+                      style: theme.textTheme.titleSmall
+                          ?.copyWith(fontWeight: FontWeight.w600)),
                   const SizedBox(height: 8),
                   Wrap(
                     spacing: 8,
@@ -799,9 +781,8 @@ class _AccountEditorState extends State<_AccountEditor> {
                   if (isCredit) ...[
                     const SizedBox(height: 14),
                     Text('Fatura',
-                        style: theme.textTheme.titleSmall?.copyWith(
-                            fontWeight: NexoType.weight(
-                                FontWeight.w900, FontWeight.w600))),
+                        style: theme.textTheme.titleSmall
+                            ?.copyWith(fontWeight: FontWeight.w600)),
                     const SizedBox(height: 8),
                     TextField(
                       controller: _limitCtrl,
@@ -876,9 +857,7 @@ class _AccountEditorState extends State<_AccountEditor> {
                     ExpansionTile(
                       tilePadding: EdgeInsets.zero,
                       title: Text('Detalhes opcionais',
-                          style: TextStyle(
-                              fontWeight: NexoType.weight(
-                                  FontWeight.w800, FontWeight.w600))),
+                          style: TextStyle(fontWeight: FontWeight.w600)),
                       children: [
                         TextField(
                           controller: _holderCtrl,
@@ -928,9 +907,8 @@ class _AccountEditorState extends State<_AccountEditor> {
                   ],
                   const SizedBox(height: 12),
                   Text('Cor',
-                      style: theme.textTheme.titleSmall?.copyWith(
-                          fontWeight: NexoType.weight(
-                              FontWeight.w900, FontWeight.w600))),
+                      style: theme.textTheme.titleSmall
+                          ?.copyWith(fontWeight: FontWeight.w600)),
                   const SizedBox(height: 8),
                   Wrap(
                     spacing: 10,

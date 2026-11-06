@@ -12,7 +12,7 @@ import '../utils/finance_input.dart';
 import '../widgets/desktop_transaction_table.dart';
 import '../services/finance_rules.dart';
 import '../widgets/nexo_ui.dart';
-import '../theme/nexo_type.dart';
+import '../widgets/nexo_brand.dart';
 import '../widgets/shared_widgets.dart' show CategoryDot;
 
 class TransactionSearchScreen extends StatefulWidget {
@@ -216,9 +216,7 @@ class _TransactionSearchScreenState extends State<TransactionSearchScreen> {
               onPressed: _filters,
               icon: const Icon(Icons.filter_alt_outlined))
         ],
-        title: Text('Extrato',
-            style: TextStyle(
-                fontWeight: NexoType.weight(FontWeight.w900, FontWeight.w600))),
+        title: Text('Extrato', style: TextStyle(fontWeight: FontWeight.w600)),
       ),
       body: Builder(
         builder: (context) {
@@ -459,29 +457,30 @@ class _Totals extends StatelessWidget {
     }
     final result = income - expense;
     String money(double v) => formatAmount(v, app.settings.currency);
-    // Three flat pills: what came in, what went out, what was left.
-    return NexoCard(
-      padding: const EdgeInsets.all(8),
+    // What came in, what went out, what was left.
+    return NexoInkPanel(
+      padding: const EdgeInsets.fromLTRB(
+          NexoSpace.lg, NexoSpace.md, NexoSpace.lg, NexoSpace.md),
       child: Row(children: [
         Expanded(
-            child: NexoStatPill(
+            child: NexoInkStat(
                 label: 'Entradas',
                 value: money(income),
-                valueColor: NexoTones.income(context))),
-        const SizedBox(width: 8),
+                color: NexoTones.incomeOnInk)),
+        const SizedBox(width: NexoSpace.sm),
         Expanded(
-            child: NexoStatPill(
+            child: NexoInkStat(
                 label: 'Saídas',
                 value: money(expense),
-                valueColor: NexoTones.expense(context))),
-        const SizedBox(width: 8),
+                color: NexoTones.expenseOnInk)),
+        const SizedBox(width: NexoSpace.sm),
         Expanded(
-            child: NexoStatPill(
+            child: NexoInkStat(
                 label: 'Resultado',
                 value: money(result),
-                valueColor: result >= 0
-                    ? NexoTones.income(context)
-                    : NexoTones.expense(context))),
+                color: result >= 0
+                    ? NexoTones.incomeOnInk
+                    : NexoTones.expenseOnInk)),
       ]),
     );
   }
@@ -537,9 +536,8 @@ class _DayList extends StatelessWidget {
             child: Row(children: [
               Expanded(
                   child: Text(_day(item),
-                      style: theme.textTheme.titleSmall?.copyWith(
-                          fontWeight: NexoType.weight(
-                              FontWeight.w800, FontWeight.w600)))),
+                      style: theme.textTheme.titleSmall
+                          ?.copyWith(fontWeight: FontWeight.w600))),
               if (!hidden && value != 0)
                 Text(
                     '${value > 0 ? '+' : '−'}${formatAmount(value.abs(), app.settings.currency)}',
@@ -566,7 +564,7 @@ class _DayList extends StatelessWidget {
                     ? 'Pendente'
                     : 'Pago');
         final color = neutral
-            ? null
+            ? theme.colorScheme.onSurfaceVariant
             : m?.isOverdue == true
                 ? NexoTones.expense(context)
                 : m?.isPending == true
@@ -574,14 +572,19 @@ class _DayList extends StatelessWidget {
                     : income
                         ? NexoTones.income(context)
                         : null;
-        return Padding(
-          padding: const EdgeInsets.only(bottom: 4),
-          child: Material(
-            color: theme.colorScheme.surfaceContainerLow,
-            borderRadius: BorderRadius.circular(18),
-            child: ListTile(
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(18)),
+        // One block per day: the rows of a day read as a single group.
+        final first = items[index - 1] is DateTime;
+        final last = index == items.length - 1 || items[index + 1] is DateTime;
+        final radius = BorderRadius.vertical(
+            top: Radius.circular(first ? NexoRadius.card : 0),
+            bottom: Radius.circular(last ? NexoRadius.card : 0));
+        return Material(
+          color: theme.colorScheme.surfaceContainerLow,
+          borderRadius: radius,
+          clipBehavior: Clip.antiAlias,
+          child: Column(mainAxisSize: MainAxisSize.min, children: [
+            ListTile(
+              shape: RoundedRectangleBorder(borderRadius: radius),
               leading: neutral
                   ? CircleAvatar(
                       radius: 20,
@@ -617,15 +620,15 @@ class _DayList extends StatelessWidget {
                           ? '••••'
                           : '${income ? '+' : '-'}${formatAmount(tx.amount, currency)}',
                       style: TextStyle(
-                          fontWeight:
-                              NexoType.weight(FontWeight.w800, FontWeight.w600),
+                          fontWeight: FontWeight.w600,
                           color: color,
                           fontFeatures: NexoTones.figures)),
                 ),
               ),
               onTap: () => onOpen(tx),
             ),
-          ),
+            if (!last) const Divider(height: 1, indent: 72),
+          ]),
         );
       },
     );

@@ -44,7 +44,7 @@ import 'net_worth_screen.dart';
 import '../models/transaction_metadata.dart';
 import '../utils/snackbar.dart';
 import 'home_customize_sheet.dart';
-import '../theme/nexo_type.dart';
+import '../widgets/nexo_brand.dart';
 
 class FinanceHomeScreen extends StatefulWidget {
   const FinanceHomeScreen({super.key});
@@ -194,21 +194,24 @@ class _FinanceHomeScreenState extends State<FinanceHomeScreen>
           toolbarHeight: math.max(
               kToolbarHeight, 42 * MediaQuery.textScalerOf(context).scale(1)),
           automaticallyImplyLeading: false,
-          title:
-              Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text(_greeting(app.settings.userName),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: NexoType.phone
-                    ? NexoType.phoneGreeting
-                    : Theme.of(context).textTheme.titleMedium),
-            Text(_todayLabel(),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: NexoType.phone
-                    ? NexoType.phoneDate
-                    : Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: Theme.of(context).colorScheme.onSurfaceVariant)),
+          title: Row(children: [
+            const NexoMark(size: 30),
+            const SizedBox(width: NexoSpace.md),
+            Expanded(
+                child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                  Text(_greeting(app.settings.userName),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: Theme.of(context).textTheme.titleMedium),
+                  Text(_todayLabel(),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color:
+                              Theme.of(context).colorScheme.onSurfaceVariant)),
+                ])),
           ]),
           actions: [
             IconButton(
@@ -288,78 +291,102 @@ class _FinanceHomeScreenState extends State<FinanceHomeScreen>
                                   DateTime(month.year, month.month + 1))))),
             ]);
             final result = data.income - data.expense;
-            final kpis = Column(children: [
-              Row(children: [
-                Expanded(
-                    child: _Kpi(
-                        label: 'Saldo em contas',
-                        value: money(commitment.cash),
-                        hint: lockedGoals > 0
-                            ? '${money(lockedGoals)} travados em objetivos'
-                            : 'hoje',
-                        big: true,
-                        onInfo: _explain,
-                        onTap: () => _open(const AccountsScreen()))),
-                const SizedBox(width: 10),
-                Expanded(
-                    child: _Kpi(
-                        label: 'Resultado',
-                        value: money(result),
-                        hint: currentMonth ? 'até hoje' : 'no mês',
-                        big: true,
-                        color: hidden
-                            ? null
-                            : result >= 0
-                                ? NexoTones.income(context)
-                                : NexoTones.expense(context),
-                        onTap: () =>
-                            _open(AnalysisScreen(initialMonth: month)))),
-              ]),
-              const SizedBox(height: 10),
-              Row(children: [
-                Expanded(
-                    child: _Kpi(
-                        label: 'Receitas',
-                        value: money(data.income),
-                        color: hidden ? null : NexoTones.income(context),
-                        onTap: () =>
-                            _open(AnalysisScreen(initialMonth: month)))),
-                const SizedBox(width: 10),
-                Expanded(
-                    child: _Kpi(
-                        label: 'Despesas',
-                        value: money(data.expense),
-                        color: hidden ? null : NexoTones.expense(context),
-                        onTap: () =>
-                            _open(AnalysisScreen(initialMonth: month)))),
-              ]),
-              const SizedBox(height: 10),
-              NexoCard(
-                padding: const EdgeInsets.all(8),
-                child: Row(children: [
-                  Expanded(
-                      child: NexoStatPill(
-                          label: 'Cartões',
-                          value: money(commitment.outstanding),
-                          onTap: () => _open(const AccountsScreen()))),
-                  const SizedBox(width: 8),
-                  Expanded(
-                      child: NexoStatPill(
-                          label: 'Após cartões',
-                          value: money(commitment.available),
-                          onTap: _explain)),
-                  const SizedBox(width: 8),
-                  Expanded(
-                      child: NexoStatPill(
-                          label: 'Previsão',
-                          value: monthEnd == null
-                              ? '—'
-                              : money(monthEnd.projected),
-                          onTap: () =>
-                              _open(const AgendaScreen(initialDays: -1)))),
-                ]),
-              ),
-            ]);
+            final kpis = NexoInkPanel(
+                child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                  Row(children: [
+                    const Expanded(
+                        child: Text('Saldo em contas',
+                            style: TextStyle(
+                                fontSize: 13, color: NexoBrand.onInkMuted))),
+                    IconButton(
+                        tooltip: 'Entender os valores',
+                        visualDensity: VisualDensity.compact,
+                        padding: EdgeInsets.zero,
+                        constraints:
+                            const BoxConstraints(minWidth: 44, minHeight: 44),
+                        onPressed: _explain,
+                        icon: const Icon(Icons.info_outline,
+                            size: 18, color: NexoBrand.onInkMuted)),
+                  ]),
+                  Semantics(
+                      label: 'Saldo em contas: ${money(commitment.cash)}',
+                      button: true,
+                      excludeSemantics: true,
+                      child: InkWell(
+                          borderRadius: BorderRadius.circular(NexoRadius.chip),
+                          onTap: () => _open(const AccountsScreen()),
+                          child: FittedBox(
+                              fit: BoxFit.scaleDown,
+                              alignment: Alignment.centerLeft,
+                              child: Text(money(commitment.cash),
+                                  style: const TextStyle(
+                                      fontSize: 36,
+                                      height: 1.15,
+                                      fontWeight: FontWeight.w600,
+                                      color: NexoBrand.onInk,
+                                      fontFeatures: NexoTones.figures))))),
+                  if (lockedGoals > 0)
+                    Text('${money(lockedGoals)} travados em objetivos',
+                        style: const TextStyle(
+                            fontSize: 12, color: NexoBrand.onInkMuted)),
+                  const SizedBox(height: NexoSpace.lg),
+                  Row(children: [
+                    Expanded(
+                        child: NexoInkStat(
+                            label: 'Receitas',
+                            value: money(data.income),
+                            color: hidden ? null : NexoTones.incomeOnInk,
+                            onTap: () =>
+                                _open(AnalysisScreen(initialMonth: month)))),
+                    const SizedBox(width: NexoSpace.sm),
+                    Expanded(
+                        child: NexoInkStat(
+                            label: 'Despesas',
+                            value: money(data.expense),
+                            color: hidden ? null : NexoTones.expenseOnInk,
+                            onTap: () =>
+                                _open(AnalysisScreen(initialMonth: month)))),
+                    const SizedBox(width: NexoSpace.sm),
+                    Expanded(
+                        child: NexoInkStat(
+                            label: 'Resultado',
+                            value: money(result),
+                            color: hidden
+                                ? null
+                                : result >= 0
+                                    ? NexoTones.incomeOnInk
+                                    : NexoTones.expenseOnInk,
+                            onTap: () =>
+                                _open(AnalysisScreen(initialMonth: month)))),
+                  ]),
+                  const Padding(
+                      padding: EdgeInsets.symmetric(vertical: NexoSpace.sm),
+                      child: Divider(height: 1, color: NexoBrand.inkLine)),
+                  Row(children: [
+                    Expanded(
+                        child: NexoInkStat(
+                            label: 'Cartões',
+                            value: money(commitment.outstanding),
+                            onTap: () => _open(const AccountsScreen()))),
+                    const SizedBox(width: NexoSpace.sm),
+                    Expanded(
+                        child: NexoInkStat(
+                            label: 'Após cartões',
+                            value: money(commitment.available),
+                            onTap: _explain)),
+                    const SizedBox(width: NexoSpace.sm),
+                    Expanded(
+                        child: NexoInkStat(
+                            label: 'Previsão',
+                            value: monthEnd == null
+                                ? '—'
+                                : money(monthEnd.projected),
+                            onTap: () =>
+                                _open(const AgendaScreen(initialDays: -1)))),
+                  ]),
+                ]));
             // "Saídas por dia": the month as a calendar, like the reference
             // apps, with the three numbers that summarize it.
             final daysWithSpending =
@@ -384,8 +411,7 @@ class _FinanceHomeScreenState extends State<FinanceHomeScreen>
                         text: money(data.expense),
                         style: TextStyle(
                             fontSize: 24,
-                            fontWeight: NexoType.weight(
-                                FontWeight.w800, FontWeight.w600),
+                            fontWeight: FontWeight.w600,
                             fontFeatures: NexoTones.figures)),
                     TextSpan(
                         text:
@@ -579,8 +605,7 @@ class _FinanceHomeScreenState extends State<FinanceHomeScreen>
                                         ? '${money(gap)} acima do ritmo ideal para o dia ${paceNow.length}.'
                                         : '${money(-gap)} abaixo do ritmo ideal: sobra espaço.',
                                 style: TextStyle(
-                                    fontWeight: NexoType.weight(
-                                        FontWeight.w700, FontWeight.w600),
+                                    fontWeight: FontWeight.w600,
                                     color: gap > 0
                                         ? NexoTones.expense(context)
                                         : NexoTones.income(context))));
@@ -946,8 +971,7 @@ class _FinanceHomeScreenState extends State<FinanceHomeScreen>
                               'Atenção ao caixa: ${money(timeline.lowest.balance)} em ${ptShortDate(timeline.lowest.date)}.',
                               style: TextStyle(
                                   color: cs.error,
-                                  fontWeight: NexoType.weight(
-                                      FontWeight.w700, FontWeight.w600)))),
+                                  fontWeight: FontWeight.w600))),
                     const SizedBox(height: 8),
                     Text(
                         'Somente valores cadastrados, incluindo atrasados. Novas compras não estão previstas.',
@@ -1067,9 +1091,7 @@ class _FinanceHomeScreenState extends State<FinanceHomeScreen>
                         contentPadding: EdgeInsets.zero,
                         leading: _MiniCard(color: Color(card.colorValue)),
                         title: Text(card.name,
-                            style: TextStyle(
-                                fontWeight: NexoType.weight(
-                                    FontWeight.w700, FontWeight.w600))),
+                            style: TextStyle(fontWeight: FontWeight.w600)),
                         subtitle: Text(
                             'Em aberto: ${money(app.convertToMain((-card.balance).clamp(0.0, double.infinity), card.currency))}\nFatura atual: ${snapshot.hasData ? money(currentInvoiceRemaining(card: card, now: now, transactions: app.transactions, metadata: app.transactionMetadata, payments: snapshot.data!, convert: app.convertToMain)) : 'indisponível'}${card.excludeFromTotal ? ' · fora do total' : ''}'),
                         trailing: const Icon(Icons.chevron_right),
@@ -1124,8 +1146,7 @@ class _FinanceHomeScreenState extends State<FinanceHomeScreen>
                         child: Text(
                             '${netChange >= 0 ? '▲' : '▼'} ${money(netChange.abs())} em 30 dias',
                             style: TextStyle(
-                                fontWeight: NexoType.weight(
-                                    FontWeight.w700, FontWeight.w600),
+                                fontWeight: FontWeight.w600,
                                 color: netChange >= 0
                                     ? NexoTones.income(context)
                                     : NexoTones.expense(context)))),
@@ -1221,9 +1242,7 @@ class _FinanceHomeScreenState extends State<FinanceHomeScreen>
                                             ? value
                                             : '${income ? '+' : '−'} $value',
                                         style: TextStyle(
-                                            fontWeight: NexoType.weight(
-                                                FontWeight.w800,
-                                                FontWeight.w600),
+                                            fontWeight: FontWeight.w600,
                                             fontFeatures: NexoTones.figures,
                                             color: neutral || hidden
                                                 ? null
@@ -1513,8 +1532,10 @@ class _SpendableBodyState extends State<_SpendableBody> {
     if (!s.hasBase) {
       return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Text('Quanto posso gastar',
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                fontWeight: NexoType.weight(FontWeight.w800, FontWeight.w600))),
+            style: Theme.of(context)
+                .textTheme
+                .titleMedium
+                ?.copyWith(fontWeight: FontWeight.w600)),
         const SizedBox(height: 6),
         const Text(
             'Cadastre sua renda fixa (salário, bolsa) como recorrente e o Nexo mostra quanto cabe por dia depois das contas e metas.'),
@@ -1546,9 +1567,10 @@ class _SpendableBodyState extends State<_SpendableBody> {
             crossAxisAlignment: WrapCrossAlignment.center,
             children: [
               Text('Quanto posso gastar',
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontWeight:
-                          NexoType.weight(FontWeight.w800, FontWeight.w600))),
+                  style: Theme.of(context)
+                      .textTheme
+                      .titleMedium
+                      ?.copyWith(fontWeight: FontWeight.w600)),
               TextButton(
                   onPressed: () => setState(() => _open = !_open),
                   child: Text(_open ? 'Ocultar conta' : 'Como chego nisso')),
@@ -1559,7 +1581,7 @@ class _SpendableBodyState extends State<_SpendableBody> {
         Text('Renda fixa do mês já usada',
             style: TextStyle(
                 color: NexoTones.warning(context),
-                fontWeight: NexoType.weight(FontWeight.w800, FontWeight.w600),
+                fontWeight: FontWeight.w600,
                 fontSize: 16)),
         Text(
             '${money(-s.free)} além dela, com ${ptCount(s.daysLeft, 'dia')} até ${s.untilNextIncome ? 'a próxima renda' : 'o fim do mês'}. Renda extra e reserva não entram nesta conta.',
@@ -1573,8 +1595,7 @@ class _SpendableBodyState extends State<_SpendableBody> {
                   text: money(s.perDay),
                   style: TextStyle(
                       fontSize: 28,
-                      fontWeight:
-                          NexoType.weight(FontWeight.w800, FontWeight.w600),
+                      fontWeight: FontWeight.w600,
                       color: cs.primary,
                       fontFeatures: NexoTones.figures)),
               const TextSpan(text: '  por dia'),
@@ -1593,8 +1614,7 @@ class _SpendableBodyState extends State<_SpendableBody> {
                 'A renda de ${DateFormat('dd/MM').format(s.since)} ainda não foi registrada; a conta já parte dela.',
                 style: small?.copyWith(
                     color: NexoTones.warning(context),
-                    fontWeight:
-                        NexoType.weight(FontWeight.w700, FontWeight.w600)))),
+                    fontWeight: FontWeight.w600))),
       if (_open) ...[
         const Divider(height: 20),
         row('Renda fixa até lá', s.fixedIncome, plus: true),
@@ -1661,8 +1681,8 @@ class _WeekBody extends StatelessWidget {
                           ? 'Igual ao mesmo período da semana passada'
                           : '${up ? '▲' : '▼'} ${change.abs().toStringAsFixed(0)}% vs. ${money(week.previousSpent)} na semana passada',
               style: TextStyle(
-                  fontSize: NexoType.size(12.5, 13),
-                  fontWeight: NexoType.weight(FontWeight.w600, FontWeight.w500),
+                  fontSize: 13,
+                  fontWeight: FontWeight.w500,
                   color: hidden || change == null || change.abs() < 1
                       ? cs.onSurfaceVariant
                       : up
@@ -1694,10 +1714,9 @@ class _WeekBody extends StatelessWidget {
                         const SizedBox(height: 4),
                         Text(letters[i],
                             style: TextStyle(
-                                fontSize: NexoType.size(10, 12),
+                                fontSize: 12,
                                 fontWeight: i == week.daysElapsed - 1
-                                    ? NexoType.weight(
-                                        FontWeight.w800, FontWeight.w500)
+                                    ? FontWeight.w500
                                     : FontWeight.w500,
                                 color: cs.onSurfaceVariant)),
                       ])),
@@ -1732,7 +1751,7 @@ class _WeekFact extends StatelessWidget {
             child: Text(text,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: TextStyle(fontSize: NexoType.size(12.5, 13)))),
+                style: TextStyle(fontSize: 13))),
       ]));
 }
 
@@ -1785,74 +1804,6 @@ String _changeText(
 }
 
 /// One number with its label, flat, as the four on top of the home.
-class _Kpi extends StatelessWidget {
-  const _Kpi(
-      {required this.label,
-      required this.value,
-      this.hint,
-      this.color,
-      this.big = false,
-      this.onTap,
-      this.onInfo});
-  final String label, value;
-  final String? hint;
-  final Color? color;
-  final bool big;
-  final VoidCallback? onTap, onInfo;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final cs = theme.colorScheme;
-    return NexoCard(
-      padding: const EdgeInsets.fromLTRB(14, 10, 8, 12),
-      child: InkWell(
-        onTap: onTap,
-        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Row(children: [
-            Expanded(
-                child: ExcludeSemantics(
-                    child: Text(label,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: theme.textTheme.labelLarge
-                            ?.copyWith(color: cs.onSurfaceVariant)))),
-            if (onInfo != null)
-              IconButton(
-                  tooltip: 'Entender os valores',
-                  visualDensity: VisualDensity.compact,
-                  padding: EdgeInsets.zero,
-                  constraints:
-                      const BoxConstraints(minWidth: 28, minHeight: 28),
-                  onPressed: onInfo,
-                  icon: Icon(Icons.info_outline,
-                      size: 18, color: cs.onSurfaceVariant))
-            else
-              const SizedBox(height: 28),
-          ]),
-          Semantics(
-              label: '$label: $value${hint == null ? '' : ', $hint'}',
-              excludeSemantics: true,
-              child: FittedBox(
-                  fit: BoxFit.scaleDown,
-                  alignment: Alignment.centerLeft,
-                  child: Text(value,
-                      style: TextStyle(
-                          fontSize: big ? 24 : 20,
-                          fontWeight:
-                              NexoType.weight(FontWeight.w900, FontWeight.w600),
-                          color: color,
-                          fontFeatures: NexoTones.figures)))),
-          if (hint != null)
-            Text(hint!,
-                style: theme.textTheme.labelSmall
-                    ?.copyWith(color: cs.onSurfaceVariant)),
-        ]),
-      ),
-    );
-  }
-}
-
 class _Panel extends StatelessWidget {
   final Widget child;
   const _Panel({required this.child});
@@ -1879,7 +1830,7 @@ class _Legend extends StatelessWidget {
                     : null,
                 borderRadius: BorderRadius.circular(2))),
         const SizedBox(width: 4),
-        Text(label, style: TextStyle(fontSize: NexoType.size(11, 12))),
+        Text(label, style: TextStyle(fontSize: 12)),
       ]);
 }
 
@@ -1915,9 +1866,10 @@ class _Heading extends StatelessWidget {
   Widget build(BuildContext context) => Row(children: [
         Expanded(
             child: Text(title,
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight:
-                        NexoType.weight(FontWeight.w800, FontWeight.w600)))),
+                style: Theme.of(context)
+                    .textTheme
+                    .titleMedium
+                    ?.copyWith(fontWeight: FontWeight.w600))),
         TextButton(onPressed: onTap, child: Text(action)),
       ]);
 }
@@ -1953,8 +1905,7 @@ class _Amount extends StatelessWidget {
           child: Text(value,
               style: TextStyle(
                   fontSize: size,
-                  fontWeight: NexoType.weight(FontWeight.w800, FontWeight.w600),
-                  letterSpacing: NexoType.tracking(-.4),
+                  fontWeight: FontWeight.w600,
                   fontFeatures: NexoTones.figures))));
 }
 
@@ -2025,11 +1976,9 @@ class _EventTile extends StatelessWidget {
                   borderRadius: BorderRadius.circular(12)),
               child: Column(mainAxisSize: MainAxisSize.min, children: [
                 Text('${event.date.day}',
-                    style: TextStyle(
-                        fontWeight:
-                            NexoType.weight(FontWeight.bold, FontWeight.w600))),
+                    style: TextStyle(fontWeight: FontWeight.w600)),
                 Text(DateFormat('MMM', 'pt_BR').format(event.date),
-                    style: TextStyle(fontSize: NexoType.size(10, 12)))
+                    style: TextStyle(fontSize: 12))
               ]))),
       title: Text(app.settings.hideBalance ? 'Compromisso' : event.title,
           maxLines: 1, overflow: TextOverflow.ellipsis),
@@ -2040,8 +1989,7 @@ class _EventTile extends StatelessWidget {
             analysisMoney(
                 app, app.convertToMain(event.amount.abs(), event.currency)),
             style: TextStyle(
-                fontFeatures: NexoTones.figures,
-                fontWeight: NexoType.weight(FontWeight.w700, FontWeight.w600))),
+                fontFeatures: NexoTones.figures, fontWeight: FontWeight.w600)),
       ]),
       trailing: const Icon(Icons.chevron_right),
     );
@@ -2067,9 +2015,7 @@ class _BudgetRow extends StatelessWidget {
                 Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
               Text(
                   '${app.categoryById(budget.categoryId)?.name ?? 'Categoria'} · ${budget.period == 'weekly' ? 'semana' : 'mês'}',
-                  style: TextStyle(
-                      fontWeight:
-                          NexoType.weight(FontWeight.w700, FontWeight.w600))),
+                  style: TextStyle(fontWeight: FontWeight.w600)),
               const SizedBox(height: 4),
               Text(
                   '${left < 0 ? 'Excedido' : 'Ainda disponível'} ${analysisMoney(app, left.abs())}'),

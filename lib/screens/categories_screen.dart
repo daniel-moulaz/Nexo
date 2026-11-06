@@ -8,7 +8,7 @@ import '../services/envelopes.dart';
 import '../models/models.dart';
 import '../widgets/shared_widgets.dart';
 import '../utils/haptics.dart';
-import '../theme/nexo_type.dart';
+import '../theme/nexo_tokens.dart';
 
 class CategoriesScreen extends StatelessWidget {
   const CategoriesScreen({super.key});
@@ -32,8 +32,7 @@ class CategoriesScreen extends StatelessWidget {
               }),
         ],
         title: Text(l10n.categories_categories,
-            style: TextStyle(
-                fontWeight: NexoType.weight(FontWeight.w800, FontWeight.w600))),
+            style: TextStyle(fontWeight: FontWeight.w600)),
       ),
       body: ListView(
         padding: const EdgeInsets.fromLTRB(14, 14, 14, 140),
@@ -106,8 +105,7 @@ class _CatTile extends StatelessWidget {
                 ? l10n.categories_expenseLabel
                 : l10n.categories_incomeLabel,
             style: TextStyle(
-                fontSize: NexoType.size(11, 12),
-                color: cs.onSurface.withValues(alpha: 0.5))),
+                fontSize: 12, color: cs.onSurface.withValues(alpha: 0.5))),
         trailing: Row(mainAxisSize: MainAxisSize.min, children: [
           IconButton(
               icon: const Icon(Icons.edit_outlined, size: 18),
@@ -196,7 +194,7 @@ class _CategorySheetState extends State<_CategorySheet> {
     if (_iconIndex > 0 && _iconIndex <= kCategoryIconOptions.length) {
       return kCategoryIconOptions[_iconIndex - 1].icon;
     }
-    return Icons.label_outline_rounded; // safe fallback constant
+    return categoryAutoIcon(_nameCtrl.text); // tree-shaking safe: constants
   }
 
   Future<void> _submit() async {
@@ -243,9 +241,10 @@ class _CategorySheetState extends State<_CategorySheet> {
                       isEdit
                           ? l10n.categories_editCategory
                           : l10n.categories_addCategory,
-                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                          fontWeight: NexoType.weight(
-                              FontWeight.w800, FontWeight.w600))),
+                      style: Theme.of(context)
+                          .textTheme
+                          .titleLarge
+                          ?.copyWith(fontWeight: FontWeight.w600)),
                 ),
                 AnimatedContainer(
                   duration: const Duration(milliseconds: 140),
@@ -261,8 +260,7 @@ class _CategorySheetState extends State<_CategorySheet> {
                       const SizedBox(width: 6),
                       Text(_nameCtrl.text,
                           style: TextStyle(
-                              fontWeight: NexoType.weight(
-                                  FontWeight.w700, FontWeight.w600),
+                              fontWeight: FontWeight.w600,
                               color: Color(_color),
                               fontSize: 13)),
                     ],
@@ -318,17 +316,17 @@ class _CategorySheetState extends State<_CategorySheet> {
                       padding: const EdgeInsets.symmetric(vertical: 10),
                       decoration: BoxDecoration(
                           color: _type == 'expense'
-                              ? const Color(0xFFC62828)
-                              : const Color(0xFFFFEBEE),
+                              ? NexoTones.expense(context)
+                              : NexoTones.expense(context)
+                                  .withValues(alpha: .14),
                           borderRadius: BorderRadius.circular(12)),
                       child: Center(
                           child: Text(l10n.categories_expense,
                               style: TextStyle(
-                                  fontWeight: NexoType.weight(
-                                      FontWeight.w700, FontWeight.w600),
+                                  fontWeight: FontWeight.w600,
                                   color: _type == 'expense'
-                                      ? Colors.white
-                                      : const Color(0xFFC62828)))),
+                                      ? Theme.of(context).colorScheme.onPrimary
+                                      : NexoTones.expense(context)))),
                     ),
                   )),
                   const SizedBox(width: 10),
@@ -340,17 +338,17 @@ class _CategorySheetState extends State<_CategorySheet> {
                       padding: const EdgeInsets.symmetric(vertical: 10),
                       decoration: BoxDecoration(
                           color: _type == 'income'
-                              ? const Color(0xFF2E7D32)
-                              : const Color(0xFFE8F5E9),
+                              ? NexoTones.income(context)
+                              : NexoTones.income(context)
+                                  .withValues(alpha: .14),
                           borderRadius: BorderRadius.circular(12)),
                       child: Center(
                           child: Text(l10n.categories_income,
                               style: TextStyle(
-                                  fontWeight: NexoType.weight(
-                                      FontWeight.w700, FontWeight.w600),
+                                  fontWeight: FontWeight.w600,
                                   color: _type == 'income'
-                                      ? Colors.white
-                                      : const Color(0xFF2E7D32)))),
+                                      ? Theme.of(context).colorScheme.onPrimary
+                                      : NexoTones.income(context)))),
                     ),
                   )),
                 ]),
@@ -359,10 +357,7 @@ class _CategorySheetState extends State<_CategorySheet> {
 
               // ── Color ─────────────────────────────────────────────────
               Text(l10n.categories_color,
-                  style: Theme.of(context)
-                      .textTheme
-                      .labelMedium
-                      ?.copyWith(letterSpacing: NexoType.tracking(1))),
+                  style: Theme.of(context).textTheme.labelMedium),
               const SizedBox(height: 8),
               Wrap(
                   spacing: 10,
@@ -393,10 +388,7 @@ class _CategorySheetState extends State<_CategorySheet> {
 
               // ── Icon picker ─────────────────────────────────────────────
               Text(l10n.categories_icon,
-                  style: Theme.of(context)
-                      .textTheme
-                      .labelMedium
-                      ?.copyWith(letterSpacing: NexoType.tracking(1))),
+                  style: Theme.of(context).textTheme.labelMedium),
               const SizedBox(height: 8),
 
               // "Auto" chip
@@ -426,8 +418,7 @@ class _CategorySheetState extends State<_CategorySheet> {
                     Text(l10n.categories_autoBasedOnName,
                         style: TextStyle(
                             fontSize: 12,
-                            fontWeight: NexoType.weight(
-                                FontWeight.w600, FontWeight.w500),
+                            fontWeight: FontWeight.w500,
                             color: _iconIndex == 0
                                 ? cs.primary
                                 : cs.onSurface.withValues(alpha: 0.5))),
@@ -471,7 +462,7 @@ class _CategorySheetState extends State<_CategorySheet> {
                         child: Icon(opt.icon,
                             size: 20,
                             color: selected
-                                ? Colors.white
+                                ? Theme.of(context).colorScheme.onPrimary
                                 : Color(_color).withValues(alpha: 0.7)),
                       ),
                     ),

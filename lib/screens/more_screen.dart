@@ -24,7 +24,6 @@ import 'accounts_screen.dart';
 import 'month_review_screen.dart';
 import 'balance_check_screen.dart';
 import 'help_screen.dart';
-import '../theme/nexo_type.dart';
 
 class MoreScreen extends StatelessWidget {
   const MoreScreen({super.key});
@@ -148,9 +147,7 @@ class MoreScreen extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(
         automaticallyImplyLeading: false,
-        title: Text('Mais',
-            style: TextStyle(
-                fontWeight: NexoType.weight(FontWeight.w900, FontWeight.w600))),
+        title: Text('Mais', style: TextStyle(fontWeight: FontWeight.w600)),
         actions: [
           IconButton(
               tooltip: 'Configurações',
@@ -246,9 +243,7 @@ class _GroupState extends State<_Group> {
               Expanded(
                   child: Text(widget.title,
                       style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: NexoType.weight(
-                              FontWeight.w800, FontWeight.w600)))),
+                          fontSize: 16, fontWeight: FontWeight.w600))),
               AnimatedRotation(
                   turns: open ? .5 : 0,
                   duration: const Duration(milliseconds: 160),
@@ -268,7 +263,15 @@ class _GroupState extends State<_Group> {
                         indent: i == 0 ? 0 : 56,
                         color: cs.outlineVariant.withValues(alpha: .6)),
                     ListTile(
-                        leading: Icon(item.icon, color: cs.primary),
+                        leading: Container(
+                            width: 40,
+                            height: 40,
+                            decoration: BoxDecoration(
+                                color: cs.primaryContainer,
+                                borderRadius:
+                                    BorderRadius.circular(NexoRadius.chip)),
+                            child: Icon(item.icon,
+                                size: 20, color: cs.onPrimaryContainer)),
                         title: Text(item.label),
                         subtitle: Text(item.sub),
                         trailing: Icon(Icons.chevron_right,

@@ -8,7 +8,6 @@ import '../theme/app_theme.dart';
 import '../widgets/shared_widgets.dart';
 import '../utils/haptics.dart';
 import '../widgets/nexo_ui.dart';
-import '../theme/nexo_type.dart';
 
 class TransferScreen extends StatefulWidget {
   const TransferScreen({super.key});
@@ -98,8 +97,7 @@ class _TransferScreenState extends State<TransferScreen> {
     return Scaffold(
       appBar: AppBar(
         title: Text(l10n.transfer_transfer,
-            style: TextStyle(
-                fontWeight: NexoType.weight(FontWeight.w800, FontWeight.w600))),
+            style: TextStyle(fontWeight: FontWeight.w600)),
       ),
       body: SafeArea(
           bottom: true,
@@ -109,10 +107,7 @@ class _TransferScreenState extends State<TransferScreen> {
                 Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
               // ── FROM row ──────────────────────────────────────────────────
               Text(l10n.transfer_from,
-                  style: Theme.of(context)
-                      .textTheme
-                      .labelMedium
-                      ?.copyWith(letterSpacing: NexoType.tracking(1))),
+                  style: Theme.of(context).textTheme.labelMedium),
               const SizedBox(height: 8),
               AccountCardPicker(
                 accounts: transferable,
@@ -128,10 +123,7 @@ class _TransferScreenState extends State<TransferScreen> {
               // ── TO row ────────────────────────────────────────────────────
               Row(children: [
                 Text(l10n.transfer_to,
-                    style: Theme.of(context)
-                        .textTheme
-                        .labelMedium
-                        ?.copyWith(letterSpacing: NexoType.tracking(1))),
+                    style: Theme.of(context).textTheme.labelMedium),
                 const Spacer(),
                 Icon(Icons.arrow_downward_rounded, size: 16, color: cs.primary),
               ]),
@@ -184,31 +176,36 @@ class _TransferScreenState extends State<TransferScreen> {
                                   color: isSame
                                       ? cs.onSurface.withValues(alpha: 0.3)
                                       : sel
-                                          ? Colors.white
+                                          ? Theme.of(context)
+                                              .colorScheme
+                                              .onPrimary
                                           : color),
                               const SizedBox(height: 3),
                               Text(acc.name,
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
                                   style: TextStyle(
-                                      fontSize: NexoType.size(11, 12),
-                                      fontWeight: NexoType.weight(
-                                          FontWeight.w700, FontWeight.w500),
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w500,
                                       color: isSame
                                           ? cs.onSurface.withValues(alpha: 0.3)
                                           : sel
-                                              ? Colors.white
+                                              ? Theme.of(context)
+                                                  .colorScheme
+                                                  .onPrimary
                                               : color)),
                               Text(formatAmount(acc.balance, acc.currency),
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
                                   style: TextStyle(
                                       fontFeatures: NexoTones.figures,
-                                      fontSize: NexoType.size(9, 12),
+                                      fontSize: 12,
                                       color: isSame
                                           ? cs.onSurface.withValues(alpha: 0.2)
                                           : sel
-                                              ? Colors.white
+                                              ? Theme.of(context)
+                                                  .colorScheme
+                                                  .onPrimary
                                                   .withValues(alpha: 0.8)
                                               : cs.onSurface
                                                   .withValues(alpha: 0.5))),
@@ -259,8 +256,7 @@ class _TransferScreenState extends State<TransferScreen> {
                                 '→ ${formatAmount(convertedAmount, toCurrency)}',
                                 style: TextStyle(
                                     fontSize: 13,
-                                    fontWeight: NexoType.weight(
-                                        FontWeight.w700, FontWeight.w600),
+                                    fontWeight: FontWeight.w600,
                                     color: cs.primary),
                               ),
                             ])
@@ -268,7 +264,7 @@ class _TransferScreenState extends State<TransferScreen> {
                         Text(
                           l10n.transfer_exchangeRatesNotLoaded,
                           style: TextStyle(
-                              fontSize: NexoType.size(11, 12),
+                              fontSize: 12,
                               color: cs.error,
                               fontWeight: FontWeight.w500),
                           textAlign: TextAlign.center,
@@ -277,7 +273,7 @@ class _TransferScreenState extends State<TransferScreen> {
                         Text(
                           l10n.transfer_enterAnAmountToSeeTh,
                           style: TextStyle(
-                              fontSize: NexoType.size(11, 12),
+                              fontSize: 12,
                               color:
                                   cs.onPrimaryContainer.withValues(alpha: 0.6)),
                           textAlign: TextAlign.center,
@@ -300,10 +296,7 @@ class _TransferScreenState extends State<TransferScreen> {
                       ? l10n.error_required
                       : null,
                 ),
-                style: TextStyle(
-                    fontSize: 18,
-                    fontWeight:
-                        NexoType.weight(FontWeight.w700, FontWeight.w600)),
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
                 onChanged: (_) => setState(() {}),
               ),
               const SizedBox(height: 12),
@@ -347,16 +340,12 @@ class _BalanceCol extends StatelessWidget {
     return Column(crossAxisAlignment: align, children: [
       Text(label,
           style: TextStyle(
-              fontSize: NexoType.size(10, 12),
+              fontSize: 12,
               color: cs.onPrimaryContainer.withValues(alpha: 0.6))),
-      Text(name,
-          style: TextStyle(
-              fontWeight: NexoType.weight(FontWeight.w700, FontWeight.w600))),
+      Text(name, style: TextStyle(fontWeight: FontWeight.w600)),
       Text(balance,
           style: TextStyle(
-              fontSize: 12,
-              color: cs.primary,
-              fontWeight: NexoType.weight(FontWeight.w600, FontWeight.w500))),
+              fontSize: 12, color: cs.primary, fontWeight: FontWeight.w500)),
     ]);
   }
 }

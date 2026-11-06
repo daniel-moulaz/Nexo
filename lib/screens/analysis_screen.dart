@@ -13,7 +13,6 @@ import 'net_worth_screen.dart';
 import 'finance_export_screen.dart';
 import '../services/merchant_breakdown.dart';
 import '../widgets/nexo_sankey.dart';
-import '../theme/nexo_type.dart';
 
 FinancialAnalysis analyzePeriod(AppProvider app, AnalysisFilter filter) =>
     FinancialAnalysis(
@@ -302,7 +301,7 @@ class _AnalysisScreenState extends State<AnalysisScreen> {
                               BarChartGroupData(x: i, barRods: [
                                 BarChartRodData(
                                     toY: history[i].income,
-                                    color: Colors.blue.shade700,
+                                    color: NexoTones.info(context),
                                     width: 9),
                                 BarChartRodData(
                                     toY: history[i].expense,
@@ -385,8 +384,7 @@ class _AnalysisScreenState extends State<AnalysisScreen> {
                     trailing: Text(money(l.total),
                         style: TextStyle(
                             fontFeatures: NexoTones.figures,
-                            fontWeight: NexoType.weight(
-                                FontWeight.w800, FontWeight.w600)))),
+                            fontWeight: FontWeight.w600))),
             ]);
           })),
       AnalysisCard(

@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/app_provider.dart';
-import '../theme/nexo_type.dart';
 
 /// The cards of Hoje a person can reorder or hide. The month bar, the four
 /// numbers, "quanto posso gastar" and the quick actions always stay.
@@ -73,9 +72,8 @@ class _HomeCustomizeSheetState extends State<_HomeCustomizeSheet> {
           child: Row(children: [
             Expanded(
                 child: Text('Personalizar o Hoje',
-                    style: theme.textTheme.titleLarge?.copyWith(
-                        fontWeight: NexoType.weight(
-                            FontWeight.w900, FontWeight.w600)))),
+                    style: theme.textTheme.titleLarge
+                        ?.copyWith(fontWeight: FontWeight.w600))),
             TextButton(
                 onPressed: () => setState(() {
                       _order = kHomeSections.keys.toList();

@@ -13,7 +13,6 @@ import '../services/lended_notification_service.dart';
 import 'lended_screen.dart' show kLendedPersonColors;
 import '../utils/haptics.dart';
 import '../widgets/nexo_ui.dart';
-import '../theme/nexo_type.dart';
 
 /// Detail page for a single [LendedPerson] — shows their net balance and
 /// their full ledger of [LendedMoney] entries (add/edit/settle/delete),
@@ -39,9 +38,9 @@ class LendedPersonScreen extends StatelessWidget {
     final color = Color(current.colorValue);
 
     final balColor = balance > 0
-        ? const Color(0xFF2E7D32)
+        ? NexoTones.income(context)
         : balance < 0
-            ? const Color(0xFFC62828)
+            ? NexoTones.expense(context)
             : cs.onPrimary;
     final balLabel = balance > 0
         ? l10n.lended_person_owesYou(current.name)
@@ -51,9 +50,8 @@ class LendedPersonScreen extends StatelessWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(current.name,
-            style: TextStyle(
-                fontWeight: NexoType.weight(FontWeight.w800, FontWeight.w600))),
+        title:
+            Text(current.name, style: TextStyle(fontWeight: FontWeight.w600)),
         actions: [
           IconButton(
             icon: const Icon(Icons.edit_outlined),
@@ -78,8 +76,8 @@ class LendedPersonScreen extends StatelessWidget {
               PopupMenuItem(
                   value: 'delete',
                   child: Row(children: [
-                    const Icon(Icons.delete_outline_rounded,
-                        size: 18, color: Colors.red),
+                    Icon(Icons.delete_outline_rounded,
+                        size: 18, color: NexoTones.expense(context)),
                     const SizedBox(width: 8),
                     Text(l10n.lended_person_deletePerson),
                   ])),
@@ -103,8 +101,7 @@ class LendedPersonScreen extends StatelessWidget {
                   child: Text(
                 current.name.isNotEmpty ? current.name[0].toUpperCase() : '?',
                 style: TextStyle(
-                    fontWeight:
-                        NexoType.weight(FontWeight.w800, FontWeight.w600),
+                    fontWeight: FontWeight.w600,
                     fontSize: 22,
                     color: Colors.white),
               )),
@@ -114,8 +111,7 @@ class LendedPersonScreen extends StatelessWidget {
                 style: TextStyle(
                     fontFeatures: NexoTones.figures,
                     fontSize: 26,
-                    fontWeight:
-                        NexoType.weight(FontWeight.w800, FontWeight.w600),
+                    fontWeight: FontWeight.w600,
                     color: cs.onPrimary)),
             const SizedBox(height: 4),
             Container(
@@ -126,8 +122,7 @@ class LendedPersonScreen extends StatelessWidget {
               child: Text(balLabel,
                   style: TextStyle(
                       fontSize: 12,
-                      fontWeight:
-                          NexoType.weight(FontWeight.w700, FontWeight.w500),
+                      fontWeight: FontWeight.w500,
                       color: balColor)),
             ),
           ]),
@@ -241,9 +236,10 @@ class _EditPersonInlineSheetState extends State<_EditPersonInlineSheet> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(l10n.lended_person_editPerson,
-              style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                  fontWeight:
-                      NexoType.weight(FontWeight.w800, FontWeight.w600))),
+              style: Theme.of(context)
+                  .textTheme
+                  .titleLarge
+                  ?.copyWith(fontWeight: FontWeight.w600)),
           const SizedBox(height: 12),
           TextField(
             controller: _nameCtrl,
@@ -258,10 +254,7 @@ class _EditPersonInlineSheetState extends State<_EditPersonInlineSheet> {
           ),
           const SizedBox(height: 14),
           Text(l10n.lended_person_color,
-              style: Theme.of(context)
-                  .textTheme
-                  .labelMedium
-                  ?.copyWith(letterSpacing: NexoType.tracking(1))),
+              style: Theme.of(context).textTheme.labelMedium),
           const SizedBox(height: 8),
           Wrap(
               spacing: 10,
@@ -325,7 +318,8 @@ class _EntryCard extends StatelessWidget {
     final l10n = AppLocalizations.of(context)!;
     final cs = Theme.of(context).colorScheme;
     final isLent = l.type == 'lent';
-    final color = isLent ? const Color(0xFF2E7D32) : const Color(0xFFC62828);
+    final color =
+        isLent ? NexoTones.income(context) : NexoTones.expense(context);
 
     final now = DateTime.now();
     final isOverdue = l.dueDate != null &&
@@ -358,13 +352,11 @@ class _EntryCard extends StatelessWidget {
                       isLent
                           ? l10n.lended_person_lent
                           : l10n.lended_person_borrowed,
-                      style: TextStyle(
-                          fontWeight:
-                              NexoType.weight(FontWeight.w700, FontWeight.w600),
-                          fontSize: 15)),
+                      style:
+                          TextStyle(fontWeight: FontWeight.w600, fontSize: 15)),
                   Text(DateFormat('dd/MM/yyyy').format(l.date),
                       style: TextStyle(
-                          fontSize: NexoType.size(11, 12),
+                          fontSize: 12,
                           color: cs.onSurface.withValues(alpha: 0.5))),
                 ])),
             Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
@@ -372,8 +364,7 @@ class _EntryCard extends StatelessWidget {
                   style: TextStyle(
                       fontFeatures: NexoTones.figures,
                       fontSize: 16,
-                      fontWeight:
-                          NexoType.weight(FontWeight.w800, FontWeight.w600),
+                      fontWeight: FontWeight.w600,
                       color: color)),
               if (l.dueDate != null)
                 Text(
@@ -382,9 +373,8 @@ class _EntryCard extends StatelessWidget {
                       : l10n.lended_person_due(
                           DateFormat('dd/MM/yyyy').format(l.dueDate!)),
                   style: TextStyle(
-                      fontSize: NexoType.size(10, 12),
-                      fontWeight:
-                          NexoType.weight(FontWeight.w600, FontWeight.w500),
+                      fontSize: 12,
+                      fontWeight: FontWeight.w500,
                       color: isOverdue
                           ? cs.error
                           : cs.onSurface.withValues(alpha: 0.5)),
@@ -411,9 +401,8 @@ class _EntryCard extends StatelessWidget {
                 Text(
                   l10n.lended_person_reminderAt(l.reminderTime),
                   style: TextStyle(
-                      fontSize: NexoType.size(10, 12),
-                      fontWeight:
-                          NexoType.weight(FontWeight.w600, FontWeight.w500),
+                      fontSize: 12,
+                      fontWeight: FontWeight.w500,
                       color: cs.primary),
                 ),
               ]),
@@ -425,14 +414,13 @@ class _EntryCard extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                 decoration: BoxDecoration(
-                    color: const Color(0xFFE8F5E9),
+                    color: NexoTones.income(context).withValues(alpha: .14),
                     borderRadius: BorderRadius.circular(8)),
                 child: Text(l10n.lended_person_settled,
                     style: TextStyle(
-                        fontSize: NexoType.size(10, 12),
-                        fontWeight:
-                            NexoType.weight(FontWeight.w700, FontWeight.w500),
-                        color: Color(0xFF2E7D32))),
+                        fontSize: 12,
+                        fontWeight: FontWeight.w500,
+                        color: NexoTones.income(context))),
               )
             else
               TextButton.icon(
@@ -633,13 +621,14 @@ class _EntrySheetState extends State<_EntrySheet> {
               isEdit
                   ? l10n.lended_person_editRecord
                   : l10n.lended_person_addRecord,
-              style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                  fontWeight:
-                      NexoType.weight(FontWeight.w800, FontWeight.w600))),
+              style: Theme.of(context)
+                  .textTheme
+                  .titleLarge
+                  ?.copyWith(fontWeight: FontWeight.w600)),
           Text(widget.person.name,
               style: TextStyle(
                   fontSize: 13,
-                  fontWeight: NexoType.weight(FontWeight.w600, FontWeight.w500),
+                  fontWeight: FontWeight.w500,
                   color: cs.onSurface.withValues(alpha: 0.55))),
           const SizedBox(height: 12),
 
@@ -653,17 +642,16 @@ class _EntrySheetState extends State<_EntrySheet> {
                 padding: const EdgeInsets.symmetric(vertical: 10),
                 decoration: BoxDecoration(
                     color: _type == 'lent'
-                        ? const Color(0xFF2E7D32)
-                        : const Color(0xFFE8F5E9),
+                        ? NexoTones.income(context)
+                        : NexoTones.income(context).withValues(alpha: .14),
                     borderRadius: BorderRadius.circular(12)),
                 child: Center(
                     child: Text(l10n.lended_person_iLent,
                         style: TextStyle(
-                            fontWeight: NexoType.weight(
-                                FontWeight.w700, FontWeight.w600),
+                            fontWeight: FontWeight.w600,
                             color: _type == 'lent'
-                                ? Colors.white
-                                : const Color(0xFF2E7D32)))),
+                                ? Theme.of(context).colorScheme.onPrimary
+                                : NexoTones.income(context)))),
               ),
             )),
             const SizedBox(width: 10),
@@ -675,17 +663,16 @@ class _EntrySheetState extends State<_EntrySheet> {
                 padding: const EdgeInsets.symmetric(vertical: 10),
                 decoration: BoxDecoration(
                     color: _type == 'borrowed'
-                        ? const Color(0xFFC62828)
-                        : const Color(0xFFFFEBEE),
+                        ? NexoTones.expense(context)
+                        : NexoTones.expense(context).withValues(alpha: .14),
                     borderRadius: BorderRadius.circular(12)),
                 child: Center(
                     child: Text(l10n.lended_person_iBorrowed,
                         style: TextStyle(
-                            fontWeight: NexoType.weight(
-                                FontWeight.w700, FontWeight.w600),
+                            fontWeight: FontWeight.w600,
                             color: _type == 'borrowed'
-                                ? Colors.white
-                                : const Color(0xFFC62828)))),
+                                ? Theme.of(context).colorScheme.onPrimary
+                                : NexoTones.expense(context)))),
               ),
             )),
           ]),
@@ -707,10 +694,7 @@ class _EntrySheetState extends State<_EntrySheet> {
           const SizedBox(height: 14),
 
           Text(l10n.lended_person_accountOptional,
-              style: Theme.of(context)
-                  .textTheme
-                  .labelMedium
-                  ?.copyWith(letterSpacing: NexoType.tracking(1))),
+              style: Theme.of(context).textTheme.labelMedium),
           const SizedBox(height: 8),
           AccountCardPicker(
             accounts: app.accounts.where((a) => !a.isGold).toList(),
@@ -799,13 +783,12 @@ class _EntrySheetState extends State<_EntrySheet> {
                           children: [
                         Text(l10n.lended_person_remindMeAt,
                             style: TextStyle(
-                                fontSize: NexoType.size(11, 12),
+                                fontSize: 12,
                                 color: cs.onSurface.withValues(alpha: 0.55))),
                         Text(_reminderTime.format(context),
                             style: TextStyle(
                                 fontSize: 16,
-                                fontWeight: NexoType.weight(
-                                    FontWeight.w700, FontWeight.w600),
+                                fontWeight: FontWeight.w600,
                                 color: cs.primary)),
                       ])),
                   Icon(Icons.chevron_right_rounded, color: cs.primary),
@@ -822,8 +805,7 @@ class _EntrySheetState extends State<_EntrySheet> {
                         DateFormat('dd/MM/yyyy').format(_dueDate!),
                         _reminderTime.format(context)),
                 style: TextStyle(
-                    fontSize: NexoType.size(11, 12),
-                    color: cs.onSurface.withValues(alpha: 0.4)),
+                    fontSize: 12, color: cs.onSurface.withValues(alpha: 0.4)),
               ),
             ),
           ],

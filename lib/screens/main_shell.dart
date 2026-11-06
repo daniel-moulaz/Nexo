@@ -15,6 +15,7 @@ import 'settings_screen.dart';
 import 'statement_import_screen.dart';
 import 'investments_screen.dart';
 import 'add_transaction_screen.dart';
+import '../widgets/nexo_brand.dart';
 import '../widgets/command_palette.dart';
 import '../services/nexo_security.dart';
 import '../services/bank_snapshots.dart';
@@ -154,9 +155,13 @@ class _MainShellState extends State<MainShell> with WidgetsBindingObserver {
             child: SafeArea(
                 child: ListView(children: [
               Padding(
-                  padding: const EdgeInsets.fromLTRB(24, 20, 24, 16),
-                  child: Text('Nexo',
-                      style: Theme.of(context).textTheme.headlineSmall)),
+                  padding: const EdgeInsets.fromLTRB(20, 20, 24, 16),
+                  child: Row(children: [
+                    const NexoMark(size: 32),
+                    const SizedBox(width: NexoSpace.sm),
+                    Text('Nexo',
+                        style: Theme.of(context).textTheme.headlineSmall),
+                  ])),
               for (final entry in const [
                 (0, 'Hoje', Icons.today_outlined),
                 (8, 'Extrato', Icons.receipt_long_outlined),
@@ -225,8 +230,8 @@ class _MainShellState extends State<MainShell> with WidgetsBindingObserver {
               borderRadius: BorderRadius.circular(40),
               child: NavigationBarTheme(
                 data: NavigationBarThemeData(
-                  height: 68,
-                  indicatorShape: const CircleBorder(),
+                  height: 72,
+                  indicatorShape: const StadiumBorder(),
                   iconTheme: WidgetStateProperty.resolveWith((states) {
                     return IconThemeData(
                       size: 24,

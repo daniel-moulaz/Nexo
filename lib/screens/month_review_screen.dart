@@ -8,7 +8,6 @@ import '../widgets/analysis_widgets.dart';
 import '../widgets/nexo_ui.dart';
 import '../widgets/shared_widgets.dart' show CategoryDot;
 import 'analysis_screen.dart';
-import '../theme/nexo_type.dart';
 
 const _weekdays = [
   'segunda',
@@ -80,9 +79,7 @@ class _MonthReviewScreenState extends State<MonthReviewScreen> {
                     Text(title, style: small),
                     Text(value,
                         style: TextStyle(
-                            fontWeight: NexoType.weight(
-                                FontWeight.w700, FontWeight.w600),
-                            fontSize: 15)),
+                            fontWeight: FontWeight.w600, fontSize: 15)),
                   ])),
             ]));
 
@@ -120,8 +117,7 @@ class _MonthReviewScreenState extends State<MonthReviewScreen> {
                   child: Text(money(r.spent),
                       style: TextStyle(
                           fontSize: 32,
-                          fontWeight:
-                              NexoType.weight(FontWeight.w800, FontWeight.w600),
+                          fontWeight: FontWeight.w600,
                           color: cs.onPrimaryContainer,
                           fontFeatures: NexoTones.figures))),
               if (!hidden)
@@ -132,8 +128,7 @@ class _MonthReviewScreenState extends State<MonthReviewScreen> {
                             ? 'Igual ao mês anterior'
                             : '${change > 0 ? '▲' : '▼'} ${change.abs().toStringAsFixed(0)}% em relação a ${money(r.previousUsual)} no mês anterior',
                     style: TextStyle(
-                        fontWeight:
-                            NexoType.weight(FontWeight.w700, FontWeight.w600),
+                        fontWeight: FontWeight.w600,
                         color: change == null || change.abs() < 1
                             ? cs.onPrimaryContainer
                             : change > 0
@@ -190,8 +185,7 @@ class _MonthReviewScreenState extends State<MonthReviewScreen> {
                             : '${value >= before ? '▲' : '▼'} ${money((value - before).abs())} em relação ao mês anterior'),
                         trailing: Text(money(value),
                             style: TextStyle(
-                                fontWeight: NexoType.weight(
-                                    FontWeight.w800, FontWeight.w600),
+                                fontWeight: FontWeight.w600,
                                 fontFeatures: NexoTones.figures))),
                 ])),
             const SizedBox(height: 16),
