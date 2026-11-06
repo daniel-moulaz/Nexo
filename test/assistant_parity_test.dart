@@ -822,6 +822,73 @@ void main() {
     expect(unknown.$1, 'rejected');
   });
 
+  test('split bill: your part is the spending, the rest comes back as neutral',
+      () async {
+    await capture();
+    await app.addTransaction(
+        expense('assinatura', 41.00, account: 'nu', date: DateTime.now()));
+    final card = await balance('nu');
+    final split = await send(
+        'transaction.split_bill',
+        {
+          'id': 'assinatura',
+          'people': ['Ana', 'Bia', 'Caio', 'Duda', 'Edu']
+        },
+        id: 'split');
+    expect(split.$1, 'done', reason: '$split');
+    expect(await balance('nu'), closeTo(card, .001),
+        reason: 'the card still owes the whole bill');
+    final entries = await DBHelper.getTransactions();
+    final mine = entries.firstWhere((t) => t.id == 'assinatura');
+    final rest = entries.firstWhere((t) => t.id == 'assinatura:shared');
+    expect(mine.amount, closeTo(6.85, .001), reason: 'keeps the odd cents');
+    expect(rest.amount, closeTo(34.15, .001));
+    final m = await metaOf(rest.id);
+    expect(FinanceRules.isNeutral(rest, m), isTrue);
+    expect(FinanceRules.onInvoice(rest, m), isTrue);
+    expect(app.lended.length, 5);
+    expect(
+        app.lended.every((l) => l.accountId == null && !l.isSettled), isTrue);
+    expect(app.lended.first.amount, closeTo(6.83, .001));
+
+    final bank = await balance('bank');
+    final pix = await send(
+        'lended.receive', {'id': app.lended.first.id, 'account_id': 'bank'});
+    expect(pix.$1, 'done', reason: '$pix');
+    expect(await balance('bank'), closeTo(bank + 6.83, .001));
+    final received = (await DBHelper.getTransactions())
+        .firstWhere((t) => t.id.startsWith('lended-received:'));
+    expect(FinanceRules.isNeutral(received, await metaOf(received.id)), isTrue);
+    await send(
+        'lended.receive', {'id': app.lended.first.id, 'account_id': 'bank'});
+    expect(await balance('bank'), closeTo(bank + 6.83, .001),
+        reason: 'a repeat moves nothing');
+
+    final again = await send('transaction.split_bill', {
+      'id': 'assinatura',
+      'people': ['Ana']
+    });
+    expect(again.$1, 'rejected');
+  });
+
+  test('split bill is undone as a whole', () async {
+    await capture();
+    await app.addTransaction(
+        expense('conta', 30, account: 'nu', date: DateTime.now()));
+    await send(
+        'transaction.split_bill',
+        {
+          'id': 'conta',
+          'people': ['Ana', 'Bia']
+        },
+        id: 'split');
+    expect((await undo('split')).$1, 'done');
+    final left = await DBHelper.getTransactions();
+    expect(left.single.amount, 30);
+    await app.reloadFromStorage();
+    expect(app.lended, isEmpty);
+  });
+
   test('invoice paid on a given day keeps that day', () async {
     await app.addTransaction(expense('compra', 80,
         account: 'nu',

@@ -434,6 +434,47 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
     if (mounted) Navigator.pop(context);
   }
 
+  /// Equal parts with the people named; yours stays as this entry.
+  Future<void> _splitBill() async {
+    final names = TextEditingController();
+    final app = context.read<AppProvider>();
+    final people = await showDialog<List<String>>(
+        context: context,
+        builder: (context) => AlertDialog(
+                title: const Text('Dividir conta'),
+                content: Column(mainAxisSize: MainAxisSize.min, children: [
+                  const Text(
+                      'Partes iguais entre você e as pessoas abaixo. A sua continua como gasto; a dos outros vira a receber, sem mudar o saldo nem a fatura.'),
+                  const SizedBox(height: 12),
+                  TextField(
+                      controller: names,
+                      autofocus: true,
+                      decoration: const InputDecoration(
+                          labelText: 'Nomes, separados por vírgula')),
+                ]),
+                actions: [
+                  TextButton(
+                      onPressed: () => Navigator.pop(context),
+                      child: const Text('Cancelar')),
+                  FilledButton(
+                      onPressed: () =>
+                          Navigator.pop(context, names.text.split(',')),
+                      child: const Text('Dividir')),
+                ]));
+    if (people == null || !mounted) return;
+    try {
+      await app.splitBill(widget.existing!.id, people);
+      if (mounted) Navigator.pop(context);
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text(e is StateError || e is ArgumentError
+                ? '${e is StateError ? e.message : (e as ArgumentError).message}'
+                : 'Não foi possível dividir a conta.')));
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     if (widget.existing?.id.startsWith('investment:') == true) {
@@ -510,6 +551,12 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
                       tooltip: 'Fotografar cupom ou comprovante',
                       onPressed: _saving ? null : _scanReceipt,
                       icon: const Icon(Icons.photo_camera_outlined),
+                    ),
+                  if (isEdit && _type == 'expense')
+                    IconButton(
+                      tooltip: 'Dividir conta',
+                      onPressed: _saving ? null : _splitBill,
+                      icon: const Icon(Icons.group_outlined),
                     ),
                   if (isEdit)
                     IconButton(

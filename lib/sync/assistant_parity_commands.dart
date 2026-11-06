@@ -29,6 +29,7 @@ class AssistantParityCommands {
     'settings.set', 'transaction.create', 'transaction.edit',
     'transaction.bulk_update',
     'transaction.bulk_delete', 'transaction.neutralize', 'transaction.split',
+    'transaction.split_bill', 'lended.receive',
     'budget.save', 'account.edit', 'goal.adjust', 'goal.edit',
     'recurring.edit', 'investment.archive', 'investment.unrecord',
     'investment.link', 'loan.add', 'loan.edit', 'loan.delete', 'loan.unpay',
@@ -292,6 +293,16 @@ class AssistantParityCommands {
           'message':
               '$n lançamento(s) agora são ajuste de saldo: não contam como receita nem gasto.',
         };
+      case 'transaction.split_bill':
+        final t = await _transaction(a['id']);
+        await app.splitBill(t.id, List<String>.from(a['people'] as List));
+        return {'transaction_id': t.id, 'message': 'Conta dividida.'};
+      case 'lended.receive':
+        final l = app.lended.where((l) => l.id == a['id']).firstOrNull ??
+            (throw StateError('O registro não existe mais.'));
+        if (l.isSettled) return {'message': 'Já estava quitado.'};
+        await app.receiveLended(l, _account(a['account_id']).id);
+        return {'message': 'Recebido e quitado.'};
       case 'transaction.split':
         final t = await _transaction(a['id']);
         final n = (a['installments'] as num).toInt();

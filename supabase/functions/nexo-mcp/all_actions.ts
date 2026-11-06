@@ -151,8 +151,9 @@ export const allActions: (ToolDefinition & { destructive?: boolean })[] = [
   },
   {
     name: "settle_lended", title: "Quitar empréstimo pessoal",
-    description: "Marca como devolvido/pago; a conta vinculada volta a ser movimentada no sentido contrário.",
-    inputSchema: obj({ id: idField }, ["id"]),
+    description: "Marca como devolvido/pago; a conta vinculada volta a ser movimentada no sentido contrário. " +
+      "Numa parte de conta dividida (sem conta vinculada), informe account_id: o dinheiro entra nela, sem contar como receita.",
+    inputSchema: obj({ id: idField, account_id: idField }, ["id"]),
   },
   {
     name: "get_assets", title: "Bens", description: "Bens cadastrados (carro, imóvel...) com valor estimado.",
@@ -535,10 +536,15 @@ export async function callAllAction(name: string, rawArgs: unknown, l: Ledger, t
       return pending((await enqueue("lended.add", body)).id, "Registro");
     }
     case "settle_lended": {
-      only(args, ["id"]);
+      only(args, ["id", "account_id"]);
       const x = find(l.lended, args.id);
       if (!x) throw new ToolInputError("Registro não encontrado. Use get_lended.");
       if (x.is_settled === 1) throw new ToolInputError("Já está quitado.");
+      if (args.account_id !== undefined) {
+        // A split bill has no account of its own: the Pix lands in this one.
+        const into = account(l, str(args, "account_id", 256), true);
+        return pending((await enqueue("lended.receive", { id: text(x.id), account_id: text(into.id) })).id, "Recebimento");
+      }
       return pending((await enqueue("lended.settle", { id: text(x.id) })).id, "Quitação");
     }
     case "get_assets": {

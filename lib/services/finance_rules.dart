@@ -19,4 +19,11 @@ class FinanceRules {
   ) {
     return (metadata?.excludeFromSpending ?? false) || isImplicitNeutral(tx);
   }
+
+  /// What a card's invoice charges. Some neutral entries still belong to it:
+  /// the balance adjustment, and the part of a split bill others will repay.
+  static bool onInvoice(AppTransaction tx, TransactionMetadata? metadata) =>
+      !isNeutral(tx, metadata) ||
+      metadata?.source == 'opening_balance' ||
+      (metadata?.source.startsWith('shared_bill:') ?? false);
 }

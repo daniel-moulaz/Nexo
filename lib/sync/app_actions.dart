@@ -20,6 +20,8 @@ const appWriteActions = <String, List<String>>{
   'transaction.bulk_delete': ['delete_transactions'],
   'transaction.neutralize': ['convert_to_balance_adjustment'],
   'transaction.split': ['split_transaction'],
+  'transaction.split_bill': ['split_bill'],
+  'lended.receive': ['settle_lended'],
   'transfer.add': ['add_transfer', 'confirm_suggestion_as_transfer'],
   'metadata.save': ['update_transaction', 'update_transactions'],
   'metadata.delete': ['update_transaction'],

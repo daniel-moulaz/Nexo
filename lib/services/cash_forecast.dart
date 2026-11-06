@@ -64,7 +64,7 @@ class CashForecast {
       final m = metadata[tx.id] ?? TransactionMetadata(transactionId: tx.id);
       final signed = tx.type == 'income' ? tx.amount : -tx.amount;
       if (a.type == 'credit') {
-        if (!FinanceRules.isNeutral(tx, m) || m.source == 'opening_balance') {
+        if (FinanceRules.onInvoice(tx, m)) {
           final currency = tx.currency.isEmpty ? a.currency : tx.currency;
           final rate = convert(1, a.currency);
           cardPurchase(

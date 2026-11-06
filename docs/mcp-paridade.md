@@ -40,6 +40,7 @@ Legenda: **ok** cobre o que a tela faz, com os mesmos números e as mesmas regra
 | Marcar pago / pendente | settle_transaction, update_transaction | ok | |
 | Duplicar | duplicate_transaction | ok | |
 | Dividir em parcelas | split_transaction | ok | total preservado; centavos na 1ª |
+| Dividir conta entre pessoas | split_bill, settle_lended | ok | sua parte fica como gasto; o resto vira a receber, sem mudar saldo nem fatura |
 | Alterar em lote por filtro | update_transactions | ok | dry_run; com filtro exige expected_count |
 | Apagar em lote por filtro | delete_transactions | ok | dry_run; estorna saldos |
 | Acertos antigos como receita → ajuste neutro | convert_to_balance_adjustment | ok | saldo igual; deixa de ser receita |

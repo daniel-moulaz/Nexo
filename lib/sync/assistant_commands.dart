@@ -651,9 +651,7 @@ class AssistantCommands {
     for (final tx in app.transactions) {
       if (tx.accountId != card.id || !cycle.contains(tx.date)) continue;
       final m = app.transactionMetadata[tx.id];
-      if (FinanceRules.isNeutral(tx, m) && m?.source != 'opening_balance') {
-        continue;
-      }
+      if (!FinanceRules.onInvoice(tx, m)) continue;
       owed += tx.type == 'income' ? -tx.amount : tx.amount;
     }
     for (final p in await (await DBHelper.database).query(

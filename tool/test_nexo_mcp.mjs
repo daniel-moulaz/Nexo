@@ -911,6 +911,22 @@ await test('emergency plan: the goal says how its target is computed', async () 
   await pact(q, 'set_setting', { settings: { emergencyPlan: {} } }, l);
 });
 
+await test('split bill: parts by name, and money received into an account', async () => {
+  const q = smartQueue();
+  const r = await pact(q, 'split_bill', { id: 'ifood', people: ['Ana', ' Bia ', 'Ana'] });
+  assert.deepEqual(q.items.at(-1).args, { id: 'ifood', people: ['Ana', 'Bia'] });
+  assert.deepEqual([r.each, r.yours], [15.3, 15.3]);
+  await assert.rejects(pact(q, 'split_bill', { id: 'salario-out', people: ['Ana'] }), /despesa/);
+  await assert.rejects(pact(q, 'split_bill', { id: 'luz-pendente', people: ['Ana'] }), /Pague/);
+  await assert.rejects(pact(q, 'split_bill', { id: 'ifood', people: [] }), /people/);
+  const l = { ...scenario, lended: [{ id: 'p1', amount: 7, type: 'lent', is_settled: 0 }] };
+  await pact(q, 'settle_lended', { id: 'p1', account_id: 'main' }, l);
+  assert.deepEqual([q.items.at(-1).kind, q.items.at(-1).args.account_id], ['lended.receive', 'main']);
+  await pact(q, 'settle_lended', { id: 'p1' }, l);
+  assert.equal(q.items.at(-1).kind, 'lended.settle');
+  await assert.rejects(pact(q, 'settle_lended', { id: 'p1', account_id: 'nu' }, l), /cartão/);
+});
+
 await test('goals show their movements, so a withdrawal explains a zero', async () => {
   const q = smartQueue();
   const l = { ...scenario, goals: [{ id: 'g', name: 'Reserva', target_amount: 1000, current_amount: 0 }],

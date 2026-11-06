@@ -135,6 +135,13 @@ export const parityActions: (ToolDefinition & { destructive?: boolean })[] = [
     inputSchema: obj({ id: idField, installments: { type: "integer", minimum: 2, maximum: 120 } }, ["id", "installments"]),
   },
   {
+    name: "split_bill", title: "Dividir conta entre pessoas",
+    description: "Divide uma despesa paga em partes iguais entre você e as pessoas informadas. Sua parte continua como gasto " +
+      "(com os centavos que sobrarem); a parte dos outros sai do gasto, continua na conta ou na fatura do cartão e vira a receber " +
+      "de cada pessoa. Quando o dinheiro chegar, use settle_lended com account_id.",
+    inputSchema: obj({ id: idField, people: { type: "array", items: { type: "string", minLength: 1, maxLength: 60 }, minItems: 1, maxItems: 20 } }, ["id", "people"]),
+  },
+  {
     name: "duplicate_transaction", title: "Duplicar lançamento",
     description: "Cria um lançamento igual a outro (mesma conta, categoria e descrição), na data e valor informados ou nos do original.",
     inputSchema: obj({ id: idField, date: dateField, amount: amountField }, ["id"]),
@@ -469,7 +476,7 @@ export async function callParityAction(name: string, rawArgs: unknown, l: Ledger
         how_it_works: "Leituras vêm da última sincronização. Mudanças viram pedidos que o app grava com as próprias regras, um de cada vez, na ordem; confirme com get_request_status. Todo pedido gravado pode ser desfeito com undo_request. Lotes têm dry_run. Mande idempotency_key para repetir um pedido com segurança.",
         consumption_rule: "Transferências, reservas/objetivos, pagamentos de fatura, ajustes de saldo e aportes não contam como consumo; pendente não sai do saldo.",
         entities: {
-          lançamentos: { read: ["list_transactions", "get_transaction", "get_daily_digest"], write: ["add_transaction", "update_transaction", "delete_transaction", "settle_transaction", "duplicate_transaction", "split_transaction", "update_transactions", "delete_transactions", "convert_to_balance_adjustment"],
+          lançamentos: { read: ["list_transactions", "get_transaction", "get_daily_digest"], write: ["add_transaction", "update_transaction", "delete_transaction", "settle_transaction", "duplicate_transaction", "split_transaction", "split_bill", "update_transactions", "delete_transactions", "convert_to_balance_adjustment"],
             editable: ["amount", "description", "account_id", "category_id", "date", "note", "type", "subcategory", "status", "due_date", "kind", "recurring_income_id"] },
           contas_e_cartões: { read: ["get_accounts", "get_card_invoices"], write: ["add_account", "update_account", "adjust_account_balance", "delete_account", "add_transfer", "pay_card_invoice"],
             editable: ["name", "statement_day", "due_day", "credit_limit", "exclude_from_total", "exclude_from_bank_total", "payment_account_id", "min_payment", "min_payment_percent", "color", "reminder_enabled", "reminder_time"] },
@@ -664,6 +671,24 @@ export async function callParityAction(name: string, rawArgs: unknown, l: Ledger
       const each = Math.floor(total / n);
       const q = await enqueue("transaction.split", { id: text(t.id), installments: n });
       return { ...pending(q.id, "Divisão em parcelas"), first: money(each + total - each * n), each: money(each) };
+    }
+    case "split_bill": {
+      only(args, ["id", "people"]);
+      const t = find(l.transactions, args.id);
+      if (!t) throw new ToolInputError("Lançamento não encontrado.");
+      if (t.type && t.type !== "expense") throw new ToolInputError("Só despesa pode ser dividida.");
+      const m = meta(metadataIndex(l).get(text(t.id)));
+      if (!isPlain(l, t) || m.installmentTotal) throw new ToolInputError("Este lançamento não pode ser dividido.");
+      if (m.status === "pending") throw new ToolInputError("Pague a despesa antes de dividir.");
+      const people = args.people;
+      if (!Array.isArray(people) || !people.length || people.length > 20 ||
+        people.some((p) => typeof p !== "string" || !p.trim() || p.length > 60)) {
+        throw new ToolInputError("people deve ter de 1 a 20 nomes.");
+      }
+      const names = [...new Set((people as string[]).map((p) => p.trim()))];
+      const q = await enqueue("transaction.split_bill", { id: text(t.id), people: names });
+      const total = cents(num(t.amount)), each = Math.floor(total / (names.length + 1));
+      return { ...pending(q.id, "Divisão da conta"), each: money(each), yours: money(total - each * names.length) };
     }
     case "duplicate_transaction": {
       only(args, ["id", "date", "amount"]);

@@ -439,7 +439,9 @@ class _EntryCard extends StatelessWidget {
                 icon: const Icon(Icons.check_circle_outline, size: 16),
                 label: Text(l10n.lended_person_settle,
                     style: const TextStyle(fontSize: 12)),
-                onPressed: () => context.read<AppProvider>().settleLended(l),
+                onPressed: () => l.accountId == null && l.type == 'lent'
+                    ? _receive(context, l)
+                    : context.read<AppProvider>().settleLended(l),
               ),
             const Spacer(),
             IconButton(
@@ -852,5 +854,31 @@ class _EntrySheetState extends State<_EntrySheet> {
         ],
       )),
     );
+  }
+}
+
+/// No account of its own: asks where the money landed, if it did.
+Future<void> _receive(BuildContext context, LendedMoney l) async {
+  final app = context.read<AppProvider>();
+  final accounts =
+      app.accounts.where((a) => a.type != 'credit' && !a.isGold).toList();
+  final choice = await showDialog<String>(
+      context: context,
+      builder: (context) => SimpleDialog(
+              title: const Text('Em qual conta o dinheiro entrou?'),
+              children: [
+                for (final a in accounts)
+                  SimpleDialogOption(
+                      onPressed: () => Navigator.pop(context, a.id),
+                      child: Text(a.name)),
+                SimpleDialogOption(
+                    onPressed: () => Navigator.pop(context, ''),
+                    child: const Text('Só marcar como quitado')),
+              ]));
+  if (choice == null) return;
+  if (choice.isEmpty) {
+    await app.settleLended(l);
+  } else {
+    await app.receiveLended(l, choice);
   }
 }

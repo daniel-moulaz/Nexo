@@ -284,9 +284,7 @@ class _CardInvoiceScreenState extends State<CardInvoiceScreen> {
             : values[0] as Map<String, TransactionMetadata>;
         final alreadyPaid = values == null ? 0.0 : values[1] as double;
         final purchases = allCycleTx
-            .where((t) =>
-                !FinanceRules.isNeutral(t, meta[t.id]) ||
-                meta[t.id]?.source == 'opening_balance')
+            .where((t) => FinanceRules.onInvoice(t, meta[t.id]))
             .toList()
           ..sort((a, b) => b.date.compareTo(a.date));
         final total = purchases.fold<double>(
