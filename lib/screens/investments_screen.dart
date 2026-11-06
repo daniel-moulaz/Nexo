@@ -22,6 +22,7 @@ import '../services/net_worth_history.dart';
 import '../utils/snackbar.dart';
 import '../widgets/nexo_ui.dart';
 import '../services/diagnostics.dart';
+import '../theme/nexo_type.dart';
 
 String _money(BuildContext context, int cents) =>
     context.read<AppProvider>().settings.hideBalance
@@ -160,8 +161,10 @@ class _InvestmentsScreenState extends State<InvestmentsScreen> {
     final private = context.watch<AppProvider>().settings.hideBalance;
     return Scaffold(
       appBar: AppBar(
-          title: const Text('Investimentos',
-              style: TextStyle(fontWeight: FontWeight.w600)),
+          title: Text('Investimentos',
+              style: TextStyle(
+                  fontWeight:
+                      NexoType.weight(FontWeight.w900, FontWeight.w600))),
           actions: [
             IconButton(
                 tooltip: 'Adicionar investimento',
@@ -505,8 +508,9 @@ class _B3ReviewSheet extends StatelessWidget {
         Padding(
           padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
           child: Text('Negociações da B3',
-              style: theme.textTheme.titleLarge
-                  ?.copyWith(fontWeight: FontWeight.w600)),
+              style: theme.textTheme.titleLarge?.copyWith(
+                  fontWeight:
+                      NexoType.weight(FontWeight.w900, FontWeight.w600))),
         ),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -531,9 +535,10 @@ class _B3ReviewSheet extends StatelessWidget {
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis),
                       trailing: Text(formatAmount(t.totalCents / 100, 'BRL'),
-                          style: const TextStyle(
+                          style: TextStyle(
                               fontFeatures: NexoTones.figures,
-                              fontWeight: FontWeight.w600))),
+                              fontWeight: NexoType.weight(
+                                  FontWeight.w800, FontWeight.w600)))),
               ]),
         ),
         Padding(
@@ -593,9 +598,10 @@ class _HistoryCard extends StatelessWidget {
                     width: 112,
                     child: Text(money(p.total),
                         textAlign: TextAlign.end,
-                        style: const TextStyle(
+                        style: TextStyle(
                             fontFeatures: NexoTones.figures,
-                            fontWeight: FontWeight.w500,
+                            fontWeight: NexoType.weight(
+                                FontWeight.w800, FontWeight.w500),
                             fontSize: 12))),
               ]),
             ),
@@ -727,7 +733,8 @@ class _CdiCardState extends State<_CdiCard> {
                     '${_money(context, result.difference.abs())} ${ahead ? 'acima' : 'abaixo'} do CDI',
                     style: TextStyle(
                         color: color,
-                        fontWeight: FontWeight.w600,
+                        fontWeight:
+                            NexoType.weight(FontWeight.w800, FontWeight.w600),
                         fontSize: 16))),
           ]),
         const SizedBox(height: 8),
@@ -789,11 +796,16 @@ class _PositionChange extends StatelessWidget {
                   size: 20,
                   color: color),
               Text(private ? '••••' : '$sign${_money(context, change.abs())}',
-                  style: TextStyle(color: color, fontWeight: FontWeight.w600)),
+                  style: TextStyle(
+                      color: color,
+                      fontWeight:
+                          NexoType.weight(FontWeight.w800, FontWeight.w600))),
               if (!private)
                 Text(percent,
-                    style:
-                        TextStyle(color: color, fontWeight: FontWeight.w600)),
+                    style: TextStyle(
+                        color: color,
+                        fontWeight:
+                            NexoType.weight(FontWeight.w700, FontWeight.w600))),
               Text(
                   private
                       ? 'Variação oculta'
@@ -847,11 +859,14 @@ class _PositionCard extends StatelessWidget {
                           style: Theme.of(context)
                               .textTheme
                               .titleMedium
-                              ?.copyWith(fontWeight: FontWeight.w600)),
+                              ?.copyWith(
+                                  fontWeight: NexoType.weight(
+                                      FontWeight.w800, FontWeight.w600))),
                     Text(p.investment.name,
                         style: TextStyle(
                             fontWeight: p.investment.ticker.isEmpty
-                                ? FontWeight.w600
+                                ? NexoType.weight(
+                                    FontWeight.w800, FontWeight.w600)
                                 : FontWeight.normal)),
                     Text(
                         '${p.investment.assetClass} · ${p.quantity == 0 ? 'Posição encerrada' : private ? '••••' : '${_quantity(p.quantity)} unidades'}',

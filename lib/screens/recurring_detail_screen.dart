@@ -11,6 +11,7 @@ import '../utils/finance_input.dart';
 import '../utils/snackbar.dart';
 import 'recurring_screen.dart';
 import '../widgets/nexo_ui.dart';
+import '../theme/nexo_type.dart';
 
 class RecurringDetailScreen extends StatefulWidget {
   final RecurringPayment recurring;
@@ -89,8 +90,9 @@ class _RecurringDetailScreenState extends State<RecurringDetailScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title:
-            Text(r.name, style: const TextStyle(fontWeight: FontWeight.w600)),
+        title: Text(r.name,
+            style: TextStyle(
+                fontWeight: NexoType.weight(FontWeight.w900, FontWeight.w600))),
         actions: [
           IconButton(
             tooltip: 'Editar',
@@ -146,8 +148,9 @@ class _RecurringDetailScreenState extends State<RecurringDetailScreen> {
                                     ? 'Vence hoje'
                                     : 'Em $days dia${days == 1 ? '' : 's'}',
                         style: TextStyle(
-                          fontWeight: FontWeight.w500,
-                          fontSize: 12,
+                          fontWeight:
+                              NexoType.weight(FontWeight.w800, FontWeight.w500),
+                          fontSize: NexoType.size(11, 12),
                           color: overdue ? cs.error : cs.primary,
                         ),
                       ),
@@ -160,7 +163,8 @@ class _RecurringDetailScreenState extends State<RecurringDetailScreen> {
                       ? money(r.nextActionAmount)
                       : 'Cronograma concluído',
                   style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                        fontWeight: FontWeight.w600,
+                        fontWeight:
+                            NexoType.weight(FontWeight.w900, FontWeight.w600),
                       ),
                 ),
                 const SizedBox(height: 4),
@@ -304,7 +308,7 @@ class _RecurringDetailScreenState extends State<RecurringDetailScreen> {
           Text(
             'Histórico',
             style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.w600,
+                  fontWeight: NexoType.weight(FontWeight.w900, FontWeight.w600),
                 ),
           ),
           const SizedBox(height: 8),
@@ -379,7 +383,9 @@ class _InfoTile extends StatelessWidget {
       title: Text(label, style: Theme.of(context).textTheme.labelMedium),
       subtitle: Text(
         value,
-        style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15),
+        style: TextStyle(
+            fontWeight: NexoType.weight(FontWeight.w800, FontWeight.w600),
+            fontSize: 15),
       ),
     );
   }
@@ -411,12 +417,14 @@ class _HistoryTile extends StatelessWidget {
               : installment
                   ? 'Parcela não paga'
                   : 'Ocorrência pulada',
-          style: const TextStyle(fontWeight: FontWeight.w600),
+          style: TextStyle(
+              fontWeight: NexoType.weight(FontWeight.w800, FontWeight.w600)),
         ),
         subtitle: Text(ptDate(entry.date)),
         trailing: Text(
           hide ? '••••' : formatAmount(entry.amount, entry.currency),
-          style: const TextStyle(fontWeight: FontWeight.w600),
+          style: TextStyle(
+              fontWeight: NexoType.weight(FontWeight.w900, FontWeight.w600)),
         ),
       ),
     );

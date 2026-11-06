@@ -7,6 +7,7 @@ import '../services/platform_capabilities.dart';
 import '../providers/app_provider.dart';
 import '../l10n/app_localizations.dart';
 import 'package:provider/provider.dart';
+import '../theme/nexo_type.dart';
 
 class BackupScreen extends StatefulWidget {
   const BackupScreen({super.key});
@@ -177,7 +178,8 @@ class _BackupScreenState extends State<BackupScreen> {
     return Scaffold(
       appBar: AppBar(
         title: Text(l10n.backup_backupRestore,
-            style: const TextStyle(fontWeight: FontWeight.w600)),
+            style: TextStyle(
+                fontWeight: NexoType.weight(FontWeight.w800, FontWeight.w600))),
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(20),
@@ -195,11 +197,13 @@ class _BackupScreenState extends State<BackupScreen> {
             Expanded(
                 child: Text(l10n.backup_whatsIncluded,
                     style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                        letterSpacing: NexoType.tracking(1),
                         color: cs.onSurface.withValues(alpha: 0.6)))),
             Text(l10n.backup_everythingAlways,
                 style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w500,
+                    fontSize: NexoType.size(11, 12),
+                    fontWeight:
+                        NexoType.weight(FontWeight.w700, FontWeight.w500),
                     color: cs.primary)),
           ]),
           const SizedBox(height: 8),
@@ -217,8 +221,9 @@ class _BackupScreenState extends State<BackupScreen> {
                             const SizedBox(width: 12),
                             Expanded(
                                 child: Text(r.label,
-                                    style: const TextStyle(
-                                        fontWeight: FontWeight.w500,
+                                    style: TextStyle(
+                                        fontWeight: NexoType.weight(
+                                            FontWeight.w600, FontWeight.w500),
                                         fontSize: 13))),
                             Container(
                               padding: const EdgeInsets.symmetric(
@@ -232,8 +237,9 @@ class _BackupScreenState extends State<BackupScreen> {
                                     ? l10n.backup_included
                                     : '${r.count}',
                                 style: TextStyle(
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.w500,
+                                    fontSize: NexoType.size(11, 12),
+                                    fontWeight: NexoType.weight(
+                                        FontWeight.w700, FontWeight.w500),
                                     color: cs.onPrimaryContainer),
                               ),
                             ),
@@ -249,17 +255,17 @@ class _BackupScreenState extends State<BackupScreen> {
             child: Text(
               l10n.backup_backupDescription,
               style: TextStyle(
-                  fontSize: 12, color: cs.onSurface.withValues(alpha: 0.55)),
+                  fontSize: NexoType.size(11.5, 12),
+                  color: cs.onSurface.withValues(alpha: 0.55)),
             ),
           ),
           const SizedBox(height: 20),
 
           // ── Create backup ──────────────────────────────────────────────
           Text(l10n.backup_createBackup,
-              style: Theme.of(context)
-                  .textTheme
-                  .labelMedium
-                  ?.copyWith(color: cs.onSurface.withValues(alpha: 0.6))),
+              style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                  letterSpacing: NexoType.tracking(1),
+                  color: cs.onSurface.withValues(alpha: 0.6))),
           const SizedBox(height: 8),
           Card(
               child: Padding(
@@ -280,8 +286,10 @@ class _BackupScreenState extends State<BackupScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(l10n.backup_saveAsJson,
-                        style: const TextStyle(
-                            fontWeight: FontWeight.w600, fontSize: 15)),
+                        style: TextStyle(
+                            fontWeight: NexoType.weight(
+                                FontWeight.w800, FontWeight.w600),
+                            fontSize: 15)),
                     Text(l10n.backup_exportsAllAppDataToA,
                         style: const TextStyle(fontSize: 12)),
                   ],
@@ -309,10 +317,9 @@ class _BackupScreenState extends State<BackupScreen> {
 
           // ── Restore backup ─────────────────────────────────────────────
           Text(l10n.backup_restoreBackup_,
-              style: Theme.of(context)
-                  .textTheme
-                  .labelMedium
-                  ?.copyWith(color: cs.onSurface.withValues(alpha: 0.6))),
+              style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                  letterSpacing: NexoType.tracking(1),
+                  color: cs.onSurface.withValues(alpha: 0.6))),
           const SizedBox(height: 8),
           Card(
               child: Padding(
@@ -333,8 +340,10 @@ class _BackupScreenState extends State<BackupScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(l10n.backup_loadFromJson,
-                        style: const TextStyle(
-                            fontWeight: FontWeight.w600, fontSize: 15)),
+                        style: TextStyle(
+                            fontWeight: NexoType.weight(
+                                FontWeight.w800, FontWeight.w600),
+                            fontSize: 15)),
                     Text(l10n.backup_picksABackupFileAndR,
                         style: TextStyle(
                             fontSize: 12,
@@ -361,13 +370,14 @@ class _BackupScreenState extends State<BackupScreen> {
                           Text(l10n.backup_thisOverwritesAllCur,
                               style: TextStyle(
                                   fontSize: 12,
-                                  fontWeight: FontWeight.w500,
+                                  fontWeight: NexoType.weight(
+                                      FontWeight.w700, FontWeight.w500),
                                   color: cs.onErrorContainer)),
                           const SizedBox(height: 2),
                           Text(
                             l10n.backup_restoreWarningText,
                             style: TextStyle(
-                                fontSize: 12,
+                                fontSize: NexoType.size(11, 12),
                                 color: cs.onErrorContainer
                                     .withValues(alpha: 0.75)),
                           ),
@@ -400,10 +410,9 @@ class _BackupScreenState extends State<BackupScreen> {
 
           // ── Import from Other Apps ─────────────────────────────────────────────
           Text(l10n.backup_importFromOtherApps,
-              style: Theme.of(context)
-                  .textTheme
-                  .labelMedium
-                  ?.copyWith(color: cs.onSurface.withValues(alpha: 0.6))),
+              style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                  letterSpacing: NexoType.tracking(1),
+                  color: cs.onSurface.withValues(alpha: 0.6))),
           const SizedBox(height: 8),
           Card(
               child: Padding(
@@ -424,8 +433,10 @@ class _BackupScreenState extends State<BackupScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(l10n.backup_importFromOtherApps,
-                        style: const TextStyle(
-                            fontWeight: FontWeight.w600, fontSize: 15)),
+                        style: TextStyle(
+                            fontWeight: NexoType.weight(
+                                FontWeight.w800, FontWeight.w600),
+                            fontSize: 15)),
                     Text(l10n.backup_importDescription,
                         style: TextStyle(
                             fontSize: 12,

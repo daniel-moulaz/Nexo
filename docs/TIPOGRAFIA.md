@@ -1,6 +1,6 @@
 # Tipografia do Nexo
 
-Regras do texto no app. `test/typography_test.dart` faz o build falhar quando elas são quebradas e `test/real_font_layout_test.dart` mede as telas com a fonte real.
+Regras do texto no **Windows**. O celular mantém o visual anterior, com títulos pesados, por escolha do dono: os valores dos dois ficam lado a lado em `NexoType` (`lib/theme/nexo_type.dart`), com o do celular primeiro. `test/typography_test.dart` faz o build falhar quando elas são quebradas e `test/real_font_layout_test.dart` mede as telas com a fonte real.
 
 ## Regras
 

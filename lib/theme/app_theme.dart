@@ -4,6 +4,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import '../services/platform_capabilities.dart';
+import 'nexo_type.dart';
 
 const Map<String, Color> kSeedColors = {
   'violet': Color(0xFF6750A4),
@@ -227,13 +228,28 @@ TextTheme _typeRamp(TextTheme t) {
   );
 }
 
+/// The phone's look: headlines carry money, heavy and with tabular figures.
+TextTheme _phoneType(TextTheme t) {
+  const figures = [FontFeature.tabularFigures()];
+  return t.copyWith(
+    headlineSmall: t.headlineSmall
+        ?.copyWith(fontWeight: FontWeight.w800, fontFeatures: figures),
+    headlineMedium: t.headlineMedium
+        ?.copyWith(fontWeight: FontWeight.w800, fontFeatures: figures),
+    headlineLarge: t.headlineLarge
+        ?.copyWith(fontWeight: FontWeight.w900, fontFeatures: figures),
+  );
+}
+
 ThemeData _base(ColorScheme cs, String appFont) {
   final baseTextTheme = ThemeData(brightness: cs.brightness).textTheme;
-  final fontTextTheme = _typeRamp(_applyFont(appFont, baseTextTheme));
+  final applied = _applyFont(appFont, baseTextTheme);
+  final phone = NexoType.phone;
+  final fontTextTheme = phone ? applied : _typeRamp(applied);
   return ThemeData(
     colorScheme: cs,
     useMaterial3: true,
-    textTheme: fontTextTheme,
+    textTheme: phone ? _phoneType(applied) : fontTextTheme,
     pageTransitionsTheme: const PageTransitionsTheme(builders: {
       TargetPlatform.android: CupertinoPageTransitionsBuilder(),
       TargetPlatform.iOS: CupertinoPageTransitionsBuilder(),
@@ -245,8 +261,8 @@ ThemeData _base(ColorScheme cs, String appFont) {
         scrolledUnderElevation: 0,
         backgroundColor: cs.surface,
         surfaceTintColor: Colors.transparent,
-        titleTextStyle:
-            fontTextTheme.titleLarge?.copyWith(color: cs.onSurface)),
+        titleTextStyle: fontTextTheme.titleLarge?.copyWith(
+            fontWeight: phone ? FontWeight.w900 : null, color: cs.onSurface)),
     navigationRailTheme: NavigationRailThemeData(
       backgroundColor: cs.surface,
       indicatorColor: cs.primaryContainer,
@@ -260,9 +276,13 @@ ThemeData _base(ColorScheme cs, String appFont) {
       indicatorShape: const StadiumBorder(),
       labelTextStyle: WidgetStateProperty.resolveWith((states) {
         final style = fontTextTheme.labelMedium ?? const TextStyle();
-        return states.contains(WidgetState.selected)
-            ? style.copyWith(fontWeight: FontWeight.w600)
+        final sized = phone
+            ? style.copyWith(fontSize: (style.fontSize ?? 12) - 1)
             : style;
+        return states.contains(WidgetState.selected)
+            ? sized.copyWith(
+                fontWeight: phone ? FontWeight.bold : FontWeight.w600)
+            : sized;
       }),
     ),
     cardTheme: CardThemeData(

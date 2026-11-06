@@ -12,6 +12,7 @@ import '../utils/finance_input.dart';
 import '../widgets/desktop_transaction_table.dart';
 import '../services/finance_rules.dart';
 import '../widgets/nexo_ui.dart';
+import '../theme/nexo_type.dart';
 import '../widgets/shared_widgets.dart' show CategoryDot;
 
 class TransactionSearchScreen extends StatefulWidget {
@@ -215,8 +216,9 @@ class _TransactionSearchScreenState extends State<TransactionSearchScreen> {
               onPressed: _filters,
               icon: const Icon(Icons.filter_alt_outlined))
         ],
-        title: const Text('Extrato',
-            style: TextStyle(fontWeight: FontWeight.w600)),
+        title: Text('Extrato',
+            style: TextStyle(
+                fontWeight: NexoType.weight(FontWeight.w900, FontWeight.w600))),
       ),
       body: Builder(
         builder: (context) {
@@ -535,8 +537,9 @@ class _DayList extends StatelessWidget {
             child: Row(children: [
               Expanded(
                   child: Text(_day(item),
-                      style: theme.textTheme.titleSmall
-                          ?.copyWith(fontWeight: FontWeight.w600))),
+                      style: theme.textTheme.titleSmall?.copyWith(
+                          fontWeight: NexoType.weight(
+                              FontWeight.w800, FontWeight.w600)))),
               if (!hidden && value != 0)
                 Text(
                     '${value > 0 ? '+' : '−'}${formatAmount(value.abs(), app.settings.currency)}',
@@ -614,7 +617,8 @@ class _DayList extends StatelessWidget {
                           ? '••••'
                           : '${income ? '+' : '-'}${formatAmount(tx.amount, currency)}',
                       style: TextStyle(
-                          fontWeight: FontWeight.w600,
+                          fontWeight:
+                              NexoType.weight(FontWeight.w800, FontWeight.w600),
                           color: color,
                           fontFeatures: NexoTones.figures)),
                 ),

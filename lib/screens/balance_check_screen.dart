@@ -10,6 +10,7 @@ import '../services/pluggy_inbox.dart';
 import '../widgets/analysis_widgets.dart';
 import '../widgets/nexo_ui.dart';
 import '../utils/finance_input.dart';
+import '../theme/nexo_type.dart';
 
 /// "Conferir com o banco": each Open Finance account against the Nexo
 /// account it is linked to, at the moment the bank was read. A difference
@@ -213,15 +214,17 @@ class _BankCard extends StatelessWidget {
               child: Text('${bank.bank} · ${bank.name}',
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(fontWeight: FontWeight.w600))),
+                  style: TextStyle(
+                      fontWeight:
+                          NexoType.weight(FontWeight.w700, FontWeight.w600)))),
         ]),
         const SizedBox(height: 8),
         Text(
             signed == null
                 ? 'O banco não informou o saldo.'
                 : '${bank.isCard ? 'Dívida no banco' : 'No banco'}: ${money(signed / 100)}',
-            style: const TextStyle(
-                fontWeight: FontWeight.w600,
+            style: TextStyle(
+                fontWeight: NexoType.weight(FontWeight.w800, FontWeight.w600),
                 fontSize: 16,
                 fontFeatures: NexoTones.figures)),
         Text(
@@ -302,14 +305,16 @@ class _CheckView extends StatelessWidget {
         Row(children: [
           Icon(Icons.check_circle, color: NexoTones.income(context)),
           const SizedBox(width: 6),
-          const Text('Bate com o banco',
-              style: TextStyle(fontWeight: FontWeight.w600)),
+          Text('Bate com o banco',
+              style: TextStyle(
+                  fontWeight:
+                      NexoType.weight(FontWeight.w700, FontWeight.w600))),
         ])
       else ...[
         Text(
             'Diferença: ${check.differenceCents > 0 ? '+' : '−'}${money(check.differenceCents.abs() / 100)}',
             style: TextStyle(
-                fontWeight: FontWeight.w600,
+                fontWeight: NexoType.weight(FontWeight.w800, FontWeight.w600),
                 color: NexoTones.warning(context))),
         const SizedBox(height: 6),
         FilledButton.tonalIcon(
@@ -356,15 +361,17 @@ class _GroupCard extends StatelessWidget {
           const SizedBox(width: 10),
           Expanded(
               child: Text('${account.name} · soma de ${banks.length} contas',
-                  style: const TextStyle(fontWeight: FontWeight.w600))),
+                  style: TextStyle(
+                      fontWeight:
+                          NexoType.weight(FontWeight.w700, FontWeight.w600)))),
         ]),
         const SizedBox(height: 4),
         Text(banks.map((b) => b.bank).toSet().join(' + '), style: small),
         const SizedBox(height: 8),
         if (combined != null)
           Text('Nos bancos: ${money(combined.balanceCents! / 100)}',
-              style: const TextStyle(
-                  fontWeight: FontWeight.w600,
+              style: TextStyle(
+                  fontWeight: NexoType.weight(FontWeight.w800, FontWeight.w600),
                   fontSize: 16,
                   fontFeatures: NexoTones.figures)),
         if (combined?.bankUpdatedAt != null)

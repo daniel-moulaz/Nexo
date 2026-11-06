@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../services/nexo_security.dart';
 import '../services/platform_capabilities.dart';
+import '../theme/nexo_type.dart';
 
 class SecuritySettingsScreen extends StatefulWidget {
   const SecuritySettingsScreen({super.key});
@@ -116,8 +117,10 @@ class _SecuritySettingsScreenState extends State<SecuritySettingsScreen> {
   Widget build(BuildContext context) => Scaffold(
       appBar: AppBar(title: const Text('Segurança')),
       body: ListView(padding: const EdgeInsets.all(16), children: [
-        const Text('Bloqueio do Nexo',
-            style: TextStyle(fontSize: 22, fontWeight: FontWeight.w600)),
+        Text('Bloqueio do Nexo',
+            style: TextStyle(
+                fontSize: 22,
+                fontWeight: NexoType.weight(FontWeight.bold, FontWeight.w600))),
         Text(PlatformCapabilities.windows
             ? 'PIN local de 6 dígitos. A proteção fica no armazenamento seguro do seu usuário Windows e não entra no backup financeiro. O PIN bloqueia a interface; o arquivo SQLite não é criptografado por ele.'
             : 'Biometria ou bloqueio do Android, com PIN de 6 dígitos do Nexo como alternativa. Segredos ficam protegidos no aparelho e não entram no backup financeiro.'),

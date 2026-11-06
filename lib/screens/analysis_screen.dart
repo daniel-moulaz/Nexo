@@ -13,6 +13,7 @@ import 'net_worth_screen.dart';
 import 'finance_export_screen.dart';
 import '../services/merchant_breakdown.dart';
 import '../widgets/nexo_sankey.dart';
+import '../theme/nexo_type.dart';
 
 FinancialAnalysis analyzePeriod(AppProvider app, AnalysisFilter filter) =>
     FinancialAnalysis(
@@ -382,9 +383,10 @@ class _AnalysisScreenState extends State<AnalysisScreen> {
                     subtitle: Text(
                         '${l.count}× · ${app.categoryById(l.categoryId)?.name ?? 'Sem categoria'}'),
                     trailing: Text(money(l.total),
-                        style: const TextStyle(
+                        style: TextStyle(
                             fontFeatures: NexoTones.figures,
-                            fontWeight: FontWeight.w600))),
+                            fontWeight: NexoType.weight(
+                                FontWeight.w800, FontWeight.w600)))),
             ]);
           })),
       AnalysisCard(

@@ -12,6 +12,7 @@ import 'recurring_detail_screen.dart';
 import 'agenda_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../services/subscription_detector.dart';
+import '../theme/nexo_type.dart';
 
 class RecurringScreen extends StatefulWidget {
   const RecurringScreen({super.key});
@@ -82,10 +83,9 @@ class _RecurringScreenState extends State<RecurringScreen>
               const SizedBox(width: 8),
               Expanded(
                   child: Text('Possíveis assinaturas',
-                      style: Theme.of(context)
-                          .textTheme
-                          .titleMedium
-                          ?.copyWith(fontWeight: FontWeight.w600))),
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                          fontWeight: NexoType.weight(
+                              FontWeight.w800, FontWeight.w600)))),
             ]),
             const SizedBox(height: 4),
             const Text(
@@ -480,7 +480,9 @@ class _RecurringTile extends StatelessWidget {
                           recurring.name,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(fontWeight: FontWeight.w600),
+                          style: TextStyle(
+                              fontWeight: NexoType.weight(
+                                  FontWeight.w900, FontWeight.w600)),
                         ),
                         const SizedBox(height: 2),
                         Text(
@@ -513,7 +515,9 @@ class _RecurringTile extends StatelessWidget {
                                 ? '••••'
                                 : formatAmount(
                                     recurring.nextActionAmount, currency),
-                            style: const TextStyle(fontWeight: FontWeight.w600),
+                            style: TextStyle(
+                                fontWeight: NexoType.weight(
+                                    FontWeight.w900, FontWeight.w600)),
                           ),
                         ),
                         Text(
@@ -526,7 +530,8 @@ class _RecurringTile extends StatelessWidget {
                               .labelSmall
                               ?.copyWith(
                                 color: overdue ? cs.error : cs.onSurfaceVariant,
-                                fontWeight: FontWeight.w600,
+                                fontWeight: NexoType.weight(
+                                    FontWeight.w700, FontWeight.w600),
                               ),
                         ),
                       ],
@@ -936,7 +941,8 @@ class _RecurringEditorState extends State<_RecurringEditor> {
                     child: Text(
                       isEdit ? 'Editar recorrente' : 'Novo recorrente',
                       style: theme.textTheme.titleLarge?.copyWith(
-                        fontWeight: FontWeight.w600,
+                        fontWeight:
+                            NexoType.weight(FontWeight.w900, FontWeight.w600),
                       ),
                     ),
                   ),
@@ -1100,8 +1106,9 @@ class _RecurringEditorState extends State<_RecurringEditor> {
                   const SizedBox(height: 8),
                   Text(
                     'Conta',
-                    style: theme.textTheme.titleSmall
-                        ?.copyWith(fontWeight: FontWeight.w600),
+                    style: theme.textTheme.titleSmall?.copyWith(
+                        fontWeight:
+                            NexoType.weight(FontWeight.w900, FontWeight.w600)),
                   ),
                   const SizedBox(height: 6),
                   if (accounts.isEmpty)
@@ -1136,8 +1143,9 @@ class _RecurringEditorState extends State<_RecurringEditor> {
                   const SizedBox(height: 14),
                   Text(
                     'Categoria',
-                    style: theme.textTheme.titleSmall
-                        ?.copyWith(fontWeight: FontWeight.w600),
+                    style: theme.textTheme.titleSmall?.copyWith(
+                        fontWeight:
+                            NexoType.weight(FontWeight.w900, FontWeight.w600)),
                   ),
                   const SizedBox(height: 6),
                   if (categories.isEmpty)
@@ -1183,7 +1191,9 @@ class _RecurringEditorState extends State<_RecurringEditor> {
                       title: const Text('Horário do lembrete'),
                       trailing: Text(
                         _reminderTime.format(context),
-                        style: const TextStyle(fontWeight: FontWeight.w600),
+                        style: TextStyle(
+                            fontWeight: NexoType.weight(
+                                FontWeight.w900, FontWeight.w600)),
                       ),
                       onTap: () async {
                         final picked = await showTimePicker(

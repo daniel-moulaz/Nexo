@@ -13,6 +13,7 @@ import '../services/ofx_parser.dart';
 import '../utils/finance_input.dart';
 import '../services/import_rules_service.dart';
 import 'import_rules_screen.dart';
+import '../theme/nexo_type.dart';
 
 class StatementImportScreen extends StatefulWidget {
   const StatementImportScreen({super.key});
@@ -477,18 +478,17 @@ class _StatementImportScreenState extends State<StatementImportScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Importar extrato',
-            style: TextStyle(fontWeight: FontWeight.w600)),
+        title: Text('Importar extrato',
+            style: TextStyle(
+                fontWeight: NexoType.weight(FontWeight.w800, FontWeight.w600))),
       ),
       body: ListView(
         padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
         children: [
           Text(
             'Mercado Pago, Nubank, CSV e OFX',
-            style: Theme.of(context)
-                .textTheme
-                .titleLarge
-                ?.copyWith(fontWeight: FontWeight.w600),
+            style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                fontWeight: NexoType.weight(FontWeight.w900, FontWeight.w600)),
           ),
           const SizedBox(height: 6),
           const Text(
@@ -539,13 +539,17 @@ class _StatementImportScreenState extends State<StatementImportScreen> {
           if (_message != null) ...[
             const SizedBox(height: 12),
             Text(_message!,
-                style: const TextStyle(fontWeight: FontWeight.w600)),
+                style: TextStyle(
+                    fontWeight:
+                        NexoType.weight(FontWeight.w700, FontWeight.w600))),
           ],
           if (_rows.isNotEmpty) ...[
             const SizedBox(height: 18),
             Text(
               'Prévia (${_rows.where((e) => e.selected).length} selecionados)',
-              style: const TextStyle(fontWeight: FontWeight.w600),
+              style: TextStyle(
+                  fontWeight:
+                      NexoType.weight(FontWeight.w800, FontWeight.w600)),
             ),
             const SizedBox(height: 8),
             ..._rows.map(
@@ -576,7 +580,8 @@ class _StatementImportScreenState extends State<StatementImportScreen> {
                   child: Text(
                       '${row.type == 'income' ? '+' : '-'} R\$ ${row.amount.toStringAsFixed(2).replaceAll('.', ',')}',
                       style: TextStyle(
-                          fontWeight: FontWeight.w600,
+                          fontWeight:
+                              NexoType.weight(FontWeight.w800, FontWeight.w600),
                           color: row.type == 'expense'
                               ? Theme.of(context).colorScheme.error
                               : Colors.green)),

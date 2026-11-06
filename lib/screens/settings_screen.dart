@@ -11,6 +11,7 @@ import 'package:package_info_plus/package_info_plus.dart';
 import 'reminder_settings_screen.dart';
 import 'security_settings_screen.dart';
 import '../services/platform_capabilities.dart';
+import '../theme/nexo_type.dart';
 
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
@@ -25,7 +26,8 @@ class SettingsScreen extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(
         title: Text(l10n.settings_title,
-            style: const TextStyle(fontWeight: FontWeight.w600)),
+            style: TextStyle(
+                fontWeight: NexoType.weight(FontWeight.w800, FontWeight.w600))),
       ),
       body: SafeArea(
           bottom: true,
@@ -71,8 +73,9 @@ class SettingsScreen extends StatelessWidget {
                                   color: cs.primary, size: 20),
                               const SizedBox(width: 10),
                               Text(l10n.settings_theme,
-                                  style: const TextStyle(
-                                      fontWeight: FontWeight.w600,
+                                  style: TextStyle(
+                                      fontWeight: NexoType.weight(
+                                          FontWeight.w700, FontWeight.w600),
                                       fontSize: 14)),
                             ]),
                             const SizedBox(height: 10),
@@ -119,8 +122,10 @@ class SettingsScreen extends StatelessWidget {
                       secondary: Icon(Icons.format_paint_outlined,
                           color: cs.primary, size: 20),
                       title: Text(l10n.settings_dynamicColor,
-                          style: const TextStyle(
-                              fontWeight: FontWeight.w600, fontSize: 14)),
+                          style: TextStyle(
+                              fontWeight: NexoType.weight(
+                                  FontWeight.w700, FontWeight.w600),
+                              fontSize: 14)),
                       subtitle: Text(l10n.settings_dynamicColorSubtitle,
                           style: TextStyle(
                               fontSize: 12,
@@ -140,8 +145,10 @@ class SettingsScreen extends StatelessWidget {
                         secondary: Icon(Icons.contrast_outlined,
                             color: cs.primary, size: 20),
                         title: Text(l10n.settings_amoledTitle,
-                            style: const TextStyle(
-                                fontWeight: FontWeight.w600, fontSize: 14)),
+                            style: TextStyle(
+                                fontWeight: NexoType.weight(
+                                    FontWeight.w700, FontWeight.w600),
+                                fontSize: 14)),
                         subtitle: Text(l10n.settings_amoledSubtitle,
                             style: TextStyle(
                                 fontSize: 12,
@@ -173,8 +180,10 @@ class SettingsScreen extends StatelessWidget {
                                           CrossAxisAlignment.start,
                                       children: [
                                         Text(l10n.settings_accentColor,
-                                            style: const TextStyle(
-                                                fontWeight: FontWeight.w600,
+                                            style: TextStyle(
+                                                fontWeight: NexoType.weight(
+                                                    FontWeight.w700,
+                                                    FontWeight.w600),
                                                 fontSize: 14)),
                                         Text(
                                             kSeedLabels[s.themeSeed] ??
@@ -243,8 +252,9 @@ class SettingsScreen extends StatelessWidget {
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Text(l10n.settings_appFont,
-                                      style: const TextStyle(
-                                          fontWeight: FontWeight.w600,
+                                      style: TextStyle(
+                                          fontWeight: NexoType.weight(
+                                              FontWeight.w700, FontWeight.w600),
                                           fontSize: 14)),
                                   Text(
                                       PlatformCapabilities.windows
@@ -285,7 +295,8 @@ class SettingsScreen extends StatelessWidget {
                                         style: TextStyle(
                                           fontSize: 13,
                                           fontWeight: sel
-                                              ? FontWeight.w600
+                                              ? NexoType.weight(FontWeight.w700,
+                                                  FontWeight.w600)
                                               : FontWeight.w400,
                                           color:
                                               sel ? cs.onPrimary : cs.onSurface,
@@ -306,8 +317,10 @@ class SettingsScreen extends StatelessWidget {
                     leading:
                         Icon(Icons.monetization_on_outlined, color: cs.primary),
                     title: Text(l10n.settings_defaultCurrency,
-                        style: const TextStyle(
-                            fontWeight: FontWeight.w600, fontSize: 14)),
+                        style: TextStyle(
+                            fontWeight: NexoType.weight(
+                                FontWeight.w700, FontWeight.w600),
+                            fontSize: 14)),
                     subtitle: Text(
                         '${currencyInfo(s.currency).name} (${currencyInfo(s.currency).symbol})',
                         style: TextStyle(
@@ -336,8 +349,10 @@ class SettingsScreen extends StatelessWidget {
                       leading:
                           Icon(Icons.date_range_outlined, color: cs.primary),
                       title: Text(l10n.settings_weekStartsOn,
-                          style: const TextStyle(
-                              fontWeight: FontWeight.w600, fontSize: 14)),
+                          style: TextStyle(
+                              fontWeight: NexoType.weight(
+                                  FontWeight.w700, FontWeight.w600),
+                              fontSize: 14)),
                       trailing: DropdownButton<String>(
                         value: s.weekStart,
                         underline: const SizedBox(),
@@ -360,8 +375,10 @@ class SettingsScreen extends StatelessWidget {
                       secondary: Icon(Icons.visibility_off_outlined,
                           color: cs.primary),
                       title: Text(l10n.settings_hideBalance,
-                          style: const TextStyle(
-                              fontWeight: FontWeight.w600, fontSize: 14)),
+                          style: TextStyle(
+                              fontWeight: NexoType.weight(
+                                  FontWeight.w700, FontWeight.w600),
+                              fontSize: 14)),
                       subtitle: Text(l10n.settings_hideBalanceSubtitle),
                       value: s.hideBalance,
                       onChanged: (v) {
@@ -374,8 +391,10 @@ class SettingsScreen extends StatelessWidget {
                       secondary: Icon(Icons.notifications_active_outlined,
                           color: cs.primary),
                       title: Text(l10n.settings_budgetAlerts,
-                          style: const TextStyle(
-                              fontWeight: FontWeight.w600, fontSize: 14)),
+                          style: TextStyle(
+                              fontWeight: NexoType.weight(
+                                  FontWeight.w700, FontWeight.w600),
+                              fontSize: 14)),
                       subtitle: Text(PlatformCapabilities.scheduledNotifications
                           ? 'Avisar quando um orçamento ou objetivo atingir o limite'
                           : 'Disponível no Android'),
@@ -392,8 +411,10 @@ class SettingsScreen extends StatelessWidget {
                       secondary:
                           Icon(Icons.access_time_rounded, color: cs.primary),
                       title: Text(l10n.settings_dailyReminder,
-                          style: const TextStyle(
-                              fontWeight: FontWeight.w600, fontSize: 14)),
+                          style: TextStyle(
+                              fontWeight: NexoType.weight(
+                                  FontWeight.w700, FontWeight.w600),
+                              fontSize: 14)),
                       subtitle: Text(PlatformCapabilities.scheduledNotifications
                           ? 'Lembrete diário para registrar lançamentos'
                           : 'Disponível no Android'),
@@ -414,7 +435,8 @@ class SettingsScreen extends StatelessWidget {
                         trailing: Text(s.dailyReminderTime,
                             style: TextStyle(
                                 color: cs.primary,
-                                fontWeight: FontWeight.w600)),
+                                fontWeight: NexoType.weight(
+                                    FontWeight.bold, FontWeight.w600))),
                         onTap: () async {
                           final initial = TimeOfDay(
                             hour: int.tryParse(
@@ -439,8 +461,10 @@ class SettingsScreen extends StatelessWidget {
                       secondary:
                           Icon(Icons.vibration_rounded, color: cs.primary),
                       title: Text(l10n.settings_hapticFeedback,
-                          style: const TextStyle(
-                              fontWeight: FontWeight.w600, fontSize: 14)),
+                          style: TextStyle(
+                              fontWeight: NexoType.weight(
+                                  FontWeight.w700, FontWeight.w600),
+                              fontSize: 14)),
                       subtitle: const Text('Vibrate on interactions'),
                       value: s.hapticsEnabled,
                       onChanged: (v) {
@@ -460,8 +484,10 @@ class SettingsScreen extends StatelessWidget {
                     leading:
                         Icon(Icons.person_outline_rounded, color: cs.primary),
                     title: Text(l10n.settings_displayName,
-                        style: const TextStyle(
-                            fontWeight: FontWeight.w600, fontSize: 14)),
+                        style: TextStyle(
+                            fontWeight: NexoType.weight(
+                                FontWeight.w700, FontWeight.w600),
+                            fontSize: 14)),
                     subtitle: Text(
                         s.userName.isNotEmpty
                             ? s.userName
@@ -482,7 +508,9 @@ class SettingsScreen extends StatelessWidget {
                       leading:
                           Icon(Icons.info_outline_rounded, color: cs.primary),
                       title: Text(l10n.settings_version,
-                          style: const TextStyle(fontWeight: FontWeight.w600)),
+                          style: TextStyle(
+                              fontWeight: NexoType.weight(
+                                  FontWeight.w700, FontWeight.w600))),
                       trailing: FutureBuilder<PackageInfo>(
                         future: PackageInfo.fromPlatform(),
                         builder: (context, snapshot) {
@@ -498,7 +526,8 @@ class SettingsScreen extends StatelessWidget {
                             child: Text(versionText,
                                 style: TextStyle(
                                     fontSize: 12,
-                                    fontWeight: FontWeight.w500,
+                                    fontWeight: NexoType.weight(
+                                        FontWeight.w700, FontWeight.w500),
                                     color: cs.primary)),
                           );
                         },
@@ -508,7 +537,9 @@ class SettingsScreen extends StatelessWidget {
                     ListTile(
                       leading: Icon(Icons.shield_outlined, color: cs.primary),
                       title: Text(l10n.settings_privacy,
-                          style: const TextStyle(fontWeight: FontWeight.w600)),
+                          style: TextStyle(
+                              fontWeight: NexoType.weight(
+                                  FontWeight.w700, FontWeight.w600))),
                       subtitle: Text(l10n.settings_privacySubtitle),
                       trailing: const Icon(Icons.check_circle_outline,
                           color: Color(0xFF2E7D32)),
@@ -517,7 +548,9 @@ class SettingsScreen extends StatelessWidget {
                     ListTile(
                       leading: Icon(Icons.code_rounded, color: cs.primary),
                       title: Text(l10n.settings_github,
-                          style: const TextStyle(fontWeight: FontWeight.w600)),
+                          style: TextStyle(
+                              fontWeight: NexoType.weight(
+                                  FontWeight.w700, FontWeight.w600))),
                       subtitle: Text(l10n.settings_githubSubtitle),
                       trailing: Icon(Icons.open_in_new_rounded,
                           size: 18, color: cs.onSurface.withValues(alpha: 0.4)),
@@ -535,7 +568,9 @@ class SettingsScreen extends StatelessWidget {
                       leading:
                           Icon(Icons.person_outline_rounded, color: cs.primary),
                       title: Text(l10n.settings_developer,
-                          style: const TextStyle(fontWeight: FontWeight.w600)),
+                          style: TextStyle(
+                              fontWeight: NexoType.weight(
+                                  FontWeight.w700, FontWeight.w600))),
                       subtitle: Text(l10n.settings_developerSubtitle),
                       trailing: Icon(Icons.open_in_new_rounded,
                           size: 18, color: cs.onSurface.withValues(alpha: 0.4)),
@@ -544,8 +579,9 @@ class SettingsScreen extends StatelessWidget {
                           context: context,
                           builder: (ctx) => AlertDialog(
                             title: Text(l10n.settings_developer,
-                                style: const TextStyle(
-                                    fontWeight: FontWeight.w600)),
+                                style: TextStyle(
+                                    fontWeight: NexoType.weight(
+                                        FontWeight.w700, FontWeight.w600))),
                             contentPadding:
                                 const EdgeInsets.only(top: 16, bottom: 8),
                             content: Column(
@@ -664,7 +700,8 @@ class _ThemeCard extends StatelessWidget {
             Text(label,
                 style: TextStyle(
                     fontSize: 12,
-                    fontWeight: FontWeight.w500,
+                    fontWeight:
+                        NexoType.weight(FontWeight.w700, FontWeight.w500),
                     color: sel ? Colors.white : cs.onSurface)),
           ]),
         ),

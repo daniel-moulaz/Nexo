@@ -62,6 +62,13 @@ void main() {
           .then((b) => ByteData.view(b.buffer)));
     }
     await loader.load();
+    final roboto = FontLoader('Roboto');
+    for (final weight in const ['Regular', 'Medium', 'SemiBold', 'Bold']) {
+      roboto.addFont(File('assets/fonts/Inter/Inter-$weight.ttf')
+          .readAsBytes()
+          .then((b) => ByteData.view(b.buffer)));
+    }
+    await roboto.load();
     await DBHelper.database;
     await seedDemoInvestments();
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger

@@ -17,6 +17,7 @@ import '../widgets/android_feature_notice.dart';
 import '../services/category_memory.dart';
 import '../services/subscription_detector.dart';
 import 'recurring_screen.dart';
+import '../theme/nexo_type.dart';
 
 class NotificationInboxScreen extends StatefulWidget {
   const NotificationInboxScreen({super.key});
@@ -241,10 +242,13 @@ class _NotificationInboxScreenState extends State<NotificationInboxScreen>
                   child: Text(hidden ? 'Movimentação' : mv.description,
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(fontWeight: FontWeight.w600))),
+                      style: TextStyle(
+                          fontWeight: NexoType.weight(
+                              FontWeight.w700, FontWeight.w600)))),
               Text('${income ? '+' : '−'}${money(mv.amountCents)}',
                   style: TextStyle(
-                      fontWeight: FontWeight.w600,
+                      fontWeight:
+                          NexoType.weight(FontWeight.w800, FontWeight.w600),
                       color: income
                           ? NexoTones.income(context)
                           : NexoTones.expense(context))),

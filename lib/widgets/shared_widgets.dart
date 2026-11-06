@@ -9,6 +9,7 @@ import 'package:provider/provider.dart';
 import 'package:shimmer/shimmer.dart';
 import '../providers/app_provider.dart';
 import 'nexo_ui.dart';
+import '../theme/nexo_type.dart';
 
 // ── Empty state ───────────────────────────────────────────────────────────────
 class EmptyState extends StatelessWidget {
@@ -139,9 +140,15 @@ class SectionHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Padding(
         padding: const EdgeInsets.fromLTRB(4, 16, 0, 6),
-        child: Text(title,
-            style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                color: Theme.of(context).colorScheme.onSurfaceVariant)),
+        child: NexoType.phone
+            ? Text(title.toUpperCase(),
+                style: NexoType.phoneSection(Theme.of(context)
+                    .colorScheme
+                    .onSurface
+                    .withValues(alpha: 0.5)))
+            : Text(title,
+                style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                    color: Theme.of(context).colorScheme.onSurfaceVariant)),
       );
 }
 
@@ -338,15 +345,16 @@ class AccountCardPicker extends StatelessWidget {
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w500,
+                          fontSize: NexoType.size(11, 12),
+                          fontWeight:
+                              NexoType.weight(FontWeight.w700, FontWeight.w500),
                           color: sel ? Colors.white : color)),
                   Text(formatAmount(acc.balance, acc.currency),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
                           fontFeatures: NexoTones.figures,
-                          fontSize: 12,
+                          fontSize: NexoType.size(9, 12),
                           color: sel
                               ? Colors.white.withValues(alpha: 0.8)
                               : cs.onSurface.withValues(alpha: 0.5))),
@@ -390,8 +398,8 @@ class _NoneCard extends StatelessWidget {
           const SizedBox(height: 4),
           Text(l10n.shared_widgets_none,
               style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w500,
+                  fontSize: NexoType.size(11, 12),
+                  fontWeight: NexoType.weight(FontWeight.w600, FontWeight.w500),
                   color:
                       sel ? cs.primary : cs.onSurface.withValues(alpha: 0.6))),
         ]),
@@ -443,7 +451,8 @@ class CategoryChipPicker extends StatelessWidget {
                 Text(cat.name,
                     style: TextStyle(
                         fontSize: 12,
-                        fontWeight: FontWeight.w500,
+                        fontWeight:
+                            NexoType.weight(FontWeight.w600, FontWeight.w500),
                         color: sel ? Colors.white : color)),
               ]),
             ),
@@ -569,8 +578,10 @@ Future<String?> showCurrencyPicker(BuildContext context,
                     .map((cur) => ListTile(
                           dense: true,
                           leading: Text(cur.symbol,
-                              style: const TextStyle(
-                                  fontWeight: FontWeight.w600, fontSize: 16)),
+                              style: TextStyle(
+                                  fontWeight: NexoType.weight(
+                                      FontWeight.w800, FontWeight.w600),
+                                  fontSize: 16)),
                           title: Text('${cur.code} — ${cur.name}'),
                           selected: current == cur.code,
                           selectedColor: Theme.of(ctx).colorScheme.primary,
@@ -695,7 +706,7 @@ class _TypeOptionCard extends StatelessWidget {
             Text(label,
                 style: TextStyle(
                   color: color,
-                  fontWeight: FontWeight.w600,
+                  fontWeight: NexoType.weight(FontWeight.w700, FontWeight.w600),
                   fontSize: 16,
                 )),
           ],

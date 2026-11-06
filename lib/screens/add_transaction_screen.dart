@@ -14,6 +14,7 @@ import '../services/entry_defaults.dart';
 import '../services/category_memory.dart';
 import '../services/receipt_scan.dart';
 import '../utils/snackbar.dart';
+import '../theme/nexo_type.dart';
 
 class AddTransactionScreen extends StatefulWidget {
   final AppTransaction? existing;
@@ -497,7 +498,9 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
                           ? 'Editar receita'
                           : 'Editar despesa')
                       : (_type == 'income' ? 'Nova receita' : 'Nova despesa'),
-                  style: const TextStyle(fontWeight: FontWeight.w600),
+                  style: TextStyle(
+                      fontWeight:
+                          NexoType.weight(FontWeight.w900, FontWeight.w600)),
                 ),
                 actions: [
                   if (!isEdit && ReceiptScan.available)
@@ -596,7 +599,8 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
                             Text(
                               currencyInfo(effectiveCurrency).symbol,
                               style: theme.textTheme.headlineSmall?.copyWith(
-                                fontWeight: FontWeight.w600,
+                                fontWeight: NexoType.weight(
+                                    FontWeight.w900, FontWeight.w600),
                               ),
                             ),
                             const SizedBox(width: 8),
@@ -616,7 +620,8 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
                                   contentPadding: EdgeInsets.zero,
                                 ),
                                 style: theme.textTheme.headlineMedium?.copyWith(
-                                  fontWeight: FontWeight.w600,
+                                  fontWeight: NexoType.weight(
+                                      FontWeight.w900, FontWeight.w600),
                                 ),
                                 onChanged: (_) => setState(() {}),
                               ),
@@ -640,7 +645,9 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
                           Text(
                             'Informe um valor maior que zero.',
                             style: TextStyle(
-                                color: cs.error, fontWeight: FontWeight.w600),
+                                color: cs.error,
+                                fontWeight: NexoType.weight(
+                                    FontWeight.w700, FontWeight.w600)),
                           ),
                       ],
                     ),
@@ -795,8 +802,9 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
                   if (subcategories.isNotEmpty) ...[
                     const SizedBox(height: 16),
                     Text('Subcategoria',
-                        style: theme.textTheme.titleSmall
-                            ?.copyWith(fontWeight: FontWeight.w600)),
+                        style: theme.textTheme.titleSmall?.copyWith(
+                            fontWeight: NexoType.weight(
+                                FontWeight.w900, FontWeight.w600))),
                     const SizedBox(height: 8),
                     Wrap(
                       spacing: 8,
@@ -994,7 +1002,10 @@ class _SectionTitle extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(title, style: const TextStyle(fontWeight: FontWeight.w600)),
+              Text(title,
+                  style: TextStyle(
+                      fontWeight:
+                          NexoType.weight(FontWeight.w900, FontWeight.w600))),
               const SizedBox(height: 2),
               Text(subtitle, style: Theme.of(context).textTheme.bodySmall),
             ],
@@ -1083,7 +1094,9 @@ class _DateTile extends StatelessWidget {
                   Text(title, style: Theme.of(context).textTheme.labelSmall),
                   const SizedBox(height: 2),
                   Text(ptDate(date),
-                      style: const TextStyle(fontWeight: FontWeight.w600)),
+                      style: TextStyle(
+                          fontWeight: NexoType.weight(
+                              FontWeight.w900, FontWeight.w600))),
                 ],
               ),
             ),

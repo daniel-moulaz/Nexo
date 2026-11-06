@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../widgets/nexo_ui.dart';
+import '../theme/nexo_type.dart';
 
 /// What a day of the month carries: money in, money out, how many items.
 class DayLoad {
@@ -46,8 +47,8 @@ class NexoMonthGrid extends StatelessWidget {
       cells.add(Center(
           child: Text(n,
               style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w500,
+                  fontSize: NexoType.size(11, 12),
+                  fontWeight: NexoType.weight(FontWeight.w700, FontWeight.w500),
                   color: cs.onSurfaceVariant))));
     }
     for (var i = 0; i < lead; i++) {
@@ -86,8 +87,8 @@ class NexoMonthGrid extends StatelessWidget {
                   style: TextStyle(
                       fontSize: 12,
                       fontWeight: isToday || isSelected
-                          ? FontWeight.w500
-                          : FontWeight.w500,
+                          ? NexoType.weight(FontWeight.w900, FontWeight.w500)
+                          : NexoType.weight(FontWeight.w600, FontWeight.w500),
                       color:
                           isSelected ? cs.onPrimaryContainer : cs.onSurface)),
               if (busy && !hidden) ...[
@@ -95,16 +96,18 @@ class NexoMonthGrid extends StatelessWidget {
                   FittedBox(
                       child: Text('−${_short(load.expense)}',
                           style: TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w500,
+                              fontSize: NexoType.size(9.5, 12),
+                              fontWeight: NexoType.weight(
+                                  FontWeight.w700, FontWeight.w500),
                               color: NexoTones.expense(context),
                               fontFeatures: NexoTones.figures))),
                 if (load.income > 0)
                   FittedBox(
                       child: Text('+${_short(load.income)}',
                           style: TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w500,
+                              fontSize: NexoType.size(9.5, 12),
+                              fontWeight: NexoType.weight(
+                                  FontWeight.w700, FontWeight.w500),
                               color: NexoTones.income(context),
                               fontFeatures: NexoTones.figures))),
               ] else if (busy)

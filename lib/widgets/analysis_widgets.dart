@@ -4,6 +4,7 @@ import '../providers/app_provider.dart';
 import 'nexo_ui.dart';
 import '../services/financial_analysis.dart';
 import '../theme/app_theme.dart';
+import '../theme/nexo_type.dart';
 
 String analysisMoney(AppProvider app, double value) => app.settings.hideBalance
     ? '••••'
@@ -22,10 +23,9 @@ class AnalysisCard extends StatelessWidget {
         Row(children: [
           Expanded(
               child: Text(title,
-                  style: Theme.of(context)
-                      .textTheme
-                      .titleMedium
-                      ?.copyWith(fontWeight: FontWeight.w600))),
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      fontWeight:
+                          NexoType.weight(FontWeight.w800, FontWeight.w600)))),
           if (action != null) action!
         ]),
         const SizedBox(height: 12),
@@ -58,7 +58,9 @@ class AnalysisMetrics extends StatelessWidget {
                           style: Theme.of(context)
                               .textTheme
                               .titleLarge
-                              ?.copyWith(fontWeight: FontWeight.w600))
+                              ?.copyWith(
+                                  fontWeight: NexoType.weight(
+                                      FontWeight.w700, FontWeight.w600)))
                     ]))
         ]);
       });

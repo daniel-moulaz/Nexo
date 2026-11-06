@@ -10,6 +10,7 @@ import '../theme/app_theme.dart';
 import '../widgets/shared_widgets.dart';
 import '../utils/haptics.dart';
 import '../widgets/nexo_ui.dart';
+import '../theme/nexo_type.dart';
 
 class AssetsScreen extends StatelessWidget {
   const AssetsScreen({super.key});
@@ -33,7 +34,8 @@ class AssetsScreen extends StatelessWidget {
               }),
         ],
         title: Text(l10n.assets_assets,
-            style: const TextStyle(fontWeight: FontWeight.w600)),
+            style: TextStyle(
+                fontWeight: NexoType.weight(FontWeight.w800, FontWeight.w600))),
       ),
       body: Column(children: [
         // ── Summary card ────────────────────────────────────────────────
@@ -133,14 +135,16 @@ class _AssetCard extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(asset.name,
-                  style: const TextStyle(
-                      fontWeight: FontWeight.w600, fontSize: 15)),
+                  style: TextStyle(
+                      fontWeight:
+                          NexoType.weight(FontWeight.w700, FontWeight.w600),
+                      fontSize: 15)),
               if (asset.notes.isNotEmpty)
                 Text(asset.notes,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
-                        fontSize: 12,
+                        fontSize: NexoType.size(11, 12),
                         color: cs.onSurface.withValues(alpha: 0.5))),
             ],
           )),
@@ -148,17 +152,18 @@ class _AssetCard extends StatelessWidget {
           Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
             Text(
               formatAmount(asset.value, asset.currency),
-              style: const TextStyle(
+              style: TextStyle(
                   fontFeatures: NexoTones.figures,
                   fontSize: 15,
-                  fontWeight: FontWeight.w600,
+                  fontWeight: NexoType.weight(FontWeight.w800, FontWeight.w600),
                   color: assetColor),
             ),
             if (convertedValue != null)
               Text(
                 '≈ ${formatAmount(convertedValue!, mainCurrency)}',
                 style: TextStyle(
-                    fontSize: 12, color: cs.onSurface.withValues(alpha: 0.5)),
+                    fontSize: NexoType.size(10, 12),
+                    color: cs.onSurface.withValues(alpha: 0.5)),
               ),
           ]),
           // Actions
@@ -274,10 +279,9 @@ class _AssetSheetState extends State<_AssetSheet> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(isEdit ? l10n.assets_editAsset : l10n.assets_addAsset,
-                style: Theme.of(context)
-                    .textTheme
-                    .titleLarge
-                    ?.copyWith(fontWeight: FontWeight.w600)),
+                style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                    fontWeight:
+                        NexoType.weight(FontWeight.w800, FontWeight.w600))),
             const SizedBox(height: 16),
 
             // Name
@@ -320,8 +324,10 @@ class _AssetSheetState extends State<_AssetSheet> {
                         ? null
                         : ' ',
                   ),
-                  style: const TextStyle(
-                      fontSize: 18, fontWeight: FontWeight.w600),
+                  style: TextStyle(
+                      fontSize: 18,
+                      fontWeight:
+                          NexoType.weight(FontWeight.w700, FontWeight.w600)),
                   onChanged: (_) {
                     if (_submitted) setState(() {});
                   },
@@ -351,8 +357,10 @@ class _AssetSheetState extends State<_AssetSheet> {
                     child: Row(children: [
                       Expanded(
                           child: Text(_currency,
-                              style: const TextStyle(
-                                  fontWeight: FontWeight.w600, fontSize: 15))),
+                              style: TextStyle(
+                                  fontWeight: NexoType.weight(
+                                      FontWeight.w700, FontWeight.w600),
+                                  fontSize: 15))),
                       const Icon(Icons.arrow_drop_down, size: 20),
                     ]),
                   ),

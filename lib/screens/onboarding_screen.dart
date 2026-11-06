@@ -8,6 +8,7 @@ import '../models/models.dart';
 import '../theme/app_theme.dart';
 import '../widgets/shared_widgets.dart';
 import 'main_shell.dart';
+import '../theme/nexo_type.dart';
 
 const List<int> _kColors = [
   0xFF6750A4,
@@ -411,10 +412,8 @@ class _PageWelcome extends StatelessWidget {
         ),
         const SizedBox(height: 20),
         Text(l10n.onboarding_welcomeToNexo,
-            style: Theme.of(context)
-                .textTheme
-                .headlineSmall
-                ?.copyWith(fontWeight: FontWeight.w600)),
+            style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                fontWeight: NexoType.weight(FontWeight.w800, FontWeight.w600))),
         const SizedBox(height: 8),
         Text(
           l10n.onboarding_yourPersonalTracker,
@@ -444,8 +443,10 @@ class _PageWelcome extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(l10n.onboarding_restoreABackup,
-                        style: const TextStyle(
-                            fontWeight: FontWeight.w600, fontSize: 15)),
+                        style: TextStyle(
+                            fontWeight: NexoType.weight(
+                                FontWeight.w800, FontWeight.w600),
+                            fontSize: 15)),
                     Text(l10n.onboarding_loadAPreviouslySaved,
                         style: TextStyle(
                             fontSize: 12,
@@ -556,10 +557,8 @@ class _PageOne extends StatelessWidget {
         ),
         const SizedBox(height: 20),
         Text(l10n.onboarding_letsGetYouSetUp,
-            style: Theme.of(context)
-                .textTheme
-                .headlineSmall
-                ?.copyWith(fontWeight: FontWeight.w600)),
+            style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                fontWeight: NexoType.weight(FontWeight.w800, FontWeight.w600))),
         const SizedBox(height: 8),
         Text(l10n.onboarding_firstWhatShouldWeCal,
             style: TextStyle(
@@ -603,10 +602,8 @@ class _PageTwo extends StatelessWidget {
         ),
         const SizedBox(height: 20),
         Text(l10n.onboarding_defaultCurrency,
-            style: Theme.of(context)
-                .textTheme
-                .headlineSmall
-                ?.copyWith(fontWeight: FontWeight.w600)),
+            style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                fontWeight: NexoType.weight(FontWeight.w800, FontWeight.w600))),
         const SizedBox(height: 8),
         Text(l10n.onboarding_thisWillBeUsedAcross,
             style: TextStyle(
@@ -629,7 +626,8 @@ class _PageTwo extends StatelessWidget {
               Text(currencyInfo(currency).symbol,
                   style: TextStyle(
                       fontSize: 24,
-                      fontWeight: FontWeight.w600,
+                      fontWeight:
+                          NexoType.weight(FontWeight.w800, FontWeight.w600),
                       color: cs.primary)),
               const SizedBox(width: 14),
               Expanded(
@@ -639,7 +637,8 @@ class _PageTwo extends StatelessWidget {
                   Text(currency,
                       style: TextStyle(
                           fontSize: 16,
-                          fontWeight: FontWeight.w600,
+                          fontWeight:
+                              NexoType.weight(FontWeight.w800, FontWeight.w600),
                           color: cs.onPrimaryContainer)),
                   Text(currencyInfo(currency).name,
                       style: TextStyle(
@@ -705,10 +704,8 @@ class _PageThree extends StatelessWidget {
         ),
         const SizedBox(height: 20),
         Text(l10n.onboarding_yourFirstAccount,
-            style: Theme.of(context)
-                .textTheme
-                .headlineSmall
-                ?.copyWith(fontWeight: FontWeight.w600)),
+            style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                fontWeight: NexoType.weight(FontWeight.w800, FontWeight.w600))),
         const SizedBox(height: 8),
         Text(l10n.onboarding_setUpYourMainAccount,
             style: TextStyle(
@@ -725,7 +722,10 @@ class _PageThree extends StatelessWidget {
 
         // Type cards
         Text(l10n.onboarding_accountType,
-            style: Theme.of(context).textTheme.labelMedium),
+            style: Theme.of(context)
+                .textTheme
+                .labelMedium
+                ?.copyWith(letterSpacing: NexoType.tracking(1))),
         const SizedBox(height: 8),
         SingleChildScrollView(
           scrollDirection: Axis.horizontal,
@@ -758,7 +758,8 @@ class _PageThree extends StatelessWidget {
                     Text(opt.$2,
                         style: TextStyle(
                             fontSize: 12,
-                            fontWeight: FontWeight.w500,
+                            fontWeight: NexoType.weight(
+                                FontWeight.w600, FontWeight.w500),
                             color:
                                 type == opt.$1 ? Colors.white : cs.onSurface)),
                   ]),
@@ -770,7 +771,10 @@ class _PageThree extends StatelessWidget {
 
         // Currency
         Text(l10n.onboarding_currency,
-            style: Theme.of(context).textTheme.labelMedium),
+            style: Theme.of(context)
+                .textTheme
+                .labelMedium
+                ?.copyWith(letterSpacing: NexoType.tracking(1))),
         const SizedBox(height: 8),
         GestureDetector(
           onTap: () async {
@@ -790,8 +794,10 @@ class _PageThree extends StatelessWidget {
               Expanded(
                   child: Text(
                       '$currency  ${currencyInfo(currency).symbol}  —  ${currencyInfo(currency).name}',
-                      style: const TextStyle(
-                          fontWeight: FontWeight.w500, fontSize: 13))),
+                      style: TextStyle(
+                          fontWeight:
+                              NexoType.weight(FontWeight.w600, FontWeight.w500),
+                          fontSize: 13))),
               const Icon(Icons.arrow_drop_down_rounded),
             ]),
           ),
@@ -808,7 +814,10 @@ class _PageThree extends StatelessWidget {
 
         // Color
         Text(l10n.onboarding_color,
-            style: Theme.of(context).textTheme.labelMedium),
+            style: Theme.of(context)
+                .textTheme
+                .labelMedium
+                ?.copyWith(letterSpacing: NexoType.tracking(1))),
         const SizedBox(height: 8),
         SizedBox(
           height: 44,
@@ -885,10 +894,8 @@ class _PageFour extends StatelessWidget {
       child: ListView(children: [
         const SizedBox(height: 24),
         Text('Adicionar cartão',
-            style: Theme.of(context)
-                .textTheme
-                .headlineSmall
-                ?.copyWith(fontWeight: FontWeight.w600)),
+            style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                fontWeight: NexoType.weight(FontWeight.w800, FontWeight.w600))),
         const SizedBox(height: 8),
         Text('Você pode adicionar seu cartão mais tarde.',
             style: TextStyle(
@@ -897,7 +904,10 @@ class _PageFour extends StatelessWidget {
 
         // Type
         Text(l10n.onboarding_accountType,
-            style: Theme.of(context).textTheme.labelMedium),
+            style: Theme.of(context)
+                .textTheme
+                .labelMedium
+                ?.copyWith(letterSpacing: NexoType.tracking(1))),
         const SizedBox(height: 8),
         SizedBox(
           height: 38,
@@ -928,7 +938,8 @@ class _PageFour extends StatelessWidget {
                       Text(opt.$2,
                           style: TextStyle(
                               fontSize: 12,
-                              fontWeight: FontWeight.w500,
+                              fontWeight: NexoType.weight(
+                                  FontWeight.w600, FontWeight.w500),
                               color: type == opt.$1
                                   ? Colors.white
                                   : cs.onSurface)),
@@ -950,7 +961,10 @@ class _PageFour extends StatelessWidget {
 
         // Currency
         Text(l10n.onboarding_currency,
-            style: Theme.of(context).textTheme.labelMedium),
+            style: Theme.of(context)
+                .textTheme
+                .labelMedium
+                ?.copyWith(letterSpacing: NexoType.tracking(1))),
         const SizedBox(height: 8),
         GestureDetector(
           onTap: () async {
@@ -970,8 +984,10 @@ class _PageFour extends StatelessWidget {
               Expanded(
                   child: Text(
                       '$currency  ${currencyInfo(currency).symbol}  —  ${currencyInfo(currency).name}',
-                      style: const TextStyle(
-                          fontWeight: FontWeight.w500, fontSize: 13))),
+                      style: TextStyle(
+                          fontWeight:
+                              NexoType.weight(FontWeight.w600, FontWeight.w500),
+                          fontSize: 13))),
               const Icon(Icons.arrow_drop_down_rounded),
             ]),
           ),
@@ -1005,7 +1021,10 @@ class _PageFour extends StatelessWidget {
 
         // Color
         Text(l10n.onboarding_color,
-            style: Theme.of(context).textTheme.labelMedium),
+            style: Theme.of(context)
+                .textTheme
+                .labelMedium
+                ?.copyWith(letterSpacing: NexoType.tracking(1))),
         const SizedBox(height: 8),
         SizedBox(
           height: 44,

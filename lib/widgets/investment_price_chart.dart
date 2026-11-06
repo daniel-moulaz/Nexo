@@ -6,6 +6,7 @@ import '../providers/app_provider.dart';
 import '../investments/investment_history.dart';
 import '../investments/investment_quotes.dart';
 import 'analysis_widgets.dart';
+import '../theme/nexo_type.dart';
 
 class InvestmentPriceChart extends StatefulWidget {
   final String ticker;
@@ -98,10 +99,10 @@ class _InvestmentPriceChartState extends State<InvestmentPriceChart> {
                 const SizedBox(height: 12),
                 Text(
                     '${money.format(points.last.price)} · ${change! >= 0 ? '+' : ''}${NumberFormat('0.00', 'pt_BR').format(change)}%',
-                    style: Theme.of(context)
-                        .textTheme
-                        .titleLarge
-                        ?.copyWith(color: color, fontWeight: FontWeight.w600)),
+                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                        color: color,
+                        fontWeight:
+                            NexoType.weight(FontWeight.w800, FontWeight.w600))),
                 const Text(
                     'Fechamento ajustado · variação entre os pontos exibidos'),
                 const SizedBox(height: 20),
@@ -120,9 +121,11 @@ class _InvestmentPriceChartState extends State<InvestmentPriceChart> {
                                         final p = points[s.spotIndex];
                                         return LineTooltipItem(
                                             '${DateFormat('dd/MM/yyyy').format(p.date.toLocal())}\n${money.format(p.price)}',
-                                            const TextStyle(
+                                            TextStyle(
                                                 color: Colors.white,
-                                                fontWeight: FontWeight.w600));
+                                                fontWeight: NexoType.weight(
+                                                    FontWeight.bold,
+                                                    FontWeight.w600)));
                                       }).toList())),
                           lineBarsData: [
                             LineChartBarData(

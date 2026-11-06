@@ -1,5 +1,6 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
+import '../theme/nexo_type.dart';
 
 /// One band of the flow: from the left column to a right-hand target.
 class SankeyFlow {
@@ -43,11 +44,13 @@ class NexoSankey extends StatelessWidget {
               textColor: cs.onSurface,
               mutedColor: cs.onSurfaceVariant,
               sourceColor: cs.primary,
-              labelStyle:
-                  theme.textTheme.labelSmall ?? const TextStyle(fontSize: 12),
-              valueStyle:
-                  (theme.textTheme.labelSmall ?? const TextStyle(fontSize: 12))
-                      .copyWith(fontWeight: FontWeight.w600),
+              labelStyle: theme.textTheme.labelSmall ??
+                  TextStyle(fontSize: NexoType.size(11, 12)),
+              valueStyle: (theme.textTheme.labelSmall ??
+                      TextStyle(fontSize: NexoType.size(11, 12)))
+                  .copyWith(
+                      fontWeight:
+                          NexoType.weight(FontWeight.w800, FontWeight.w600)),
               sourceLabel: sourceLabel,
               money: money),
           size: Size.infinite,

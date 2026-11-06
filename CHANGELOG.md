@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.13.2] - 2026-11-06
+### Celular
+- O celular volta ao visual anterior, com títulos pesados e rótulos compactos. A tipografia da 1.13.1 continua valendo só no Windows, que não muda nesta versão. As correções da 1.13.1 (cor do patrimônio, plurais, texto cortado) seguem valendo nos dois.
+
 ## [1.13.1] - 2026-11-06
 ### Leitura no Windows (e no resto do app)
 - **Fonte própria:** o Windows passa a usar a Inter, incluída no app, em vez de depender da Segoe UI. Títulos deixaram de cair na Segoe UI Black, que era o que os deixava pesados e apertados.

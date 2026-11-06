@@ -2,6 +2,7 @@ import 'dart:math' as math;
 
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
+import '../theme/nexo_type.dart';
 
 /// Semantic money colors that read well on dark and light surfaces.
 abstract final class NexoTones {
@@ -82,8 +83,9 @@ class NexoSectionTitle extends StatelessWidget {
       Expanded(
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Text(title,
-              style: theme.textTheme.titleMedium
-                  ?.copyWith(fontWeight: FontWeight.w600)),
+              style: theme.textTheme.titleMedium?.copyWith(
+                  fontWeight:
+                      NexoType.weight(FontWeight.w800, FontWeight.w600))),
           if (subtitle != null)
             Text(subtitle!,
                 style: theme.textTheme.bodySmall
@@ -144,7 +146,7 @@ class NexoStatPill extends StatelessWidget {
                             maxLines: 2,
                             overflow: TextOverflow.ellipsis,
                             style: TextStyle(
-                                fontSize: 12,
+                                fontSize: NexoType.size(11.5, 12),
                                 height: 1.15,
                                 color: fg.withValues(alpha: .8))),
                       ),
@@ -156,7 +158,8 @@ class NexoStatPill extends StatelessWidget {
                       child: Text(value,
                           maxLines: 1,
                           style: TextStyle(
-                              fontWeight: FontWeight.w600,
+                              fontWeight: NexoType.weight(
+                                  FontWeight.w800, FontWeight.w600),
                               fontSize: 15,
                               color: valueColor ?? fg,
                               fontFeatures: NexoTones.figures)),
@@ -208,8 +211,10 @@ class NexoQuickAction extends StatelessWidget {
               child: Text(label,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                      fontSize: 12, fontWeight: FontWeight.w500)),
+                  style: TextStyle(
+                      fontSize: 12,
+                      fontWeight:
+                          NexoType.weight(FontWeight.w600, FontWeight.w500))),
             ),
           ]),
         ),
@@ -263,12 +268,14 @@ class NexoSavingsGauge extends StatelessWidget {
                   Text(percent,
                       style: TextStyle(
                           fontSize: size * .22,
-                          fontWeight: FontWeight.w600,
+                          fontWeight:
+                              NexoType.weight(FontWeight.w900, FontWeight.w600),
                           fontFeatures: NexoTones.figures)),
                   Text(label,
                       textAlign: TextAlign.center,
-                      style:
-                          TextStyle(fontSize: 12, color: cs.onSurfaceVariant)),
+                      style: TextStyle(
+                          fontSize: NexoType.size(11.5, 12),
+                          color: cs.onSurfaceVariant)),
                 ]),
               ),
             ),
@@ -464,8 +471,9 @@ class NexoCategoryDonut extends StatelessWidget {
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 22),
               child: Text(money(total),
-                  style: const TextStyle(
-                      fontWeight: FontWeight.w600,
+                  style: TextStyle(
+                      fontWeight:
+                          NexoType.weight(FontWeight.w900, FontWeight.w600),
                       fontFeatures: NexoTones.figures)),
             ),
           ),
@@ -501,8 +509,9 @@ class NexoCategoryDonut extends StatelessWidget {
                   fit: BoxFit.scaleDown,
                   alignment: Alignment.centerRight,
                   child: Text(money(s.value),
-                      style: const TextStyle(
-                          fontWeight: FontWeight.w600,
+                      style: TextStyle(
+                          fontWeight:
+                              NexoType.weight(FontWeight.w700, FontWeight.w600),
                           fontFeatures: NexoTones.figures)),
                 ),
               ),
@@ -585,20 +594,25 @@ class _NexoInsightCarouselState extends State<NexoInsightCarousel> {
                     Text(i.title,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(fontWeight: FontWeight.w600)),
+                        style: TextStyle(
+                            fontWeight: NexoType.weight(
+                                FontWeight.w800, FontWeight.w600))),
                     const SizedBox(height: 2),
                     Text(i.subtitle,
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                         style: TextStyle(
-                            fontSize: 13, color: cs.onSurfaceVariant)),
+                            fontSize: NexoType.size(12.5, 13),
+                            color: cs.onSurfaceVariant)),
                   ]),
             ),
             if (i.action != null) ...[
               const SizedBox(width: 8),
               Text(i.action!,
-                  style:
-                      TextStyle(color: i.color, fontWeight: FontWeight.w600)),
+                  style: TextStyle(
+                      color: i.color,
+                      fontWeight:
+                          NexoType.weight(FontWeight.w800, FontWeight.w600))),
             ],
           ]),
         ),
@@ -680,7 +694,9 @@ class NexoMonthPill extends StatelessWidget {
             visualDensity: VisualDensity.compact,
             onPressed: onPrevious,
             icon: const Icon(Icons.chevron_left, size: 20)),
-        Text(label, style: const TextStyle(fontWeight: FontWeight.w600)),
+        Text(label,
+            style: TextStyle(
+                fontWeight: NexoType.weight(FontWeight.w800, FontWeight.w600))),
         IconButton(
             tooltip: 'Próximo mês',
             visualDensity: VisualDensity.compact,
@@ -810,8 +826,9 @@ class NexoSpendingCalendar extends StatelessWidget {
               child: Center(
                   child: Text(n,
                       style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w500,
+                          fontSize: NexoType.size(11, 12),
+                          fontWeight:
+                              NexoType.weight(FontWeight.w700, FontWeight.w500),
                           color: cs.onSurfaceVariant)))),
       ]),
       const SizedBox(height: 6),
@@ -850,8 +867,10 @@ class NexoSpendingCalendar extends StatelessWidget {
                                     style: TextStyle(
                                         fontSize: 12,
                                         fontWeight: day == today
-                                            ? FontWeight.w500
-                                            : FontWeight.w500)),
+                                            ? NexoType.weight(FontWeight.w900,
+                                                FontWeight.w500)
+                                            : NexoType.weight(FontWeight.w600,
+                                                FontWeight.w500))),
                                 if (value > 0)
                                   FittedBox(
                                     fit: BoxFit.scaleDown,
@@ -859,8 +878,8 @@ class NexoSpendingCalendar extends StatelessWidget {
                                       padding: const EdgeInsets.symmetric(
                                           horizontal: 2),
                                       child: Text(compact(value),
-                                          style: const TextStyle(
-                                              fontSize: 12,
+                                          style: TextStyle(
+                                              fontSize: NexoType.size(9.5, 12),
                                               fontFeatures: NexoTones.figures)),
                                     ),
                                   ),

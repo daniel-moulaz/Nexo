@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 
 import '../providers/app_provider.dart';
 import '../services/finance_export_service.dart';
+import '../theme/nexo_type.dart';
 
 class FinanceExportScreen extends StatefulWidget {
   const FinanceExportScreen({super.key});
@@ -68,16 +69,17 @@ class _FinanceExportScreenState extends State<FinanceExportScreen> {
     final theme = Theme.of(context);
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Relatório financeiro',
-            style: TextStyle(fontWeight: FontWeight.w600)),
+        title: Text('Relatório financeiro',
+            style: TextStyle(
+                fontWeight: NexoType.weight(FontWeight.w800, FontWeight.w600))),
       ),
       body: ListView(
         padding: const EdgeInsets.all(20),
         children: [
           Text(
             'Excel completo para análise',
-            style: theme.textTheme.headlineSmall
-                ?.copyWith(fontWeight: FontWeight.w600),
+            style: theme.textTheme.headlineSmall?.copyWith(
+                fontWeight: NexoType.weight(FontWeight.w900, FontWeight.w600)),
           ),
           const SizedBox(height: 8),
           const Text(
@@ -106,7 +108,9 @@ class _FinanceExportScreenState extends State<FinanceExportScreen> {
           const SizedBox(height: 20),
           if (_message != null) ...[
             Text(_message!,
-                style: const TextStyle(fontWeight: FontWeight.w600)),
+                style: TextStyle(
+                    fontWeight:
+                        NexoType.weight(FontWeight.w700, FontWeight.w600))),
             const SizedBox(height: 12),
           ],
           FilledButton.icon(
@@ -163,7 +167,9 @@ class _DateBox extends StatelessWidget {
             const SizedBox(height: 4),
             Text(
               DateFormat('dd/MM/yyyy').format(date),
-              style: const TextStyle(fontWeight: FontWeight.w600),
+              style: TextStyle(
+                  fontWeight:
+                      NexoType.weight(FontWeight.w800, FontWeight.w600)),
             ),
           ],
         ),

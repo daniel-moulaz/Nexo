@@ -5,6 +5,7 @@ import '../models/models.dart';
 import '../providers/app_provider.dart';
 import '../theme/app_theme.dart';
 import '../utils/finance_input.dart';
+import '../theme/nexo_type.dart';
 
 class SavingsGoalSheet extends StatefulWidget {
   final SavingsGoal? existing;
@@ -107,8 +108,9 @@ class _SavingsGoalSheetState extends State<SavingsGoalSheet> {
                 Expanded(
                   child: Text(
                     isEdit ? 'Editar objetivo' : 'Novo objetivo',
-                    style: theme.textTheme.titleLarge
-                        ?.copyWith(fontWeight: FontWeight.w600),
+                    style: theme.textTheme.titleLarge?.copyWith(
+                        fontWeight:
+                            NexoType.weight(FontWeight.w900, FontWeight.w600)),
                   ),
                 ),
                 IconButton(
@@ -175,8 +177,9 @@ class _SavingsGoalSheetState extends State<SavingsGoalSheet> {
             ),
             const SizedBox(height: 12),
             Text('Cor',
-                style: theme.textTheme.titleSmall
-                    ?.copyWith(fontWeight: FontWeight.w600)),
+                style: theme.textTheme.titleSmall?.copyWith(
+                    fontWeight:
+                        NexoType.weight(FontWeight.w900, FontWeight.w600))),
             const SizedBox(height: 10),
             Wrap(
               spacing: 10,

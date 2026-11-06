@@ -10,6 +10,7 @@ import '../theme/app_theme.dart';
 import '../widgets/shared_widgets.dart';
 import '../utils/haptics.dart';
 import '../widgets/nexo_ui.dart';
+import '../theme/nexo_type.dart';
 
 class WishlistScreen extends StatelessWidget {
   const WishlistScreen({super.key});
@@ -32,7 +33,8 @@ class WishlistScreen extends StatelessWidget {
               }),
         ],
         title: Text(l10n.wishlist_wishlist,
-            style: const TextStyle(fontWeight: FontWeight.w600)),
+            style: TextStyle(
+                fontWeight: NexoType.weight(FontWeight.w800, FontWeight.w600))),
       ),
       body: app.wishlist.isEmpty
           ? EmptyState(
@@ -96,7 +98,7 @@ class _WishCard extends StatelessWidget {
         ),
         title: Text(item.name,
             style: TextStyle(
-                fontWeight: FontWeight.w600,
+                fontWeight: NexoType.weight(FontWeight.w700, FontWeight.w600),
                 decoration:
                     item.isPurchased ? TextDecoration.lineThrough : null)),
         subtitle:
@@ -109,23 +111,26 @@ class _WishCard extends StatelessWidget {
                   borderRadius: BorderRadius.circular(8)),
               child: Text(item.priority.toUpperCase(),
                   style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w500,
+                      fontSize: NexoType.size(9, 12),
+                      fontWeight:
+                          NexoType.weight(FontWeight.w700, FontWeight.w500),
                       color: pColor)),
             ),
             const SizedBox(width: 8),
             Text(fmt(item.targetPrice),
-                style: const TextStyle(
+                style: TextStyle(
                     fontFeatures: NexoTones.figures,
                     fontSize: 12,
-                    fontWeight: FontWeight.w500)),
+                    fontWeight:
+                        NexoType.weight(FontWeight.w700, FontWeight.w500))),
           ]),
           if (item.notes.isNotEmpty)
             Text(item.notes,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(
-                    fontSize: 12, color: cs.onSurface.withValues(alpha: 0.5))),
+                    fontSize: NexoType.size(11, 12),
+                    color: cs.onSurface.withValues(alpha: 0.5))),
         ]),
         trailing: Row(mainAxisSize: MainAxisSize.min, children: [
           IconButton(
@@ -238,10 +243,9 @@ class _WishSheetState extends State<_WishSheet> {
                   isEdit
                       ? l10n.wishlist_editItem
                       : l10n.wishlist_addWishlistItem,
-                  style: Theme.of(context)
-                      .textTheme
-                      .titleLarge
-                      ?.copyWith(fontWeight: FontWeight.w600)),
+                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                      fontWeight:
+                          NexoType.weight(FontWeight.w800, FontWeight.w600))),
               const SizedBox(height: 16),
               TextField(
                 controller: _nameCtrl,
@@ -271,7 +275,10 @@ class _WishSheetState extends State<_WishSheet> {
               ),
               const SizedBox(height: 14),
               Text(l10n.wishlist_priority,
-                  style: Theme.of(context).textTheme.labelMedium),
+                  style: Theme.of(context)
+                      .textTheme
+                      .labelMedium
+                      ?.copyWith(letterSpacing: NexoType.tracking(1))),
               const SizedBox(height: 8),
               Row(children: [
                 for (final p in [
@@ -296,7 +303,8 @@ class _WishSheetState extends State<_WishSheet> {
                             child: Text(p.$2,
                                 style: TextStyle(
                                     fontSize: 12,
-                                    fontWeight: FontWeight.w500,
+                                    fontWeight: NexoType.weight(
+                                        FontWeight.w700, FontWeight.w500),
                                     color: _priority == p.$1
                                         ? Colors.white
                                         : Color(p.$3)))),

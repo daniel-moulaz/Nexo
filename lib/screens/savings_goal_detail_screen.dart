@@ -10,6 +10,7 @@ import '../widgets/savings_goal_sheet.dart';
 import '../utils/haptics.dart';
 import 'package:intl/intl.dart';
 import '../widgets/nexo_ui.dart';
+import '../theme/nexo_type.dart';
 
 class SavingsGoalDetailScreen extends StatelessWidget {
   final SavingsGoal goal;
@@ -34,7 +35,8 @@ class SavingsGoalDetailScreen extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(
         title: Text(currentGoal.name,
-            style: const TextStyle(fontWeight: FontWeight.w600)),
+            style: TextStyle(
+                fontWeight: NexoType.weight(FontWeight.w800, FontWeight.w600))),
         backgroundColor: color,
         foregroundColor:
             color.computeLuminance() > 0.5 ? Colors.black : Colors.white,
@@ -73,15 +75,18 @@ class SavingsGoalDetailScreen extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(l10n.savings_savedSoFar,
-                            style: const TextStyle(
-                                fontSize: 12, fontWeight: FontWeight.w500)),
+                            style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: NexoType.weight(
+                                    FontWeight.w600, FontWeight.w500))),
                         Text(
                             formatAmount(currentGoal.currentAmount,
                                 currentGoal.currency),
                             style: TextStyle(
                                 fontFeatures: NexoTones.figures,
                                 fontSize: 28,
-                                fontWeight: FontWeight.w600,
+                                fontWeight: NexoType.weight(
+                                    FontWeight.w800, FontWeight.w600),
                                 color: color)),
                       ],
                     ),
@@ -89,15 +94,18 @@ class SavingsGoalDetailScreen extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.end,
                       children: [
                         Text(l10n.savings_target,
-                            style: const TextStyle(
-                                fontSize: 12, fontWeight: FontWeight.w500)),
+                            style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: NexoType.weight(
+                                    FontWeight.w600, FontWeight.w500))),
                         Text(
                             formatAmount(
                                 currentGoal.targetAmount, currentGoal.currency),
-                            style: const TextStyle(
+                            style: TextStyle(
                                 fontFeatures: NexoTones.figures,
                                 fontSize: 20,
-                                fontWeight: FontWeight.w600)),
+                                fontWeight: NexoType.weight(
+                                    FontWeight.w700, FontWeight.w600))),
                       ],
                     ),
                   ],
@@ -126,7 +134,8 @@ class SavingsGoalDetailScreen extends StatelessWidget {
                     Text('${(progress * 100).toStringAsFixed(1)}%',
                         style: TextStyle(
                             fontSize: 14,
-                            fontWeight: FontWeight.w600,
+                            fontWeight: NexoType.weight(
+                                FontWeight.w700, FontWeight.w600),
                             color: color)),
                     if (currentGoal.targetDate != null)
                       Text(
@@ -210,7 +219,8 @@ class SavingsGoalDetailScreen extends StatelessWidget {
                         '${isContrib ? '+' : '-'}${formatAmount(c.amount, currentGoal.currency)}',
                         style: TextStyle(
                             fontSize: 15,
-                            fontWeight: FontWeight.w600,
+                            fontWeight: NexoType.weight(
+                                FontWeight.w700, FontWeight.w600),
                             color: isContrib
                                 ? const Color(0xFF2E7D32)
                                 : cs.onSurface),
@@ -332,8 +342,10 @@ class _ContributionSheetState extends State<_ContributionSheet> {
               widget.isContribution
                   ? 'Adicionar aporte'
                   : 'Retirar do objetivo',
-              style:
-                  const TextStyle(fontSize: 20, fontWeight: FontWeight.w600)),
+              style: TextStyle(
+                  fontSize: 20,
+                  fontWeight:
+                      NexoType.weight(FontWeight.w800, FontWeight.w600))),
           const SizedBox(height: 20),
           if (widget.app.cashAccounts.isEmpty)
             Text(l10n.savings_noAccounts)
@@ -398,8 +410,10 @@ class _ContributionSheetState extends State<_ContributionSheet> {
                       borderRadius: BorderRadius.circular(16))),
               child: Text(
                   widget.isContribution ? 'Adicionar aporte' : 'Retirar',
-                  style: const TextStyle(
-                      fontSize: 16, fontWeight: FontWeight.w600)),
+                  style: TextStyle(
+                      fontSize: 16,
+                      fontWeight:
+                          NexoType.weight(FontWeight.w700, FontWeight.w600))),
             ),
           ],
         ],

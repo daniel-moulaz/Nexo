@@ -6,6 +6,7 @@ import '../l10n/app_localizations.dart';
 import '../providers/app_provider.dart';
 import '../theme/app_theme.dart';
 import '../widgets/nexo_ui.dart';
+import '../theme/nexo_type.dart';
 
 class NetWorthScreen extends StatelessWidget {
   const NetWorthScreen({super.key});
@@ -38,7 +39,8 @@ class NetWorthScreen extends StatelessWidget {
       appBar: AppBar(
         title: Text(
           l10n.more_insights, // Fallback if netWorth_title unavailable
-          style: const TextStyle(fontWeight: FontWeight.w600),
+          style: TextStyle(
+              fontWeight: NexoType.weight(FontWeight.w800, FontWeight.w600)),
         ),
       ),
       body: ListView(
@@ -55,7 +57,8 @@ class NetWorthScreen extends StatelessWidget {
                     'Patrimônio atual',
                     style: TextStyle(
                       fontSize: 13,
-                      fontWeight: FontWeight.w500,
+                      fontWeight:
+                          NexoType.weight(FontWeight.w600, FontWeight.w500),
                       color: cs.onSurface.withValues(alpha: 0.6),
                     ),
                   ),
@@ -65,7 +68,8 @@ class NetWorthScreen extends StatelessWidget {
                     style: TextStyle(
                       fontFeatures: NexoTones.figures,
                       fontSize: 28,
-                      fontWeight: FontWeight.w600,
+                      fontWeight:
+                          NexoType.weight(FontWeight.w800, FontWeight.w600),
                       color: cs.primary,
                     ),
                   ),
@@ -82,11 +86,12 @@ class NetWorthScreen extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
+                  Text(
                     'Evolução do patrimônio',
                     style: TextStyle(
                       fontSize: 16,
-                      fontWeight: FontWeight.w600,
+                      fontWeight:
+                          NexoType.weight(FontWeight.w700, FontWeight.w600),
                     ),
                   ),
                   const SizedBox(height: 16),
@@ -149,7 +154,8 @@ class NetWorthScreen extends StatelessWidget {
                                 overflow: TextOverflow.ellipsis,
                                 style: TextStyle(
                                   fontSize: 12,
-                                  fontWeight: FontWeight.w500,
+                                  fontWeight: NexoType.weight(
+                                      FontWeight.w600, FontWeight.w500),
                                   color: cs.onSurface.withValues(alpha: 0.7),
                                 ),
                               ),
@@ -159,10 +165,11 @@ class NetWorthScreen extends StatelessWidget {
                         const SizedBox(height: 8),
                         Text(
                           fmt(totalAccounts),
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontFeatures: NexoTones.figures,
                             fontSize: 16,
-                            fontWeight: FontWeight.w600,
+                            fontWeight: NexoType.weight(
+                                FontWeight.w800, FontWeight.w600),
                           ),
                         ),
                       ],
@@ -190,7 +197,8 @@ class NetWorthScreen extends StatelessWidget {
                                 overflow: TextOverflow.ellipsis,
                                 style: TextStyle(
                                   fontSize: 12,
-                                  fontWeight: FontWeight.w500,
+                                  fontWeight: NexoType.weight(
+                                      FontWeight.w600, FontWeight.w500),
                                   color: cs.onSurface.withValues(alpha: 0.7),
                                 ),
                               ),
@@ -200,10 +208,11 @@ class NetWorthScreen extends StatelessWidget {
                         const SizedBox(height: 8),
                         Text(
                           fmt(totalAssets),
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontFeatures: NexoTones.figures,
                             fontSize: 16,
-                            fontWeight: FontWeight.w600,
+                            fontWeight: NexoType.weight(
+                                FontWeight.w800, FontWeight.w600),
                           ),
                         ),
                       ],

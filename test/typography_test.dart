@@ -4,48 +4,86 @@
 // applied to everything.
 import 'dart:io';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nexo/theme/app_theme.dart';
+import 'package:nexo/theme/nexo_type.dart';
 
 Iterable<File> _sources() =>
-    Directory('lib').listSync(recursive: true).whereType<File>().where((f) =>
-        f.path.endsWith('.dart') &&
-        !f.path.replaceAll(r'\', '/').contains('/l10n/'));
+    Directory('lib').listSync(recursive: true).whereType<File>().where((f) {
+      final path = f.path.replaceAll(r'\', '/');
+      return path.endsWith('.dart') &&
+          !path.contains('/l10n/') &&
+          !path.endsWith('theme/nexo_type.dart') &&
+          !path.endsWith('theme/app_theme.dart');
+    });
+
+/// What Windows sees: the phone's value is the first argument of each call.
+String _windowsView(File f) => f
+    .readAsStringSync()
+    .replaceAll(RegExp(r'NexoType\.(weight|size)\(\s*[\w.]+,\s*'), '(')
+    .replaceAll(RegExp(r'letterSpacing:\s*NexoType\.tracking\([^)]*\)'), '');
+
+ThemeData _windowsTheme({String appFont = 'default', bool dark = true}) {
+  debugDefaultTargetPlatformOverride = TargetPlatform.windows;
+  final theme = buildTheme(seed: 'sky', dark: dark, appFont: appFont);
+  debugDefaultTargetPlatformOverride = null;
+  return theme;
+}
 
 void main() {
-  test('no weight above 700: the bundled font has none', () {
+  test('no weight above 700 on Windows: the bundled font has none', () {
     final heavy = RegExp(r'FontWeight\.(w800|w900)');
     final found = [
       for (final f in _sources())
-        if (heavy.hasMatch(f.readAsStringSync())) f.path
+        if (heavy.hasMatch(_windowsView(f))) f.path
     ];
     expect(found, isEmpty);
   });
 
-  test('no literal text size under 12', () {
-    final size = RegExp(r'fontSize:\s*(\d+(?:\.\d+)?)');
+  test('no literal text size under 12 on Windows', () {
+    final size = RegExp(r'fontSize:\s*\(?(\d+(?:\.\d+)?)');
     final found = [
       for (final f in _sources())
-        for (final m in size.allMatches(f.readAsStringSync()))
+        for (final m in size.allMatches(_windowsView(f)))
           if (double.parse(m[1]!) < 12) '${f.path}: ${m[0]}'
     ];
     expect(found, isEmpty);
   });
 
-  test('tracking stays in the theme', () {
+  test('on Windows, tracking stays in the theme', () {
     final found = [
       for (final f in _sources())
-        if (f.readAsStringSync().contains('letterSpacing:') &&
+        if (_windowsView(f).contains('letterSpacing:') &&
             !f.path.endsWith('app_theme.dart'))
           f.path
     ];
     expect(found, isEmpty);
   });
 
+  test('NexoType picks the phone value everywhere but Windows', () {
+    expect(NexoType.weight(FontWeight.w900, FontWeight.w600), FontWeight.w900);
+    expect(NexoType.size(10, 12), 10);
+    expect(NexoType.tracking(1), 1);
+    debugDefaultTargetPlatformOverride = TargetPlatform.windows;
+    expect(NexoType.weight(FontWeight.w900, FontWeight.w600), FontWeight.w600);
+    expect(NexoType.size(10, 12), 12);
+    expect(NexoType.tracking(1), 0);
+    debugDefaultTargetPlatformOverride = null;
+  });
+
+  test('the phone keeps its heavy titles', () {
+    final theme = buildTheme(seed: 'sky', dark: true);
+    expect(theme.appBarTheme.titleTextStyle!.fontWeight, FontWeight.w900);
+    expect(theme.textTheme.headlineLarge!.fontWeight, FontWeight.w900);
+    expect(theme.textTheme.headlineSmall!.fontWeight, FontWeight.w800);
+    expect(theme.textTheme.bodyMedium!.fontFamily, isNot(kBundledFont));
+  });
+
   test('the type ramp: nothing under 12, no tracking', () {
     for (final dark in [false, true]) {
-      final t = buildTheme(seed: 'sky', dark: dark).textTheme;
+      final t = _windowsTheme(dark: dark).textTheme;
       for (final style in [
         t.displayLarge,
         t.displayMedium,
@@ -72,7 +110,7 @@ void main() {
 
   test('no theme style has tabular figures: they widen the hyphen in Inter',
       () {
-    final t = buildTheme(seed: 'sky', dark: true).textTheme;
+    final t = _windowsTheme().textTheme;
     for (final style in [
       t.displayLarge,
       t.displayMedium,

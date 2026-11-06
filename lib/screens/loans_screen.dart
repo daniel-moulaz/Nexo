@@ -12,6 +12,7 @@ import '../utils/snackbar.dart';
 import '../services/loan_reminder_service.dart';
 import 'loan_detail_screen.dart';
 import '../widgets/nexo_ui.dart';
+import '../theme/nexo_type.dart';
 
 class LoansScreen extends StatefulWidget {
   const LoansScreen({super.key});
@@ -58,7 +59,8 @@ class _LoansScreenState extends State<LoansScreen> {
               }),
         ],
         title: Text(l10n.loans_title,
-            style: const TextStyle(fontWeight: FontWeight.w600)),
+            style: TextStyle(
+                fontWeight: NexoType.weight(FontWeight.w800, FontWeight.w600))),
       ),
       body: Column(
         children: [
@@ -123,8 +125,10 @@ class _LoansScreenState extends State<LoansScreen> {
                             l10n.loans_settled,
                             style: TextStyle(
                               fontSize: 12,
-                              fontWeight: FontWeight.w500,
+                              fontWeight: NexoType.weight(
+                                  FontWeight.w700, FontWeight.w500),
                               color: cs.onSurface.withValues(alpha: 0.4),
+                              letterSpacing: NexoType.tracking(0.5),
                             ),
                           ),
                         ),
@@ -175,8 +179,8 @@ class _SumChip extends StatelessWidget {
               Text(
                 label,
                 style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w500,
+                  fontSize: NexoType.size(10, 12),
+                  fontWeight: NexoType.weight(FontWeight.w600, FontWeight.w500),
                   color: color,
                 ),
               ),
@@ -187,7 +191,7 @@ class _SumChip extends StatelessWidget {
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(
                   fontSize: 13,
-                  fontWeight: FontWeight.w600,
+                  fontWeight: NexoType.weight(FontWeight.w800, FontWeight.w600),
                   color: color,
                 ),
               ),
@@ -356,8 +360,10 @@ class _LoanSheetState extends State<LoanSheet> {
                     widget.existing == null
                         ? l10n.loans_addLoan
                         : l10n.loans_editLoan,
-                    style: const TextStyle(
-                        fontSize: 18, fontWeight: FontWeight.w600),
+                    style: TextStyle(
+                        fontSize: 18,
+                        fontWeight:
+                            NexoType.weight(FontWeight.bold, FontWeight.w600)),
                   ),
                 ],
               ),
@@ -400,7 +406,10 @@ class _LoanSheetState extends State<LoanSheet> {
 
               // Currency Picker
               Text(l10n.accounts_currency,
-                  style: Theme.of(context).textTheme.labelMedium),
+                  style: Theme.of(context)
+                      .textTheme
+                      .labelMedium
+                      ?.copyWith(letterSpacing: NexoType.tracking(1))),
               const SizedBox(height: 8),
               GestureDetector(
                 onTap: () async {
@@ -494,7 +503,8 @@ class _LoanSheetState extends State<LoanSheet> {
                 child: Text(
                   'Duração: ${l10n.loans_durationMonths(_durationMonths)}',
                   style: TextStyle(
-                      fontSize: 12, color: cs.onSurface.withValues(alpha: 0.6)),
+                      fontSize: NexoType.size(11, 12),
+                      color: cs.onSurface.withValues(alpha: 0.6)),
                 ),
               ),
               const SizedBox(height: 12),
@@ -525,9 +535,12 @@ class _LoanSheetState extends State<LoanSheet> {
 
               // Account Card Picker
               // Transfer Account Card Picker
-              const Text(
+              Text(
                 'Transfer Loan Amount To',
-                style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
+                style: TextStyle(
+                    fontSize: 12,
+                    fontWeight:
+                        NexoType.weight(FontWeight.bold, FontWeight.w500)),
               ),
               const SizedBox(height: 6),
               AccountCardPicker(
@@ -539,9 +552,12 @@ class _LoanSheetState extends State<LoanSheet> {
               const SizedBox(height: 16),
 
               // Installment Account Card Picker
-              const Text(
+              Text(
                 'Pay Installments From',
-                style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
+                style: TextStyle(
+                    fontSize: 12,
+                    fontWeight:
+                        NexoType.weight(FontWeight.bold, FontWeight.w500)),
               ),
               const SizedBox(height: 6),
               AccountCardPicker(
@@ -569,13 +585,16 @@ class _LoanSheetState extends State<LoanSheet> {
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
                             Text(l10n.loans_monthlyPayment,
-                                style: const TextStyle(
-                                    fontSize: 12, fontWeight: FontWeight.w500)),
+                                style: TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: NexoType.weight(
+                                        FontWeight.w600, FontWeight.w500))),
                             Text(formatAmount(_monthlyPayment, _currency),
                                 style: TextStyle(
                                     fontFeatures: NexoTones.figures,
                                     fontSize: 15,
-                                    fontWeight: FontWeight.w600,
+                                    fontWeight: NexoType.weight(
+                                        FontWeight.w900, FontWeight.w600),
                                     color: cs.primary)),
                           ],
                         ),
@@ -585,12 +604,14 @@ class _LoanSheetState extends State<LoanSheet> {
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
                               Text(l10n.loans_totalPayable,
-                                  style: const TextStyle(fontSize: 12)),
+                                  style: TextStyle(
+                                      fontSize: NexoType.size(11, 12))),
                               Text(formatAmount(_totalPayable, _currency),
-                                  style: const TextStyle(
+                                  style: TextStyle(
                                       fontFeatures: NexoTones.figures,
                                       fontSize: 12,
-                                      fontWeight: FontWeight.w500)),
+                                      fontWeight: NexoType.weight(
+                                          FontWeight.w700, FontWeight.w500))),
                             ],
                           ),
                         ],
@@ -604,8 +625,10 @@ class _LoanSheetState extends State<LoanSheet> {
               SwitchListTile(
                 value: _reminderEnabled,
                 title: Text(l10n.loans_paymentReminder,
-                    style: const TextStyle(
-                        fontSize: 14, fontWeight: FontWeight.w600)),
+                    style: TextStyle(
+                        fontSize: 14,
+                        fontWeight:
+                            NexoType.weight(FontWeight.bold, FontWeight.w600))),
                 contentPadding: EdgeInsets.zero,
                 onChanged: (val) async {
                   if (val) {
