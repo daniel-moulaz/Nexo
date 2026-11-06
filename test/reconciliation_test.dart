@@ -151,4 +151,83 @@ void main() {
     ], transactions: const [], metadata: const {});
     expect(result.map((m) => m.resolution).toSet(), {Resolution.ownTransfer});
   });
+
+  group('real cases', () {
+    final day = DateTime(2026, 11, 5, 12);
+    PendingMovement move(String id, int cents, String text,
+            {String kind = 'expense', String medium = 'bank'}) =>
+        PendingMovement(
+            id: id,
+            amountCents: cents,
+            description: text,
+            kind: kind,
+            medium: medium,
+            occurredAt: day);
+    AppTransaction entry(String id, double amount, String text,
+            {String account = 'bank'}) =>
+        AppTransaction(
+            id: id,
+            type: 'expense',
+            amount: amount,
+            description: text,
+            accountId: account,
+            categoryId: 'c',
+            date: day,
+            currency: 'BRL');
+
+    test('a Pix to oneself is neither spending nor income, one side or two',
+        () {
+      final r = reconcile(pending: [
+        move('out', 5000, 'Pix enviado Pessoa Exemplo'),
+        move('in', 7000, 'Pix recebido Pessoa Exemplo', kind: 'income'),
+        move('other', 5000, 'Pix enviado Outra Pessoa'),
+      ], transactions: const [], metadata: const {}, ownerNames: [
+        'Pessoa Exemplo'
+      ]);
+      expect(r[0].resolution, Resolution.ownName);
+      expect(r[1].resolution, Resolution.ownName);
+      expect(r[0].automatic, isTrue);
+      expect(r[2].resolution, Resolution.newEntry);
+    });
+
+    test('the piggy bank moves stay out by themselves', () {
+      final r = reconcile(pending: [
+        move('a', 1000, 'Dinheiro retirado Emergências', kind: 'income'),
+        move('b', 1000, 'Reserva por gasto'),
+      ], transactions: const [], metadata: const {});
+      expect(r.every((m) => m.resolution == Resolution.reserve), isTrue);
+    });
+
+    test('an entry made by hand links to the movement', () {
+      final r = reconcile(
+          pending: [move('a', 3300, 'Lanche', medium: 'credit')],
+          transactions: [entry('t', 33, 'Lanche', account: 'card')],
+          metadata: const {},
+          creditAccounts: const {'card'});
+      expect(r.single.resolution, Resolution.linked);
+      expect(r.single.wrongAccount, isFalse);
+    });
+
+    test('a Pix against a card entry is pointed out, never linked by itself',
+        () {
+      final r = reconcile(
+          pending: [move('a', 2530, 'iFood')],
+          transactions: [entry('t', 25.30, 'iFood', account: 'card')],
+          metadata: const {},
+          creditAccounts: const {'card'});
+      expect(r.single.resolution, Resolution.maybe);
+      expect(r.single.wrongAccount, isTrue);
+      expect(r.single.automatic, isFalse);
+    });
+
+    test('"they are different" holds for a wrong account too', () {
+      final r = reconcile(
+          pending: [move('a', 2530, 'iFood')],
+          transactions: [entry('t', 25.30, 'iFood', account: 'card')],
+          metadata: const {},
+          dismissedPairs: const {'a|t'},
+          creditAccounts: const {'card'});
+      expect(r.single.wrongAccount, isFalse);
+    });
+  });
 }

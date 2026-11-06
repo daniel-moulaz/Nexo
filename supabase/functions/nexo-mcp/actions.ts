@@ -511,11 +511,30 @@ async function dispatchAction(name: string, args: Args, l: Ledger, today: string
         throw new ToolInputError("limit deve ser um inteiro entre 1 e 200.");
       }
       const rows = await deps.suggestions(limit);
+      const metas = metadataIndex(l);
+      const credit = new Set(l.accounts.filter((x) => x.type === "credit").map((x) => text(x.id)));
+      const used = new Set<string>();
+      /// Same direction, same amount, three days apart at most: most likely
+      /// recorded by hand. The kind of account decides if it is really right.
+      const recorded = (s: Record<string, unknown>) => {
+        const when = new Date(Number(s.occurred_at)).toISOString().slice(0, 10);
+        const type = s.kind === "income" || s.kind === "refund" ? "income" : "expense";
+        const near = l.transactions.find((t) => !used.has(text(t.id)) && t.type === type &&
+          cents(num(t.amount)) === Number(s.amount_cents) && !isNeutral(t, meta(metas.get(text(t.id)))) &&
+          Math.abs(Date.parse(day(text(t.date))) - Date.parse(when)) <= 3 * 86400000);
+        if (!near) return undefined;
+        used.add(text(near.id));
+        return {
+          id: text(near.id), description: text(near.description),
+          account_mismatch: (s.medium === "credit") !== credit.has(text(near.account_id)),
+        };
+      };
       return {
         suggestions: rows.map((s) => ({
           id: s.id, bank: s.bank, date: new Date(Number(s.occurred_at)).toISOString().slice(0, 10),
           amount: Number(s.amount_cents) / 100, kind: s.kind, medium: s.medium === "credit" ? "cartão" : "conta",
           description: s.description, settled: s.settled, installment: s.installment ?? undefined,
+          probably_recorded: recorded(s),
         })),
         note: "Sugestões não são lançamentos. Confirme as que são reais com confirm_suggestion e descarte o resto com ignore_suggestions.",
         bank_data: await bankFreshness(deps, today),

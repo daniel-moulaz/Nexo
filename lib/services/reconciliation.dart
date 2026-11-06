@@ -9,8 +9,12 @@ class PendingMovement {
       required this.amountCents,
       required this.description,
       required this.kind,
-      required this.occurredAt});
+      required this.occurredAt,
+      this.medium = 'bank'});
   final String id, description;
+
+  /// bank | credit: where the bank says the money moved.
+  final String medium;
 
   /// expense | income | refund | transfer
   final String kind;
@@ -22,6 +26,7 @@ class PendingMovement {
       amountCents: r['amount_cents'] as int,
       description: r['description'] as String,
       kind: r['kind'] as String,
+      medium: r['medium'] as String? ?? 'bank',
       occurredAt: DateTime.fromMillisecondsSinceEpoch(r['occurred_at'] as int));
 
   bool get outgoing => kind == 'expense' || kind == 'transfer';
@@ -36,6 +41,10 @@ enum Resolution {
 
   /// Money between the person's own accounts (both sides seen).
   ownTransfer,
+
+  /// To or from the person's own name, with the other side not seen (a bank
+  /// that is not connected, for instance): never spending or income.
+  ownName,
 
   /// A payment and its reversal: nothing happened.
   reversal,
@@ -52,7 +61,11 @@ enum Resolution {
 
 class Match {
   const Match(this.movement, this.resolution,
-      {this.transaction, this.score = 0, this.pair, this.categoryId});
+      {this.transaction,
+      this.score = 0,
+      this.pair,
+      this.categoryId,
+      this.wrongAccount = false});
   final PendingMovement movement;
   final Resolution resolution;
   final AppTransaction? transaction;
@@ -66,11 +79,16 @@ class Match {
   /// Category learned from rules or past entries, for new entries.
   final String? categoryId;
 
+  /// The entry looks right but sits on the other kind of account: the bank
+  /// saw a Pix where the Nexo has a card purchase, or the opposite.
+  final bool wrongAccount;
+
   /// Applied without asking (linked, reversal, reserve, small yield).
   bool get automatic =>
       resolution == Resolution.linked ||
       resolution == Resolution.reversal ||
       resolution == Resolution.reserve ||
+      resolution == Resolution.ownName ||
       resolution == Resolution.smallYield;
 }
 
@@ -146,6 +164,7 @@ List<Match> reconcile({
   Set<String> dismissedPairs = const {},
   int smallYieldCents = 100,
   String? Function(PendingMovement)? learnedCategory,
+  Set<String> creditAccounts = const {},
 }) {
   final out = <String, Match>{};
   final used = <String>{...linkedIds};
@@ -214,6 +233,13 @@ List<Match> reconcile({
     }
   }
 
+  // Only one side visible, but it names the person: their own money moving.
+  for (final m in open()) {
+    if (mentionsOwner(m.description)) {
+      out[m.id] = Match(m, Resolution.ownName);
+    }
+  }
+
   // 4. Entries already in the Nexo.
   final candidates = transactions.where((t) {
     final m = metadata[t.id];
@@ -268,7 +294,17 @@ List<Match> reconcile({
                 _days(o.occurredAt, m.occurredAt) <= 1)
             .isEmpty;
     final similar = textSimilarity(m.description, best.description) >= .6;
-    if (exact && days <= 3 && (similar || (days <= 1 && unique))) {
+    // A movement from the bank account never settles a card entry by itself:
+    // linking them would keep the invoice wrong.
+    final mismatch = creditAccounts.isNotEmpty &&
+        (m.medium == 'credit') != creditAccounts.contains(best.accountId);
+    if (exact &&
+        mismatch &&
+        days <= 3 &&
+        !dismissedPairs.contains('${m.id}|${best.id}')) {
+      out[m.id] = Match(m, Resolution.maybe,
+          transaction: best, score: s, wrongAccount: true);
+    } else if (exact && days <= 3 && (similar || (days <= 1 && unique))) {
       used.add(best.id);
       out[m.id] = Match(m, Resolution.linked,
           transaction: best, score: s < 85 ? 85 : s);

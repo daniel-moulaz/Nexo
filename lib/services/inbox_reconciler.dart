@@ -70,6 +70,48 @@ class InboxReconciler {
         for (final n in names)
           if (n.trim().isNotEmpty) n.trim()
       ]);
+
+  /// What the person typed, or the profile's full name. A single first name
+  /// would match any namesake, so it does not count.
+  static Future<List<String>> _owners(String profileName) async {
+    final typed = await ownerNames();
+    if (typed.isNotEmpty) return typed;
+    final name = profileName.trim();
+    return name.contains(' ') ? [name] : const [];
+  }
+
+  static DateTime? _lastBackground;
+
+  /// The same work as opening "Para revisar", after a sync: what the app
+  /// settles by itself stops reaching the person and the assistant. Then the
+  /// decisions go to the server. A failure waits for the next round.
+  static Future<void> background(
+      {required Future<List<Map<String, dynamic>>> Function() pending,
+      required List<AppTransaction> transactions,
+      required Map<String, TransactionMetadata> metadata,
+      required List<Account> accounts,
+      required String profileName,
+      Future<void> Function()? push,
+      Duration every = const Duration(minutes: 10)}) async {
+    final now = DateTime.now();
+    final last = _lastBackground;
+    if (last != null && now.difference(last) < every) return;
+    _lastBackground = now;
+    try {
+      final rows = await pending();
+      if (rows.isEmpty) return;
+      await run(
+          pendingRows: rows,
+          transactions: transactions,
+          metadata: metadata,
+          accounts: accounts,
+          profileName: profileName);
+      await push?.call();
+    } catch (_) {
+      // The screen does the same when opened.
+    }
+  }
+
   static Future<bool> automatic() async =>
       (await _prefs).getBool(autoKey) ?? true;
   static Future<void> setAutomatic(bool on) async =>
@@ -110,6 +152,7 @@ class InboxReconciler {
         'linked' => 'Já estava lançado',
         'reversal' => 'Pagamento estornado',
         'reserve' => 'Movimento de reserva',
+        'ownName' => 'Transferência sua',
         'smallYield' => 'Rendimento pequeno',
         _ => 'Resolvido',
       };
@@ -119,6 +162,8 @@ class InboxReconciler {
     required List<Map<String, dynamic>> pendingRows,
     required List<AppTransaction> transactions,
     required Map<String, TransactionMetadata> metadata,
+    List<Account> accounts = const [],
+    String profileName = '',
   }) async {
     final db = await DBHelper.database;
     final linked = {
@@ -135,7 +180,11 @@ class InboxReconciler {
         transactions: transactions,
         metadata: metadata,
         linkedIds: linked,
-        ownerNames: await ownerNames(),
+        ownerNames: await _owners(profileName),
+        creditAccounts: {
+          for (final a in accounts)
+            if (a.type == 'credit') a.id
+        },
         dismissedPairs: await _set(_dismissedKey),
         learnedCategory: (m) {
           final type = m.outgoing ? 'expense' : 'income';

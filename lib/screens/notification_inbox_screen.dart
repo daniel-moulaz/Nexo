@@ -83,7 +83,9 @@ class _NotificationInboxScreenState extends State<NotificationInboxScreen>
       final result = await InboxReconciler.run(
           pendingRows: await NotificationInbox.pending(),
           transactions: app.transactions,
-          metadata: app.transactionMetadata);
+          metadata: app.transactionMetadata,
+          accounts: app.accounts,
+          profileName: app.settings.userName);
       if (mounted)
         setState(() {
           state = result;
@@ -395,6 +397,13 @@ class _NotificationInboxScreenState extends State<NotificationInboxScreen>
                                           m.movement.id, m.transaction!.id),
                                       'Separados.'),
                                   child: const Text('São diferentes')),
+                              if (m.wrongAccount)
+                                Text(
+                                    m.movement.medium == 'credit'
+                                        ? 'O banco viu no cartão; aqui está em uma conta.'
+                                        : 'O banco viu Pix ou débito; aqui está no cartão. Confira a fatura.',
+                                    style: TextStyle(
+                                        color: NexoTones.warning(context))),
                             ])),
                 ],
                 if (own.isNotEmpty) ...[

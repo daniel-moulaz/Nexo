@@ -29,6 +29,8 @@ import 'screens/month_review_screen.dart';
 import 'sync/supabase_auth.dart';
 import 'sync/sync_config.dart';
 import 'sync/sync_controller.dart';
+import 'services/inbox_reconciler.dart';
+import 'services/notification_inbox.dart';
 import 'services/pluggy_inbox.dart';
 import 'sync/mcp_connectors.dart';
 import 'sync/assistant_commands.dart';
@@ -97,6 +99,13 @@ Future<void> startNexo() async {
       // After a round, the other device's settings are already here.
       await provider.seedSharedSettings();
       await assistant.run(datasetId: sync.datasetId!, deviceId: sync.deviceId!);
+      await InboxReconciler.background(
+          pending: NotificationInbox.pending,
+          transactions: provider.transactions,
+          metadata: provider.transactionMetadata,
+          accounts: provider.accounts,
+          profileName: provider.settings.userName,
+          push: () async => PluggyInbox.instance?.sync());
     };
   }
   // Never blocks opening the app: offline or signed out just waits.

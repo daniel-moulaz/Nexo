@@ -927,6 +927,22 @@ await test('split bill: parts by name, and money received into an account', asyn
   await assert.rejects(pact(q, 'settle_lended', { id: 'p1', account_id: 'nu' }, l), /cartão/);
 });
 
+await test('suggestions point at what is probably recorded, and at the wrong account', async () => {
+  const q = smartQueue();
+  const at = (d) => Date.parse(`${d}T12:00:00Z`);
+  q.deps.suggestions = async () => [
+    { id: 'pluggy:a', bank: 'B', occurred_at: at('2026-10-20'), amount_cents: 4590, kind: 'expense', medium: 'credit', description: 'iFood' },
+    { id: 'pluggy:b', bank: 'B', occurred_at: at('2026-10-21'), amount_cents: 3990, kind: 'expense', medium: 'bank', description: 'iFood Pix' },
+    { id: 'pluggy:c', bank: 'B', occurred_at: at('2026-10-21'), amount_cents: 777, kind: 'expense', medium: 'bank', description: 'Novo' },
+    { id: 'pluggy:d', bank: 'B', occurred_at: at('2026-10-20'), amount_cents: 4590, kind: 'expense', medium: 'credit', description: 'iFood de novo' },
+  ];
+  const s = (await pact(q, 'list_suggestions', {})).suggestions;
+  assert.deepEqual(s[0].probably_recorded, { id: 'ifood', description: 'ifood', account_mismatch: false });
+  assert.equal(s[1].probably_recorded.account_mismatch, true, 'the bank saw a Pix; the entry is on the card');
+  assert.equal(s[2].probably_recorded, undefined);
+  assert.equal(s[3].probably_recorded, undefined, 'one entry answers for one movement');
+});
+
 await test('goals show their movements, so a withdrawal explains a zero', async () => {
   const q = smartQueue();
   const l = { ...scenario, goals: [{ id: 'g', name: 'Reserva', target_amount: 1000, current_amount: 0 }],
