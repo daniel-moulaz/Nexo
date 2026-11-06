@@ -124,6 +124,13 @@ class EnvelopesView extends StatelessWidget {
               : 'Cadastre uma renda fixa recorrente ou informe a renda de referência',
           action: 'Ajustar',
           onAction: onAdjust),
+      for (final line in report.lines.where((l) => l.wayOver))
+        Padding(
+            padding: const EdgeInsets.only(top: 6),
+            child: Text(
+                '${line.def.name} em ${(line.usedRatio * 100).toStringAsFixed(0)}% da meta do mês.',
+                style: TextStyle(
+                    fontSize: 13, color: NexoTones.expense(context)))),
       const SizedBox(height: 8),
       GridView.builder(
         shrinkWrap: true,

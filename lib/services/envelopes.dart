@@ -152,6 +152,9 @@ class EnvelopeLine {
   /// Investing and saving are the goal; spending is the thing to watch.
   bool get isSaving => def.id == 'freedom' || def.id == 'goals';
   bool get over => !isSaving && planned > 0 && spent > planned + .005;
+
+  /// Far past the target: worth saying out loud, not only in the bar.
+  bool get wayOver => over && usedRatio >= 1.5;
 }
 
 class EnvelopeReport {

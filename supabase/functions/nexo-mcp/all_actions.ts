@@ -446,7 +446,9 @@ export async function callAllAction(name: string, rawArgs: unknown, l: Ledger, t
       const body: Args = {
         name: str(args, "name", 80),
         asset_class: oneOf(args, "asset_class", ["Ações", "FIIs", "ETFs", "Renda fixa", "Cripto", "Outros"]),
-        ticker: str(args, "ticker", 12, false) ?? "", institution: str(args, "institution", 60, false) ?? "",
+        // The fractional market (BPAC11F) is the same asset as BPAC11.
+        ticker: (str(args, "ticker", 12, false) ?? "").toUpperCase().replace(/^([A-Z]{4}\d{1,2})F$/, "$1"),
+        institution: str(args, "institution", 60, false) ?? "",
         quantity_micros: quantityMicros(args, true), cents: reais(args, "total"), date,
       };
       if (args.cash_account_id !== undefined) body.cash_account_id = text(account(l, str(args, "cash_account_id", 256), true).id);

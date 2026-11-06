@@ -943,6 +943,22 @@ await test('suggestions point at what is probably recorded, and at the wrong acc
   assert.equal(s[3].probably_recorded, undefined, 'one entry answers for one movement');
 });
 
+await test('spending types say when a target is far behind, and when a category has no type', async () => {
+  const q = smartQueue();
+  const l = { ...scenario, sharedSettings: [{ key: 'referenceIncome', value: '100' }, { key: 'envelopeShares', value: JSON.stringify({ fixed: 30, comfort: 15, goals: 15, pleasures: 10, knowledge: 5, freedom: 25 }) }] };
+  const alerts = (await pact(q, 'get_spending_types', { month: '2026-10' }, l)).alerts;
+  assert.ok(alerts.some((a) => /^Custos fixos em \d+% da meta/.test(a)), alerts.join(' | '));
+  assert.ok(alerts.some((a) => /sem tipo/.test(a)));
+});
+
+await test('a fractional ticker is the same asset', async () => {
+  const q = smartQueue();
+  await pact(q, 'add_investment', { name: 'Ativo', asset_class: 'Ações', ticker: 'bpac11f', quantity: 1, total: 50, date: tday });
+  assert.equal(q.items.at(-1).args.ticker, 'BPAC11');
+  await pact(q, 'add_investment', { name: 'Fundo', asset_class: 'FIIs', ticker: 'HGLG11', quantity: 2, total: 50, date: tday });
+  assert.equal(q.items.at(-1).args.ticker, 'HGLG11');
+});
+
 await test('goals show their movements, so a withdrawal explains a zero', async () => {
   const q = smartQueue();
   const l = { ...scenario, goals: [{ id: 'g', name: 'Reserva', target_amount: 1000, current_amount: 0 }],

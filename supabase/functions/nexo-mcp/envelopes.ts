@@ -80,6 +80,10 @@ export function spendingTypes(l: Ledger, month: string, shares: Record<string, n
         .map((c) => ({ id: text(c.id), name: text(c.name), spent: money(byCategory.get(text(c.id)) ?? 0) })),
       all_categories: unassigned.map((c) => ({ id: text(c.id), name: text(c.name) })),
     },
+    alerts: [
+      ...lines.filter((x) => x.over && (x.used_percent ?? 0) >= 150).map((x) => `${x.name} em ${x.used_percent}% da meta do mês.`),
+      ...(unassignedSpent > 0 ? ["Há gasto em categoria sem tipo: classifique com set_category_type."] : []),
+    ],
     total_spent: money(lines.reduce((s, x) => s + cents(x.spent), 0) + unassignedSpent),
     not_converted_other_currencies: Object.fromEntries(Object.entries(unconverted).map(([c, v]) => [c, money(v)])),
   };

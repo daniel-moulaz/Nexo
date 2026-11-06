@@ -6,6 +6,18 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
+  test('far past the target is called out; saving never is', () {
+    EnvelopeLine line(String id, double spent) => EnvelopeLine(
+        def: envelopeById(id)!,
+        share: 10,
+        planned: 100,
+        spent: spent,
+        categories: const []);
+    expect(line('fixed', 150).wayOver, isTrue);
+    expect(line('fixed', 140).wayOver, isFalse);
+    expect(line('freedom', 300).wayOver, isFalse);
+  });
+
   AppCategory cat(String id, String name, {String? envelope}) => AppCategory(
       id: id, name: name, type: 'expense', colorValue: 0, envelope: envelope);
   AppTransaction tx(String id, double amount, String category,
