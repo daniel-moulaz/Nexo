@@ -154,6 +154,6 @@ Future<void> main(List<String> args) async {
           locale: const Locale('pt'),
           localizationsDelegates: AppLocalizations.localizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
-          theme: buildTheme(seed: 'sky', dark: dark, amoled: dark),
+          theme: buildTheme(seed: 'nexo', dark: dark),
           home: const MainShell())));
 }
