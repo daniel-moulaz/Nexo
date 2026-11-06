@@ -324,6 +324,42 @@ function budgetSpentCents(l: Ledger, b: Row, today: string, weekStart: string): 
   return total;
 }
 
+/// Same as the app's BudgetRule: base, plus a share of the profit; a loss
+/// never lowers the base.
+function budgetRule(l: Ledger, b: Row, today: string, weekStart: string, spent: number) {
+  const rules = (sharedSettings(l).budgetRules ?? {}) as Record<string, Record<string, unknown>>;
+  const rule = rules[text(b.category_id)];
+  if (!rule) return undefined;
+  const { from, to } = budgetWindow(b, today, weekStart);
+  const metas = metadataIndex(l);
+  let earned = 0;
+  for (const tx of l.transactions) {
+    if (tx.type !== "income" || text(tx.category_id) !== text(rule.income_category_id)) continue;
+    const date = day(text(tx.date));
+    if (date < from || date >= to || isNeutral(tx, meta(metas.get(text(tx.id))))) continue;
+    if (currencyOf(l, tx) !== l.mainCurrency) continue;
+    earned += cents(num(tx.amount));
+  }
+  const base = cents(num(rule.base)), profit = earned - spent;
+  const limit = base + (profit > 0 ? Math.round(profit * num(rule.percent) / 100) : 0);
+  return { base, percent: num(rule.percent), earned, profit, limit };
+}
+
+/// What the recurring expenses still running cost in an average month.
+function monthlyFixedCents(l: Ledger, today: string): number {
+  let total = 0;
+  for (const r of l.recurring) {
+    const every = num(r.freq_val);
+    if (r.payment_type === "income" || every <= 0) continue;
+    if (typeof r.end_date === "string" && day(r.end_date) < today) continue;
+    const amount = cents(num(r.amount));
+    const unit = text(r.freq_unit);
+    total += unit === "days" ? amount * 365 / 12 / every : unit === "weeks" ? amount * 52 / 12 / every :
+      unit === "years" ? amount / 12 / every : amount / every;
+  }
+  return Math.round(total);
+}
+
 export async function callMoreAction(name: string, rawArgs: unknown, l: Ledger, today: string,
   enqueue: Enqueue): Promise<Record<string, unknown> | null> {
   const args = (rawArgs ?? {}) as Args;
@@ -477,7 +513,8 @@ export async function callMoreAction(name: string, rawArgs: unknown, l: Ledger, 
         budgets: (l.budgets ?? []).map((b) => {
           const spent = budgetSpentCents(l, b, today, weekStart);
           const window = budgetWindow(b, today, weekStart);
-          const limit = window.limitCents;
+          const rule = budgetRule(l, b, today, weekStart, spent);
+          const limit = rule?.limit ?? window.limitCents;
           return {
             id: text(b.id),
             category: text(find(l.categories, b.category_id)?.name) || "Categoria",
@@ -490,6 +527,9 @@ export async function callMoreAction(name: string, rawArgs: unknown, l: Ledger, 
             counts_from: window.partial ? window.from : undefined,
             full_limit: window.partial ? money(cents(num(b.amount))) : undefined,
             prorated: window.partial,
+            variable_limit: rule && {
+              base: money(rule.base), percent: rule.percent, earned: money(rule.earned), profit: money(rule.profit),
+            },
           };
         }),
         week_starts_on: weekStart === "sunday" ? "domingo" : "segunda",
@@ -533,6 +573,7 @@ export async function callMoreAction(name: string, rawArgs: unknown, l: Ledger, 
     }
     case "get_goals": {
       only(args, []);
+      const plan = sharedSettings(l).emergencyPlan as { goal_id?: string; months?: number; food_minimum?: number } | undefined;
       return {
         goals: (l.goals ?? []).map((g) => {
           const target = cents(num(g.target_amount)), saved = cents(num(g.current_amount));
@@ -544,6 +585,9 @@ export async function callMoreAction(name: string, rawArgs: unknown, l: Ledger, 
             missing: money(Math.max(target - saved, 0)),
             target_date: g.target_date ? day(text(g.target_date)) : undefined,
             completed: g.is_completed === 1 || g.is_completed === true,
+            auto_target: plan?.goal_id === g.id ? {
+              months: plan.months, food_minimum: plan.food_minimum, fixed_costs: money(monthlyFixedCents(l, today)),
+            } : undefined,
             // Without these, a withdrawal made in the app looks like a lost deposit.
             movements: (l.contributions ?? [])
               .filter((c) => c.goal_id === g.id)

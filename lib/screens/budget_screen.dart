@@ -8,6 +8,7 @@ import '../models/models.dart';
 import '../services/budget_insights.dart';
 import '../theme/app_theme.dart';
 import '../widgets/nexo_ui.dart';
+import '../widgets/planning_dialogs.dart';
 import '../widgets/shared_widgets.dart';
 import '../widgets/savings_goal_sheet.dart';
 import 'savings_goal_detail_screen.dart';
@@ -289,7 +290,8 @@ class _BudgetCard extends StatelessWidget {
     final cs = Theme.of(context).colorScheme;
     final spent = app.budgetSpent(budget);
     final window = budgetWindow(budget, now, weekStart: app.settings.weekStart);
-    final limit = window.limit;
+    final rule = app.budgetRuleOf(budget);
+    final limit = rule?.limit ?? window.limit;
     final ratio = limit <= 0 ? 0.0 : spent / limit;
     final color = ratio >= 1
         ? NexoTones.expense(context)
@@ -359,6 +361,13 @@ class _BudgetCard extends StatelessWidget {
                                 : 'de ${money(limit)}',
                             color: color),
                       ]),
+                      if (rule != null) ...[
+                        const SizedBox(height: 8),
+                        Text(
+                            'Base ${money(rule.rule.base)} + ${rule.rule.percent.toStringAsFixed(0)}% do lucro de ${money(rule.profit)}',
+                            style: TextStyle(
+                                fontSize: 12, color: cs.onSurfaceVariant)),
+                      ],
                       const SizedBox(height: 12),
                       NexoProgress(value: ratio),
                       const SizedBox(height: 8),
@@ -874,6 +883,16 @@ class _BudgetSheetState extends State<_BudgetSheet> {
               const SizedBox(height: 16),
             ],
 
+            if (isEdit) ...[
+              OutlinedButton.icon(
+                  icon: const Icon(Icons.tune),
+                  label: const Text('Limite variável'),
+                  onPressed: () => showBudgetRuleDialog(
+                      context,
+                      context.read<AppProvider>(),
+                      widget.existing!.categoryId)),
+              const SizedBox(height: 12),
+            ],
             FilledButton.icon(
               onPressed: () {
                 AppHaptics.tap(context, HapticStrength.light);

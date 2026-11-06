@@ -737,6 +737,91 @@ void main() {
     expect(positions.where((p) => !p.investment.archived), hasLength(1));
   });
 
+  test('variable budget: base plus profit, by settings, on every device',
+      () async {
+    await capture();
+    await app.addCategory(AppCategory(
+        id: 'ganhos', name: 'Ganhos', type: 'income', colorValue: 0));
+    await app.addBudget(Budget(
+        id: 'b',
+        categoryId: 'food_exp',
+        amount: 50,
+        period: 'monthly',
+        createdAt: DateTime(2026, 1, 1)));
+    final set = await send('settings.set', {
+      'values': {
+        'budgetRules': {
+          'food_exp': {
+            'base': 50,
+            'percent': 50,
+            'income_category_id': 'ganhos'
+          }
+        }
+      }
+    });
+    expect(set.$1, 'done', reason: '$set');
+    await app.addTransaction(expense('aposta', 100, date: DateTime.now()));
+    await app.addTransaction(AppTransaction(
+        id: 'ganho',
+        type: 'income',
+        amount: 300,
+        description: 'Ganho',
+        accountId: 'bank',
+        categoryId: 'ganhos',
+        date: DateTime.now(),
+        currency: 'BRL'));
+    final budget = app.budgets.single;
+    expect(app.budgetRuleOf(budget)!.profit, 200);
+    expect(app.budgetLimit(budget), 150);
+    final bad = await send('settings.set', {
+      'values': {
+        'budgetRules': {
+          'food_exp': {'base': 50, 'percent': 300}
+        }
+      }
+    });
+    expect(bad.$1, 'rejected');
+  });
+
+  test('emergency plan moves the target and nothing else', () async {
+    await capture();
+    await app.addSavingsGoal(SavingsGoal(
+        id: 'g',
+        name: 'Reserva',
+        targetAmount: 100,
+        currentAmount: 40,
+        currency: 'BRL',
+        colorValue: 0));
+    await app.addRecurring(RecurringPayment(
+        id: 'r',
+        name: 'Aluguel',
+        accountId: 'bank',
+        categoryId: 'food_exp',
+        amount: 700,
+        freqVal: 1,
+        freqUnit: 'months',
+        startDate: DateTime(2026, 1, 1),
+        nextDate: DateTime.now().add(const Duration(days: 10))));
+    final set = await send('settings.set', {
+      'values': {
+        'emergencyPlan': {'goal_id': 'g', 'months': 6, 'food_minimum': 200}
+      }
+    });
+    expect(set.$1, 'done', reason: '$set');
+    final accounts = await balance('bank');
+    await app.applyEmergencyPlan();
+    final goal = app.savingsGoals.single;
+    expect(goal.targetAmount, 5400);
+    expect(goal.currentAmount, 40);
+    expect(await balance('bank'), accounts);
+    final unknown = await send('settings.set', {
+      'values': {
+        'emergencyPlan': {'goal_id': 'x', 'months': 6, 'food_minimum': 0}
+      }
+    });
+    expect(unknown.$1, 'rejected');
+  });
+
   test('invoice paid on a given day keeps that day', () async {
     await app.addTransaction(expense('compra', 80,
         account: 'nu',

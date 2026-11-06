@@ -1,6 +1,7 @@
 import '../providers/app_provider.dart';
 import '../screens/home_customize_sheet.dart' show kHomeSections;
 import '../services/envelopes.dart';
+import '../services/planning_rules.dart';
 
 /// One app setting the assistant may read and change. [shared] settings
 /// live in the synced ledger (same on every device); the others belong to
@@ -10,7 +11,8 @@ class AssistantSetting {
       {this.shared = false, this.values = const []});
   final String key, label;
 
-  /// bool, number, time, enum, string, currency, shares, goal_ids, cards.
+  /// bool, number, time, enum, string, currency, shares, goal_ids, cards,
+  /// budget_rules, emergency_plan.
   final String kind;
   final bool shared;
   final List<String> values;
@@ -32,6 +34,16 @@ final assistantSettings = <AssistantSetting>[
       shared: true, values: ['monday', 'sunday']),
   const AssistantSetting('lockedGoalIds',
       'Objetivos cujo dinheiro fica fora do saldo livre do Hoje', 'goal_ids',
+      shared: true),
+  const AssistantSetting(
+      'budgetRules',
+      'Orçamentos com limite variável: base + % do lucro do mês, por categoria',
+      'budget_rules',
+      shared: true),
+  const AssistantSetting(
+      'emergencyPlan',
+      'Objetivo cuja meta segue os custos fixos: meses e alimentação mínima',
+      'emergency_plan',
       shared: true),
   const AssistantSetting(
       'budgetAlertsEnabled', 'Aviso quando um orçamento estoura', 'bool'),
@@ -112,6 +124,36 @@ Object validateAssistantSetting(String key, Object? value,
       final total = shares.values.fold<int>(0, (s, v) => s + v);
       if (total != 100) bad('as porcentagens somam $total%, devem somar 100%.');
       return shares;
+    case 'budget_rules':
+      if (value is! Map) bad('informe uma regra por categoria.');
+      final rules = <String, Object>{};
+      for (final e in value.entries) {
+        final rule = BudgetRule.fromJson(e.value);
+        if (e.key is! String ||
+            rule == null ||
+            rule.base < 0 ||
+            rule.percent < 0 ||
+            rule.percent > 100 ||
+            rule.incomeCategoryId.isEmpty) {
+          bad('cada regra precisa de base, percent de 0 a 100 e income_category_id.');
+        }
+        rules[e.key as String] = rule.toJson();
+      }
+      return rules;
+    case 'emergency_plan':
+      if (value is! Map) bad('informe goal_id, months e food_minimum.');
+      if (value.isEmpty) return <String, Object>{};
+      final plan = EmergencyPlan.fromJson(value);
+      if (plan == null ||
+          plan.months < 1 ||
+          plan.months > 60 ||
+          plan.foodMinimum < 0) {
+        bad('use goal_id, months de 1 a 60 e food_minimum.');
+      }
+      if (!goalIds.contains(plan.goalId)) {
+        bad('objetivo não encontrado: ${plan.goalId}.');
+      }
+      return plan.toJson();
     case 'goal_ids':
       if (value is! List || value.any((v) => v is! String)) {
         bad('informe a lista de ids dos objetivos.');

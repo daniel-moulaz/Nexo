@@ -8,6 +8,7 @@ import 'package:uuid/uuid.dart';
 import 'package:file_picker/file_picker.dart';
 import '../models/models.dart';
 import '../database/db_helper.dart';
+import '../services/planning_rules.dart';
 import '../services/transaction_metadata_service.dart';
 import '../services/finance_rules.dart';
 import '../services/budget_insights.dart';
@@ -53,6 +54,12 @@ class AppSettings {
 
   /// Income the shares are taken from; 0 means the month's fixed income.
   double referenceIncome;
+
+  /// Budgets with a variable limit: category id → rule (see BudgetRule).
+  Map<String, dynamic> budgetRules;
+
+  /// The goal whose target follows the fixed costs (see EmergencyPlan).
+  Map<String, dynamic> emergencyPlan;
   bool dailyReminderEnabled;
   String dailyReminderTime;
   bool hapticsEnabled;
@@ -79,6 +86,8 @@ class AppSettings {
     this.budgetAlertsEnabled = true,
     Map<String, int>? envelopeShares,
     this.referenceIncome = 0,
+    this.budgetRules = const {},
+    this.emergencyPlan = const {},
     this.dailyReminderEnabled = false,
     this.dailyReminderTime = '22:00',
     this.hapticsEnabled = true,
@@ -102,6 +111,8 @@ class AppSettings {
         'budgetAlertsEnabled': budgetAlertsEnabled,
         'envelopeShares': envelopeShares,
         'referenceIncome': referenceIncome,
+        'budgetRules': budgetRules,
+        'emergencyPlan': emergencyPlan,
         'dailyReminderEnabled': dailyReminderEnabled,
         'dailyReminderTime': dailyReminderTime,
         'hapticsEnabled': hapticsEnabled,
@@ -206,6 +217,10 @@ class AppSettings {
       envelopeShares: (j['envelopeShares'] as Map?)
           ?.map((k, v) => MapEntry(k.toString(), (v as num).toInt())),
       referenceIncome: (j['referenceIncome'] as num?)?.toDouble() ?? 0,
+      budgetRules:
+          (j['budgetRules'] as Map?)?.cast<String, dynamic>() ?? const {},
+      emergencyPlan:
+          (j['emergencyPlan'] as Map?)?.cast<String, dynamic>() ?? const {},
       dailyReminderEnabled: (j['dailyReminderEnabled'] as bool?) ?? false,
       dailyReminderTime: (j['dailyReminderTime'] as String?) ?? '22:00',
       hapticsEnabled: (j['hapticsEnabled'] as bool?) ?? true,
@@ -535,6 +550,8 @@ class AppProvider extends ChangeNotifier {
     'envelopeShares',
     'weekStart',
     'lockedGoalIds',
+    'budgetRules',
+    'emergencyPlan',
   };
 
   static const _sharedSeededKey = 'nexo_shared_settings_seeded_v1';
@@ -671,6 +688,12 @@ class AppProvider extends ChangeNotifier {
         break;
       case 'referenceIncome':
         settings.referenceIncome = (value as num).toDouble();
+        break;
+      case 'budgetRules':
+        settings.budgetRules = (value as Map).cast<String, dynamic>();
+        break;
+      case 'emergencyPlan':
+        settings.emergencyPlan = (value as Map).cast<String, dynamic>();
         break;
       case 'dailyReminderEnabled':
         settings.dailyReminderEnabled = value as bool;
@@ -1841,9 +1864,72 @@ class AppProvider extends ChangeNotifier {
     });
   }
 
-  /// Limit of the current period (proportional when created mid-period).
+  /// Limit of the current period (proportional when created mid-period, or
+  /// what the budget's rule gives, when it has one).
   double budgetLimit(Budget b) =>
+      budgetRuleOf(b)?.limit ??
       budgetWindow(b, DateTime.now(), weekStart: settings.weekStart).limit;
+
+  /// Base, profit and resulting limit of a budget with a variable limit.
+  BudgetRuleResult? budgetRuleOf(Budget b) {
+    final rule = BudgetRule.fromJson(settings.budgetRules[b.categoryId]);
+    if (rule == null) return null;
+    final window =
+        budgetWindow(b, DateTime.now(), weekStart: settings.weekStart);
+    final earned = transactions
+        .where((t) =>
+            t.type == 'income' &&
+            t.categoryId == rule.incomeCategoryId &&
+            !FinanceRules.isNeutral(t, transactionMetadata[t.id]) &&
+            t.date.isBefore(window.end) &&
+            !t.date.isBefore(window.countsFrom))
+        .fold(
+            0.0,
+            (sum, t) =>
+                sum +
+                convertToMain(
+                    t.amount,
+                    t.currency.isNotEmpty
+                        ? t.currency
+                        : accountById(t.accountId)?.currency ??
+                            settings.currency));
+    return rule.apply(earned: earned, spent: budgetSpent(b));
+  }
+
+  bool _applyingPlan = false;
+
+  /// Keeps the planned goal's target on what the fixed costs say. Only the
+  /// target moves: what the goal holds and the accounts stay as they are.
+  Future<void> applyEmergencyPlan() async {
+    final plan = EmergencyPlan.fromJson(settings.emergencyPlan);
+    if (plan == null || _applyingPlan) return;
+    final goal = savingsGoals.where((g) => g.id == plan.goalId).firstOrNull;
+    if (goal == null) return;
+    final target = (plan.target(recurring, DateTime.now()) * 100).round() / 100;
+    if (target <= 0 || (target - goal.targetAmount).abs() < 1) return;
+    _applyingPlan = true;
+    try {
+      final db = await DBHelper.database;
+      await ledgerTransaction(db, 'goal.emergency_target', (txn) async {
+        final completed = goal.currentAmount >= target;
+        await txn.update(
+            'savings_goals',
+            goal
+                .copyWith(
+                    targetAmount: target,
+                    isCompleted: completed,
+                    completedAt: completed ? DateTime.now() : null,
+                    clearCompletedAt: !completed)
+                .toMap(),
+            where: 'id = ?',
+            whereArgs: [goal.id]);
+      });
+      savingsGoals = await DBHelper.getSavingsGoals();
+      notifyListeners();
+    } finally {
+      _applyingPlan = false;
+    }
+  }
 
   /// Spent / limit, not clamped (1.5 = 50% over).
   double budgetProgressRaw(Budget b) {

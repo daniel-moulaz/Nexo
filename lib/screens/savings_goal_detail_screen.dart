@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import '../providers/app_provider.dart';
 import '../models/models.dart';
 import '../theme/app_theme.dart';
+import '../widgets/planning_dialogs.dart';
 import '../widgets/shared_widgets.dart';
 import '../widgets/savings_goal_sheet.dart';
 import '../utils/haptics.dart';
@@ -41,6 +42,12 @@ class SavingsGoalDetailScreen extends StatelessWidget {
         foregroundColor:
             color.computeLuminance() > 0.5 ? Colors.black : Colors.white,
         actions: [
+          IconButton(
+            tooltip: 'Meta automática',
+            icon: const Icon(Icons.autorenew),
+            onPressed: () => showEmergencyPlanDialog(
+                context, context.read<AppProvider>(), currentGoal),
+          ),
           IconButton(
             icon: const Icon(Icons.edit),
             onPressed: () {

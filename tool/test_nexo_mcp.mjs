@@ -883,6 +883,34 @@ await test('card limit alert: a recurring charge that will not fit', async () =>
   assert.equal(callTool('get_upcoming_bills', { days: 30 }, two, tday).card_limit_alerts[0].charge, 'depois');
 });
 
+await test('variable budget: base plus profit, and a loss stays on the base', async () => {
+  const q = smartQueue();
+  const rule = { key: 'budgetRules', value: JSON.stringify({ bar: { base: 50, percent: 50, income_category_id: 'ganhos' } }) };
+  const bet = { id: 'g1', type: 'income', amount: 300, description: 'Ganho', account_id: 'main', category_id: 'ganhos', date: '2026-10-20T12:00:00.000', note: '' };
+  const base = { ...scenario, categories: [...scenario.categories, { id: 'ganhos', name: 'Ganhos', type: 'income' }],
+    budgets: [{ id: 'b', category_id: 'bar', amount: 50, period: 'monthly', created_at: '2026-01-01T00:00:00.000' }], sharedSettings: [rule] };
+  const won = (await pact(q, 'get_budgets', {}, { ...base, transactions: [...base.transactions, bet] })).budgets[0];
+  assert.equal(won.spent, 60);
+  assert.equal(won.limit, 170);
+  assert.deepEqual(won.variable_limit, { base: 50, percent: 50, earned: 300, profit: 240 });
+  const lost = (await pact(q, 'get_budgets', {}, base)).budgets[0];
+  assert.equal(lost.limit, 50);
+  assert.equal((await pact(q, 'get_budgets', {}, { ...base, sharedSettings: [] })).budgets[0].variable_limit, undefined);
+  await pact(q, 'set_setting', { settings: { budgetRules: { bar: { base: 50, percent: 50, income_category_id: 'ganhos' } } } }, base);
+  assert.equal(q.items.at(-1).kind, 'settings.set');
+  await assert.rejects(pact(q, 'set_setting', { settings: { budgetRules: { bar: { base: 50, percent: 500, income_category_id: 'x' } } } }, base), /percent/);
+});
+
+await test('emergency plan: the goal says how its target is computed', async () => {
+  const q = smartQueue();
+  const l = { ...scenario, goals: [{ id: 'g', name: 'Reserva', target_amount: 5400, current_amount: 0 }],
+    recurring: [{ id: 'r', name: 'Aluguel', amount: 700, account_id: 'main', payment_type: 'expense', freq_val: 1, freq_unit: 'months', next_date: '2026-11-05T12:00:00.000' }],
+    sharedSettings: [{ key: 'emergencyPlan', value: JSON.stringify({ goal_id: 'g', months: 6, food_minimum: 200 }) }] };
+  assert.deepEqual((await pact(q, 'get_goals', {}, l)).goals[0].auto_target, { months: 6, food_minimum: 200, fixed_costs: 700 });
+  await assert.rejects(pact(q, 'set_setting', { settings: { emergencyPlan: { goal_id: 'nao', months: 6, food_minimum: 0 } } }, l), /não encontrado/);
+  await pact(q, 'set_setting', { settings: { emergencyPlan: {} } }, l);
+});
+
 await test('goals show their movements, so a withdrawal explains a zero', async () => {
   const q = smartQueue();
   const l = { ...scenario, goals: [{ id: 'g', name: 'Reserva', target_amount: 1000, current_amount: 0 }],

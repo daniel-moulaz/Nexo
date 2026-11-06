@@ -104,6 +104,7 @@ Future<void> startNexo() async {
   NexoSecurity.instance.addListener(provider.updateHomeWidgets);
   provider
       .addListener(() => FinancialReminders.instance.requestRefresh(provider));
+  provider.addListener(() => unawaited(provider.applyEmergencyPlan()));
   FinancialReminders.instance.requestRefresh(provider);
 
   runApp(

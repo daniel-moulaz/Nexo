@@ -8,7 +8,7 @@ import { envelopes } from "./envelopes.ts";
 export interface SettingDef {
   key: string;
   label: string;
-  kind: "bool" | "number" | "time" | "enum" | "string" | "currency" | "shares" | "goal_ids" | "cards";
+  kind: "bool" | "number" | "time" | "enum" | "string" | "currency" | "shares" | "budget_rules" | "emergency_plan" | "goal_ids" | "cards";
   shared?: boolean;
   values?: string[];
   default: unknown;
@@ -27,6 +27,8 @@ export const settingDefs: SettingDef[] = [
     default: Object.fromEntries(envelopes.map((e) => [e.id, e.defaultShare])) },
   { key: "weekStart", label: "Primeiro dia da semana dos orçamentos semanais", kind: "enum", shared: true, values: ["monday", "sunday"], default: "monday" },
   { key: "lockedGoalIds", label: "Objetivos cujo dinheiro fica fora do saldo livre do Hoje", kind: "goal_ids", shared: true, default: [] },
+  { key: "budgetRules", label: "Orçamentos com limite variável: base + % do lucro do mês, por categoria", kind: "budget_rules", shared: true, default: {} },
+  { key: "emergencyPlan", label: "Objetivo cuja meta segue os custos fixos: meses e alimentação mínima", kind: "emergency_plan", shared: true, default: {} },
   { key: "budgetAlertsEnabled", label: "Aviso quando um orçamento estoura", kind: "bool", default: true },
   { key: "dailyReminderEnabled", label: "Lembrete diário para lançar gastos", kind: "bool", default: false },
   { key: "dailyReminderTime", label: "Hora do lembrete diário (HH:mm)", kind: "time", default: "22:00" },
@@ -95,6 +97,30 @@ export function checkSetting(key: string, value: unknown, goalIds: Set<string>):
       }
       const total = Object.values(out).reduce((s, n) => s + n, 0);
       return total === 100 ? { ok: out } : bad(`as porcentagens somam ${total}%, devem somar 100%.`);
+    }
+    case "budget_rules": {
+      if (!value || typeof value !== "object" || Array.isArray(value)) return bad("informe uma regra por categoria.");
+      const out: Record<string, unknown> = {};
+      for (const [category, rule] of Object.entries(value as Record<string, Record<string, unknown>>)) {
+        const { base, percent, income_category_id: income } = rule ?? {};
+        if (typeof base !== "number" || base < 0 || typeof percent !== "number" || percent < 0 || percent > 100 ||
+          typeof income !== "string" || !income) {
+          return bad("cada regra precisa de base, percent de 0 a 100 e income_category_id.");
+        }
+        out[category] = { base, percent, income_category_id: income };
+      }
+      return { ok: out };
+    }
+    case "emergency_plan": {
+      if (!value || typeof value !== "object" || Array.isArray(value)) return bad("informe goal_id, months e food_minimum.");
+      const v = value as Record<string, unknown>;
+      if (!Object.keys(v).length) return { ok: {} };
+      if (typeof v.goal_id !== "string" || typeof v.months !== "number" || !Number.isInteger(v.months) || v.months < 1 ||
+        v.months > 60 || typeof v.food_minimum !== "number" || v.food_minimum < 0) {
+        return bad("use goal_id, months de 1 a 60 e food_minimum.");
+      }
+      if (!goalIds.has(v.goal_id)) return bad(`objetivo não encontrado: ${v.goal_id}.`);
+      return { ok: { goal_id: v.goal_id, months: v.months, food_minimum: v.food_minimum } };
     }
     case "goal_ids": {
       if (!Array.isArray(value) || value.some((x) => typeof x !== "string")) return bad("informe a lista de ids dos objetivos.");

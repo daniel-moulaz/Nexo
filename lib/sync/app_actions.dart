@@ -77,6 +77,7 @@ const appWriteActions = <String, List<String>>{
   'lended.add': ['add_lended'],
   'lended.update': ['update_lended'],
   'lended.settle': ['settle_lended'],
+  'goal.emergency_target': ['set_setting'],
   'lended.delete': ['delete_lended'],
   'lended.restore': ['undo_request'],
   'lended_person.insert': ['add_lended'],
