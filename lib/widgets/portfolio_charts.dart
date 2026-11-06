@@ -68,15 +68,6 @@ class _PortfolioChartsState extends State<PortfolioCharts> {
           id: null
         ),
     ];
-    const colors = [
-      Color(0xff00a878),
-      Color(0xff52a9ef),
-      Color(0xffa18af5),
-      Color(0xfff1b64a),
-      Color(0xffec8db5),
-      Color(0xff64c9c3),
-      Color(0xff89959e)
-    ];
     final chart = SizedBox(
         height: 170,
         child: Semantics(
@@ -98,7 +89,7 @@ class _PortfolioChartsState extends State<PortfolioCharts> {
                 for (var i = 0; i < slices.length; i++)
                   PieChartSectionData(
                       value: slices[i].value.toDouble(),
-                      color: colors[i],
+                      color: NexoChart.slot(context, i),
                       radius: 28,
                       showTitle: false)
               ],
@@ -108,7 +99,8 @@ class _PortfolioChartsState extends State<PortfolioCharts> {
         ListTile(
           contentPadding: EdgeInsets.zero,
           dense: true,
-          leading: CircleAvatar(radius: 5, backgroundColor: colors[i]),
+          leading: CircleAvatar(
+              radius: 5, backgroundColor: NexoChart.slot(context, i)),
           title: Text(slices[i].label,
               maxLines: 1, overflow: TextOverflow.ellipsis),
           subtitle: Text(
@@ -151,8 +143,8 @@ class _PortfolioChartsState extends State<PortfolioCharts> {
                 style: TextStyle(
                     fontFeatures: NexoTones.figures,
                     color: p.unrealized < 0
-                        ? Theme.of(context).colorScheme.error
-                        : const Color(0xff008f64))),
+                        ? NexoTones.expense(context)
+                        : NexoTones.income(context))),
             onTap: () => widget.onAsset(p.investment.id)),
       Text(
           '${positions.length > 8 ? 'Oito maiores variações em valor absoluto. ' : ''}Valor atual menos custo restante. Vendas e proventos ficam separados.'),
@@ -220,10 +212,11 @@ class _PortfolioChartsState extends State<PortfolioCharts> {
                     i < values.length) onTap?.call(i);
               },
               touchTooltipData: BarTouchTooltipData(
+                  getTooltipColor: (_) => NexoChart.tooltip(context),
                   getTooltipItem: (group, groupIndex, rod, rodIndex) =>
                       BarTooltipItem(
                           '${labels[groupIndex]}\n${_money(values[groupIndex])}',
-                          const TextStyle(color: Colors.white)))),
+                          NexoChart.tooltipText(context)))),
           barGroups: [
             for (var i = 0; i < values.length; i++)
               BarChartGroupData(x: i, barRods: [
@@ -231,8 +224,8 @@ class _PortfolioChartsState extends State<PortfolioCharts> {
                     toY: values[i] / 100,
                     width: values.length > 6 ? 16 : 24,
                     color: values[i] < 0
-                        ? Theme.of(context).colorScheme.error
-                        : const Color(0xff00a878),
+                        ? NexoTones.expense(context)
+                        : NexoTones.income(context),
                     borderRadius: BorderRadius.circular(4))
               ])
           ],

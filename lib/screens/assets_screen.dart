@@ -108,7 +108,7 @@ class _AssetCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    const assetColor = Color(0xFF1565C0);
+    final assetColor = NexoTones.info(context);
 
     return Card(
       margin: const EdgeInsets.only(bottom: 8),
@@ -123,8 +123,8 @@ class _AssetCard extends StatelessWidget {
               color: assetColor.withValues(alpha: 0.10),
               borderRadius: BorderRadius.circular(12),
             ),
-            child: const Icon(Icons.inventory_2_outlined,
-                color: assetColor, size: 22),
+            child:
+                Icon(Icons.inventory_2_outlined, color: assetColor, size: 22),
           ),
           const SizedBox(width: 12),
           // Name + notes

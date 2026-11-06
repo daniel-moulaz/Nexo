@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import '../investments/investment_quotes.dart';
 import '../providers/app_provider.dart';
 import 'analysis_widgets.dart';
+import '../theme/nexo_tokens.dart';
 
 /// Market changes are never presented as the user's portfolio return.
 class InvestmentMarketInfo extends StatefulWidget {
@@ -47,12 +48,11 @@ class _InvestmentMarketInfoState extends State<InvestmentMarketInfo> {
         final market = snapshot.data?.$1;
         if (market == null) return const SizedBox.shrink();
         final change = market.value('regularMarketChangePercent');
-        final dark = Theme.of(context).brightness == Brightness.dark;
         final color = private || change == null || change == 0
             ? Theme.of(context).colorScheme.onSurfaceVariant
             : change > 0
-                ? (dark ? const Color(0xff69dbad) : const Color(0xff146c43))
-                : (dark ? const Color(0xffffa4a4) : const Color(0xffb3261e));
+                ? NexoTones.income(context)
+                : NexoTones.expense(context);
         final fallback = Center(
             child: Text(widget.ticker.substring(0, 1),
                 style: TextStyle(fontWeight: FontWeight.w600)));

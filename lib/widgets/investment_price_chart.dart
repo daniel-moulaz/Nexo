@@ -6,6 +6,7 @@ import '../providers/app_provider.dart';
 import '../investments/investment_history.dart';
 import '../investments/investment_quotes.dart';
 import 'analysis_widgets.dart';
+import '../theme/nexo_tokens.dart';
 
 class InvestmentPriceChart extends StatefulWidget {
   final String ticker;
@@ -72,8 +73,8 @@ class _InvestmentPriceChartState extends State<InvestmentPriceChart> {
         ? null
         : (points.last.price / points.first.price - 1) * 100;
     final color = change == null || change >= 0
-        ? const Color(0xff008f64)
-        : Theme.of(context).colorScheme.error;
+        ? NexoTones.income(context)
+        : NexoTones.expense(context);
     return AnalysisCard(
         title: 'Evolução do ativo',
         child: Column(
@@ -116,13 +117,13 @@ class _InvestmentPriceChartState extends State<InvestmentPriceChart> {
                           titlesData: const FlTitlesData(show: false),
                           lineTouchData: LineTouchData(
                               touchTooltipData: LineTouchTooltipData(
+                                  getTooltipColor: (_) =>
+                                      NexoChart.tooltip(context),
                                   getTooltipItems: (spots) => spots.map((s) {
                                         final p = points[s.spotIndex];
                                         return LineTooltipItem(
                                             '${DateFormat('dd/MM/yyyy').format(p.date.toLocal())}\n${money.format(p.price)}',
-                                            TextStyle(
-                                                color: Colors.white,
-                                                fontWeight: FontWeight.w600));
+                                            NexoChart.tooltipText(context));
                                       }).toList())),
                           lineBarsData: [
                             LineChartBarData(

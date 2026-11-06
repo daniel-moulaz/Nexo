@@ -91,12 +91,41 @@ abstract final class NexoTones {
 /// Series for charts with no color of their own. Picked to stay apart for
 /// people with red-green color blindness, and away from gain and loss.
 abstract final class NexoChart {
-  static const series = [
-    Color(0xFF5EEAD4),
-    Color(0xFFF2B84B),
-    Color(0xFF8AB4F8),
-    Color(0xFFE58FD0),
-    Color(0xFFC9D1DC),
-    Color(0xFFF29D6B),
+  /// Same hue order in both themes, each checked against its own card surface
+  /// for lightness, contrast and color blindness. The order matters: neighbors
+  /// are the pairs that must stay apart. Far from gain and loss on purpose.
+  static const seriesDark = [
+    Color(0xFF12A594),
+    Color(0xFFC2851A),
+    Color(0xFF8F7BE8),
+    Color(0xFFD9743A),
+    Color(0xFF4C8DE8),
+    Color(0xFFC75FB8),
   ];
+  static const seriesLight = [
+    Color(0xFF00897A),
+    Color(0xFF9A6A00),
+    Color(0xFF6D5BD0),
+    Color(0xFFB45309),
+    Color(0xFF2563EB),
+    Color(0xFFC026A3),
+  ];
+
+  /// Every chart tooltip: the inverse surface reads over any series.
+  static Color tooltip(BuildContext context) =>
+      Theme.of(context).colorScheme.inverseSurface;
+  static TextStyle tooltipText(BuildContext context) => TextStyle(
+      color: Theme.of(context).colorScheme.onInverseSurface,
+      fontWeight: FontWeight.w600);
+
+  /// The color of the [index]th series. Past the palette a series reads as
+  /// "others": new hues are never made up and colors never repeat.
+  static Color slot(BuildContext context, int index) {
+    final theme = Theme.of(context);
+    final series =
+        theme.brightness == Brightness.dark ? seriesDark : seriesLight;
+    return index < series.length
+        ? series[index]
+        : theme.colorScheme.onSurfaceVariant;
+  }
 }

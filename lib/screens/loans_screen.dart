@@ -73,7 +73,7 @@ class _LoansScreenState extends State<LoansScreen> {
                     value: app.settings.hideBalance
                         ? '••••'
                         : formatAmount(app.totalOutstandingLoanDebt, cur),
-                    color: const Color(0xFF4A148C),
+                    color: NexoTones.expense(context),
                   ),
                   const SizedBox(width: 8),
                   _SumChip(

@@ -659,7 +659,7 @@ class _AddTypeSheet extends StatelessWidget {
                 child: _TypeOptionCard(
               icon: Icons.arrow_downward_rounded,
               label: l10n.add_transaction_income,
-              color: const Color(0xFF2E7D32),
+              color: NexoTones.income(context),
               onTap: () {
                 Navigator.pop(context);
                 Navigator.push(
@@ -674,7 +674,7 @@ class _AddTypeSheet extends StatelessWidget {
                 child: _TypeOptionCard(
               icon: Icons.arrow_upward_rounded,
               label: l10n.add_transaction_expense,
-              color: const Color(0xFFC62828),
+              color: NexoTones.expense(context),
               onTap: () {
                 Navigator.pop(context);
                 Navigator.push(
@@ -838,13 +838,13 @@ class _ExpandableFabState extends State<ExpandableFab>
           ExpandableFabItem(
             label: l10n.add_transaction_expense,
             icon: Icons.arrow_upward_rounded,
-            color: const Color(0xFFC62828),
+            color: NexoTones.expense(context),
             onTap: widget.onExpense ?? () {},
           ),
           ExpandableFabItem(
             label: l10n.add_transaction_income,
             icon: Icons.arrow_downward_rounded,
-            color: const Color(0xFF2E7D32),
+            color: NexoTones.income(context),
             onTap: widget.onIncome ?? () {},
           ),
         ];

@@ -180,8 +180,8 @@ class NetWorthScreen extends StatelessWidget {
                       children: [
                         Row(
                           children: [
-                            const Icon(Icons.inventory_2_outlined,
-                                size: 18, color: Color(0xFF1565C0)),
+                            Icon(Icons.inventory_2_outlined,
+                                size: 18, color: NexoTones.info(context)),
                             const SizedBox(width: 6),
                             Expanded(
                               child: Text(

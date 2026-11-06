@@ -906,7 +906,6 @@ class _Allocation extends StatelessWidget {
     final total = groups.values.fold(0, (a, b) => a + b);
     if (total == 0) return const Text('Sem posições com valor positivo.');
     final entries = groups.entries.toList();
-    const colors = [...NexoChart.series, Colors.pink, Colors.indigo];
     return Column(children: [
       SizedBox(
           height: 170,
@@ -916,7 +915,7 @@ class _Allocation extends StatelessWidget {
                 for (var i = 0; i < entries.length; i++)
                   PieChartSectionData(
                       value: entries[i].value.toDouble(),
-                      color: colors[i],
+                      color: NexoChart.slot(context, i),
                       radius: 34,
                       showTitle: false)
               ],
@@ -930,7 +929,8 @@ class _Allocation extends StatelessWidget {
       for (var i = 0; i < entries.length; i++)
         ListTile(
             dense: true,
-            leading: Icon(Icons.circle, size: 14, color: colors[i]),
+            leading:
+                Icon(Icons.circle, size: 14, color: NexoChart.slot(context, i)),
             title: Text(entries[i].key),
             subtitle: Text(
                 '${(entries[i].value / total * 100).toStringAsFixed(1).replaceAll('.', ',')}% · ${_money(context, entries[i].value)}'),
