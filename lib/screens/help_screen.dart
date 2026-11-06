@@ -33,7 +33,7 @@ class _HelpScreenState extends State<HelpScreen> {
     return Scaffold(
       appBar: AppBar(
           title: const Text('Ajuda',
-              style: TextStyle(fontWeight: FontWeight.w900))),
+              style: TextStyle(fontWeight: FontWeight.w600))),
       body: ListView(
         padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
         children: [
@@ -64,7 +64,7 @@ class _HelpScreenState extends State<HelpScreen> {
           for (final g in groups.entries) ...[
             Text(g.key,
                 style: theme.textTheme.titleMedium
-                    ?.copyWith(fontWeight: FontWeight.w800)),
+                    ?.copyWith(fontWeight: FontWeight.w600)),
             const SizedBox(height: 4),
             for (final t in g.value)
               Card(
@@ -72,7 +72,7 @@ class _HelpScreenState extends State<HelpScreen> {
                 child: ExpansionTile(
                     initiallyExpanded: _query.isNotEmpty,
                     title: Text(t.question,
-                        style: const TextStyle(fontWeight: FontWeight.w700)),
+                        style: const TextStyle(fontWeight: FontWeight.w600)),
                     childrenPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
                     children: [Text(t.answer)]),
               ),
@@ -81,7 +81,7 @@ class _HelpScreenState extends State<HelpScreen> {
           if (_query.isEmpty) ...[
             Text('Diagnóstico',
                 style: theme.textTheme.titleMedium
-                    ?.copyWith(fontWeight: FontWeight.w800)),
+                    ?.copyWith(fontWeight: FontWeight.w600)),
             const SizedBox(height: 4),
             ValueListenableBuilder<int>(
                 valueListenable: Diagnostics.revision,

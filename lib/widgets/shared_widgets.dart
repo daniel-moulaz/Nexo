@@ -8,6 +8,7 @@ import '../screens/add_transaction_screen.dart';
 import 'package:provider/provider.dart';
 import 'package:shimmer/shimmer.dart';
 import '../providers/app_provider.dart';
+import 'nexo_ui.dart';
 
 // ── Empty state ───────────────────────────────────────────────────────────────
 class EmptyState extends StatelessWidget {
@@ -138,15 +139,9 @@ class SectionHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Padding(
         padding: const EdgeInsets.fromLTRB(4, 16, 0, 6),
-        child: Text(title.toUpperCase(),
-            style: TextStyle(
-                fontSize: 11,
-                fontWeight: FontWeight.w700,
-                letterSpacing: 1.2,
-                color: Theme.of(context)
-                    .colorScheme
-                    .onSurface
-                    .withValues(alpha: 0.5))),
+        child: Text(title,
+            style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                color: Theme.of(context).colorScheme.onSurfaceVariant)),
       );
 }
 
@@ -343,14 +338,15 @@ class AccountCardPicker extends StatelessWidget {
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w700,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w500,
                           color: sel ? Colors.white : color)),
                   Text(formatAmount(acc.balance, acc.currency),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
-                          fontSize: 9,
+                          fontFeatures: NexoTones.figures,
+                          fontSize: 12,
                           color: sel
                               ? Colors.white.withValues(alpha: 0.8)
                               : cs.onSurface.withValues(alpha: 0.5))),
@@ -394,8 +390,8 @@ class _NoneCard extends StatelessWidget {
           const SizedBox(height: 4),
           Text(l10n.shared_widgets_none,
               style: TextStyle(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w600,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w500,
                   color:
                       sel ? cs.primary : cs.onSurface.withValues(alpha: 0.6))),
         ]),
@@ -447,7 +443,7 @@ class CategoryChipPicker extends StatelessWidget {
                 Text(cat.name,
                     style: TextStyle(
                         fontSize: 12,
-                        fontWeight: FontWeight.w600,
+                        fontWeight: FontWeight.w500,
                         color: sel ? Colors.white : color)),
               ]),
             ),
@@ -574,7 +570,7 @@ Future<String?> showCurrencyPicker(BuildContext context,
                           dense: true,
                           leading: Text(cur.symbol,
                               style: const TextStyle(
-                                  fontWeight: FontWeight.w800, fontSize: 16)),
+                                  fontWeight: FontWeight.w600, fontSize: 16)),
                           title: Text('${cur.code} — ${cur.name}'),
                           selected: current == cur.code,
                           selectedColor: Theme.of(ctx).colorScheme.primary,
@@ -699,7 +695,7 @@ class _TypeOptionCard extends StatelessWidget {
             Text(label,
                 style: TextStyle(
                   color: color,
-                  fontWeight: FontWeight.w700,
+                  fontWeight: FontWeight.w600,
                   fontSize: 16,
                 )),
           ],

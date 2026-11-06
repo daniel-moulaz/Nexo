@@ -73,7 +73,7 @@ class _HomeCustomizeSheetState extends State<_HomeCustomizeSheet> {
             Expanded(
                 child: Text('Personalizar o Hoje',
                     style: theme.textTheme.titleLarge
-                        ?.copyWith(fontWeight: FontWeight.w900))),
+                        ?.copyWith(fontWeight: FontWeight.w600))),
             TextButton(
                 onPressed: () => setState(() {
                       _order = kHomeSections.keys.toList();

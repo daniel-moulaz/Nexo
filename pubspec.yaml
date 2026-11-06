@@ -50,6 +50,20 @@ dev_dependencies:
 flutter:
   generate: true
   uses-material-design: true
+  assets:
+    - assets/fonts/Inter/OFL.txt
+  # Inter 4.1, unmodified (SIL OFL). Only these four weights exist in the app.
+  fonts:
+    - family: Inter
+      fonts:
+        - asset: assets/fonts/Inter/Inter-Regular.ttf
+          weight: 400
+        - asset: assets/fonts/Inter/Inter-Medium.ttf
+          weight: 500
+        - asset: assets/fonts/Inter/Inter-SemiBold.ttf
+          weight: 600
+        - asset: assets/fonts/Inter/Inter-Bold.ttf
+          weight: 700
 
 # Launcher icons from the brand mark (assets/brand/*, rendered from the SVG
 # in docs/brand). Run: dart run flutter_launcher_icons

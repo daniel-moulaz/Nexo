@@ -31,7 +31,7 @@ class CategoriesScreen extends StatelessWidget {
               }),
         ],
         title: Text(l10n.categories_categories,
-            style: const TextStyle(fontWeight: FontWeight.w800)),
+            style: const TextStyle(fontWeight: FontWeight.w600)),
       ),
       body: ListView(
         padding: const EdgeInsets.fromLTRB(14, 14, 14, 140),
@@ -104,7 +104,7 @@ class _CatTile extends StatelessWidget {
                 ? l10n.categories_expenseLabel
                 : l10n.categories_incomeLabel,
             style: TextStyle(
-                fontSize: 11, color: cs.onSurface.withValues(alpha: 0.5))),
+                fontSize: 12, color: cs.onSurface.withValues(alpha: 0.5))),
         trailing: Row(mainAxisSize: MainAxisSize.min, children: [
           IconButton(
               icon: const Icon(Icons.edit_outlined, size: 18),
@@ -243,7 +243,7 @@ class _CategorySheetState extends State<_CategorySheet> {
                       style: Theme.of(context)
                           .textTheme
                           .titleLarge
-                          ?.copyWith(fontWeight: FontWeight.w800)),
+                          ?.copyWith(fontWeight: FontWeight.w600)),
                 ),
                 AnimatedContainer(
                   duration: const Duration(milliseconds: 140),
@@ -259,7 +259,7 @@ class _CategorySheetState extends State<_CategorySheet> {
                       const SizedBox(width: 6),
                       Text(_nameCtrl.text,
                           style: TextStyle(
-                              fontWeight: FontWeight.w700,
+                              fontWeight: FontWeight.w600,
                               color: Color(_color),
                               fontSize: 13)),
                     ],
@@ -321,7 +321,7 @@ class _CategorySheetState extends State<_CategorySheet> {
                       child: Center(
                           child: Text(l10n.categories_expense,
                               style: TextStyle(
-                                  fontWeight: FontWeight.w700,
+                                  fontWeight: FontWeight.w600,
                                   color: _type == 'expense'
                                       ? Colors.white
                                       : const Color(0xFFC62828)))),
@@ -342,7 +342,7 @@ class _CategorySheetState extends State<_CategorySheet> {
                       child: Center(
                           child: Text(l10n.categories_income,
                               style: TextStyle(
-                                  fontWeight: FontWeight.w700,
+                                  fontWeight: FontWeight.w600,
                                   color: _type == 'income'
                                       ? Colors.white
                                       : const Color(0xFF2E7D32)))),
@@ -354,10 +354,7 @@ class _CategorySheetState extends State<_CategorySheet> {
 
               // ── Color ─────────────────────────────────────────────────
               Text(l10n.categories_color,
-                  style: Theme.of(context)
-                      .textTheme
-                      .labelMedium
-                      ?.copyWith(letterSpacing: 1)),
+                  style: Theme.of(context).textTheme.labelMedium),
               const SizedBox(height: 8),
               Wrap(
                   spacing: 10,
@@ -388,10 +385,7 @@ class _CategorySheetState extends State<_CategorySheet> {
 
               // ── Icon picker ─────────────────────────────────────────────
               Text(l10n.categories_icon,
-                  style: Theme.of(context)
-                      .textTheme
-                      .labelMedium
-                      ?.copyWith(letterSpacing: 1)),
+                  style: Theme.of(context).textTheme.labelMedium),
               const SizedBox(height: 8),
 
               // "Auto" chip
@@ -421,7 +415,7 @@ class _CategorySheetState extends State<_CategorySheet> {
                     Text(l10n.categories_autoBasedOnName,
                         style: TextStyle(
                             fontSize: 12,
-                            fontWeight: FontWeight.w600,
+                            fontWeight: FontWeight.w500,
                             color: _iconIndex == 0
                                 ? cs.primary
                                 : cs.onSurface.withValues(alpha: 0.5))),

@@ -4,7 +4,7 @@
 //   flutter test tool/readme_screens.dart
 //
 // Writes docs/images/nexo-home-mobile.png and nexo-home-desktop.png. Needs
-// Windows fonts (Segoe UI) and the Material icons from the Flutter cache.
+// the Material icons from the Flutter cache.
 import 'dart:io';
 import 'dart:ui' as ui;
 
@@ -195,15 +195,13 @@ void main() {
         (await Directory.systemTemp.createTemp('nexo-readme-')).path);
     await DBHelper.database;
     await initializeDateFormatting('pt_BR');
-    const fonts = 'C:/Windows/Fonts';
-    final segoe = [
-      '$fonts/segoeui.ttf',
-      '$fonts/seguisb.ttf',
-      '$fonts/segoeuib.ttf'
+    final inter = [
+      for (final weight in const ['Regular', 'Medium', 'SemiBold', 'Bold'])
+        'assets/fonts/Inter/Inter-$weight.ttf'
     ];
-    // Android screens ask for Roboto; Segoe UI stands in for it here.
-    await _font('Segoe UI', segoe);
-    await _font('Roboto', segoe);
+    // Android screens ask for Roboto; Inter stands in for it here.
+    await _font('Inter', inter);
+    await _font('Roboto', inter);
     await _font('MaterialIcons', [icons]);
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
         .setMockMethodCallHandler(

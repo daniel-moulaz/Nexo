@@ -79,7 +79,7 @@ class _MonthReviewScreenState extends State<MonthReviewScreen> {
                     Text(title, style: small),
                     Text(value,
                         style: const TextStyle(
-                            fontWeight: FontWeight.w700, fontSize: 15)),
+                            fontWeight: FontWeight.w600, fontSize: 15)),
                   ])),
             ]));
 
@@ -117,7 +117,7 @@ class _MonthReviewScreenState extends State<MonthReviewScreen> {
                   child: Text(money(r.spent),
                       style: TextStyle(
                           fontSize: 32,
-                          fontWeight: FontWeight.w800,
+                          fontWeight: FontWeight.w600,
                           color: cs.onPrimaryContainer,
                           fontFeatures: NexoTones.figures))),
               if (!hidden)
@@ -128,7 +128,7 @@ class _MonthReviewScreenState extends State<MonthReviewScreen> {
                             ? 'Igual ao mês anterior'
                             : '${change > 0 ? '▲' : '▼'} ${change.abs().toStringAsFixed(0)}% em relação a ${money(r.previousUsual)} no mês anterior',
                     style: TextStyle(
-                        fontWeight: FontWeight.w700,
+                        fontWeight: FontWeight.w600,
                         color: change == null || change.abs() < 1
                             ? cs.onPrimaryContainer
                             : change > 0
@@ -185,7 +185,7 @@ class _MonthReviewScreenState extends State<MonthReviewScreen> {
                             : '${value >= before ? '▲' : '▼'} ${money((value - before).abs())} em relação ao mês anterior'),
                         trailing: Text(money(value),
                             style: const TextStyle(
-                                fontWeight: FontWeight.w800,
+                                fontWeight: FontWeight.w600,
                                 fontFeatures: NexoTones.figures))),
                 ])),
             const SizedBox(height: 16),

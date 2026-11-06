@@ -153,11 +153,10 @@ class _MainShellState extends State<MainShell> with WidgetsBindingObserver {
             width: 220,
             child: SafeArea(
                 child: ListView(children: [
-              const Padding(
-                  padding: EdgeInsets.all(24),
+              Padding(
+                  padding: const EdgeInsets.fromLTRB(24, 20, 24, 16),
                   child: Text('Nexo',
-                      style: TextStyle(
-                          fontSize: 28, fontWeight: FontWeight.w800))),
+                      style: Theme.of(context).textTheme.headlineSmall)),
               for (final entry in const [
                 (0, 'Hoje', Icons.today_outlined),
                 (8, 'Extrato', Icons.receipt_long_outlined),
@@ -171,20 +170,35 @@ class _MainShellState extends State<MainShell> with WidgetsBindingObserver {
                 (9, 'Configurações', Icons.settings_outlined),
                 (5, 'Mais', Icons.more_horiz),
               ])
-                ListTile(
-                    selected: _index == entry.$1,
-                    leading: Icon(entry.$3),
-                    title: Text(entry.$2),
-                    onTap: () => context
-                        .read<AppProvider>()
-                        .tabIndexNotifier
-                        .value = entry.$1),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 8),
+                  child: ListTile(
+                      dense: true,
+                      visualDensity: const VisualDensity(vertical: -1),
+                      selected: _index == entry.$1,
+                      selectedTileColor: Theme.of(context)
+                          .colorScheme
+                          .primary
+                          .withValues(alpha: .12),
+                      contentPadding:
+                          const EdgeInsets.symmetric(horizontal: 12),
+                      horizontalTitleGap: 12,
+                      leading: Icon(entry.$3, size: 20),
+                      title: Text(entry.$2,
+                          style: Theme.of(context).textTheme.labelLarge),
+                      onTap: () => context
+                          .read<AppProvider>()
+                          .tabIndexNotifier
+                          .value = entry.$1),
+                ),
               const Divider(),
-              const Padding(
-                  padding: EdgeInsets.all(16),
+              Padding(
+                  padding: const EdgeInsets.all(20),
                   child: Text(
                       'Ctrl+N  Novo lançamento\nCtrl+K  Buscar ou fazer\nCtrl+F  Extrato',
-                      style: TextStyle(fontSize: 12))),
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color:
+                              Theme.of(context).colorScheme.onSurfaceVariant))),
             ]))),
         const VerticalDivider(width: 1),
         Expanded(child: _body),

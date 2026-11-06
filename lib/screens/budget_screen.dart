@@ -79,7 +79,7 @@ class _BudgetScreenState extends State<BudgetScreen>
     return Scaffold(
       appBar: AppBar(
           title: const Text('Orçamento',
-              style: TextStyle(fontWeight: FontWeight.w900)),
+              style: TextStyle(fontWeight: FontWeight.w600)),
           actions: [
             // In the header, so no button floats over the list.
             AnimatedBuilder(
@@ -216,7 +216,7 @@ class _BudgetSummary extends StatelessWidget {
                   text: money(spent),
                   style: TextStyle(
                       fontSize: 28,
-                      fontWeight: FontWeight.w800,
+                      fontWeight: FontWeight.w600,
                       color: onHero,
                       fontFeatures: NexoTones.figures)),
               TextSpan(
@@ -243,9 +243,10 @@ class _BudgetSummary extends StatelessWidget {
                     label: 'Faltam', value: '${pace.daysLeft} dias')),
           ]),
         ] else
-          Text('${app.budgets.length} limite(s) semanal(is)',
+          Text(
+              ptCount(app.budgets.length, 'limite semanal', 'limites semanais'),
               style: TextStyle(
-                  fontSize: 20, fontWeight: FontWeight.w700, color: onHero)),
+                  fontSize: 20, fontWeight: FontWeight.w600, color: onHero)),
         if (over > 0) ...[
           const SizedBox(height: 12),
           Row(children: [
@@ -253,7 +254,10 @@ class _BudgetSummary extends StatelessWidget {
                 size: 18, color: NexoTones.expense(context)),
             const SizedBox(width: 6),
             Expanded(
-                child: Text('$over categoria(s) passaram do limite',
+                child: Text(
+                    over == 1
+                        ? '1 categoria passou do limite'
+                        : '$over categorias passaram do limite',
                     style:
                         TextStyle(color: onHero, fontWeight: FontWeight.w600))),
           ]),
@@ -301,7 +305,7 @@ class _BudgetCard extends StatelessWidget {
       status = 'No ritmo atual fecha o mês em ${money(projection)}';
     } else {
       status =
-          'Cabe ${money(pace.perDay)} por dia · ${pace.daysLeft} dia(s) restante(s)';
+          'Cabe ${money(pace.perDay)} por dia · ${ptCount(pace.daysLeft, 'dia restante', 'dias restantes')}';
     }
     return NexoCard(
         padding: EdgeInsets.zero,
@@ -332,7 +336,7 @@ class _BudgetCard extends StatelessWidget {
                                   overflow: TextOverflow.ellipsis,
                                   style: const TextStyle(
                                       fontSize: 16,
-                                      fontWeight: FontWeight.w700)),
+                                      fontWeight: FontWeight.w600)),
                               Text(
                                   budget.period == 'weekly'
                                       ? 'Esta semana'
@@ -356,17 +360,17 @@ class _BudgetCard extends StatelessWidget {
                             child: Text(status,
                                 maxLines: 2,
                                 style: TextStyle(
-                                    fontSize: 12.5,
+                                    fontSize: 13,
                                     color: remaining < 0
                                         ? color
                                         : cs.onSurfaceVariant,
                                     fontWeight: remaining < 0
-                                        ? FontWeight.w700
+                                        ? FontWeight.w600
                                         : FontWeight.w500))),
                         const SizedBox(width: 8),
                         Text('${(ratio * 100).toStringAsFixed(0)}%',
                             style: TextStyle(
-                                fontWeight: FontWeight.w700, color: color)),
+                                fontWeight: FontWeight.w600, color: color)),
                       ]),
                     ]))));
   }
@@ -390,7 +394,7 @@ class _Amounts extends StatelessWidget {
           Text(top,
               style: TextStyle(
                   fontSize: 16,
-                  fontWeight: FontWeight.w800,
+                  fontWeight: FontWeight.w600,
                   color: color ?? cs.onSurface,
                   fontFeatures: NexoTones.figures)),
           Text(bottom,
@@ -430,7 +434,7 @@ class _GoalsSummary extends StatelessWidget {
             child: Text(money(app.totalSaved),
                 style: TextStyle(
                     fontSize: 28,
-                    fontWeight: FontWeight.w800,
+                    fontWeight: FontWeight.w600,
                     color: onHero,
                     fontFeatures: NexoTones.figures))),
         if (target > 0) ...[
@@ -438,12 +442,12 @@ class _GoalsSummary extends StatelessWidget {
           NexoProgress(value: saved / target, height: 10),
           const SizedBox(height: 8),
           Text(
-              'Faltam ${money(target - saved < 0 ? 0 : target - saved)} para ${open.length} objetivo(s) em andamento',
+              'Faltam ${money(target - saved < 0 ? 0 : target - saved)} para ${ptCount(open.length, 'objetivo')} em andamento',
               style: TextStyle(color: onHero.withValues(alpha: .85))),
         ],
         if (done > 0) ...[
           const SizedBox(height: 4),
-          Text('$done concluído(s)',
+          Text(ptCount(done, 'concluído'),
               style: TextStyle(color: onHero.withValues(alpha: .75))),
         ],
       ]),
@@ -543,7 +547,7 @@ class _GoalCard extends StatelessWidget {
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: const TextStyle(
-                        fontWeight: FontWeight.w700, fontSize: 16)),
+                        fontWeight: FontWeight.w600, fontSize: 16)),
               ),
               IconButton(
                   tooltip: locked
@@ -571,16 +575,16 @@ class _GoalCard extends StatelessWidget {
                   child: Text(line,
                       maxLines: 2,
                       style: TextStyle(
-                          fontSize: 12.5,
+                          fontSize: 13,
                           color: late
                               ? NexoTones.warning(context)
                               : isCompleted
                                   ? done
                                   : cs.onSurfaceVariant,
-                          fontWeight: FontWeight.w600))),
+                          fontWeight: FontWeight.w500))),
               const SizedBox(width: 8),
               Text('${(progress * 100).clamp(0, 100).toStringAsFixed(0)}%',
-                  style: const TextStyle(fontWeight: FontWeight.w700)),
+                  style: const TextStyle(fontWeight: FontWeight.w600)),
             ]),
           ]),
         ),
@@ -693,7 +697,7 @@ class _BudgetSheetState extends State<_BudgetSheet> {
               style: Theme.of(context)
                   .textTheme
                   .titleLarge
-                  ?.copyWith(fontWeight: FontWeight.w800),
+                  ?.copyWith(fontWeight: FontWeight.w600),
             ),
             const SizedBox(height: 16),
 
@@ -717,10 +721,7 @@ class _BudgetSheetState extends State<_BudgetSheet> {
 
             // Period selector
             Text(l10n.budget_period,
-                style: Theme.of(context)
-                    .textTheme
-                    .labelMedium
-                    ?.copyWith(letterSpacing: 1)),
+                style: Theme.of(context).textTheme.labelMedium),
             const SizedBox(height: 8),
             Row(children: [
               Expanded(
@@ -738,7 +739,7 @@ class _BudgetSheetState extends State<_BudgetSheet> {
                     child: Center(
                       child: Text(l10n.budget_monthly,
                           style: TextStyle(
-                              fontWeight: FontWeight.w700,
+                              fontWeight: FontWeight.w600,
                               color: _period == 'monthly'
                                   ? cs.onPrimary
                                   : cs.primary)),
@@ -762,7 +763,7 @@ class _BudgetSheetState extends State<_BudgetSheet> {
                     child: Center(
                       child: Text(l10n.budget_weekly,
                           style: TextStyle(
-                              fontWeight: FontWeight.w700,
+                              fontWeight: FontWeight.w600,
                               color: _period == 'weekly'
                                   ? cs.onSecondary
                                   : cs.secondary)),
@@ -776,10 +777,7 @@ class _BudgetSheetState extends State<_BudgetSheet> {
             // Category
             if (expCats.isNotEmpty) ...[
               Text(l10n.budget_category,
-                  style: Theme.of(context)
-                      .textTheme
-                      .labelMedium
-                      ?.copyWith(letterSpacing: 1)),
+                  style: Theme.of(context).textTheme.labelMedium),
               const SizedBox(height: 8),
               CategoryChipPicker(
                 categories: expCats,
@@ -815,7 +813,7 @@ class _BudgetSheetState extends State<_BudgetSheet> {
                       children: [
                         Text(l10n.budget_previewFor(catName),
                             style: TextStyle(
-                                fontSize: 11,
+                                fontSize: 12,
                                 color: cs.onSurface.withValues(alpha: 0.6))),
                         const SizedBox(height: 6),
                         Wrap(spacing: 12, runSpacing: 4, children: [
@@ -823,7 +821,7 @@ class _BudgetSheetState extends State<_BudgetSheet> {
                               l10n.budget_spentAmount(
                                   formatAmount(spent, app.settings.currency)),
                               style: const TextStyle(
-                                  fontSize: 13, fontWeight: FontWeight.w700)),
+                                  fontSize: 13, fontWeight: FontWeight.w600)),
                           Text(
                               l10n.budget_ofAmount(formatAmount(
                                   budgetAmt, app.settings.currency)),

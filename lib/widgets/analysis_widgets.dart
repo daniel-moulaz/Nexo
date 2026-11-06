@@ -25,7 +25,7 @@ class AnalysisCard extends StatelessWidget {
                   style: Theme.of(context)
                       .textTheme
                       .titleMedium
-                      ?.copyWith(fontWeight: FontWeight.w800))),
+                      ?.copyWith(fontWeight: FontWeight.w600))),
           if (action != null) action!
         ]),
         const SizedBox(height: 12),
@@ -58,7 +58,7 @@ class AnalysisMetrics extends StatelessWidget {
                           style: Theme.of(context)
                               .textTheme
                               .titleLarge
-                              ?.copyWith(fontWeight: FontWeight.w700))
+                              ?.copyWith(fontWeight: FontWeight.w600))
                     ]))
         ]);
       });

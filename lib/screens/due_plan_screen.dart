@@ -71,12 +71,12 @@ class _DuePlanScreenState extends State<DuePlanScreen> {
             child:
                 Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
               Text('${s.event.title} · vence ${fmt.format(due)}',
-                  style: const TextStyle(fontWeight: FontWeight.w700)),
+                  style: const TextStyle(fontWeight: FontWeight.w600)),
               const SizedBox(height: 6),
               Text('Faltam ${money(s.missing)}',
                   style: TextStyle(
                       fontSize: 26,
-                      fontWeight: FontWeight.w800,
+                      fontWeight: FontWeight.w600,
                       color: NexoTones.expense(context),
                       fontFeatures: NexoTones.figures)),
               Text(
@@ -115,7 +115,7 @@ class _DuePlanScreenState extends State<DuePlanScreen> {
                   inTime >= s.missing
                       ? 'O que chega a tempo (${money(inTime)}) cobre a diferença.'
                       : 'O que chega a tempo soma ${money(inTime)}; ainda faltariam ${money(s.missing - inTime)}.',
-                  style: const TextStyle(fontWeight: FontWeight.w700)),
+                  style: const TextStyle(fontWeight: FontWeight.w600)),
             if (options.any((o) =>
                 o.kind == 'Ações' || o.kind == 'FIIs' || o.kind == 'ETFs'))
               Padding(

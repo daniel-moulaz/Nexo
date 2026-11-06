@@ -6,6 +6,7 @@ import '../providers/app_provider.dart';
 import '../services/envelopes.dart';
 import '../services/spendable.dart';
 import '../widgets/nexo_ui.dart';
+import '../utils/finance_input.dart';
 
 /// "Por tipo de gasto": the six envelopes of the month against their share
 /// of the reference income, with the sheets to adjust shares and to assign
@@ -153,7 +154,7 @@ class EnvelopesView extends StatelessWidget {
                 const SizedBox(width: 8),
                 Expanded(
                     child: Text(
-                        '${hidden ? '••••' : money(report.unassignedSpent)} em ${report.unassigned.length} categoria(s) sem tipo',
+                        '${hidden ? '••••' : money(report.unassignedSpent)} em ${ptCount(report.unassigned.length, 'categoria')} sem tipo',
                         style: theme.textTheme.bodySmall)),
                 Text('Classificar',
                     style: theme.textTheme.labelLarge
@@ -201,7 +202,7 @@ class _EnvelopeTile extends StatelessWidget {
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: const TextStyle(
-                        fontSize: 13, fontWeight: FontWeight.w800))),
+                        fontSize: 13, fontWeight: FontWeight.w600))),
           ]),
           const SizedBox(height: 6),
           Row(crossAxisAlignment: CrossAxisAlignment.end, children: [
@@ -213,7 +214,7 @@ class _EnvelopeTile extends StatelessWidget {
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: theme.textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.w900,
+                      fontWeight: FontWeight.w600,
                       color: tone,
                       fontFeatures: NexoTones.figures)),
             ),
@@ -293,7 +294,7 @@ class _EnvelopeGoalsSheetState extends State<_EnvelopeGoalsSheet> {
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Text('Metas por tipo de gasto',
               style: theme.textTheme.titleLarge
-                  ?.copyWith(fontWeight: FontWeight.w900)),
+                  ?.copyWith(fontWeight: FontWeight.w600)),
           const SizedBox(height: 4),
           Text(
               'Planejamento, não lançamento: nada aqui mexe em transações ou saldos.',
@@ -314,7 +315,7 @@ class _EnvelopeGoalsSheetState extends State<_EnvelopeGoalsSheet> {
               const SizedBox(width: 8),
               Expanded(child: Text(def.name)),
               Text('${_shares[def.id] ?? def.defaultShare}%',
-                  style: const TextStyle(fontWeight: FontWeight.w800)),
+                  style: const TextStyle(fontWeight: FontWeight.w600)),
             ]),
             Slider(
                 value: (_shares[def.id] ?? def.defaultShare).toDouble(),
@@ -329,7 +330,7 @@ class _EnvelopeGoalsSheetState extends State<_EnvelopeGoalsSheet> {
             Expanded(
                 child: Text('Alocado $_total% / 100%',
                     style: TextStyle(
-                        fontWeight: FontWeight.w800,
+                        fontWeight: FontWeight.w600,
                         color: ok ? null : theme.colorScheme.error))),
             TextButton(
                 onPressed: () =>
@@ -410,7 +411,7 @@ class _EnvelopeClassifySheetState extends State<_EnvelopeClassifySheet> {
             Expanded(
                 child: Text('Tipo de cada categoria',
                     style: theme.textTheme.titleLarge
-                        ?.copyWith(fontWeight: FontWeight.w900))),
+                        ?.copyWith(fontWeight: FontWeight.w600))),
             TextButton.icon(
                 onPressed: _suggest,
                 icon: const Icon(Icons.auto_awesome_outlined, size: 18),
@@ -426,7 +427,7 @@ class _EnvelopeClassifySheetState extends State<_EnvelopeClassifySheet> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(c.name,
-                        style: const TextStyle(fontWeight: FontWeight.w700)),
+                        style: const TextStyle(fontWeight: FontWeight.w600)),
                     const SizedBox(height: 4),
                     SingleChildScrollView(
                       scrollDirection: Axis.horizontal,

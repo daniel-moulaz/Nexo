@@ -34,6 +34,10 @@ String ptDate(DateTime date) => DateFormat('dd/MM/yyyy', 'pt_BR').format(date);
 
 String ptShortDate(DateTime date) => DateFormat('dd/MM', 'pt_BR').format(date);
 
+/// "1 dia", "25 dias": never "25 dia(s)".
+String ptCount(int count, String singular, [String? plural]) =>
+    '$count ${count == 1 ? singular : plural ?? '${singular}s'}';
+
 String ptMonthYear(DateTime date) {
   final value = DateFormat('MMMM yyyy', 'pt_BR').format(date);
   if (value.isEmpty) return value;

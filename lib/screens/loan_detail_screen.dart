@@ -9,6 +9,7 @@ import '../theme/app_theme.dart';
 import '../l10n/app_localizations.dart';
 import '../utils/snackbar.dart';
 import 'loans_screen.dart';
+import '../widgets/nexo_ui.dart';
 
 class LoanDetailScreen extends StatefulWidget {
   final Loan loan;
@@ -126,8 +127,8 @@ class _LoanDetailScreenState extends State<LoanDetailScreen> {
                         Text(
                           l10n.loans_remaining,
                           style: TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.w700,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w500,
                             color: cs.onSurface.withValues(alpha: 0.5),
                           ),
                         ),
@@ -143,8 +144,8 @@ class _LoanDetailScreenState extends State<LoanDetailScreen> {
                             child: Text(
                               l10n.loans_settled.toUpperCase(),
                               style: const TextStyle(
-                                fontSize: 9,
-                                fontWeight: FontWeight.bold,
+                                fontSize: 12,
+                                fontWeight: FontWeight.w500,
                                 color: Color(0xFF2E7D32),
                               ),
                             ),
@@ -155,8 +156,9 @@ class _LoanDetailScreenState extends State<LoanDetailScreen> {
                     Text(
                       formatAmount(remaining, cur),
                       style: TextStyle(
+                        fontFeatures: NexoTones.figures,
                         fontSize: 24,
-                        fontWeight: FontWeight.w900,
+                        fontWeight: FontWeight.w600,
                         color: remaining > 0
                             ? cs.primary
                             : const Color(0xFF2E7D32),
@@ -169,12 +171,12 @@ class _LoanDetailScreenState extends State<LoanDetailScreen> {
                         Text(
                           '${l10n.loans_paid}: ${formatAmount(totalPaid, cur)}',
                           style: const TextStyle(
-                              fontSize: 11, fontWeight: FontWeight.w600),
+                              fontSize: 12, fontWeight: FontWeight.w500),
                         ),
                         Text(
                           '${(progress * 100).toStringAsFixed(0)}%',
                           style: const TextStyle(
-                              fontSize: 11, fontWeight: FontWeight.bold),
+                              fontSize: 12, fontWeight: FontWeight.w500),
                         ),
                       ],
                     ),
@@ -261,8 +263,8 @@ class _LoanDetailScreenState extends State<LoanDetailScreen> {
                                 Text(
                                   l10n.loans_notes,
                                   style: TextStyle(
-                                    fontSize: 10,
-                                    fontWeight: FontWeight.w600,
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w500,
                                     color: cs.onSurface.withValues(alpha: 0.5),
                                   ),
                                 ),
@@ -292,9 +294,8 @@ class _LoanDetailScreenState extends State<LoanDetailScreen> {
                   l10n.loans_paymentHistory,
                   style: TextStyle(
                     fontSize: 12,
-                    fontWeight: FontWeight.bold,
+                    fontWeight: FontWeight.w500,
                     color: cs.onSurface.withValues(alpha: 0.6),
-                    letterSpacing: 0.5,
                   ),
                 ),
               ],
@@ -384,7 +385,9 @@ class _LoanDetailScreenState extends State<LoanDetailScreen> {
                             title: Text(
                               formatAmount(p.amount, p.currency),
                               style: const TextStyle(
-                                  fontWeight: FontWeight.bold, fontSize: 14),
+                                  fontFeatures: NexoTones.figures,
+                                  fontWeight: FontWeight.w600,
+                                  fontSize: 14),
                             ),
                             subtitle: Text(
                               [
@@ -393,7 +396,7 @@ class _LoanDetailScreenState extends State<LoanDetailScreen> {
                                 if (p.notes.trim().isNotEmpty) p.notes
                               ].join('  ·  '),
                               style: TextStyle(
-                                fontSize: 11,
+                                fontSize: 12,
                                 color: cs.onSurface.withValues(alpha: 0.5),
                               ),
                             ),
@@ -429,8 +432,8 @@ class _DetailStat extends StatelessWidget {
         Text(
           label,
           style: TextStyle(
-            fontSize: 10,
-            fontWeight: FontWeight.w600,
+            fontSize: 12,
+            fontWeight: FontWeight.w500,
             color: cs.onSurface.withValues(alpha: 0.5),
           ),
         ),
@@ -439,7 +442,7 @@ class _DetailStat extends StatelessWidget {
           value,
           style: const TextStyle(
             fontSize: 13,
-            fontWeight: FontWeight.w700,
+            fontWeight: FontWeight.w600,
           ),
         ),
       ],
@@ -492,7 +495,7 @@ class _LogPaymentSheetState extends State<_LogPaymentSheet> {
               Text(
                 l10n.loans_logPayment,
                 style:
-                    const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                    const TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
               ),
               const SizedBox(height: 16),
 
@@ -522,7 +525,7 @@ class _LogPaymentSheetState extends State<_LogPaymentSheet> {
               Text(
                 l10n.loans_account,
                 style:
-                    const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                    const TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
               ),
               const SizedBox(height: 6),
               AccountCardPicker(

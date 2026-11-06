@@ -161,7 +161,7 @@ class _InvestmentsScreenState extends State<InvestmentsScreen> {
     return Scaffold(
       appBar: AppBar(
           title: const Text('Investimentos',
-              style: TextStyle(fontWeight: FontWeight.w900)),
+              style: TextStyle(fontWeight: FontWeight.w600)),
           actions: [
             IconButton(
                 tooltip: 'Adicionar investimento',
@@ -506,7 +506,7 @@ class _B3ReviewSheet extends StatelessWidget {
           padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
           child: Text('Negociações da B3',
               style: theme.textTheme.titleLarge
-                  ?.copyWith(fontWeight: FontWeight.w900)),
+                  ?.copyWith(fontWeight: FontWeight.w600)),
         ),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -531,7 +531,9 @@ class _B3ReviewSheet extends StatelessWidget {
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis),
                       trailing: Text(formatAmount(t.totalCents / 100, 'BRL'),
-                          style: const TextStyle(fontWeight: FontWeight.w800))),
+                          style: const TextStyle(
+                              fontFeatures: NexoTones.figures,
+                              fontWeight: FontWeight.w600))),
               ]),
         ),
         Padding(
@@ -582,16 +584,19 @@ class _HistoryCard extends StatelessWidget {
                         style: Theme.of(context).textTheme.labelSmall)),
                 Expanded(
                     child: NexoProgress(
+                        color: Theme.of(context).colorScheme.primary,
                         value: top <= 0
                             ? 0
                             : (p.total / top).clamp(0, 1).toDouble())),
                 const SizedBox(width: 8),
                 SizedBox(
-                    width: 96,
+                    width: 112,
                     child: Text(money(p.total),
                         textAlign: TextAlign.end,
                         style: const TextStyle(
-                            fontWeight: FontWeight.w800, fontSize: 12))),
+                            fontFeatures: NexoTones.figures,
+                            fontWeight: FontWeight.w500,
+                            fontSize: 12))),
               ]),
             ),
           const SizedBox(height: 6),
@@ -722,7 +727,7 @@ class _CdiCardState extends State<_CdiCard> {
                     '${_money(context, result.difference.abs())} ${ahead ? 'acima' : 'abaixo'} do CDI',
                     style: TextStyle(
                         color: color,
-                        fontWeight: FontWeight.w800,
+                        fontWeight: FontWeight.w600,
                         fontSize: 16))),
           ]),
         const SizedBox(height: 8),
@@ -784,11 +789,11 @@ class _PositionChange extends StatelessWidget {
                   size: 20,
                   color: color),
               Text(private ? '••••' : '$sign${_money(context, change.abs())}',
-                  style: TextStyle(color: color, fontWeight: FontWeight.w800)),
+                  style: TextStyle(color: color, fontWeight: FontWeight.w600)),
               if (!private)
                 Text(percent,
                     style:
-                        TextStyle(color: color, fontWeight: FontWeight.w700)),
+                        TextStyle(color: color, fontWeight: FontWeight.w600)),
               Text(
                   private
                       ? 'Variação oculta'
@@ -842,11 +847,11 @@ class _PositionCard extends StatelessWidget {
                           style: Theme.of(context)
                               .textTheme
                               .titleMedium
-                              ?.copyWith(fontWeight: FontWeight.w800)),
+                              ?.copyWith(fontWeight: FontWeight.w600)),
                     Text(p.investment.name,
                         style: TextStyle(
                             fontWeight: p.investment.ticker.isEmpty
-                                ? FontWeight.w800
+                                ? FontWeight.w600
                                 : FontWeight.normal)),
                     Text(
                         '${p.investment.assetClass} · ${p.quantity == 0 ? 'Posição encerrada' : private ? '••••' : '${_quantity(p.quantity)} unidades'}',

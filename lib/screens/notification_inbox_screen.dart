@@ -241,10 +241,10 @@ class _NotificationInboxScreenState extends State<NotificationInboxScreen>
                   child: Text(hidden ? 'Movimentação' : mv.description,
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(fontWeight: FontWeight.w700))),
+                      style: const TextStyle(fontWeight: FontWeight.w600))),
               Text('${income ? '+' : '−'}${money(mv.amountCents)}',
                   style: TextStyle(
-                      fontWeight: FontWeight.w800,
+                      fontWeight: FontWeight.w600,
                       color: income
                           ? NexoTones.income(context)
                           : NexoTones.expense(context))),
@@ -339,7 +339,7 @@ class _NotificationInboxScreenState extends State<NotificationInboxScreen>
                             leading:
                                 Icon(Icons.auto_awesome, color: cs.primary),
                             title: Text(
-                                '${resolved.length} resolvida(s) automaticamente'),
+                                '${ptCount(resolved.length, 'resolvida')} automaticamente'),
                             subtitle: const Text(
                                 'Já lançadas, estornos, reservas e rendimentos pequenos'),
                             trailing: Icon(_showResolved

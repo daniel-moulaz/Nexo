@@ -85,7 +85,7 @@ class _RecurringScreenState extends State<RecurringScreen>
                       style: Theme.of(context)
                           .textTheme
                           .titleMedium
-                          ?.copyWith(fontWeight: FontWeight.w800))),
+                          ?.copyWith(fontWeight: FontWeight.w600))),
             ]),
             const SizedBox(height: 4),
             const Text(
@@ -234,8 +234,11 @@ class _RecurringScreenState extends State<RecurringScreen>
                                 ? 'A pagar até o fim do mês'
                                 : 'A receber até o fim do mês'),
                             Text(money(sum(thisMonth)),
-                                style:
-                                    Theme.of(context).textTheme.headlineSmall),
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .headlineSmall
+                                    ?.copyWith(
+                                        fontFeatures: NexoTones.figures)),
                             Text(
                                 '${thisMonth.length} ${thisMonth.length == 1 ? 'vencimento' : 'vencimentos'} de hoje até ${ptDate(DateTime(today.year, today.month + 1, 0))}'),
                             if (overdue.isNotEmpty)
@@ -290,12 +293,16 @@ class _RecurringScreenState extends State<RecurringScreen>
                     contentPadding: EdgeInsets.zero,
                     title: Text(
                         '${(today.month + offset - 1) % 12 + 1}/${DateTime(today.year, today.month + offset).year}'),
-                    trailing: Text(money(sum(future.where((e) =>
-                        e.date.year ==
-                            DateTime(today.year, today.month + offset).year &&
-                        e.date.month ==
-                            DateTime(today.year, today.month + offset)
-                                .month))))),
+                    trailing: Text(
+                        money(sum(future.where((e) =>
+                            e.date.year ==
+                                DateTime(today.year, today.month + offset)
+                                    .year &&
+                            e.date.month ==
+                                DateTime(today.year, today.month + offset)
+                                    .month))),
+                        style:
+                            const TextStyle(fontFeatures: NexoTones.figures))),
               for (final e in future.take(80))
                 Card(
                     child: ListTile(
@@ -473,7 +480,7 @@ class _RecurringTile extends StatelessWidget {
                           recurring.name,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(fontWeight: FontWeight.w900),
+                          style: const TextStyle(fontWeight: FontWeight.w600),
                         ),
                         const SizedBox(height: 2),
                         Text(
@@ -506,7 +513,7 @@ class _RecurringTile extends StatelessWidget {
                                 ? '••••'
                                 : formatAmount(
                                     recurring.nextActionAmount, currency),
-                            style: const TextStyle(fontWeight: FontWeight.w900),
+                            style: const TextStyle(fontWeight: FontWeight.w600),
                           ),
                         ),
                         Text(
@@ -519,7 +526,7 @@ class _RecurringTile extends StatelessWidget {
                               .labelSmall
                               ?.copyWith(
                                 color: overdue ? cs.error : cs.onSurfaceVariant,
-                                fontWeight: FontWeight.w700,
+                                fontWeight: FontWeight.w600,
                               ),
                         ),
                       ],
@@ -929,7 +936,7 @@ class _RecurringEditorState extends State<_RecurringEditor> {
                     child: Text(
                       isEdit ? 'Editar recorrente' : 'Novo recorrente',
                       style: theme.textTheme.titleLarge?.copyWith(
-                        fontWeight: FontWeight.w900,
+                        fontWeight: FontWeight.w600,
                       ),
                     ),
                   ),
@@ -1094,7 +1101,7 @@ class _RecurringEditorState extends State<_RecurringEditor> {
                   Text(
                     'Conta',
                     style: theme.textTheme.titleSmall
-                        ?.copyWith(fontWeight: FontWeight.w900),
+                        ?.copyWith(fontWeight: FontWeight.w600),
                   ),
                   const SizedBox(height: 6),
                   if (accounts.isEmpty)
@@ -1130,7 +1137,7 @@ class _RecurringEditorState extends State<_RecurringEditor> {
                   Text(
                     'Categoria',
                     style: theme.textTheme.titleSmall
-                        ?.copyWith(fontWeight: FontWeight.w900),
+                        ?.copyWith(fontWeight: FontWeight.w600),
                   ),
                   const SizedBox(height: 6),
                   if (categories.isEmpty)
@@ -1176,7 +1183,7 @@ class _RecurringEditorState extends State<_RecurringEditor> {
                       title: const Text('Horário do lembrete'),
                       trailing: Text(
                         _reminderTime.format(context),
-                        style: const TextStyle(fontWeight: FontWeight.w900),
+                        style: const TextStyle(fontWeight: FontWeight.w600),
                       ),
                       onTap: () async {
                         final picked = await showTimePicker(

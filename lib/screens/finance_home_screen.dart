@@ -197,11 +197,12 @@ class _FinanceHomeScreenState extends State<FinanceHomeScreen>
             Text(_greeting(app.settings.userName),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: const TextStyle(fontWeight: FontWeight.w900)),
+                style: Theme.of(context).textTheme.titleMedium),
             Text(_todayLabel(),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: const TextStyle(fontSize: 12)),
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: Theme.of(context).colorScheme.onSurfaceVariant)),
           ]),
           actions: [
             IconButton(
@@ -377,10 +378,11 @@ class _FinanceHomeScreenState extends State<FinanceHomeScreen>
                         text: money(data.expense),
                         style: TextStyle(
                             fontSize: 24,
-                            fontWeight: FontWeight.w800,
+                            fontWeight: FontWeight.w600,
                             fontFeatures: NexoTones.figures)),
                     TextSpan(
-                        text: '  em $daysWithSpending dia(s) com saída',
+                        text:
+                            '  em ${ptCount(daysWithSpending, 'dia')} com saída',
                         style: Theme.of(context).textTheme.bodySmall),
                   ])),
                   const SizedBox(height: 10),
@@ -473,7 +475,8 @@ class _FinanceHomeScreenState extends State<FinanceHomeScreen>
                 child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                  NexoSectionTitle('Resumo de ${ptMonthYear(month)}',
+                  NexoSectionTitle(
+                      'Resumo de ${DateFormat("MMMM 'de' y", 'pt_BR').format(month)}',
                       subtitle: currentMonth ? 'Até hoje' : 'Mês completo'),
                   const SizedBox(height: 6),
                   LayoutBuilder(builder: (context, c) {
@@ -569,7 +572,7 @@ class _FinanceHomeScreenState extends State<FinanceHomeScreen>
                                         ? '${money(gap)} acima do ritmo ideal para o dia ${paceNow.length}.'
                                         : '${money(-gap)} abaixo do ritmo ideal: sobra espaço.',
                                 style: TextStyle(
-                                    fontWeight: FontWeight.w700,
+                                    fontWeight: FontWeight.w600,
                                     color: gap > 0
                                         ? NexoTones.expense(context)
                                         : NexoTones.income(context))));
@@ -822,7 +825,7 @@ class _FinanceHomeScreenState extends State<FinanceHomeScreen>
                   },
                   subtitle: switch (alert.kind) {
                     'duplicate' =>
-                      '${alert.charges.length}× ${money(first.amount)} em ${alert.charges.last.date.difference(first.date).inDays + 1} dia(s). Confira se é isso mesmo.',
+                      '${alert.charges.length}× ${money(first.amount)} em ${ptCount(alert.charges.last.date.difference(first.date).inDays + 1, 'dia')}. Confira se é isso mesmo.',
                     'review' =>
                       '${money(first.amount)} em ${ptShortDate(first.date)}. Parece tarifa, seguro ou serviço do banco. Você contratou?',
                     _ => 'Previsto: ${money(alert.expected!)}. Mudou o preço?',
@@ -920,7 +923,7 @@ class _FinanceHomeScreenState extends State<FinanceHomeScreen>
                               'Atenção ao caixa: ${money(timeline.lowest.balance)} em ${ptShortDate(timeline.lowest.date)}.',
                               style: TextStyle(
                                   color: cs.error,
-                                  fontWeight: FontWeight.w700))),
+                                  fontWeight: FontWeight.w600))),
                     const SizedBox(height: 8),
                     Text(
                         'Somente valores cadastrados, incluindo atrasados. Novas compras não estão previstas.',
@@ -1041,7 +1044,7 @@ class _FinanceHomeScreenState extends State<FinanceHomeScreen>
                         leading: _MiniCard(color: Color(card.colorValue)),
                         title: Text(card.name,
                             style:
-                                const TextStyle(fontWeight: FontWeight.w700)),
+                                const TextStyle(fontWeight: FontWeight.w600)),
                         subtitle: Text(
                             'Em aberto: ${money(app.convertToMain((-card.balance).clamp(0.0, double.infinity), card.currency))}\nFatura atual: ${snapshot.hasData ? money(currentInvoiceRemaining(card: card, now: now, transactions: app.transactions, metadata: app.transactionMetadata, payments: snapshot.data!, convert: app.convertToMain)) : 'indisponível'}${card.excludeFromTotal ? ' · fora do total' : ''}'),
                         trailing: const Icon(Icons.chevron_right),
@@ -1096,7 +1099,7 @@ class _FinanceHomeScreenState extends State<FinanceHomeScreen>
                         child: Text(
                             '${netChange >= 0 ? '▲' : '▼'} ${money(netChange.abs())} em 30 dias',
                             style: TextStyle(
-                                fontWeight: FontWeight.w700,
+                                fontWeight: FontWeight.w600,
                                 color: netChange >= 0
                                     ? NexoTones.income(context)
                                     : NexoTones.expense(context)))),
@@ -1192,7 +1195,7 @@ class _FinanceHomeScreenState extends State<FinanceHomeScreen>
                                             ? value
                                             : '${income ? '+' : '−'} $value',
                                         style: TextStyle(
-                                            fontWeight: FontWeight.w800,
+                                            fontWeight: FontWeight.w600,
                                             fontFeatures: NexoTones.figures,
                                             color: neutral || hidden
                                                 ? null
@@ -1402,7 +1405,9 @@ class _FinanceHomeScreenState extends State<FinanceHomeScreen>
                         contentPadding: EdgeInsets.zero,
                         title: Text(t.description),
                         subtitle: Text(ptShortDate(t.date)),
-                        trailing: Text(analysisMoney(app, t.amount))),
+                        trailing: Text(analysisMoney(app, t.amount),
+                            style: const TextStyle(
+                                fontFeatures: NexoTones.figures))),
                   if (alert.kind == 'price')
                     Text(
                         'A recorrente prevê ${analysisMoney(app, alert.expected!)}.'),
@@ -1483,7 +1488,7 @@ class _SpendableBodyState extends State<_SpendableBody> {
             style: Theme.of(context)
                 .textTheme
                 .titleMedium
-                ?.copyWith(fontWeight: FontWeight.w800)),
+                ?.copyWith(fontWeight: FontWeight.w600)),
         const SizedBox(height: 6),
         const Text(
             'Cadastre sua renda fixa (salário, bolsa) como recorrente e o Nexo mostra quanto cabe por dia depois das contas e metas.'),
@@ -1497,30 +1502,39 @@ class _SpendableBodyState extends State<_SpendableBody> {
         padding: const EdgeInsets.symmetric(vertical: 2),
         child: Row(children: [
           Expanded(child: Text(label)),
-          Text('${plus ? '+' : '−'} ${money(value)}',
-              style: const TextStyle(fontFeatures: NexoTones.figures)),
+          const SizedBox(width: 8),
+          Flexible(
+              child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: Alignment.centerRight,
+                  child: Text('${plus ? '+' : '−'} ${money(value)}',
+                      style:
+                          const TextStyle(fontFeatures: NexoTones.figures)))),
         ]));
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      Row(children: [
-        Expanded(
-            child: Text('Quanto posso gastar',
-                style: Theme.of(context)
-                    .textTheme
-                    .titleMedium
-                    ?.copyWith(fontWeight: FontWeight.w800))),
-        TextButton(
-            onPressed: () => setState(() => _open = !_open),
-            child: Text(_open ? 'Ocultar conta' : 'Como chego nisso')),
-      ]),
+      // The button drops to its own line when both no longer fit.
+      SizedBox(
+        width: double.infinity,
+        child: Wrap(
+            alignment: WrapAlignment.spaceBetween,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            children: [
+              Text('Quanto posso gastar',
+                  style: Theme.of(context).textTheme.titleMedium),
+              TextButton(
+                  onPressed: () => setState(() => _open = !_open),
+                  child: Text(_open ? 'Ocultar conta' : 'Como chego nisso')),
+            ]),
+      ),
       if (over) ...[
         // Said once, without shouting: the number and what is left out.
         Text('Renda fixa do mês já usada',
             style: TextStyle(
                 color: NexoTones.warning(context),
-                fontWeight: FontWeight.w800,
+                fontWeight: FontWeight.w600,
                 fontSize: 16)),
         Text(
-            '${money(-s.free)} além dela, com ${s.daysLeft} dia(s) até ${s.untilNextIncome ? 'a próxima renda' : 'o fim do mês'}. Renda extra e reserva não entram nesta conta.',
+            '${money(-s.free)} além dela, com ${ptCount(s.daysLeft, 'dia')} até ${s.untilNextIncome ? 'a próxima renda' : 'o fim do mês'}. Renda extra e reserva não entram nesta conta.',
             style: small),
       ] else ...[
         FittedBox(
@@ -1531,13 +1545,13 @@ class _SpendableBodyState extends State<_SpendableBody> {
                   text: money(s.perDay),
                   style: TextStyle(
                       fontSize: 28,
-                      fontWeight: FontWeight.w800,
+                      fontWeight: FontWeight.w600,
                       color: cs.primary,
                       fontFeatures: NexoTones.figures)),
               const TextSpan(text: '  por dia'),
             ]))),
         Text(
-            '${money(s.free)} livres até ${DateFormat('dd/MM').format(s.until)}${s.untilNextIncome ? ', a próxima renda' : ', fim do mês'} · ${s.daysLeft} dia(s)',
+            '${money(s.free)} livres até ${DateFormat('dd/MM').format(s.until)}${s.untilNextIncome ? ', a próxima renda' : ', fim do mês'} · ${ptCount(s.daysLeft, 'dia')}',
             style: small),
         if (s.upcomingBills > 0)
           Text('Ainda saem ${money(s.upcomingBills)} em contas até lá.',
@@ -1550,7 +1564,7 @@ class _SpendableBodyState extends State<_SpendableBody> {
                 'A renda de ${DateFormat('dd/MM').format(s.since)} ainda não foi registrada; a conta já parte dela.',
                 style: small?.copyWith(
                     color: NexoTones.warning(context),
-                    fontWeight: FontWeight.w700))),
+                    fontWeight: FontWeight.w600))),
       if (_open) ...[
         const Divider(height: 20),
         row('Renda fixa até lá', s.fixedIncome, plus: true),
@@ -1617,8 +1631,8 @@ class _WeekBody extends StatelessWidget {
                           ? 'Igual ao mesmo período da semana passada'
                           : '${up ? '▲' : '▼'} ${change.abs().toStringAsFixed(0)}% vs. ${money(week.previousSpent)} na semana passada',
               style: TextStyle(
-                  fontSize: 12.5,
-                  fontWeight: FontWeight.w600,
+                  fontSize: 13,
+                  fontWeight: FontWeight.w500,
                   color: hidden || change == null || change.abs() < 1
                       ? cs.onSurfaceVariant
                       : up
@@ -1650,9 +1664,9 @@ class _WeekBody extends StatelessWidget {
                         const SizedBox(height: 4),
                         Text(letters[i],
                             style: TextStyle(
-                                fontSize: 10,
+                                fontSize: 12,
                                 fontWeight: i == week.daysElapsed - 1
-                                    ? FontWeight.w800
+                                    ? FontWeight.w500
                                     : FontWeight.w500,
                                 color: cs.onSurfaceVariant)),
                       ])),
@@ -1661,7 +1675,7 @@ class _WeekBody extends StatelessWidget {
       const SizedBox(height: 12),
       Wrap(spacing: 16, runSpacing: 8, children: [
         _WeekFact(Icons.spa_outlined,
-            '${week.quietDays} de ${week.daysElapsed} dia(s) sem gastos'),
+            '${week.quietDays} de ${ptCount(week.daysElapsed, 'dia')} sem gastos'),
         if (top != null && !hidden)
           _WeekFact(Icons.donut_small_outlined,
               '${categoryName(top.key)}: ${money(top.value)}'),
@@ -1687,7 +1701,7 @@ class _WeekFact extends StatelessWidget {
             child: Text(text,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: const TextStyle(fontSize: 12.5))),
+                style: const TextStyle(fontSize: 13))),
       ]));
 }
 
@@ -1794,7 +1808,7 @@ class _Kpi extends StatelessWidget {
                   child: Text(value,
                       style: TextStyle(
                           fontSize: big ? 24 : 20,
-                          fontWeight: FontWeight.w900,
+                          fontWeight: FontWeight.w600,
                           color: color,
                           fontFeatures: NexoTones.figures)))),
           if (hint != null)
@@ -1833,7 +1847,7 @@ class _Legend extends StatelessWidget {
                     : null,
                 borderRadius: BorderRadius.circular(2))),
         const SizedBox(width: 4),
-        Text(label, style: const TextStyle(fontSize: 11)),
+        Text(label, style: const TextStyle(fontSize: 12)),
       ]);
 }
 
@@ -1872,7 +1886,7 @@ class _Heading extends StatelessWidget {
                 style: Theme.of(context)
                     .textTheme
                     .titleMedium
-                    ?.copyWith(fontWeight: FontWeight.w800))),
+                    ?.copyWith(fontWeight: FontWeight.w600))),
         TextButton(onPressed: onTap, child: Text(action)),
       ]);
 }
@@ -1908,8 +1922,7 @@ class _Amount extends StatelessWidget {
           child: Text(value,
               style: TextStyle(
                   fontSize: size,
-                  fontWeight: FontWeight.w800,
-                  letterSpacing: -.4,
+                  fontWeight: FontWeight.w600,
                   fontFeatures: NexoTones.figures))));
 }
 
@@ -1980,9 +1993,9 @@ class _EventTile extends StatelessWidget {
                   borderRadius: BorderRadius.circular(12)),
               child: Column(mainAxisSize: MainAxisSize.min, children: [
                 Text('${event.date.day}',
-                    style: const TextStyle(fontWeight: FontWeight.bold)),
+                    style: const TextStyle(fontWeight: FontWeight.w600)),
                 Text(DateFormat('MMM', 'pt_BR').format(event.date),
-                    style: const TextStyle(fontSize: 10))
+                    style: const TextStyle(fontSize: 12))
               ]))),
       title: Text(app.settings.hideBalance ? 'Compromisso' : event.title,
           maxLines: 1, overflow: TextOverflow.ellipsis),
@@ -1992,7 +2005,8 @@ class _EventTile extends StatelessWidget {
         Text(
             analysisMoney(
                 app, app.convertToMain(event.amount.abs(), event.currency)),
-            style: const TextStyle(fontWeight: FontWeight.w700)),
+            style: const TextStyle(
+                fontFeatures: NexoTones.figures, fontWeight: FontWeight.w600)),
       ]),
       trailing: const Icon(Icons.chevron_right),
     );
@@ -2018,7 +2032,7 @@ class _BudgetRow extends StatelessWidget {
                 Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
               Text(
                   '${app.categoryById(budget.categoryId)?.name ?? 'Categoria'} · ${budget.period == 'weekly' ? 'semana' : 'mês'}',
-                  style: const TextStyle(fontWeight: FontWeight.w700)),
+                  style: const TextStyle(fontWeight: FontWeight.w600)),
               const SizedBox(height: 4),
               Text(
                   '${left < 0 ? 'Excedido' : 'Ainda disponível'} ${analysisMoney(app, left.abs())}'),

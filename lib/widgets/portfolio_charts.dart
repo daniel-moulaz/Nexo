@@ -6,6 +6,7 @@ import 'package:provider/provider.dart';
 import '../providers/app_provider.dart';
 import '../investments/investment_models.dart';
 import 'analysis_widgets.dart';
+import 'nexo_ui.dart';
 
 class PortfolioCharts extends StatefulWidget {
   final List<InvestmentPosition> positions;
@@ -148,6 +149,7 @@ class _PortfolioChartsState extends State<PortfolioCharts> {
             title: Text(_label(p)),
             trailing: Text(_money(p.unrealized),
                 style: TextStyle(
+                    fontFeatures: NexoTones.figures,
                     color: p.unrealized < 0
                         ? Theme.of(context).colorScheme.error
                         : const Color(0xff008f64))),

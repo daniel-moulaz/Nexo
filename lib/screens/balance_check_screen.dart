@@ -9,6 +9,7 @@ import '../services/bank_snapshots.dart';
 import '../services/pluggy_inbox.dart';
 import '../widgets/analysis_widgets.dart';
 import '../widgets/nexo_ui.dart';
+import '../utils/finance_input.dart';
 
 /// "Conferir com o banco": each Open Finance account against the Nexo
 /// account it is linked to, at the moment the bank was read. A difference
@@ -212,7 +213,7 @@ class _BankCard extends StatelessWidget {
               child: Text('${bank.bank} · ${bank.name}',
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(fontWeight: FontWeight.w700))),
+                  style: const TextStyle(fontWeight: FontWeight.w600))),
         ]),
         const SizedBox(height: 8),
         Text(
@@ -220,7 +221,7 @@ class _BankCard extends StatelessWidget {
                 ? 'O banco não informou o saldo.'
                 : '${bank.isCard ? 'Dívida no banco' : 'No banco'}: ${money(signed / 100)}',
             style: const TextStyle(
-                fontWeight: FontWeight.w800,
+                fontWeight: FontWeight.w600,
                 fontSize: 16,
                 fontFeatures: NexoTones.figures)),
         Text(
@@ -253,7 +254,7 @@ class _BankCard extends StatelessWidget {
           Padding(
             padding: const EdgeInsets.only(top: 8),
             child: Text(
-                'Somada com mais $sharedWith conta(s) do banco em ${linked.name}: a comparação está no total acima.',
+                'Somada com mais ${ptCount(sharedWith, 'conta')} do banco em ${linked.name}: a comparação está no total acima.',
                 style: small),
           )
         else
@@ -294,7 +295,7 @@ class _CheckView extends StatelessWidget {
       Text('No Nexo naquele momento: ${money(check.nexoAtBankCents / 100)}'),
       if (check.laterEntries.isNotEmpty)
         Text(
-            '${check.laterEntries.length} lançamento(s) depois da leitura do banco ficaram de fora.',
+            '${ptCount(check.laterEntries.length, 'lançamento')} depois da leitura do banco ${check.laterEntries.length == 1 ? 'ficou' : 'ficaram'} de fora.',
             style: small),
       const SizedBox(height: 8),
       if (check.matches)
@@ -302,13 +303,13 @@ class _CheckView extends StatelessWidget {
           Icon(Icons.check_circle, color: NexoTones.income(context)),
           const SizedBox(width: 6),
           const Text('Bate com o banco',
-              style: TextStyle(fontWeight: FontWeight.w700)),
+              style: TextStyle(fontWeight: FontWeight.w600)),
         ])
       else ...[
         Text(
             'Diferença: ${check.differenceCents > 0 ? '+' : '−'}${money(check.differenceCents.abs() / 100)}',
             style: TextStyle(
-                fontWeight: FontWeight.w800,
+                fontWeight: FontWeight.w600,
                 color: NexoTones.warning(context))),
         const SizedBox(height: 6),
         FilledButton.tonalIcon(
@@ -355,7 +356,7 @@ class _GroupCard extends StatelessWidget {
           const SizedBox(width: 10),
           Expanded(
               child: Text('${account.name} · soma de ${banks.length} contas',
-                  style: const TextStyle(fontWeight: FontWeight.w700))),
+                  style: const TextStyle(fontWeight: FontWeight.w600))),
         ]),
         const SizedBox(height: 4),
         Text(banks.map((b) => b.bank).toSet().join(' + '), style: small),
@@ -363,7 +364,7 @@ class _GroupCard extends StatelessWidget {
         if (combined != null)
           Text('Nos bancos: ${money(combined.balanceCents! / 100)}',
               style: const TextStyle(
-                  fontWeight: FontWeight.w800,
+                  fontWeight: FontWeight.w600,
                   fontSize: 16,
                   fontFeatures: NexoTones.figures)),
         if (combined?.bankUpdatedAt != null)

@@ -33,7 +33,7 @@ class AssetsScreen extends StatelessWidget {
               }),
         ],
         title: Text(l10n.assets_assets,
-            style: const TextStyle(fontWeight: FontWeight.w800)),
+            style: const TextStyle(fontWeight: FontWeight.w600)),
       ),
       body: Column(children: [
         // ── Summary card ────────────────────────────────────────────────
@@ -134,13 +134,13 @@ class _AssetCard extends StatelessWidget {
             children: [
               Text(asset.name,
                   style: const TextStyle(
-                      fontWeight: FontWeight.w700, fontSize: 15)),
+                      fontWeight: FontWeight.w600, fontSize: 15)),
               if (asset.notes.isNotEmpty)
                 Text(asset.notes,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
-                        fontSize: 11,
+                        fontSize: 12,
                         color: cs.onSurface.withValues(alpha: 0.5))),
             ],
           )),
@@ -149,13 +149,16 @@ class _AssetCard extends StatelessWidget {
             Text(
               formatAmount(asset.value, asset.currency),
               style: const TextStyle(
-                  fontSize: 15, fontWeight: FontWeight.w800, color: assetColor),
+                  fontFeatures: NexoTones.figures,
+                  fontSize: 15,
+                  fontWeight: FontWeight.w600,
+                  color: assetColor),
             ),
             if (convertedValue != null)
               Text(
                 '≈ ${formatAmount(convertedValue!, mainCurrency)}',
                 style: TextStyle(
-                    fontSize: 10, color: cs.onSurface.withValues(alpha: 0.5)),
+                    fontSize: 12, color: cs.onSurface.withValues(alpha: 0.5)),
               ),
           ]),
           // Actions
@@ -274,7 +277,7 @@ class _AssetSheetState extends State<_AssetSheet> {
                 style: Theme.of(context)
                     .textTheme
                     .titleLarge
-                    ?.copyWith(fontWeight: FontWeight.w800)),
+                    ?.copyWith(fontWeight: FontWeight.w600)),
             const SizedBox(height: 16),
 
             // Name
@@ -318,7 +321,7 @@ class _AssetSheetState extends State<_AssetSheet> {
                         : ' ',
                   ),
                   style: const TextStyle(
-                      fontSize: 18, fontWeight: FontWeight.w700),
+                      fontSize: 18, fontWeight: FontWeight.w600),
                   onChanged: (_) {
                     if (_submitted) setState(() {});
                   },
@@ -349,7 +352,7 @@ class _AssetSheetState extends State<_AssetSheet> {
                       Expanded(
                           child: Text(_currency,
                               style: const TextStyle(
-                                  fontWeight: FontWeight.w700, fontSize: 15))),
+                                  fontWeight: FontWeight.w600, fontSize: 15))),
                       const Icon(Icons.arrow_drop_down, size: 20),
                     ]),
                   ),

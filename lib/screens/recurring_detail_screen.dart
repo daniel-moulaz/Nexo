@@ -10,6 +10,7 @@ import '../theme/app_theme.dart';
 import '../utils/finance_input.dart';
 import '../utils/snackbar.dart';
 import 'recurring_screen.dart';
+import '../widgets/nexo_ui.dart';
 
 class RecurringDetailScreen extends StatefulWidget {
   final RecurringPayment recurring;
@@ -89,7 +90,7 @@ class _RecurringDetailScreenState extends State<RecurringDetailScreen> {
     return Scaffold(
       appBar: AppBar(
         title:
-            Text(r.name, style: const TextStyle(fontWeight: FontWeight.w900)),
+            Text(r.name, style: const TextStyle(fontWeight: FontWeight.w600)),
         actions: [
           IconButton(
             tooltip: 'Editar',
@@ -145,8 +146,8 @@ class _RecurringDetailScreenState extends State<RecurringDetailScreen> {
                                     ? 'Vence hoje'
                                     : 'Em $days dia${days == 1 ? '' : 's'}',
                         style: TextStyle(
-                          fontWeight: FontWeight.w800,
-                          fontSize: 11,
+                          fontWeight: FontWeight.w500,
+                          fontSize: 12,
                           color: overdue ? cs.error : cs.primary,
                         ),
                       ),
@@ -159,7 +160,7 @@ class _RecurringDetailScreenState extends State<RecurringDetailScreen> {
                       ? money(r.nextActionAmount)
                       : 'Cronograma concluído',
                   style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                        fontWeight: FontWeight.w900,
+                        fontWeight: FontWeight.w600,
                       ),
                 ),
                 const SizedBox(height: 4),
@@ -282,7 +283,9 @@ class _RecurringDetailScreenState extends State<RecurringDetailScreen> {
                       subtitle: Text(e.date.isBefore(startToday)
                           ? 'Em atraso'
                           : 'Previsto'),
-                      trailing: Text(money(e.amount))),
+                      trailing: Text(money(e.amount),
+                          style: const TextStyle(
+                              fontFeatures: NexoTones.figures))),
                 if (upcoming.occurrences.length > 12)
                   const Padding(
                       padding: EdgeInsets.all(12),
@@ -301,7 +304,7 @@ class _RecurringDetailScreenState extends State<RecurringDetailScreen> {
           Text(
             'Histórico',
             style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.w900,
+                  fontWeight: FontWeight.w600,
                 ),
           ),
           const SizedBox(height: 8),
@@ -376,7 +379,7 @@ class _InfoTile extends StatelessWidget {
       title: Text(label, style: Theme.of(context).textTheme.labelMedium),
       subtitle: Text(
         value,
-        style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 15),
+        style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15),
       ),
     );
   }
@@ -408,12 +411,12 @@ class _HistoryTile extends StatelessWidget {
               : installment
                   ? 'Parcela não paga'
                   : 'Ocorrência pulada',
-          style: const TextStyle(fontWeight: FontWeight.w800),
+          style: const TextStyle(fontWeight: FontWeight.w600),
         ),
         subtitle: Text(ptDate(entry.date)),
         trailing: Text(
           hide ? '••••' : formatAmount(entry.amount, entry.currency),
-          style: const TextStyle(fontWeight: FontWeight.w900),
+          style: const TextStyle(fontWeight: FontWeight.w600),
         ),
       ),
     );
@@ -459,7 +462,7 @@ class _CancelIntentTileState extends State<_CancelIntentTile> {
             title: const Text('Não vou renovar'),
             subtitle: Text(_days == null
                 ? 'Lembrar de cancelar antes da próxima cobrança'
-                : 'Aviso no início $_days dia(s) antes de ${ptShortDate(widget.recurring.nextDate)}. A cobrança continua prevista até você cancelar.'),
+                : 'Aviso no início ${ptCount(_days!, 'dia')} antes de ${ptShortDate(widget.recurring.nextDate)}. A cobrança continua prevista até você cancelar.'),
             value: _days != null,
             onChanged: (on) => _set(on ? 3 : null)),
         if (_days != null)
@@ -468,7 +471,7 @@ class _CancelIntentTileState extends State<_CancelIntentTile> {
             child: Wrap(spacing: 8, children: [
               for (final d in [1, 3, 7])
                 ChoiceChip(
-                    label: Text('$d dia(s) antes'),
+                    label: Text('${ptCount(d, 'dia')} antes'),
                     selected: _days == d,
                     onSelected: (_) => _set(d)),
             ]),

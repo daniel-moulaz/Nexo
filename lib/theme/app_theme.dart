@@ -84,15 +84,20 @@ const Map<String, String> kFonts = {
   'nunito': 'Nunito',
 };
 
+/// Ships inside the app (assets/fonts/Inter, SIL OFL): it works offline and
+/// has a true Medium, which Segoe UI lacks. No weight above 700 exists in the
+/// bundle; asking for one makes the engine smear a fake bold over the Bold.
+const kBundledFont = 'Inter';
+
 TextTheme _applyFont(String font, TextTheme base) {
-  if (PlatformCapabilities.windows) return base.apply(fontFamily: 'Segoe UI');
+  if (PlatformCapabilities.windows || font == 'inter') {
+    return base.apply(fontFamily: kBundledFont);
+  }
   switch (font) {
     case 'plus_jakarta_sans':
       return GoogleFonts.plusJakartaSansTextTheme(base);
     case 'dm_sans':
       return GoogleFonts.dmSansTextTheme(base);
-    case 'inter':
-      return GoogleFonts.interTextTheme(base);
     case 'nunito_sans':
       return GoogleFonts.nunitoSansTextTheme(base);
     case 'space_grotesk':
@@ -185,24 +190,50 @@ ColorScheme _layered(ColorScheme cs, Color seed, bool dark) {
   );
 }
 
+/// The Windows type ramp under Material's names: 12/16, 14/20, 20/28, 28/36.
+/// Regular for reading, semibold for titles, nothing under 12. Tracking stays
+/// at zero: Material's values were tuned for Roboto.
+///
+/// No style here turns on tabular figures. In Inter they also widen the hyphen
+/// by 41% ("Bem - vindo"), and any of these styles can hold a sentence. Amounts
+/// in columns ask for [NexoTones.figures] where they are drawn.
+TextTheme _typeRamp(TextTheme t) {
+  TextStyle? ramp(TextStyle? s, double size, double line, FontWeight weight) =>
+      s?.copyWith(
+          fontSize: size,
+          height: line / size,
+          fontWeight: weight,
+          letterSpacing: 0,
+          fontFeatures: const []);
+  const regular = FontWeight.w400;
+  const medium = FontWeight.w500;
+  const semibold = FontWeight.w600;
+  return t.copyWith(
+    displayLarge: ramp(t.displayLarge, 48, 56, semibold),
+    displayMedium: ramp(t.displayMedium, 40, 52, semibold),
+    displaySmall: ramp(t.displaySmall, 34, 44, semibold),
+    headlineLarge: ramp(t.headlineLarge, 32, 40, FontWeight.w700),
+    headlineMedium: ramp(t.headlineMedium, 28, 36, semibold),
+    headlineSmall: ramp(t.headlineSmall, 24, 32, semibold),
+    titleLarge: ramp(t.titleLarge, 20, 28, semibold),
+    titleMedium: ramp(t.titleMedium, 16, 24, semibold),
+    titleSmall: ramp(t.titleSmall, 14, 20, semibold),
+    bodyLarge: ramp(t.bodyLarge, 16, 24, regular),
+    bodyMedium: ramp(t.bodyMedium, 14, 20, regular),
+    bodySmall: ramp(t.bodySmall, 12, 16, regular),
+    labelLarge: ramp(t.labelLarge, 14, 20, medium),
+    labelMedium: ramp(t.labelMedium, 12, 16, medium),
+    labelSmall: ramp(t.labelSmall, 12, 16, medium),
+  );
+}
+
 ThemeData _base(ColorScheme cs, String appFont) {
   final baseTextTheme = ThemeData(brightness: cs.brightness).textTheme;
-  final fontTextTheme = _applyFont(appFont, baseTextTheme);
+  final fontTextTheme = _typeRamp(_applyFont(appFont, baseTextTheme));
   return ThemeData(
     colorScheme: cs,
     useMaterial3: true,
-    // Headlines carry money: heavy and with tabular figures, everywhere.
-    textTheme: fontTextTheme.copyWith(
-      headlineSmall: fontTextTheme.headlineSmall?.copyWith(
-          fontWeight: FontWeight.w800,
-          fontFeatures: const [FontFeature.tabularFigures()]),
-      headlineMedium: fontTextTheme.headlineMedium?.copyWith(
-          fontWeight: FontWeight.w800,
-          fontFeatures: const [FontFeature.tabularFigures()]),
-      headlineLarge: fontTextTheme.headlineLarge?.copyWith(
-          fontWeight: FontWeight.w900,
-          fontFeatures: const [FontFeature.tabularFigures()]),
-    ),
+    textTheme: fontTextTheme,
     pageTransitionsTheme: const PageTransitionsTheme(builders: {
       TargetPlatform.android: CupertinoPageTransitionsBuilder(),
       TargetPlatform.iOS: CupertinoPageTransitionsBuilder(),
@@ -214,9 +245,8 @@ ThemeData _base(ColorScheme cs, String appFont) {
         scrolledUnderElevation: 0,
         backgroundColor: cs.surface,
         surfaceTintColor: Colors.transparent,
-        // Every screen title in the same heavy weight.
-        titleTextStyle: fontTextTheme.titleLarge
-            ?.copyWith(fontWeight: FontWeight.w900, color: cs.onSurface)),
+        titleTextStyle:
+            fontTextTheme.titleLarge?.copyWith(color: cs.onSurface)),
     navigationRailTheme: NavigationRailThemeData(
       backgroundColor: cs.surface,
       indicatorColor: cs.primaryContainer,
@@ -230,12 +260,9 @@ ThemeData _base(ColorScheme cs, String appFont) {
       indicatorShape: const StadiumBorder(),
       labelTextStyle: WidgetStateProperty.resolveWith((states) {
         final style = fontTextTheme.labelMedium ?? const TextStyle();
-        if (states.contains(WidgetState.selected)) {
-          return style.copyWith(
-              fontSize: (style.fontSize ?? 12) - 1,
-              fontWeight: FontWeight.bold);
-        }
-        return style.copyWith(fontSize: (style.fontSize ?? 12) - 1);
+        return states.contains(WidgetState.selected)
+            ? style.copyWith(fontWeight: FontWeight.w600)
+            : style;
       }),
     ),
     cardTheme: CardThemeData(

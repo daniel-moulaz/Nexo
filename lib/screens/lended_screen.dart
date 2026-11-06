@@ -77,7 +77,7 @@ class LendedScreen extends StatelessWidget {
               }),
         ],
         title: Text(l10n.lended_lentMoney,
-            style: const TextStyle(fontWeight: FontWeight.w800)),
+            style: const TextStyle(fontWeight: FontWeight.w600)),
       ),
       body: Column(children: [
         if (app.lendedPeople.isNotEmpty)
@@ -180,7 +180,7 @@ class _PersonCard extends StatelessWidget {
                   child: Text(
                 person.name.isNotEmpty ? person.name[0].toUpperCase() : '?',
                 style: TextStyle(
-                    fontWeight: FontWeight.w800, fontSize: 18, color: color),
+                    fontWeight: FontWeight.w600, fontSize: 18, color: color),
               )),
             ),
             const SizedBox(width: 12),
@@ -193,7 +193,7 @@ class _PersonCard extends StatelessWidget {
                         child: Text(person.name,
                             overflow: TextOverflow.ellipsis,
                             style: const TextStyle(
-                                fontWeight: FontWeight.w700, fontSize: 15))),
+                                fontWeight: FontWeight.w600, fontSize: 15))),
                     if (overdue) ...[
                       const SizedBox(width: 6),
                       Container(
@@ -204,8 +204,8 @@ class _PersonCard extends StatelessWidget {
                             borderRadius: BorderRadius.circular(6)),
                         child: Text(l10n.lended_overdue,
                             style: TextStyle(
-                                fontSize: 9,
-                                fontWeight: FontWeight.w700,
+                                fontSize: 12,
+                                fontWeight: FontWeight.w500,
                                 color: cs.onErrorContainer)),
                       ),
                     ],
@@ -216,20 +216,21 @@ class _PersonCard extends StatelessWidget {
                         ? l10n.lended_noActiveRecords
                         : l10n.lended_activeRecords(activeCount),
                     style: TextStyle(
-                        fontSize: 11,
+                        fontSize: 12,
                         color: cs.onSurface.withValues(alpha: 0.5)),
                   ),
                 ])),
             Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
               Text(fmt(balance.abs()),
                   style: TextStyle(
+                      fontFeatures: NexoTones.figures,
                       fontSize: 16,
-                      fontWeight: FontWeight.w800,
+                      fontWeight: FontWeight.w600,
                       color: balColor)),
               Text(balLabel,
                   style: TextStyle(
-                      fontSize: 10,
-                      fontWeight: FontWeight.w600,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w500,
                       color: balColor)),
             ]),
             const Icon(Icons.chevron_right_rounded),
@@ -312,7 +313,7 @@ class _PersonSheetState extends State<_PersonSheet> {
               style: Theme.of(context)
                   .textTheme
                   .titleLarge
-                  ?.copyWith(fontWeight: FontWeight.w800)),
+                  ?.copyWith(fontWeight: FontWeight.w600)),
           const SizedBox(height: 12),
           TextField(
             controller: _nameCtrl,
@@ -328,10 +329,7 @@ class _PersonSheetState extends State<_PersonSheet> {
           ),
           const SizedBox(height: 14),
           Text(l10n.lended_color,
-              style: Theme.of(context)
-                  .textTheme
-                  .labelMedium
-                  ?.copyWith(letterSpacing: 1)),
+              style: Theme.of(context).textTheme.labelMedium),
           const SizedBox(height: 8),
           Wrap(
               spacing: 10,

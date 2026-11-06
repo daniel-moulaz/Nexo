@@ -152,7 +152,7 @@ void main() {
     expect(find.text('Por tipo de gasto'), findsOneWidget);
     expect(find.text('Prazeres'), findsOneWidget);
     expect(find.text('120% · passou'), findsOneWidget);
-    expect(find.textContaining('1 categoria(s) sem tipo'), findsOneWidget);
+    expect(find.textContaining('1 categoria sem tipo'), findsOneWidget);
     await tester.tap(find.text('Ajustar'));
     await tester.pump();
     await tester.ensureVisible(find.text('Classificar'));

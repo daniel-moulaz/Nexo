@@ -209,6 +209,8 @@ class _AgendaScreenState extends State<AgendaScreen> {
                                               .textTheme
                                               .headlineSmall
                                               ?.copyWith(
+                                                  fontFeatures:
+                                                      NexoTones.figures,
                                                   color: forecast.projected < 0
                                                       ? Theme.of(context)
                                                           .colorScheme

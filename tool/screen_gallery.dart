@@ -193,14 +193,13 @@ void main() {
         (await Directory.systemTemp.createTemp('nexo-gallery-')).path);
     await DBHelper.database;
     await initializeDateFormatting('pt_BR');
-    const fonts = 'C:/Windows/Fonts';
-    final segoe = [
-      '$fonts/segoeui.ttf',
-      '$fonts/seguisb.ttf',
-      '$fonts/segoeuib.ttf'
+    final inter = [
+      for (final weight in const ['Regular', 'Medium', 'SemiBold', 'Bold'])
+        'assets/fonts/Inter/Inter-$weight.ttf'
     ];
-    await _font('Segoe UI', segoe);
-    await _font('Roboto', segoe);
+    // Android screens ask for Roboto; Inter stands in for it here.
+    await _font('Inter', inter);
+    await _font('Roboto', inter);
     await _font('MaterialIcons', [icons]);
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
         .setMockMethodCallHandler(

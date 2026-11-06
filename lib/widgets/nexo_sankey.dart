@@ -44,10 +44,10 @@ class NexoSankey extends StatelessWidget {
               mutedColor: cs.onSurfaceVariant,
               sourceColor: cs.primary,
               labelStyle:
-                  theme.textTheme.labelSmall ?? const TextStyle(fontSize: 11),
+                  theme.textTheme.labelSmall ?? const TextStyle(fontSize: 12),
               valueStyle:
-                  (theme.textTheme.labelSmall ?? const TextStyle(fontSize: 11))
-                      .copyWith(fontWeight: FontWeight.w800),
+                  (theme.textTheme.labelSmall ?? const TextStyle(fontSize: 12))
+                      .copyWith(fontWeight: FontWeight.w600),
               sourceLabel: sourceLabel,
               money: money),
           size: Size.infinite,

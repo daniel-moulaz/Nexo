@@ -1,5 +1,16 @@
 # Changelog
 
+## [Não publicado]
+### Leitura no Windows (e no resto do app)
+- **Fonte própria:** o Windows passa a usar a Inter, incluída no app, em vez de depender da Segoe UI. Títulos deixaram de cair na Segoe UI Black, que era o que os deixava pesados e apertados.
+- **Uma rampa de tipos:** tamanhos e pesos seguem a rampa do Windows (12/16, 14/20, 20/28, 28/36): nada abaixo de 12, regular para ler, semibold para títulos, nada acima de 700. O espaçamento do Material, calibrado para Roboto, saiu. Um teste falha se isso voltar.
+- **Barra lateral:** item ativo com fundo, textos de 14 e atalhos em tom secundário. Títulos de seção sem caixa alta. Data do Hoje em tom secundário.
+- **Fonte Inter no Android:** escolher Inter nas configurações não baixa mais nada da internet.
+### Correções
+- Patrimônio ao longo do tempo pintava o mês mais alto de vermelho e os próximos de âmbar, como se fosse orçamento estourado.
+- Telas de Hoje, Contas e Configurações cortavam conteúdo com texto ampliado ou valores altos.
+- Textos como "25 dia(s)" e "6 categoria(s)" agora usam singular e plural; "Resumo de novembro de 2026" no lugar de "Resumo de Novembro 2026".
+
 ## [1.13.0] - 2026-10-29
 ### Claude com o app na mão (paridade do conector)
 - **Por tipo de gasto pelo Claude:** ler a visão do Orçamento (renda de referência, % e meta de cada tipo, usado, sobra, categorias sem tipo), **Classificar** categorias e **Ajustar** renda e porcentagens.

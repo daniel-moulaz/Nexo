@@ -190,7 +190,7 @@ void main() {
     await settle();
     expect(tester.takeException(), isNull);
     expect(find.text('Conta principal · soma de 3 contas'), findsOneWidget);
-    expect(find.textContaining('Somada com mais 2 conta(s)'), findsNWidgets(3));
+    expect(find.textContaining('Somada com mais 2 contas'), findsNWidgets(3));
     expect(find.text('Ajustar o Nexo (neutro)'), findsOneWidget);
 
     await tester.tap(find.text('Ajustar o Nexo (neutro)'));

@@ -216,7 +216,7 @@ class _TransactionSearchScreenState extends State<TransactionSearchScreen> {
               icon: const Icon(Icons.filter_alt_outlined))
         ],
         title: const Text('Extrato',
-            style: TextStyle(fontWeight: FontWeight.w900)),
+            style: TextStyle(fontWeight: FontWeight.w600)),
       ),
       body: Builder(
         builder: (context) {
@@ -536,7 +536,7 @@ class _DayList extends StatelessWidget {
               Expanded(
                   child: Text(_day(item),
                       style: theme.textTheme.titleSmall
-                          ?.copyWith(fontWeight: FontWeight.w800))),
+                          ?.copyWith(fontWeight: FontWeight.w600))),
               if (!hidden && value != 0)
                 Text(
                     '${value > 0 ? '+' : '−'}${formatAmount(value.abs(), app.settings.currency)}',
@@ -614,7 +614,7 @@ class _DayList extends StatelessWidget {
                           ? '••••'
                           : '${income ? '+' : '-'}${formatAmount(tx.amount, currency)}',
                       style: TextStyle(
-                          fontWeight: FontWeight.w800,
+                          fontWeight: FontWeight.w600,
                           color: color,
                           fontFeatures: NexoTones.figures)),
                 ),

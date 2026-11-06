@@ -7,6 +7,7 @@ import '../providers/app_provider.dart';
 import '../theme/app_theme.dart';
 import '../widgets/shared_widgets.dart';
 import '../utils/haptics.dart';
+import '../widgets/nexo_ui.dart';
 
 class TransferScreen extends StatefulWidget {
   const TransferScreen({super.key});
@@ -96,7 +97,7 @@ class _TransferScreenState extends State<TransferScreen> {
     return Scaffold(
       appBar: AppBar(
         title: Text(l10n.transfer_transfer,
-            style: const TextStyle(fontWeight: FontWeight.w800)),
+            style: const TextStyle(fontWeight: FontWeight.w600)),
       ),
       body: SafeArea(
           bottom: true,
@@ -106,10 +107,7 @@ class _TransferScreenState extends State<TransferScreen> {
                 Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
               // ── FROM row ──────────────────────────────────────────────────
               Text(l10n.transfer_from,
-                  style: Theme.of(context)
-                      .textTheme
-                      .labelMedium
-                      ?.copyWith(letterSpacing: 1)),
+                  style: Theme.of(context).textTheme.labelMedium),
               const SizedBox(height: 8),
               AccountCardPicker(
                 accounts: transferable,
@@ -125,10 +123,7 @@ class _TransferScreenState extends State<TransferScreen> {
               // ── TO row ────────────────────────────────────────────────────
               Row(children: [
                 Text(l10n.transfer_to,
-                    style: Theme.of(context)
-                        .textTheme
-                        .labelMedium
-                        ?.copyWith(letterSpacing: 1)),
+                    style: Theme.of(context).textTheme.labelMedium),
                 const Spacer(),
                 Icon(Icons.arrow_downward_rounded, size: 16, color: cs.primary),
               ]),
@@ -188,8 +183,8 @@ class _TransferScreenState extends State<TransferScreen> {
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
                                   style: TextStyle(
-                                      fontSize: 11,
-                                      fontWeight: FontWeight.w700,
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w500,
                                       color: isSame
                                           ? cs.onSurface.withValues(alpha: 0.3)
                                           : sel
@@ -199,7 +194,8 @@ class _TransferScreenState extends State<TransferScreen> {
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
                                   style: TextStyle(
-                                      fontSize: 9,
+                                      fontFeatures: NexoTones.figures,
+                                      fontSize: 12,
                                       color: isSame
                                           ? cs.onSurface.withValues(alpha: 0.2)
                                           : sel
@@ -254,7 +250,7 @@ class _TransferScreenState extends State<TransferScreen> {
                                 '→ ${formatAmount(convertedAmount, toCurrency)}',
                                 style: TextStyle(
                                     fontSize: 13,
-                                    fontWeight: FontWeight.w700,
+                                    fontWeight: FontWeight.w600,
                                     color: cs.primary),
                               ),
                             ])
@@ -262,7 +258,7 @@ class _TransferScreenState extends State<TransferScreen> {
                         Text(
                           l10n.transfer_exchangeRatesNotLoaded,
                           style: TextStyle(
-                              fontSize: 11,
+                              fontSize: 12,
                               color: cs.error,
                               fontWeight: FontWeight.w500),
                           textAlign: TextAlign.center,
@@ -271,7 +267,7 @@ class _TransferScreenState extends State<TransferScreen> {
                         Text(
                           l10n.transfer_enterAnAmountToSeeTh,
                           style: TextStyle(
-                              fontSize: 11,
+                              fontSize: 12,
                               color:
                                   cs.onPrimaryContainer.withValues(alpha: 0.6)),
                           textAlign: TextAlign.center,
@@ -295,7 +291,7 @@ class _TransferScreenState extends State<TransferScreen> {
                       : null,
                 ),
                 style:
-                    const TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
+                    const TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
                 onChanged: (_) => setState(() {}),
               ),
               const SizedBox(height: 12),
@@ -339,12 +335,12 @@ class _BalanceCol extends StatelessWidget {
     return Column(crossAxisAlignment: align, children: [
       Text(label,
           style: TextStyle(
-              fontSize: 10,
+              fontSize: 12,
               color: cs.onPrimaryContainer.withValues(alpha: 0.6))),
-      Text(name, style: const TextStyle(fontWeight: FontWeight.w700)),
+      Text(name, style: const TextStyle(fontWeight: FontWeight.w600)),
       Text(balance,
           style: TextStyle(
-              fontSize: 12, color: cs.primary, fontWeight: FontWeight.w600)),
+              fontSize: 12, color: cs.primary, fontWeight: FontWeight.w500)),
     ]);
   }
 }

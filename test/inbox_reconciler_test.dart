@@ -151,10 +151,10 @@ void main() {
 
     bool shows(String text) => find.text(text).evaluate().isNotEmpty;
 
-    await settle(() => shows('3 resolvida(s) automaticamente'));
+    await settle(() => shows('3 resolvidas automaticamente'));
     expect(tester.takeException(), isNull);
     // Linked (Pix = "lanche ufop"), reserve and tiny yield: automatic.
-    expect(find.text('3 resolvida(s) automaticamente'), findsOneWidget);
+    expect(find.text('3 resolvidas automaticamente'), findsOneWidget);
     expect(find.text('Na dúvida'), findsOneWidget);
     expect(find.text('Novas'), findsOneWidget);
     final db = await tester.runAsync(() => DBHelper.database);
@@ -170,15 +170,15 @@ void main() {
     await tester.tap(find.text('É o mesmo'));
     await settle(() => !shows('Na dúvida'));
     expect(find.text('Na dúvida'), findsNothing);
-    expect(find.text('4 resolvida(s) automaticamente'), findsNothing);
+    expect(find.text('4 resolvidas automaticamente'), findsNothing);
 
     // Undo the reserve: it comes back and the app leaves it to the person.
-    await tester.tap(find.text('3 resolvida(s) automaticamente'));
+    await tester.tap(find.text('3 resolvidas automaticamente'));
     await settle(() => find.text('Desfazer').evaluate().length >= 2);
     final undo = find.text('Desfazer');
     expect(undo, findsNWidgets(2)); // reserve and yield; the link is final
     await tester.tap(undo.first);
-    await settle(() => shows('2 resolvida(s) automaticamente'));
+    await settle(() => shows('2 resolvidas automaticamente'));
     final pending = await tester.runAsync(NotificationInbox.pending);
     expect(pending!.map((r) => r['id']),
         containsAll(['pluggy:new', isNot('pluggy:pix8')]));

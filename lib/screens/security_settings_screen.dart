@@ -117,7 +117,7 @@ class _SecuritySettingsScreenState extends State<SecuritySettingsScreen> {
       appBar: AppBar(title: const Text('Segurança')),
       body: ListView(padding: const EdgeInsets.all(16), children: [
         const Text('Bloqueio do Nexo',
-            style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
+            style: TextStyle(fontSize: 22, fontWeight: FontWeight.w600)),
         Text(PlatformCapabilities.windows
             ? 'PIN local de 6 dígitos. A proteção fica no armazenamento seguro do seu usuário Windows e não entra no backup financeiro. O PIN bloqueia a interface; o arquivo SQLite não é criptografado por ele.'
             : 'Biometria ou bloqueio do Android, com PIN de 6 dígitos do Nexo como alternativa. Segredos ficam protegidos no aparelho e não entram no backup financeiro.'),

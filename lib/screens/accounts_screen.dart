@@ -48,7 +48,7 @@ class AccountsScreen extends StatelessWidget {
         appBar: AppBar(
           automaticallyImplyLeading: false,
           title: const Text('Contas e cartões',
-              style: TextStyle(fontWeight: FontWeight.w900)),
+              style: TextStyle(fontWeight: FontWeight.w600)),
           actions: [
             IconButton(
                 tooltip: 'Adicionar conta ou cartão',
@@ -64,20 +64,29 @@ class AccountsScreen extends StatelessWidget {
                           builder: (_) => const BalanceCheckScreen()))),
             Padding(
               padding: const EdgeInsets.only(right: 16),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  Text('Saldo total',
-                      style: Theme.of(context).textTheme.labelSmall),
-                  Text(
-                    app.settings.hideBalance
-                        ? '••••'
-                        : formatAmount(
-                            app.totalBalanceAll, app.settings.currency),
-                    style: const TextStyle(fontWeight: FontWeight.w900),
+              // Big totals and large text shrink instead of pushing the bar.
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 150, maxHeight: 48),
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: Alignment.centerRight,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      Text('Saldo total',
+                          style: Theme.of(context).textTheme.labelSmall),
+                      Text(
+                        app.settings.hideBalance
+                            ? '••••'
+                            : formatAmount(
+                                app.totalBalanceAll, app.settings.currency),
+                        style: const TextStyle(
+                            fontWeight: FontWeight.w600,
+                            fontFeatures: NexoTones.figures),
+                      ),
+                    ],
                   ),
-                ],
+                ),
               ),
             ),
           ],
@@ -110,7 +119,7 @@ class AccountsScreen extends StatelessWidget {
             children: [
               const ListTile(
                 title: Text('O que você quer adicionar?',
-                    style: TextStyle(fontWeight: FontWeight.w900)),
+                    style: TextStyle(fontWeight: FontWeight.w600)),
                 subtitle: Text(
                     'Separe contas do dia a dia e cartões de crédito/débito.'),
               ),
@@ -118,7 +127,7 @@ class AccountsScreen extends StatelessWidget {
                 leading: const CircleAvatar(
                     child: Icon(Icons.account_balance_wallet_outlined)),
                 title: const Text('Conta',
-                    style: TextStyle(fontWeight: FontWeight.w800)),
+                    style: TextStyle(fontWeight: FontWeight.w600)),
                 subtitle: const Text('Banco, dinheiro, poupança ou carteira'),
                 onTap: () => Navigator.pop(sheetContext, 'account'),
               ),
@@ -126,7 +135,7 @@ class AccountsScreen extends StatelessWidget {
                 leading:
                     const CircleAvatar(child: Icon(Icons.credit_card_rounded)),
                 title: const Text('Cartão',
-                    style: TextStyle(fontWeight: FontWeight.w800)),
+                    style: TextStyle(fontWeight: FontWeight.w600)),
                 subtitle: const Text('Crédito ou débito com limite e fatura'),
                 onTap: () => Navigator.pop(sheetContext, 'card'),
               ),
@@ -191,30 +200,39 @@ class _AccountTile extends StatelessWidget {
           child: Icon(_accountIcon(account.type), color: color),
         ),
         title: Text(account.name,
-            style: const TextStyle(fontWeight: FontWeight.w900)),
+            style: const TextStyle(fontWeight: FontWeight.w600)),
         subtitle: Text([
           _typeLabel(),
           account.currency,
           if (account.excludeFromTotal) 'fora do saldo total',
         ].join(' • ')),
-        trailing: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          crossAxisAlignment: CrossAxisAlignment.end,
-          children: [
-            Text(
-              app.settings.hideBalance
-                  ? '••••'
-                  : formatAmount(balance, account.currency),
-              style: TextStyle(
-                  fontWeight: FontWeight.w900,
-                  color:
-                      balance < 0 ? Theme.of(context).colorScheme.error : null),
+        trailing: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 160, maxHeight: 44),
+          child: FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: Alignment.centerRight,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Text(
+                  app.settings.hideBalance
+                      ? '••••'
+                      : formatAmount(balance, account.currency),
+                  style: TextStyle(
+                      fontWeight: FontWeight.w600,
+                      fontFeatures: NexoTones.figures,
+                      color: balance < 0
+                          ? Theme.of(context).colorScheme.error
+                          : null),
+                ),
+                Text(
+                  ptCount(app.getAccountTransactions(account.id).length,
+                      'lançamento'),
+                  style: Theme.of(context).textTheme.labelSmall,
+                ),
+              ],
             ),
-            Text(
-              '${app.getAccountTransactions(account.id).length} lançamento${app.getAccountTransactions(account.id).length == 1 ? '' : 's'}',
-              style: Theme.of(context).textTheme.labelSmall,
-            ),
-          ],
+          ),
         ),
         onTap: () => AccountsScreen.openSheet(context, existing: account),
         onLongPress: () => _confirmDelete(context, account),
@@ -311,7 +329,7 @@ class _CardTile extends StatelessWidget {
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
                                   style: const TextStyle(
-                                      fontWeight: FontWeight.w900,
+                                      fontWeight: FontWeight.w600,
                                       fontSize: 17)),
                               Text(
                                   card.type == 'credit'
@@ -350,7 +368,7 @@ class _CardTile extends StatelessWidget {
                           alignment: Alignment.centerLeft,
                           child: Text(money(used),
                               style: const TextStyle(
-                                  fontWeight: FontWeight.w900,
+                                  fontWeight: FontWeight.w600,
                                   fontSize: 26,
                                   fontFeatures: NexoTones.figures)),
                         ),
@@ -390,7 +408,7 @@ class _CardTile extends StatelessWidget {
                       ]),
                     ] else
                       Text('Saldo ${money(card.balance)}',
-                          style: const TextStyle(fontWeight: FontWeight.w800)),
+                          style: const TextStyle(fontWeight: FontWeight.w600)),
                   ],
                 ),
               ),
@@ -657,7 +675,7 @@ class _AccountEditorState extends State<_AccountEditor> {
                           ? (isCard ? 'Editar cartão' : 'Editar conta')
                           : (isCard ? 'Novo cartão' : 'Nova conta'),
                       style: theme.textTheme.titleLarge
-                          ?.copyWith(fontWeight: FontWeight.w900),
+                          ?.copyWith(fontWeight: FontWeight.w600),
                     ),
                   ),
                   IconButton(
@@ -687,7 +705,7 @@ class _AccountEditorState extends State<_AccountEditor> {
                   const SizedBox(height: 14),
                   Text('Tipo',
                       style: theme.textTheme.titleSmall
-                          ?.copyWith(fontWeight: FontWeight.w900)),
+                          ?.copyWith(fontWeight: FontWeight.w600)),
                   const SizedBox(height: 8),
                   Wrap(
                     spacing: 8,
@@ -764,7 +782,7 @@ class _AccountEditorState extends State<_AccountEditor> {
                     const SizedBox(height: 14),
                     Text('Fatura',
                         style: theme.textTheme.titleSmall
-                            ?.copyWith(fontWeight: FontWeight.w900)),
+                            ?.copyWith(fontWeight: FontWeight.w600)),
                     const SizedBox(height: 8),
                     TextField(
                       controller: _limitCtrl,
@@ -839,7 +857,7 @@ class _AccountEditorState extends State<_AccountEditor> {
                     ExpansionTile(
                       tilePadding: EdgeInsets.zero,
                       title: const Text('Detalhes opcionais',
-                          style: TextStyle(fontWeight: FontWeight.w800)),
+                          style: TextStyle(fontWeight: FontWeight.w600)),
                       children: [
                         TextField(
                           controller: _holderCtrl,
@@ -890,7 +908,7 @@ class _AccountEditorState extends State<_AccountEditor> {
                   const SizedBox(height: 12),
                   Text('Cor',
                       style: theme.textTheme.titleSmall
-                          ?.copyWith(fontWeight: FontWeight.w900)),
+                          ?.copyWith(fontWeight: FontWeight.w600)),
                   const SizedBox(height: 8),
                   Wrap(
                     spacing: 10,

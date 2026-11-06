@@ -11,6 +11,7 @@ import '../l10n/app_localizations.dart';
 import '../utils/snackbar.dart';
 import '../services/loan_reminder_service.dart';
 import 'loan_detail_screen.dart';
+import '../widgets/nexo_ui.dart';
 
 class LoansScreen extends StatefulWidget {
   const LoansScreen({super.key});
@@ -57,7 +58,7 @@ class _LoansScreenState extends State<LoansScreen> {
               }),
         ],
         title: Text(l10n.loans_title,
-            style: const TextStyle(fontWeight: FontWeight.w800)),
+            style: const TextStyle(fontWeight: FontWeight.w600)),
       ),
       body: Column(
         children: [
@@ -122,9 +123,8 @@ class _LoansScreenState extends State<LoansScreen> {
                             l10n.loans_settled,
                             style: TextStyle(
                               fontSize: 12,
-                              fontWeight: FontWeight.w700,
+                              fontWeight: FontWeight.w500,
                               color: cs.onSurface.withValues(alpha: 0.4),
-                              letterSpacing: 0.5,
                             ),
                           ),
                         ),
@@ -175,8 +175,8 @@ class _SumChip extends StatelessWidget {
               Text(
                 label,
                 style: TextStyle(
-                  fontSize: 10,
-                  fontWeight: FontWeight.w600,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w500,
                   color: color,
                 ),
               ),
@@ -187,7 +187,7 @@ class _SumChip extends StatelessWidget {
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(
                   fontSize: 13,
-                  fontWeight: FontWeight.w800,
+                  fontWeight: FontWeight.w600,
                   color: color,
                 ),
               ),
@@ -242,7 +242,10 @@ class _LoanCard extends StatelessWidget {
                               : 'Falta pagar',
                           style: Theme.of(context).textTheme.labelLarge),
                       Text(money(remaining),
-                          style: Theme.of(context).textTheme.headlineSmall),
+                          style: Theme.of(context)
+                              .textTheme
+                              .headlineSmall
+                              ?.copyWith(fontFeatures: NexoTones.figures)),
                       const SizedBox(height: 8),
                       LinearProgressIndicator(
                           value: app.loanProgress(loan), color: barColor),
@@ -354,7 +357,7 @@ class _LoanSheetState extends State<LoanSheet> {
                         ? l10n.loans_addLoan
                         : l10n.loans_editLoan,
                     style: const TextStyle(
-                        fontSize: 18, fontWeight: FontWeight.bold),
+                        fontSize: 18, fontWeight: FontWeight.w600),
                   ),
                 ],
               ),
@@ -397,10 +400,7 @@ class _LoanSheetState extends State<LoanSheet> {
 
               // Currency Picker
               Text(l10n.accounts_currency,
-                  style: Theme.of(context)
-                      .textTheme
-                      .labelMedium
-                      ?.copyWith(letterSpacing: 1)),
+                  style: Theme.of(context).textTheme.labelMedium),
               const SizedBox(height: 8),
               GestureDetector(
                 onTap: () async {
@@ -494,7 +494,7 @@ class _LoanSheetState extends State<LoanSheet> {
                 child: Text(
                   'Duração: ${l10n.loans_durationMonths(_durationMonths)}',
                   style: TextStyle(
-                      fontSize: 11, color: cs.onSurface.withValues(alpha: 0.6)),
+                      fontSize: 12, color: cs.onSurface.withValues(alpha: 0.6)),
                 ),
               ),
               const SizedBox(height: 12),
@@ -527,7 +527,7 @@ class _LoanSheetState extends State<LoanSheet> {
               // Transfer Account Card Picker
               const Text(
                 'Transfer Loan Amount To',
-                style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
               ),
               const SizedBox(height: 6),
               AccountCardPicker(
@@ -541,7 +541,7 @@ class _LoanSheetState extends State<LoanSheet> {
               // Installment Account Card Picker
               const Text(
                 'Pay Installments From',
-                style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
               ),
               const SizedBox(height: 6),
               AccountCardPicker(
@@ -570,11 +570,12 @@ class _LoanSheetState extends State<LoanSheet> {
                           children: [
                             Text(l10n.loans_monthlyPayment,
                                 style: const TextStyle(
-                                    fontSize: 12, fontWeight: FontWeight.w600)),
+                                    fontSize: 12, fontWeight: FontWeight.w500)),
                             Text(formatAmount(_monthlyPayment, _currency),
                                 style: TextStyle(
+                                    fontFeatures: NexoTones.figures,
                                     fontSize: 15,
-                                    fontWeight: FontWeight.w900,
+                                    fontWeight: FontWeight.w600,
                                     color: cs.primary)),
                           ],
                         ),
@@ -584,11 +585,12 @@ class _LoanSheetState extends State<LoanSheet> {
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
                               Text(l10n.loans_totalPayable,
-                                  style: const TextStyle(fontSize: 11)),
+                                  style: const TextStyle(fontSize: 12)),
                               Text(formatAmount(_totalPayable, _currency),
                                   style: const TextStyle(
+                                      fontFeatures: NexoTones.figures,
                                       fontSize: 12,
-                                      fontWeight: FontWeight.w700)),
+                                      fontWeight: FontWeight.w500)),
                             ],
                           ),
                         ],
@@ -603,7 +605,7 @@ class _LoanSheetState extends State<LoanSheet> {
                 value: _reminderEnabled,
                 title: Text(l10n.loans_paymentReminder,
                     style: const TextStyle(
-                        fontSize: 14, fontWeight: FontWeight.bold)),
+                        fontSize: 14, fontWeight: FontWeight.w600)),
                 contentPadding: EdgeInsets.zero,
                 onChanged: (val) async {
                   if (val) {

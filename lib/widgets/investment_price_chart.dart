@@ -101,7 +101,7 @@ class _InvestmentPriceChartState extends State<InvestmentPriceChart> {
                     style: Theme.of(context)
                         .textTheme
                         .titleLarge
-                        ?.copyWith(color: color, fontWeight: FontWeight.w800)),
+                        ?.copyWith(color: color, fontWeight: FontWeight.w600)),
                 const Text(
                     'Fechamento ajustado · variação entre os pontos exibidos'),
                 const SizedBox(height: 20),
@@ -122,7 +122,7 @@ class _InvestmentPriceChartState extends State<InvestmentPriceChart> {
                                             '${DateFormat('dd/MM/yyyy').format(p.date.toLocal())}\n${money.format(p.price)}',
                                             const TextStyle(
                                                 color: Colors.white,
-                                                fontWeight: FontWeight.bold));
+                                                fontWeight: FontWeight.w600));
                                       }).toList())),
                           lineBarsData: [
                             LineChartBarData(

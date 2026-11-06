@@ -478,7 +478,7 @@ class _StatementImportScreenState extends State<StatementImportScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Importar extrato',
-            style: TextStyle(fontWeight: FontWeight.w800)),
+            style: TextStyle(fontWeight: FontWeight.w600)),
       ),
       body: ListView(
         padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
@@ -488,7 +488,7 @@ class _StatementImportScreenState extends State<StatementImportScreen> {
             style: Theme.of(context)
                 .textTheme
                 .titleLarge
-                ?.copyWith(fontWeight: FontWeight.w900),
+                ?.copyWith(fontWeight: FontWeight.w600),
           ),
           const SizedBox(height: 6),
           const Text(
@@ -539,13 +539,13 @@ class _StatementImportScreenState extends State<StatementImportScreen> {
           if (_message != null) ...[
             const SizedBox(height: 12),
             Text(_message!,
-                style: const TextStyle(fontWeight: FontWeight.w700)),
+                style: const TextStyle(fontWeight: FontWeight.w600)),
           ],
           if (_rows.isNotEmpty) ...[
             const SizedBox(height: 18),
             Text(
               'Prévia (${_rows.where((e) => e.selected).length} selecionados)',
-              style: const TextStyle(fontWeight: FontWeight.w800),
+              style: const TextStyle(fontWeight: FontWeight.w600),
             ),
             const SizedBox(height: 8),
             ..._rows.map(
@@ -576,7 +576,7 @@ class _StatementImportScreenState extends State<StatementImportScreen> {
                   child: Text(
                       '${row.type == 'income' ? '+' : '-'} R\$ ${row.amount.toStringAsFixed(2).replaceAll('.', ',')}',
                       style: TextStyle(
-                          fontWeight: FontWeight.w800,
+                          fontWeight: FontWeight.w600,
                           color: row.type == 'expense'
                               ? Theme.of(context).colorScheme.error
                               : Colors.green)),

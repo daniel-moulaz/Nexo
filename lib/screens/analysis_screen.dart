@@ -382,7 +382,9 @@ class _AnalysisScreenState extends State<AnalysisScreen> {
                     subtitle: Text(
                         '${l.count}× · ${app.categoryById(l.categoryId)?.name ?? 'Sem categoria'}'),
                     trailing: Text(money(l.total),
-                        style: const TextStyle(fontWeight: FontWeight.w800))),
+                        style: const TextStyle(
+                            fontFeatures: NexoTones.figures,
+                            fontWeight: FontWeight.w600))),
             ]);
           })),
       AnalysisCard(
@@ -612,7 +614,8 @@ class _AnalysisScreenState extends State<AnalysisScreen> {
         ListTile(
             contentPadding: EdgeInsets.zero,
             title: Text(name(e.key)),
-            subtitle: Text(analysisMoney(app, e.value)),
+            subtitle: Text(analysisMoney(app, e.value),
+                style: const TextStyle(fontFeatures: NexoTones.figures)),
             trailing: const Icon(Icons.chevron_right),
             onTap: () => openAnalysisEntries(context, rows(e.key), name(e.key)))
     ]);
@@ -664,16 +667,20 @@ class AnalysisEntriesScreen extends StatelessWidget {
                                   DataCell(Text(
                                       app.accountById(tx.accountId)?.name ??
                                           '')),
-                                  DataCell(Text(analysisMoney(
-                                      app,
-                                      app.convertToMain(
-                                          tx.amount,
-                                          tx.currency.isEmpty
-                                              ? app
-                                                      .accountById(tx.accountId)
-                                                      ?.currency ??
-                                                  app.settings.currency
-                                              : tx.currency)))),
+                                  DataCell(Text(
+                                      analysisMoney(
+                                          app,
+                                          app.convertToMain(
+                                              tx.amount,
+                                              tx.currency.isEmpty
+                                                  ? app
+                                                          .accountById(
+                                                              tx.accountId)
+                                                          ?.currency ??
+                                                      app.settings.currency
+                                                  : tx.currency)),
+                                      style: const TextStyle(
+                                          fontFeatures: NexoTones.figures))),
                                   DataCell(IconButton(
                                       tooltip: 'Editar lançamento',
                                       icon: const Icon(Icons.edit_outlined),
@@ -692,16 +699,19 @@ class AnalysisEntriesScreen extends StatelessWidget {
                                   : tx.description),
                               subtitle: Text(
                                   '${DateFormat('dd/MM/yyyy').format(tx.date)} • ${app.accountById(tx.accountId)?.name ?? ''}${meta.isPending ? ' • Pendente' : ''}'),
-                              trailing: Text(analysisMoney(
-                                  app,
-                                  app.convertToMain(
-                                      tx.amount,
-                                      tx.currency.isEmpty
-                                          ? app
-                                                  .accountById(tx.accountId)
-                                                  ?.currency ??
-                                              app.settings.currency
-                                          : tx.currency))),
+                              trailing: Text(
+                                  analysisMoney(
+                                      app,
+                                      app.convertToMain(
+                                          tx.amount,
+                                          tx.currency.isEmpty
+                                              ? app
+                                                      .accountById(tx.accountId)
+                                                      ?.currency ??
+                                                  app.settings.currency
+                                              : tx.currency)),
+                                  style: const TextStyle(
+                                      fontFeatures: NexoTones.figures)),
                               onTap: () => edit(tx));
                         })));
   }

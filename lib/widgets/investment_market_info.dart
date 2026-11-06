@@ -55,7 +55,7 @@ class _InvestmentMarketInfoState extends State<InvestmentMarketInfo> {
                 : (dark ? const Color(0xffffa4a4) : const Color(0xffb3261e));
         final fallback = Center(
             child: Text(widget.ticker.substring(0, 1),
-                style: const TextStyle(fontWeight: FontWeight.bold)));
+                style: const TextStyle(fontWeight: FontWeight.w600)));
         final logo = market.logo;
         String amount(String key) {
           final value = market.value(key);

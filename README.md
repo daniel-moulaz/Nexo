@@ -153,6 +153,7 @@ O identificador Android `com.ma.expensy` é preservado para que o app instalado 
 - [Início da implementação da sincronização](docs/NEXO_SYNC_IMPLEMENTATION.md)
 - [Segurança: RLS, segredos e rotação](docs/SEGURANCA.md)
 - [Paridade do assistente (MCP) com o app](docs/mcp-paridade.md)
+- [Tipografia: fonte, rampa e regras](docs/TIPOGRAFIA.md)
 - [Servidor MCP: publicação e ciclo dos pedidos](supabase/functions/nexo-mcp/README.md)
 - [Widgets da tela inicial (Android)](HOMESCREEN_WIDGET.md)
 - [Histórico de versões](CHANGELOG.md)
@@ -165,4 +166,4 @@ O Nexo é desenvolvido por [Daniel Moulaz](https://github.com/daniel-moulaz) e f
 
 Contribuições devem manter testes relevantes, compatibilidade dos dados e migrações explícitas quando necessárias. Nunca inclua bancos pessoais, notificações reais, extratos, PINs, tokens, chaves de serviço, keystores ou arquivos de configuração locais em commits ou issues.
 
-Licença [MIT](LICENSE).
+Licença [MIT](LICENSE). A fonte Inter, incluída em `assets/fonts/Inter`, segue a [SIL Open Font License](assets/fonts/Inter/OFL.txt).

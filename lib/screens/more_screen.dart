@@ -148,7 +148,7 @@ class MoreScreen extends StatelessWidget {
       appBar: AppBar(
         automaticallyImplyLeading: false,
         title:
-            const Text('Mais', style: TextStyle(fontWeight: FontWeight.w900)),
+            const Text('Mais', style: TextStyle(fontWeight: FontWeight.w600)),
         actions: [
           IconButton(
               tooltip: 'Configurações',
@@ -244,7 +244,7 @@ class _GroupState extends State<_Group> {
               Expanded(
                   child: Text(widget.title,
                       style: const TextStyle(
-                          fontSize: 16, fontWeight: FontWeight.w800))),
+                          fontSize: 16, fontWeight: FontWeight.w600))),
               AnimatedRotation(
                   turns: open ? .5 : 0,
                   duration: const Duration(milliseconds: 160),

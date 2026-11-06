@@ -42,7 +42,8 @@ class _SavingsGoalSheetState extends State<SavingsGoalSheet> {
     final existing = widget.existing;
     if (existing != null) {
       _nameCtrl.text = existing.name;
-      _amountCtrl.text = existing.targetAmount.toStringAsFixed(2).replaceAll('.', ',');
+      _amountCtrl.text =
+          existing.targetAmount.toStringAsFixed(2).replaceAll('.', ',');
       _targetDate = existing.targetDate;
       _color = existing.colorValue;
     }
@@ -106,7 +107,8 @@ class _SavingsGoalSheetState extends State<SavingsGoalSheet> {
                 Expanded(
                   child: Text(
                     isEdit ? 'Editar objetivo' : 'Novo objetivo',
-                    style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w900),
+                    style: theme.textTheme.titleLarge
+                        ?.copyWith(fontWeight: FontWeight.w600),
                   ),
                 ),
                 IconButton(
@@ -131,7 +133,8 @@ class _SavingsGoalSheetState extends State<SavingsGoalSheet> {
             const SizedBox(height: 12),
             TextField(
               controller: _amountCtrl,
-              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+              keyboardType:
+                  const TextInputType.numberWithOptions(decimal: true),
               decoration: InputDecoration(
                 labelText: 'Valor da meta',
                 prefixText: '${currencyInfo(app.settings.currency).symbol} ',
@@ -146,7 +149,9 @@ class _SavingsGoalSheetState extends State<SavingsGoalSheet> {
               contentPadding: const EdgeInsets.symmetric(horizontal: 4),
               leading: const Icon(Icons.event_outlined),
               title: const Text('Prazo (opcional)'),
-              subtitle: Text(_targetDate == null ? 'Sem data definida' : ptDate(_targetDate!)),
+              subtitle: Text(_targetDate == null
+                  ? 'Sem data definida'
+                  : ptDate(_targetDate!)),
               trailing: _targetDate == null
                   ? const Icon(Icons.chevron_right_rounded)
                   : IconButton(
@@ -158,7 +163,8 @@ class _SavingsGoalSheetState extends State<SavingsGoalSheet> {
                 final now = DateTime.now();
                 final picked = await showDatePicker(
                   context: context,
-                  initialDate: _targetDate ?? now.add(const Duration(days: 180)),
+                  initialDate:
+                      _targetDate ?? now.add(const Duration(days: 180)),
                   firstDate: now,
                   lastDate: DateTime(now.year + 50),
                   cancelText: 'Cancelar',
@@ -168,7 +174,9 @@ class _SavingsGoalSheetState extends State<SavingsGoalSheet> {
               },
             ),
             const SizedBox(height: 12),
-            Text('Cor', style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w900)),
+            Text('Cor',
+                style: theme.textTheme.titleSmall
+                    ?.copyWith(fontWeight: FontWeight.w600)),
             const SizedBox(height: 10),
             Wrap(
               spacing: 10,
@@ -183,9 +191,13 @@ class _SavingsGoalSheetState extends State<SavingsGoalSheet> {
                     decoration: BoxDecoration(
                       color: Color(value),
                       shape: BoxShape.circle,
-                      border: selected ? Border.all(color: cs.onSurface, width: 3) : null,
+                      border: selected
+                          ? Border.all(color: cs.onSurface, width: 3)
+                          : null,
                     ),
-                    child: selected ? const Icon(Icons.check_rounded, color: Colors.white) : null,
+                    child: selected
+                        ? const Icon(Icons.check_rounded, color: Colors.white)
+                        : null,
                   ),
                 );
               }).toList(),
@@ -194,12 +206,16 @@ class _SavingsGoalSheetState extends State<SavingsGoalSheet> {
             FilledButton.icon(
               onPressed: _saving ? null : _save,
               icon: _saving
-                  ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
+                  ? const SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(strokeWidth: 2))
                   : const Icon(Icons.check_rounded),
               label: Text(isEdit ? 'Salvar alterações' : 'Criar objetivo'),
               style: FilledButton.styleFrom(
                 minimumSize: const Size.fromHeight(52),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(18)),
               ),
             ),
           ],

@@ -9,6 +9,7 @@ import '../models/models.dart';
 import '../theme/app_theme.dart';
 import '../widgets/shared_widgets.dart';
 import '../utils/haptics.dart';
+import '../widgets/nexo_ui.dart';
 
 class WishlistScreen extends StatelessWidget {
   const WishlistScreen({super.key});
@@ -31,7 +32,7 @@ class WishlistScreen extends StatelessWidget {
               }),
         ],
         title: Text(l10n.wishlist_wishlist,
-            style: const TextStyle(fontWeight: FontWeight.w800)),
+            style: const TextStyle(fontWeight: FontWeight.w600)),
       ),
       body: app.wishlist.isEmpty
           ? EmptyState(
@@ -95,7 +96,7 @@ class _WishCard extends StatelessWidget {
         ),
         title: Text(item.name,
             style: TextStyle(
-                fontWeight: FontWeight.w700,
+                fontWeight: FontWeight.w600,
                 decoration:
                     item.isPurchased ? TextDecoration.lineThrough : null)),
         subtitle:
@@ -108,19 +109,23 @@ class _WishCard extends StatelessWidget {
                   borderRadius: BorderRadius.circular(8)),
               child: Text(item.priority.toUpperCase(),
                   style: TextStyle(
-                      fontSize: 9, fontWeight: FontWeight.w700, color: pColor)),
+                      fontSize: 12,
+                      fontWeight: FontWeight.w500,
+                      color: pColor)),
             ),
             const SizedBox(width: 8),
             Text(fmt(item.targetPrice),
-                style:
-                    const TextStyle(fontSize: 12, fontWeight: FontWeight.w700)),
+                style: const TextStyle(
+                    fontFeatures: NexoTones.figures,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w500)),
           ]),
           if (item.notes.isNotEmpty)
             Text(item.notes,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(
-                    fontSize: 11, color: cs.onSurface.withValues(alpha: 0.5))),
+                    fontSize: 12, color: cs.onSurface.withValues(alpha: 0.5))),
         ]),
         trailing: Row(mainAxisSize: MainAxisSize.min, children: [
           IconButton(
@@ -236,7 +241,7 @@ class _WishSheetState extends State<_WishSheet> {
                   style: Theme.of(context)
                       .textTheme
                       .titleLarge
-                      ?.copyWith(fontWeight: FontWeight.w800)),
+                      ?.copyWith(fontWeight: FontWeight.w600)),
               const SizedBox(height: 16),
               TextField(
                 controller: _nameCtrl,
@@ -266,10 +271,7 @@ class _WishSheetState extends State<_WishSheet> {
               ),
               const SizedBox(height: 14),
               Text(l10n.wishlist_priority,
-                  style: Theme.of(context)
-                      .textTheme
-                      .labelMedium
-                      ?.copyWith(letterSpacing: 1)),
+                  style: Theme.of(context).textTheme.labelMedium),
               const SizedBox(height: 8),
               Row(children: [
                 for (final p in [
@@ -294,7 +296,7 @@ class _WishSheetState extends State<_WishSheet> {
                             child: Text(p.$2,
                                 style: TextStyle(
                                     fontSize: 12,
-                                    fontWeight: FontWeight.w700,
+                                    fontWeight: FontWeight.w500,
                                     color: _priority == p.$1
                                         ? Colors.white
                                         : Color(p.$3)))),

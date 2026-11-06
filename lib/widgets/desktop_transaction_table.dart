@@ -5,6 +5,7 @@ import '../services/finance_rules.dart';
 import '../services/transaction_metadata_service.dart';
 import '../theme/app_theme.dart';
 import '../utils/finance_input.dart';
+import 'nexo_ui.dart';
 import '../screens/add_transaction_screen.dart';
 
 class DesktopTransactionTable extends StatefulWidget {
@@ -66,13 +67,21 @@ class _DesktopTransactionTableState extends State<DesktopTransactionTable> {
               existing: repeat ? null : t,
               template: repeat ? t : null,
               initialType: t.type)));
-  DataCell cell(String text, double width, VoidCallback action) => DataCell(
-      SizedBox(
-          width: width,
-          child: Tooltip(
-              message: text,
-              child: Text(text, maxLines: 1, overflow: TextOverflow.ellipsis))),
-      onTap: action);
+  DataCell cell(String text, double width, VoidCallback action,
+          {bool amount = false}) =>
+      DataCell(
+          SizedBox(
+              width: width,
+              child: Tooltip(
+                  message: text,
+                  child: Text(text,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      textAlign: amount ? TextAlign.end : null,
+                      style: amount
+                          ? const TextStyle(fontFeatures: NexoTones.figures)
+                          : null))),
+          onTap: action);
   @override
   Widget build(BuildContext context) {
     final app = widget.app;
@@ -126,7 +135,7 @@ class _DesktopTransactionTableState extends State<DesktopTransactionTable> {
                       .skip(page * pageSize)
                       .take(pageSize)
                       .map((t) => DataRow(cells: [
-                            cell(ptDate(t.date), 82, () => edit(t)),
+                            cell(ptDate(t.date), 88, () => edit(t)),
                             cell(t.description, 180, () => edit(t)),
                             cell(category(t), 110, () => edit(t)),
                             cell(account(t), 120, () => edit(t)),
@@ -144,7 +153,8 @@ class _DesktopTransactionTableState extends State<DesktopTransactionTable> {
                                                     ?.currency ??
                                                 app.settings.currency),
                                 115,
-                                () => edit(t)),
+                                () => edit(t),
+                                amount: true),
                             DataCell(PopupMenuButton<String>(
                                 tooltip: 'Ações do lançamento',
                                 onSelected: (action) =>
