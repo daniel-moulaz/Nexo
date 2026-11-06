@@ -1,0 +1,208 @@
+<title>Marca do Nexo</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=Instrument+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400&display=swap">
+<style>
+/* Layout: a verdict first, then the eight options as a catalogue, then the
+   real contexts where an icon lives. The page itself stays quiet in cool ink. */
+:root {
+  --bg: #F3F5F8; --panel: #FFFFFF; --fg: #141A24; --muted: #566274; --line: #D8DEE7; --accent: #0F766E; --accent-soft: #D5F2EC;
+  --display: "Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
+  --body: "Instrument Sans", "Segoe UI", system-ui, sans-serif;
+  --mono: "JetBrains Mono", Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #0A0E15; --panel: #121822; --fg: #E8ECF2; --muted: #9AA6B6; --line: #263040; --accent: #5EEAD4; --accent-soft: #123A36; color-scheme: dark } }
+:root[data-theme="dark"] {
+  --bg: #0A0E15; --panel: #121822; --fg: #E8ECF2; --muted: #9AA6B6; --line: #263040; --accent: #5EEAD4; --accent-soft: #123A36; color-scheme: dark }
+* { box-sizing: border-box }
+body { background: var(--bg); color: var(--fg); font: 400 15px/1.55 var(--body) }
+main { max-width: 1180px; margin: 0 auto; display: grid; gap: 56px; padding-block: 40px 72px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)) }
+section { display: grid; gap: 18px; min-width: 0 }
+h1, h2, h3 { font-family: var(--display); margin: 0; text-wrap: balance }
+h1 { font-size: clamp(32px, 5vw, 48px); line-height: 1.08; font-weight: 700 }
+h2 { font-size: 26px; line-height: 1.2; font-weight: 700 }
+h3 { font-size: 20px; line-height: 1.2; font-weight: 700 }
+p { margin: 0; max-width: 68ch }
+.lead { color: var(--muted); font-size: 17px }
+.verdict { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 24px; align-items: center; background: var(--accent-soft); padding: 24px; border-radius: 16px }
+.verdict img { border-radius: 26px; display: block }
+.verdict h2 { margin-bottom: 6px }
+.now { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 24px; align-items: start }
+.now .shots { display: flex; gap: 14px; align-items: flex-end }
+.now img { border-radius: 26px; display: block }
+.now .shots img + img, .now .shots img:not(:first-child) { border-radius: 0 }
+ul.plain { margin: 0; padding-left: 18px; display: grid; gap: 6px; max-width: 72ch }
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 460px), 1fr)); gap: 18px }
+.card { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 18px; display: grid; gap: 12px; align-content: start; min-width: 0 }
+.card.best { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent) }
+.card header { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; flex-wrap: wrap }
+.tag { color: var(--muted); font-size: 13px }
+.best .tag { color: var(--accent); font-weight: 600 }
+.concept { min-height: 3.1em }
+.pair { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px }
+.on { border-radius: 10px; padding: 16px 12px; display: grid; place-items: center; min-height: 76px }
+.on.dark { background: #0B0F16 }
+.on.light { background: #FFFFFF; box-shadow: inset 0 0 0 1px #E2E7EE }
+.lock { height: 34px; max-width: 100%; display: block }
+.sizes { display: flex; gap: 18px; align-items: flex-end }
+figure { margin: 0; display: grid; gap: 4px; justify-items: center }
+figcaption, .numbers, small { color: var(--muted); font-size: 12px }
+.chips { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 6px 12px }
+.chips li { display: flex; align-items: center; gap: 5px }
+.sw { width: 14px; height: 14px; border-radius: 4px; box-shadow: inset 0 0 0 1px #8884 }
+code { font: 400 12px var(--mono) }
+.chips small { display: none }
+details summary { cursor: pointer; color: var(--accent); font-weight: 500 }
+details summary:focus-visible, button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px }
+.big { display: flex; flex-wrap: wrap; gap: 16px; padding-top: 12px; align-items: flex-end }
+.big img { max-width: 100%; height: auto; display: block }
+.big .full { flex-basis: 100% }
+.layer { position: relative; width: 192px; height: 192px; overflow: hidden }
+.layer img { width: 100%; height: 100% }
+.layer i { position: absolute; inset: calc(50% - 58.67px); border: 1.5px dashed #fff9; border-radius: 50% }
+.phone { background: linear-gradient(165deg, #1B2A44, #2B1F3B 60%, #0E1420); border-radius: 26px; padding: 26px 16px; max-width: 460px; width: 100% }
+.apps { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 20px 10px }
+.apps li { display: grid; justify-items: center; gap: 6px }
+.apps small { color: #F4F6FA; font-size: 12px }
+.app { position: relative; width: 60px; height: 60px; background: var(--tile); overflow: hidden; display: block; border-radius: var(--mask, 50%) }
+.app img { position: absolute; inset: -16.66%; width: 133.33%; height: 133.33% }
+.app .mono { display: none }
+.phone.themed .app { background: #C9E7F5 }
+.phone.themed .color { display: none }
+.phone.themed .mono { display: block; filter: brightness(0) saturate(100%) invert(16%) sepia(40%) saturate(900%) hue-rotate(160deg) }
+.controls { display: flex; flex-wrap: wrap; gap: 8px }
+button { font: 500 14px var(--body); color: var(--fg); background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 7px 12px; cursor: pointer }
+button[aria-pressed="true"] { background: var(--accent); color: var(--bg); border-color: var(--accent) }
+.contexts { display: grid; grid-template-columns: minmax(0, 460px) minmax(0, 1fr); gap: 28px; align-items: start }
+.stack { display: grid; gap: 14px; min-width: 0 }
+.scroll { overflow-x: auto }
+.bar { list-style: none; margin: 0; padding: 8px 10px; display: flex; gap: 6px; border-radius: 10px; min-width: max-content }
+.bar li { display: grid; justify-items: center; gap: 3px; padding: 6px 7px; border-radius: 6px; min-width: 58px }
+.bar img { display: block }
+.bar.dark { background: #1C1F26 } .bar.dark small { color: #C4CAD4 } .bar.dark .on { background: #2F343E }
+.bar.light { background: #E9EDF2 } .bar.light small { color: #3B4554 } .bar.light .on { background: #FFFFFF }
+.zoom { display: flex; flex-wrap: wrap; gap: 6px }
+.zoom figure { width: 64px }
+.zoom figcaption { font-size: 11px; white-space: nowrap }
+.px { image-rendering: pixelated; border-radius: 4px; display: block }
+.cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr)); gap: 24px }
+.cols > div { display: grid; gap: 8px; align-content: start; min-width: 0 }
+@media (max-width: 760px) {
+  .contexts, .verdict, .now { grid-template-columns: minmax(0, 1fr) }
+  .concept { min-height: 0 }
+}
+@media (prefers-reduced-motion: no-preference) { button { transition: background .12s } }
+</style>
+
+<main>
+  <section>
+    <h1>Marca do Nexo: oito caminhos</h1>
+    <p class="lead">Propostas originais para substituir o N dourado. Nada foi trocado no app: quando você escolher, aplico tudo de uma vez.</p>
+  </section>
+
+  <section class="verdict">
+    {{FAVORITE}}
+    <div>
+      <h2>Minha escolha: Engate</h2>
+      <p>Dois ganchos que se prendem contam o nome sem explicação: nexo é ligação, e a forma ainda se lê como N até em 16 px. As duas cores são a ideia em si, e combinam com o tema escuro do app sem lembrar a marca de nenhum banco. Em 16 px, Ponte e Fluxo ficam mais nítidas: se isso pesar mais para você, são as outras duas que eu olharia.</p>
+    </div>
+  </section>
+
+  <section>
+    <h2>A logo atual</h2>
+    <div class="now">
+      <div class="shots">{{CURRENT}}{{CURRENT_ZOOM}}</div>
+      <ul class="plain">
+        <li><strong>Pouco próprio:</strong> um N de traço único é o desenho mais previsível para esse nome, e o ponto é o único detalhe.</li>
+        <li><strong>Em 16 px:</strong> o ponto gruda no traço e some, e sobra um N comum. Veja a ampliação ao lado.</li>
+        <li><strong>Sem relação com a ideia:</strong> nada nele fala de ligação, conta ou fluxo.</li>
+        <li><strong>O que funciona:</strong> o contraste é ótimo, e dourado no preto é legível. Só que é a combinação mais usada em marcas de "premium" e cripto.</li>
+        <li><strong>Onde aparece:</strong> ícone e camadas adaptativas do Android, abertura, ícone do Windows. A barra lateral e a tela de bloqueio usam só o texto "Nexo", e não há favicon nem instalador.</li>
+      </ul>
+    </div>
+  </section>
+
+  <section>
+    <h2>As opções</h2>
+    <p>Cada uma traz símbolo, nome, paleta, tamanhos reais e a camada do Android. Abaixo de 3 de contraste um ícone começa a falhar; nenhuma opção chega lá.</p>
+    <div class="grid">
+{{CARDS}}
+    </div>
+  </section>
+
+  <section>
+    <h2>No lugar onde vão morar</h2>
+    <div class="contexts">
+      <div class="stack">
+        <div class="controls" role="group" aria-label="Forma do ícone no Android">
+          <button id="m-round" aria-pressed="true" data-mask="50%">Círculo</button>
+          <button id="m-squircle" aria-pressed="false" data-mask="28%">Arredondado</button>
+          <button id="m-themed" aria-pressed="false" data-themed>Ícone temático</button>
+        </div>
+        <div class="phone" id="phone"><ul class="apps">{{APPS}}</ul></div>
+      </div>
+      <div class="stack">
+        <h3>Barra de tarefas do Windows, em 24 px</h3>
+        <div class="scroll">{{BAR_DARK}}</div>
+        <div class="scroll">{{BAR_LIGHT}}</div>
+        <h3>16 px, ampliado quatro vezes</h3>
+        <p>Cada quadradinho é um pixel real. É o pior caso: a aba e o menor ícone do Windows.</p>
+        <div class="zoom">{{ZOOM}}</div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Pesquisa e decisões</h2>
+    <div class="cols">
+      <div>
+        <h3>O que as boas marcas fazem</h3>
+        <ul class="plain">
+          <li><strong>Monzo:</strong> no redesenho, mudou as cores e manteve a forma do M. A silhueta é o que dura.</li>
+          <li><strong>Wise:</strong> a bandeira foi engrossada para ficar mais legível. Símbolo forte vale mais que detalhe.</li>
+          <li><strong>Revolut:</strong> uma letra, geometria simples, poucas cores.</li>
+          <li><strong>Nubank:</strong> a forma nasce das letras do nome e a cor vira a marca.</li>
+          <li><strong>Inter, Mobills, Organizze, Wealthfront:</strong> observação geral, sem estudo detalhado: uma cor forte e um sinal simples.</li>
+        </ul>
+      </div>
+      <div>
+        <h3>O que decidi evitar</h3>
+        <ul class="plain">
+          <li><strong>Já existe uma fintech chamada Nexo</strong>, de cripto, com identidade azul. Fiquei longe de N facetado em azul. Antes de divulgar o app, vale olhar o registro do nome.</li>
+          <li>Roxo, por causa do Nubank, e laranja chapado, por causa do Inter.</li>
+          <li>N sobre caixa, que lembra apps de notas, e N de fita dobrada, que lembra serviços de vídeo.</li>
+          <li>Cifrão, moeda e barras, como pedido.</li>
+          <li><strong>Fluxo</strong> é a opção mais perto de uma letra feita de fita. Se ela te agradar, faço uma busca de semelhança antes.</li>
+        </ul>
+      </div>
+      <div>
+        <h3>Como aplicar a escolhida</h3>
+        <ul class="plain">
+          <li><code>docs/brand/nexo-mark.svg</code> e o README da marca</li>
+          <li><code>assets/brand/</code>: icon, foreground, monochrome e splash</li>
+          <li><code>pubspec.yaml</code>: cor de fundo do ícone</li>
+          <li><code>values*/colors.xml</code>: <code>ic_launcher_background</code></li>
+          <li><code>drawable-*/splash_mark.png</code> e <code>ic_notification.png</code></li>
+          <li><code>dart run flutter_launcher_icons</code> refaz as camadas do Android e o <code>app_icon.ico</code></li>
+          <li>Imagens do README, com a nova marca na janela</li>
+        </ul>
+      </div>
+    </div>
+    <p>Não fiz busca de marcas registradas. "Não lembra nenhuma marca" é a minha avaliação visual.</p>
+  </section>
+</main>
+
+<script>
+const phone = document.getElementById('phone');
+const masks = document.querySelectorAll('[data-mask]');
+const themed = document.getElementById('m-themed');
+masks.forEach((b) => b.addEventListener('click', () => {
+  phone.style.setProperty('--mask', b.dataset.mask);
+  masks.forEach((x) => x.setAttribute('aria-pressed', x === b));
+}));
+themed.addEventListener('click', () => {
+  const on = phone.classList.toggle('themed');
+  themed.setAttribute('aria-pressed', on);
+});
+</script>
