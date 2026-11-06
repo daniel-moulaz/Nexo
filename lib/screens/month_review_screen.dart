@@ -61,7 +61,16 @@ class _MonthReviewScreenState extends State<MonthReviewScreen> {
         budgetList: app.budgets);
     final isCurrent = _month.year == now.year && _month.month == now.month;
     final canGoNext = !isCurrent;
-    final change = r.change;
+    // The first month with records is usually partial: no fair percentage.
+    final dates = app.transactions.map((t) => t.date);
+    final first =
+        dates.isEmpty ? null : dates.reduce((a, b) => a.isBefore(b) ? a : b);
+    final before = DateTime(_month.year, _month.month - 1);
+    final partial = first != null &&
+        first.year == before.year &&
+        first.month == before.month &&
+        first.day > 1;
+    final change = partial ? null : r.change;
     final biggest = r.biggest;
     final weekday = r.busiestWeekday;
     final small = Theme.of(context).textTheme.bodySmall;
@@ -123,7 +132,9 @@ class _MonthReviewScreenState extends State<MonthReviewScreen> {
               if (!hidden)
                 Text(
                     change == null
-                        ? 'Sem gastos no mês anterior para comparar'
+                        ? partial
+                            ? 'Seus registros começam em ${ptShortDate(first)}: o mês anterior não dá uma comparação justa'
+                            : 'Sem gastos no mês anterior para comparar'
                         : change.abs() < 1
                             ? 'Igual ao mês anterior'
                             : '${change > 0 ? '▲' : '▼'} ${change.abs().toStringAsFixed(0)}% em relação a ${money(r.previousUsual)} no mês anterior',

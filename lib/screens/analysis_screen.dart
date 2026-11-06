@@ -13,6 +13,7 @@ import 'net_worth_screen.dart';
 import 'finance_export_screen.dart';
 import '../services/merchant_breakdown.dart';
 import '../widgets/nexo_sankey.dart';
+import '../utils/finance_input.dart';
 
 FinancialAnalysis analyzePeriod(AppProvider app, AnalysisFilter filter) =>
     FinancialAnalysis(
@@ -174,7 +175,7 @@ class _AnalysisScreenState extends State<AnalysisScreen> {
         ? 'Comparação oculta'
         : change == null
             ? 'Sem base percentual no período anterior'
-            : '${change >= 0 ? '+' : ''}${change.toStringAsFixed(1)}% nas despesas';
+            : '${change >= 0 ? '+' : ''}${change.toStringAsFixed(1).replaceAll('.', ',')}% nas despesas';
     final panels = <Widget>[
       AnalysisCard(
           title: widget.closing
@@ -267,7 +268,7 @@ class _AnalysisScreenState extends State<AnalysisScreen> {
                           setState(() => _historyMonths = s.first)),
                   const SizedBox(height: 8),
                   const Text(
-                      'Azul: receitas • laranja: despesas. Toque em um mês para abrir os lançamentos.'),
+                      'Em cada mês, a primeira barra são as receitas e a segunda, as despesas. Toque em um mês para abrir os lançamentos.'),
                   const SizedBox(height: 16),
                   SizedBox(
                       height: 200,
@@ -286,9 +287,14 @@ class _AnalysisScreenState extends State<AnalysisScreen> {
                                   sideTitles: SideTitles(
                                       showTitles: true,
                                       reservedSize: 30,
-                                      getTitlesWidget: (value, meta) => Text(
-                                          DateFormat('MM/yy').format(months[
-                                              value.toInt().clamp(0, 5)]))))),
+                                      getTitlesWidget: (value, meta) =>
+                                          // Twelve labels do not fit a phone.
+                                          months.length > 6 &&
+                                                  value.toInt().isOdd
+                                              ? const SizedBox()
+                                              : Text(DateFormat('MM/yy').format(
+                                                  months[value.toInt().clamp(0,
+                                                      months.length - 1)]))))),
                           barTouchData:
                               BarTouchData(touchCallback: (event, response) {
                             final i = response?.spot?.touchedBarGroupIndex;
@@ -297,20 +303,20 @@ class _AnalysisScreenState extends State<AnalysisScreen> {
                                   DateFormat('MM/yyyy').format(months[i]));
                           }),
                           barGroups: [
-                            for (var i = 0; i < 6; i++)
+                            for (var i = 0; i < months.length; i++)
                               BarChartGroupData(x: i, barRods: [
                                 BarChartRodData(
                                     toY: history[i].income,
-                                    color: NexoTones.info(context),
-                                    width: 9),
+                                    color: NexoTones.income(context),
+                                    width: months.length > 6 ? 6 : 9),
                                 BarChartRodData(
                                     toY: history[i].expense,
-                                    color: Colors.deepOrange.shade700,
-                                    width: 9)
+                                    color: NexoTones.expense(context),
+                                    width: months.length > 6 ? 6 : 9)
                               ])
                           ]))),
                   // Text equivalents support accessibility and exact values without touch.
-                  for (var i = 0; i < 6; i++)
+                  for (var i = 0; i < months.length; i++)
                     ListTile(
                         dense: true,
                         contentPadding: EdgeInsets.zero,
@@ -322,8 +328,16 @@ class _AnalysisScreenState extends State<AnalysisScreen> {
                             context,
                             history[i].realized,
                             DateFormat('MM/yyyy').format(months[i]))),
-                  Text(
-                      'Média de despesas nos ${_historyMonths - 1} meses anteriores: ${money(history.take(_historyMonths - 1).fold<double>(0, (s, d) => s + d.expense) / (_historyMonths - 1))}. Meses sem registros contam como zero.'),
+                  Builder(builder: (context) {
+                    // A month with nothing recorded is not a month at zero.
+                    final past = history
+                        .take(months.length - 1)
+                        .where((d) => d.expense > 0 || d.income > 0)
+                        .toList();
+                    return Text(past.isEmpty
+                        ? 'Ainda não há meses anteriores para comparar.'
+                        : 'Média de despesas nos ${ptCount(past.length, 'mês anterior', 'meses anteriores')} com registros: ${money(past.fold<double>(0, (s, d) => s + d.expense) / past.length)}.');
+                  }),
                 ])),
       if (!app.settings.hideBalance && data.income > 0)
         AnalysisCard(

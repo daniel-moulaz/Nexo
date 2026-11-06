@@ -625,17 +625,21 @@ class _BudgetSheetState extends State<_BudgetSheet> {
 
   bool get isEdit => widget.existing != null;
 
+  /// Off, a budget made mid-period counts only the days left in it.
+  bool _fullPeriod = false;
+
   @override
   void initState() {
     super.initState();
     if (isEdit) {
       final e = widget.existing!;
-      _amtCtrl.text = e.amount.toStringAsFixed(2);
+      _amtCtrl.text = e.amount.toStringAsFixed(2).replaceAll('.', ',');
       _categoryId = e.categoryId;
       _period = e.period;
     } else if (widget.categoryId != null) {
       _categoryId = widget.categoryId;
-      _amtCtrl.text = widget.amount?.toStringAsFixed(2) ?? '';
+      _amtCtrl.text =
+          widget.amount?.toStringAsFixed(2).replaceAll('.', ',') ?? '';
     } else {
       // Default to first expense category not yet budgeted
       final app = context.read<AppProvider>();
@@ -676,7 +680,20 @@ class _BudgetSheetState extends State<_BudgetSheet> {
       categoryId: _categoryId!,
       amount: amount,
       period: _period,
-      createdAt: isEdit ? widget.existing!.createdAt : DateTime.now(),
+      createdAt: isEdit
+          ? widget.existing!.createdAt
+          : _fullPeriod
+              ? budgetWindow(
+                      Budget(
+                          id: '',
+                          categoryId: _categoryId!,
+                          amount: 1,
+                          period: _period,
+                          createdAt: DateTime.now()),
+                      DateTime.now(),
+                      weekStart: app.settings.weekStart)
+                  .start
+              : DateTime.now(),
     );
 
     if (isEdit) {
@@ -863,6 +880,14 @@ class _BudgetSheetState extends State<_BudgetSheet> {
               const SizedBox(height: 16),
             ],
 
+            if (!isEdit)
+              SwitchListTile(
+                  contentPadding: EdgeInsets.zero,
+                  title: const Text('Valer pelo período inteiro'),
+                  subtitle: const Text(
+                      'Desligado, o limite é proporcional aos dias que faltam.'),
+                  value: _fullPeriod,
+                  onChanged: (v) => setState(() => _fullPeriod = v)),
             if (isEdit) ...[
               OutlinedButton.icon(
                   icon: const Icon(Icons.tune),
