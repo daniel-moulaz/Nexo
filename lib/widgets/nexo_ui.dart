@@ -311,6 +311,20 @@ class NexoSpendingPace extends StatelessWidget {
   final double? ideal;
   final int? monthDays;
 
+  static double? _sameDayBefore(List<double> current, List<double> previous) =>
+      previous.isEmpty || current.isEmpty
+          ? null
+          : previous[math.min(current.length, previous.length) - 1];
+
+  /// The line's color, for a legend to say the same as the chart.
+  static Color lineColor(
+      BuildContext context, List<double> current, List<double> previous) {
+    final then = _sameDayBefore(current, previous);
+    return then != null && current.last > then
+        ? NexoTones.expense(context)
+        : Theme.of(context).colorScheme.primary;
+  }
+
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
@@ -319,11 +333,8 @@ class NexoSpendingPace extends StatelessWidget {
     final top =
         [...current, ...previous, ideal ?? 0, 1.0].reduce(math.max) * 1.12;
     final now = current.isEmpty ? 0.0 : current.last;
-    final then = previous.isEmpty
-        ? null
-        : previous[math.min(current.length, previous.length) - 1];
-    final ahead = then != null && now > then;
-    final color = ahead ? NexoTones.expense(context) : cs.primary;
+    final then = _sameDayBefore(current, previous);
+    final color = lineColor(context, current, previous);
     List<FlSpot> spots(List<double> v) =>
         [for (var i = 0; i < v.length; i++) FlSpot(i + 1.0, v[i])];
     return Semantics(
@@ -641,6 +652,43 @@ class NexoChipRow extends StatelessWidget {
       child: Row(spacing: spacing, children: children));
 }
 
+/// A state in a word: icon, label and tone together, never color alone.
+class NexoStatusTag extends StatelessWidget {
+  const NexoStatusTag(
+      {super.key,
+      required this.label,
+      required this.icon,
+      required this.color});
+  final String label;
+  final IconData icon;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return DecoratedBox(
+      decoration: BoxDecoration(
+          color: color.withValues(alpha: .14),
+          borderRadius: BorderRadius.circular(NexoRadius.chip)),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(
+            horizontal: NexoSpace.sm, vertical: NexoSpace.xs),
+        child: Row(mainAxisSize: MainAxisSize.min, children: [
+          Icon(icon, size: 14, color: color),
+          const SizedBox(width: NexoSpace.xs),
+          Flexible(
+              child: Text(label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: Theme.of(context)
+                      .textTheme
+                      .labelMedium
+                      ?.copyWith(color: color))),
+        ]),
+      ),
+    );
+  }
+}
+
 /// Month selector pill ("‹ Outubro 2026 ›"), the same on every tab.
 class NexoMonthPill extends StatelessWidget {
   const NexoMonthPill(
@@ -662,13 +710,11 @@ class NexoMonthPill extends StatelessWidget {
       child: Row(mainAxisSize: MainAxisSize.min, children: [
         IconButton(
             tooltip: 'Mês anterior',
-            visualDensity: VisualDensity.compact,
             onPressed: onPrevious,
             icon: const Icon(Icons.chevron_left, size: 20)),
         Text(label, style: TextStyle(fontWeight: FontWeight.w600)),
         IconButton(
             tooltip: 'Próximo mês',
-            visualDensity: VisualDensity.compact,
             onPressed: onNext,
             icon: const Icon(Icons.chevron_right, size: 20)),
       ]),

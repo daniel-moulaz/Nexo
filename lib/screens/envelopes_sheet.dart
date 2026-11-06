@@ -225,13 +225,10 @@ class _EnvelopeTile extends StatelessWidget {
                       color: tone,
                       fontFeatures: NexoTones.figures)),
             ),
-            Flexible(
-              child: Text('${line.share}% da renda',
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: theme.textTheme.labelSmall
-                      ?.copyWith(color: cs.onSurfaceVariant)),
-            ),
+            Text('${line.share}% da renda',
+                maxLines: 1,
+                style: theme.textTheme.labelSmall
+                    ?.copyWith(color: cs.onSurfaceVariant)),
           ]),
           const SizedBox(height: 4),
           NexoProgress(

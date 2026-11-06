@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import '../models/models.dart';
 import '../providers/app_provider.dart';
@@ -67,8 +69,21 @@ class _DesktopTransactionTableState extends State<DesktopTransactionTable> {
               existing: repeat ? null : t,
               template: repeat ? t : null,
               initialType: t.type)));
+
+  /// Same reading as the list on the phone: neutral is muted, an exception
+  /// is warned about and income is the only green.
+  Color? amountColor(BuildContext context, AppTransaction t) {
+    final m = meta(t);
+    if (FinanceRules.isNeutral(t, m)) {
+      return Theme.of(context).colorScheme.onSurfaceVariant;
+    }
+    if (m.isOverdue) return NexoTones.expense(context);
+    if (m.isPending) return NexoTones.warning(context);
+    return t.type == 'income' ? NexoTones.income(context) : null;
+  }
+
   DataCell cell(String text, double width, VoidCallback action,
-          {bool amount = false}) =>
+          {bool amount = false, Color? color}) =>
       DataCell(
           SizedBox(
               width: width,
@@ -79,7 +94,8 @@ class _DesktopTransactionTableState extends State<DesktopTransactionTable> {
                       overflow: TextOverflow.ellipsis,
                       textAlign: amount ? TextAlign.end : null,
                       style: amount
-                          ? const TextStyle(fontFeatures: NexoTones.figures)
+                          ? TextStyle(
+                              fontFeatures: NexoTones.figures, color: color)
                           : null))),
           onTap: action);
   @override
@@ -98,81 +114,91 @@ class _DesktopTransactionTableState extends State<DesktopTransactionTable> {
     return Column(children: [
       Expanded(
           child: ListView(padding: const EdgeInsets.all(16), children: [
-        Scrollbar(
-            controller: horizontal,
-            thumbVisibility: true,
-            child: SingleChildScrollView(
-                controller: horizontal,
-                scrollDirection: Axis.horizontal,
-                padding: const EdgeInsets.only(bottom: 14),
-                child: DataTable(
-                  sortColumnIndex: column,
-                  sortAscending: ascending,
-                  columnSpacing: 20,
-                  horizontalMargin: 12,
-                  showCheckboxColumn: false,
-                  columns: [
-                    for (final label in [
-                      'Data',
-                      'Descrição',
-                      'Categoria',
-                      'Conta / cartão',
-                      'Tipo',
-                      'Situação',
-                      'Valor'
-                    ])
-                      DataColumn(
-                          label: Text(label),
-                          numeric: label == 'Valor',
-                          onSort: (index, asc) => setState(() {
-                                column = index;
-                                ascending = asc;
-                                page = 0;
-                              })),
-                    const DataColumn(label: Text('Ações')),
-                  ],
-                  rows: rows
-                      .skip(page * pageSize)
-                      .take(pageSize)
-                      .map((t) => DataRow(cells: [
-                            cell(ptDate(t.date), 88, () => edit(t)),
-                            cell(t.description, 180, () => edit(t)),
-                            cell(category(t), 110, () => edit(t)),
-                            cell(account(t), 120, () => edit(t)),
-                            cell(type(t), 100, () => edit(t)),
-                            cell(status(t), 74, () => edit(t)),
-                            cell(
-                                app.settings.hideBalance
-                                    ? '••••'
-                                    : formatAmount(
-                                        t.amount,
-                                        t.currency.isNotEmpty
-                                            ? t.currency
-                                            : app
-                                                    .accountById(t.accountId)
-                                                    ?.currency ??
-                                                app.settings.currency),
-                                115,
-                                () => edit(t),
-                                amount: true),
-                            DataCell(PopupMenuButton<String>(
-                                tooltip: 'Ações do lançamento',
-                                onSelected: (action) =>
-                                    edit(t, repeat: action == 'repeat'),
-                                itemBuilder: (_) => [
-                                      const PopupMenuItem(
-                                          value: 'edit',
-                                          child: Text('Abrir / editar')),
-                                      if (!FinanceRules.isNeutral(t, meta(t)) &&
-                                          meta(t).source == 'manual' &&
-                                          meta(t).installmentTotal == null)
+        LayoutBuilder(builder: (context, constraints) {
+          // What is left past the fixed columns goes to the ones with text.
+          final room = math.max(0.0, constraints.maxWidth - 1040);
+          return Scrollbar(
+              controller: horizontal,
+              thumbVisibility: true,
+              child: SingleChildScrollView(
+                  controller: horizontal,
+                  scrollDirection: Axis.horizontal,
+                  padding: const EdgeInsets.only(bottom: 14),
+                  child: DataTable(
+                    sortColumnIndex: column,
+                    sortAscending: ascending,
+                    columnSpacing: 20,
+                    horizontalMargin: 12,
+                    showCheckboxColumn: false,
+                    columns: [
+                      for (final label in [
+                        'Data',
+                        'Descrição',
+                        'Categoria',
+                        'Conta / cartão',
+                        'Tipo',
+                        'Situação',
+                        'Valor'
+                      ])
+                        DataColumn(
+                            label: Text(label),
+                            numeric: label == 'Valor',
+                            onSort: (index, asc) => setState(() {
+                                  column = index;
+                                  ascending = asc;
+                                  page = 0;
+                                })),
+                      const DataColumn(label: Text('Ações')),
+                    ],
+                    rows: rows
+                        .skip(page * pageSize)
+                        .take(pageSize)
+                        .map((t) => DataRow(cells: [
+                              cell(ptDate(t.date), 88, () => edit(t)),
+                              cell(t.description, 180 + room * .6,
+                                  () => edit(t)),
+                              cell(category(t), 110 + room * .2, () => edit(t)),
+                              cell(account(t), 120 + room * .2, () => edit(t)),
+                              cell(type(t), 100, () => edit(t)),
+                              cell(status(t), 74, () => edit(t)),
+                              cell(
+                                  app.settings.hideBalance
+                                      ? '••••'
+                                      : (t.type == 'income' ? '+' : '-') +
+                                          formatAmount(
+                                              t.amount,
+                                              t.currency.isNotEmpty
+                                                  ? t.currency
+                                                  : app
+                                                          .accountById(
+                                                              t.accountId)
+                                                          ?.currency ??
+                                                      app.settings.currency),
+                                  115,
+                                  () => edit(t),
+                                  amount: true,
+                                  color: amountColor(context, t)),
+                              DataCell(PopupMenuButton<String>(
+                                  tooltip: 'Ações do lançamento',
+                                  onSelected: (action) =>
+                                      edit(t, repeat: action == 'repeat'),
+                                  itemBuilder: (_) => [
                                         const PopupMenuItem(
-                                            value: 'repeat',
-                                            child: Text('Repetir como novo…')),
-                                    ])),
-                          ]))
-                      .toList(),
-                ))),
+                                            value: 'edit',
+                                            child: Text('Abrir / editar')),
+                                        if (!FinanceRules.isNeutral(
+                                                t, meta(t)) &&
+                                            meta(t).source == 'manual' &&
+                                            meta(t).installmentTotal == null)
+                                          const PopupMenuItem(
+                                              value: 'repeat',
+                                              child:
+                                                  Text('Repetir como novo…')),
+                                      ])),
+                            ]))
+                        .toList(),
+                  )));
+        }),
       ])),
       Row(mainAxisAlignment: MainAxisAlignment.end, children: [
         Text('Página ${page + 1} de $pages • até $pageSize por página'),

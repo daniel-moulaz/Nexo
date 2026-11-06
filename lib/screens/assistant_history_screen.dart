@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import '../sync/assistant_commands.dart';
 import '../utils/snackbar.dart';
 import '../widgets/shared_widgets.dart';
+import '../widgets/nexo_ui.dart';
 
 /// Plain words for each request kind, for the list below.
 const assistantKindLabels = <String, String>{
@@ -176,24 +177,59 @@ class _AssistantHistoryScreenState extends State<AssistantHistoryScreen> {
                 final item = items[i];
                 final when =
                     DateFormat('dd/MM HH:mm', 'pt_BR').format(item.createdAt);
+                final muted = theme.colorScheme.onSurfaceVariant;
                 final state = switch (item.status) {
-                  _ when item.undoneAt != null => 'desfeito',
-                  'done' => 'gravado',
-                  'rejected' => 'recusado',
-                  'applying' => 'gravando',
-                  _ => 'esperando o app',
+                  _ when item.undoneAt != null => (
+                      'Desfeito',
+                      Icons.undo,
+                      muted
+                    ),
+                  'done' => (
+                      'Gravado',
+                      Icons.check_circle_outline,
+                      theme.colorScheme.primary
+                    ),
+                  'rejected' => (
+                      'Recusado',
+                      Icons.block,
+                      NexoTones.expense(context)
+                    ),
+                  'applying' => (
+                      'Gravando',
+                      Icons.sync,
+                      NexoTones.info(context)
+                    ),
+                  _ => (
+                      'Esperando o app',
+                      Icons.schedule,
+                      NexoTones.warning(context)
+                    ),
                 };
                 final detail =
                     item.status == 'rejected' ? item.reason : item.message;
                 return ListTile(
                   contentPadding: const EdgeInsets.symmetric(vertical: 4),
                   title: Text(assistantKindLabels[item.kind] ?? item.kind),
-                  subtitle: Text(
-                      [
-                        '$when · $state',
-                        if (detail != null && detail.isNotEmpty) detail,
-                      ].join('\n'),
-                      style: theme.textTheme.bodySmall),
+                  subtitle: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const SizedBox(height: NexoSpace.xs),
+                        Wrap(
+                            spacing: NexoSpace.sm,
+                            runSpacing: NexoSpace.xs,
+                            crossAxisAlignment: WrapCrossAlignment.center,
+                            children: [
+                              NexoStatusTag(
+                                  label: state.$1,
+                                  icon: state.$2,
+                                  color: state.$3),
+                              Text(when, style: theme.textTheme.bodySmall),
+                            ]),
+                        if (detail != null && detail.isNotEmpty) ...[
+                          const SizedBox(height: NexoSpace.xs),
+                          Text(detail, style: theme.textTheme.bodySmall),
+                        ],
+                      ]),
                   trailing: item.undoable
                       ? TextButton(
                           onPressed: _busy ? null : () => _undo(item),

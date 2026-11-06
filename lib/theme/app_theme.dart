@@ -379,6 +379,26 @@ ThemeData _base(ColorScheme cs, String appFont) {
             side: BorderSide(color: cs.outline),
             shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(NexoRadius.field)))),
+    segmentedButtonTheme: SegmentedButtonThemeData(
+        style: ButtonStyle(
+            visualDensity: VisualDensity.standard,
+            minimumSize: const WidgetStatePropertyAll(Size(0, 44)),
+            side: WidgetStatePropertyAll(BorderSide(color: cs.outlineVariant)),
+            shape: WidgetStatePropertyAll(RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(NexoRadius.field))),
+            backgroundColor: WidgetStateProperty.resolveWith((states) =>
+                states.contains(WidgetState.selected)
+                    ? cs.primaryContainer
+                    : Colors.transparent),
+            foregroundColor: WidgetStateProperty.resolveWith((states) =>
+                states.contains(WidgetState.selected)
+                    ? cs.onPrimaryContainer
+                    : cs.onSurfaceVariant))),
+    // 44 px on both devices: a Windows laptop can have a touch screen too.
+    iconButtonTheme: IconButtonThemeData(
+        style: IconButton.styleFrom(
+            minimumSize: const Size(44, 44),
+            visualDensity: VisualDensity.standard)),
     floatingActionButtonTheme: FloatingActionButtonThemeData(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20))),
     dialogTheme: DialogThemeData(

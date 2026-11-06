@@ -288,7 +288,9 @@ class _TransactionSearchScreenState extends State<TransactionSearchScreen> {
                                   color: Theme.of(context)
                                       .colorScheme
                                       .onSurfaceVariant))),
-                  Flexible(
+                  ConstrainedBox(
+                    constraints: BoxConstraints(
+                        maxWidth: MediaQuery.sizeOf(context).width - 32),
                     child: FittedBox(
                       fit: BoxFit.scaleDown,
                       alignment: Alignment.centerRight,
@@ -311,7 +313,6 @@ class _TransactionSearchScreenState extends State<TransactionSearchScreen> {
                             tooltip: month == null
                                 ? 'Só este mês'
                                 : 'Todos os meses',
-                            visualDensity: VisualDensity.compact,
                             onPressed: () => setState(() => _month = month ==
                                     null
                                 ? DateTime(

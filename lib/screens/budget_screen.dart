@@ -104,11 +104,13 @@ class _BudgetScreenState extends State<BudgetScreen>
           )),
       body: TabBarView(controller: _tabCtrl, children: [
         ListView(padding: const EdgeInsets.fromLTRB(16, 16, 16, 32), children: [
-          EnvelopesSection(app: app, money: money, now: now),
-          const SizedBox(height: 16),
           if (budgets.isNotEmpty) ...[
             _BudgetSummary(app: app, money: money, now: now),
             const SizedBox(height: 16),
+          ],
+          EnvelopesSection(app: app, money: money, now: now),
+          const SizedBox(height: 16),
+          if (budgets.isNotEmpty) ...[
             const NexoSectionTitle('Limites por categoria',
                 subtitle: 'Toque para alterar; segure para excluir'),
             const SizedBox(height: 8),

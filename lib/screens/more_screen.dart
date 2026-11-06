@@ -156,45 +156,60 @@ class MoreScreen extends StatelessWidget {
                   context, NexoRoute(builder: (_) => const SettingsScreen())))
         ],
       ),
-      body: ListView(
-          padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
-          children: [
-            for (final group in <String, List<String>>{
-              'Planejar e acompanhar': [
-                'Agenda financeira',
-                'Contas e cartões',
-                'Recorrentes e assinaturas',
-                'Análises',
-                'Mês em revisão',
-              ],
-              'Organizar e proteger': [
-                'Sugestões de lançamentos',
-                'Conferir com o banco',
-                'Importar extrato',
-                'Exportar relatório',
-                'Categorias',
-                'Backup e restauração',
-                'Sincronizar dispositivos',
-                'Configurações',
-                'Ajuda',
-              ],
-              'Outros controles': [
-                'Empréstimos',
-                'Dinheiro emprestado',
-                'Bens e patrimônio',
-                'Lista de desejos',
-              ],
-            }.entries) ...[
-              _Group(
-                  title: group.key,
-                  initiallyOpen: group.key == 'Planejar e acompanhar',
-                  items: [
-                    for (final label in group.value)
-                      items.singleWhere((item) => item.label == label)
-                  ]),
-              const SizedBox(height: 12),
-            ],
-          ]),
+      body: Builder(builder: (context) {
+        const groups = <String, List<String>>{
+          'Planejar e acompanhar': [
+            'Agenda financeira',
+            'Contas e cartões',
+            'Recorrentes e assinaturas',
+            'Análises',
+            'Mês em revisão',
+          ],
+          'Organizar e proteger': [
+            'Sugestões de lançamentos',
+            'Conferir com o banco',
+            'Importar extrato',
+            'Exportar relatório',
+            'Categorias',
+            'Backup e restauração',
+            'Sincronizar dispositivos',
+            'Configurações',
+            'Ajuda',
+          ],
+          'Outros controles': [
+            'Empréstimos',
+            'Dinheiro emprestado',
+            'Bens e patrimônio',
+            'Lista de desejos',
+          ],
+        };
+        final wide = MediaQuery.sizeOf(context).width >= 1100;
+        Widget group(String title) => Padding(
+            padding: const EdgeInsets.only(bottom: NexoSpace.md),
+            child: _Group(
+                title: title,
+                initiallyOpen: wide || title == 'Planejar e acompanhar',
+                items: [
+                  for (final label in groups[title]!)
+                    items.singleWhere((item) => item.label == label)
+                ]));
+        const padding = EdgeInsets.fromLTRB(16, 8, 16, 32);
+        if (!wide) {
+          return ListView(
+              padding: padding, children: [...groups.keys.map(group)]);
+        }
+        return SingleChildScrollView(
+            padding: padding,
+            child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Expanded(
+                  child: Column(children: [
+                group('Planejar e acompanhar'),
+                group('Outros controles'),
+              ])),
+              const SizedBox(width: NexoSpace.lg),
+              Expanded(child: group('Organizar e proteger')),
+            ]));
+      }),
     );
   }
 }

@@ -277,7 +277,9 @@ class _FinanceHomeScreenState extends State<FinanceHomeScreen>
                           .textTheme
                           .labelLarge
                           ?.copyWith(color: cs.onSurfaceVariant))),
-              Flexible(
+              ConstrainedBox(
+                  constraints: BoxConstraints(
+                      maxWidth: MediaQuery.sizeOf(context).width - 32),
                   child: FittedBox(
                       fit: BoxFit.scaleDown,
                       alignment: Alignment.centerRight,
@@ -302,10 +304,6 @@ class _FinanceHomeScreenState extends State<FinanceHomeScreen>
                                 fontSize: 13, color: NexoBrand.onInkMuted))),
                     IconButton(
                         tooltip: 'Entender os valores',
-                        visualDensity: VisualDensity.compact,
-                        padding: EdgeInsets.zero,
-                        constraints:
-                            const BoxConstraints(minWidth: 44, minHeight: 44),
                         onPressed: _explain,
                         icon: const Icon(Icons.info_outline,
                             size: 18, color: NexoBrand.onInkMuted)),
@@ -573,7 +571,10 @@ class _FinanceHomeScreenState extends State<FinanceHomeScreen>
                         children: [
                           Text('Ritmo de gastos variáveis',
                               style: Theme.of(context).textTheme.titleSmall),
-                          _Legend(color: cs.primary, label: 'Este mês'),
+                          _Legend(
+                              color: NexoSpendingPace.lineColor(
+                                  context, paceNow, pacePrevious),
+                              label: 'Este mês'),
                           if (ideal != null)
                             _Legend(
                                 color: cs.tertiary,
