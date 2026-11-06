@@ -40,7 +40,12 @@ Dentro do painel de tinta, use os tons `*OnInk`, que valem nos dois temas.
 ### Categorias e gráficos
 
 - Categorias guardam a própria cor. `NexoTones.category` ajusta a luminosidade para cada tema, porque muitas eram escuras e sumiam no fundo escuro.
-- Séries sem cor própria usam `NexoChart.series`, separadas para daltonismo e longe de ganho e gasto.
+- Séries sem cor própria usam `NexoChart.slot(context, i)`. A ordem é fixa e igual nos dois temas: teal, âmbar, violeta, laranja, azul, magenta. Cada tema tem seus valores, conferidos contra o próprio cartão em luminosidade, contraste de 3:1 e separação para daltonismo entre vizinhas. Por isso a ordem não muda.
+- Passou da sexta série, ela vira "outros" em cinza: nenhuma cor nova é inventada e nenhuma se repete.
+- Ganho e perda em gráfico usam `NexoTones`, como no resto do app.
+- Tooltip é sempre `NexoChart.tooltip` e `NexoChart.tooltipText`.
+- A legenda diz a mesma cor da linha: `NexoSpendingPace.lineColor` serve aos dois.
+- Sem grade nem borda. Os valores ficam em texto ao lado do gráfico, na cor do texto, com a cor só no marcador.
 
 ## Tipografia
 
@@ -62,6 +67,8 @@ Inter, incluída no app, nos dois aparelhos. As regras estão em `docs/TIPOGRAFI
 | `NexoProgress` | Barras: teal dentro da meta, âmbar a partir de 80%, vermelho no limite |
 | `CategoryDot` | Ícone e cor da categoria, com ícone escolhido pelo nome em português |
 | `EmptyState` | Tela vazia, com ícone e marca |
+| `NexoStatusTag` | Um estado em uma palavra, com ícone e tom. Usado nos pedidos do Claude: esperando o app, gravando, gravado, recusado, desfeito |
+| `NexoMonthPill` | Seletor de mês, igual em todas as abas |
 
 Dentro do painel, os filhos recebem o tema escuro sozinhos. Só o que é calculado fora dele, como um `NexoTones.income(context)` da tela, precisa do tom `*OnInk`.
 
@@ -71,3 +78,12 @@ Dentro do painel, os filhos recebem o tema escuro sozinhos. Só o que é calcula
 2. Um painel de tinta por tela.
 3. Texto normal com contraste de 4,5:1, em todas as superfícies e nos dois temas.
 4. Sobre um preenchimento qualquer, use `NexoTones.on(cor)`, nunca branco fixo.
+5. Tudo que se toca tem pelo menos 44 px, no celular e no Windows. O tema já garante isso nos botões de ícone e nos segmentados: não use `VisualDensity.compact` neles. `test/scaled_text_tabs_test.dart` confere cada aba.
+6. Texto acompanha a escala do sistema: as abas são testadas em 1,5×. Nada de altura fixa em volta de texto.
+
+## Largura no Windows
+
+- **Hoje:** duas colunas a partir de 1050 px.
+- **Extrato:** tabela a partir de 900 px, que cresce com a janela nas colunas de texto.
+- **Mais:** grupos lado a lado e abertos a partir de 1100 px.
+- **Lançar:** formulário centralizado em 760 px, porque campos largos demais leem pior.

@@ -1,13 +1,12 @@
 # Tipografia do Nexo
 
-Regras do texto no **Windows**. O celular mantém o visual anterior, com títulos pesados, por escolha do dono: os valores dos dois ficam lado a lado em `NexoType` (`lib/theme/nexo_type.dart`), com o do celular primeiro. `test/typography_test.dart` faz o build falhar quando elas são quebradas e `test/real_font_layout_test.dart` mede as telas com a fonte real.
+Regras do texto do Nexo, iguais no celular e no Windows desde a 1.15.0, por escolha do dono (a diferença da 1.13.2 acabou, e `NexoType` saiu do código). `test/typography_test.dart` faz o build falhar quando elas são quebradas e `test/real_font_layout_test.dart` mede as telas com a fonte real.
 
 ## Regras
 
 | Regra | Valor | Por quê |
 | --- | --- | --- |
-| Fonte no Windows | Inter 4.1, em `assets/fonts/Inter` (arquivos sem alteração, SIL OFL) | Funciona offline, tem peso médio de verdade e não depende da versão do Windows |
-| Fonte no Android | A do sistema, salvo escolha em Configurações | Inter escolhida ali vem do app, sem rede; as outras opções ainda são baixadas |
+| Fonte | Inter 4.1, em `assets/fonts/Inter` (arquivos sem alteração, SIL OFL), nos dois aparelhos | Funciona offline, tem peso médio de verdade e não depende do sistema. As outras opções de Configurações ainda são baixadas |
 | Tamanho mínimo | 12 | Mínimo do Windows para texto regular |
 | Pesos | 400 ler, 500 rótulos, 600 títulos e valores, 700 só em valores de 24 ou mais | Só esses quatro arquivos existem no app |
 | Acima de 700 | Proibido | Com a Inter o motor borra um negrito falso por cima do Bold |

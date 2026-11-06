@@ -1,5 +1,27 @@
 # Changelog
 
+## [1.15.0] - 2026-11-06
+### Identidade
+- **Uma cara só:** o app ganha a tinta azul-escura e o teal do Engate, igual no celular e no Windows. Sai o preto com contornos; entram superfícies em camadas.
+- **Painel de tinta:** o número principal de Hoje, Extrato, Orçamento, Investir e Lançar fica num painel escuro com a marca em marca-d'água, nos dois temas.
+- **Ganho longe da marca:** o verde de ganho virou verde-lima, para não ser confundido com o teal. Cor de marca nunca fala de dinheiro.
+- **Categorias:** as cores se ajustam a cada tema, e os ícones agora entendem nomes em português.
+- **Inter nos dois aparelhos:** um só texto, com a rampa de tipos do Windows. O tema e a fonte novos entram sozinhos na primeira abertura.
+### Gráficos
+- **Uma paleta:** seis cores em ordem fixa, conferidas para daltonismo e contraste em cada tema. Da sétima série em diante, cinza de "outros".
+- **Tooltip único** e ganho e perda com os mesmos tons do resto do app.
+- **Ritmo de gastos:** a legenda agora tem a cor da linha.
+### Windows
+- **Extrato:** a tabela ocupa a janela, com sinal e cor nos valores, como no celular.
+- **Mais:** grupos lado a lado e abertos em janela larga.
+### Detalhes
+- **Orçamento:** o painel do mês abre a tela.
+- **Pedidos do Claude:** cada um mostra o estado com ícone e palavra: esperando o app, gravando, gravado, recusado ou desfeito.
+- **Toque:** botões de ícone e segmentados têm pelo menos 44 px. O seletor de mês deixou de encolher no celular.
+- **Movimento:** barras animadas respeitam o pedido do sistema por menos movimento.
+### Sistema
+- `docs/design-system.md`, tokens em `lib/theme/nexo_tokens.dart` e testes para contraste, cores escritas nas telas, área de toque e componentes.
+
 ## [1.14.0] - 2026-11-06
 ### Marca
 - **Nova logo:** o Engate, dois ganchos que se prendem e formam o N. Troca o ícone do Android, a abertura, a notificação e o ícone do Windows.
