@@ -9,6 +9,20 @@
 - **Uma regra só:** Hoje, a tela de Patrimônio e o card agora somam contas, cartões, investimentos, bens, objetivos e dinheiro emprestado, menos dívidas. Antes, Hoje e Patrimônio ignoravam investimentos.
 - **Objetivos:** aportar tira da conta, mas o dinheiro continua seu e agora conta no patrimônio, inclusive no conector.
 - **Evolução:** os registros diários antigos ganham na leitura o que não guardavam, sem mudar o banco.
+### Dinheiro
+- **Fatura:** um crédito ainda previsto não reduz mais a fatura, no app e no conector.
+- **Recorrente paga antes da data:** o lançamento fica com o dia em que foi pago. O salário adiantado agora entra no mês e no "Quanto posso gastar".
+- **Cartão:** uma compra acima do limite livre pergunta antes de salvar, sem impedir.
+- **Receita:** começa numa conta, nunca no cartão.
+- **Transferir:** com uma só conta, a tela explica o que fazer. Ao terminar, volta para onde você estava.
+### Telas
+- **Excluir:** categoria, bem, desejo e pessoa pedem confirmação, e os botões têm nome.
+- **Textos:** saíram "Quaresma", "MEDIUM", "deleted", "Undo" e o inglês dos empréstimos. "Ativos" virou "Bens", e os números usam vírgula.
+- **Análises:** o gráfico de 1 ano mostra os 12 meses, e a média ignora meses sem registro.
+- **Mês em revisão:** não compara com um mês só parcialmente registrado.
+- **Orçamento:** o formulário permite valer pelo período inteiro.
+### Abertura
+- **Fusos horários:** carregados uma vez, e não em cada serviço de lembrete.
 
 ## [1.15.0] - 2026-11-06
 ### Identidade
