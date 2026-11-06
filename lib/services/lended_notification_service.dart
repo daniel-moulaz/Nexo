@@ -16,7 +16,7 @@
 import 'platform_capabilities.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:timezone/timezone.dart' as tz;
-import 'package:timezone/data/latest_all.dart' as tz_data;
+import 'time_zones.dart';
 import '../models/models.dart';
 
 class LendedNotificationService {
@@ -44,9 +44,7 @@ class LendedNotificationService {
     if (!PlatformCapabilities.scheduledNotifications) return;
     if (_initialized) return;
 
-    // Timezone definitions — safe to call multiple times if the recurring
-    // service already called it; tz_data tracks its own init state.
-    tz_data.initializeTimeZones();
+    ensureTimeZones();
 
     const androidSettings = AndroidInitializationSettings('ic_notification');
     await _plugin
