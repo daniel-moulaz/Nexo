@@ -1,6 +1,6 @@
 # Changelog
 
-## [Não publicado]
+## [1.13.1] - 2026-11-06
 ### Leitura no Windows (e no resto do app)
 - **Fonte própria:** o Windows passa a usar a Inter, incluída no app, em vez de depender da Segoe UI. Títulos deixaram de cair na Segoe UI Black, que era o que os deixava pesados e apertados.
 - **Uma rampa de tipos:** tamanhos e pesos seguem a rampa do Windows (12/16, 14/20, 20/28, 28/36): nada abaixo de 12, regular para ler, semibold para títulos, nada acima de 700. O espaçamento do Material, calibrado para Roboto, saiu. Um teste falha se isso voltar.

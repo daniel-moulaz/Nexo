@@ -55,7 +55,7 @@ As imagens abaixo são da versão 1.12.7, geradas com **dados fictícios** a par
 
 ## Estado do projeto
 
-Versão de referência: **1.13.0+52** (outubro de 2026, schema 27). Detalhes em [CHANGELOG.md](CHANGELOG.md).
+Versão de referência: **1.13.1+53** (novembro de 2026, schema 27). Detalhes em [CHANGELOG.md](CHANGELOG.md).
 
 | Área | Situação |
 | --- | --- |
