@@ -145,6 +145,13 @@ void main() {
     expect(mp.balance, closeTo(-33, 1e-9));
     expect((await tester.runAsync(DBHelper.getTransactions))!, isEmpty,
         reason: 'a neutral adjustment is neither spending nor income');
+    // The ledger commits before the provider notifies: on a loaded machine the
+    // balance above can already be right with the screen one frame behind.
+    for (var i = 0;
+        i < 20 && find.text('Bate com o banco').evaluate().isEmpty;
+        i++) {
+      await settle();
+    }
     expect(find.text('Bate com o banco'), findsOneWidget);
     await tester.pumpWidget(const SizedBox());
     debugDefaultTargetPlatformOverride = null;
