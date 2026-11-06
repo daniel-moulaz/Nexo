@@ -28,7 +28,9 @@ import 'package:home_widget/home_widget.dart';
 import '../services/credit_reminder_service.dart';
 import '../services/loan_reminder_service.dart';
 import '../services/loan_ledger.dart';
+import '../investments/investment_models.dart';
 import '../investments/investment_repository.dart';
+import '../services/net_worth_history.dart';
 import '../services/envelopes.dart';
 import '../services/lended_ledger.dart';
 import '../sync/ledger_capture.dart';
@@ -255,6 +257,10 @@ class AppProvider extends ChangeNotifier {
   List<SavingsContribution> savingsContributions = [];
   List<NetWorthSnapshot> netWorthSnapshots = [];
 
+  /// Kept here so net worth can include investments on any screen.
+  List<InvestmentPosition> investmentPositions = [];
+  bool _disposed = false;
+
   /// Total row count in `recurring_history` — kept for display purposes
   /// (e.g. the Backup screen's "what's included" list) without needing to
   /// load every history row for every recurring payment into memory.
@@ -325,6 +331,8 @@ class AppProvider extends ChangeNotifier {
     loanPayments = await DBHelper.getAllLoanPayments();
     netWorthSnapshots = await DBHelper.getNetWorthSnapshots();
     recurringHistoryCount = await DBHelper.getRecurringHistoryCount();
+    await _loadPositions();
+    InvestmentRepository.revision.addListener(_onInvestmentsChanged);
     _loaded = true;
     notifyListeners();
 
@@ -341,6 +349,29 @@ class AppProvider extends ChangeNotifier {
     _loadRates();
     await _recordNetWorthSnapshot();
     await updateHomeWidgets();
+  }
+
+  /// A portfolio that cannot be read must not stop the app from opening: the
+  /// Investir tab is where that error is shown.
+  Future<void> _loadPositions() async {
+    try {
+      investmentPositions = await InvestmentRepository().load();
+    } catch (_) {
+      investmentPositions = [];
+    }
+  }
+
+  void _onInvestmentsChanged() {
+    _loadPositions().then((_) {
+      if (!_disposed) notifyListeners();
+    });
+  }
+
+  @override
+  void dispose() {
+    _disposed = true;
+    InvestmentRepository.revision.removeListener(_onInvestmentsChanged);
+    super.dispose();
   }
 
   /// Reloads what another device changed through synchronization. No
@@ -748,6 +779,31 @@ class AppProvider extends ChangeNotifier {
                     absBalance, a.currency, settings.currency, exchangeRates) ??
                 absBalance);
       });
+
+  /// The one rule for net worth, for any list of positions.
+  NetWorthInputs netWorthInputs([List<InvestmentPosition>? positions]) =>
+      NetWorthInputs(
+          accounts: accounts,
+          transactions: transactions,
+          metadata: transactionMetadata,
+          positions: positions ?? investmentPositions,
+          convert: convertToMain,
+          assets: assets,
+          loans: loans,
+          loanPayments: loanPayments,
+          lended: lended,
+          goals: savingsGoals,
+          contributions: savingsContributions);
+
+  /// Net worth today: accounts and cards, bens, investments at the last
+  /// price, money in goals, money lent, minus debts.
+  double get netWorthNow {
+    final data = netWorthInputs();
+    return totalBalanceAll +
+        totalAssetsValue +
+        data.marketValue +
+        data.claimsAt(NetWorthInputs.now);
+  }
 
   double get totalBalanceAll => accounts.fold(0.0, (sum, a) {
         final absBalance = a.balance;

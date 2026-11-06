@@ -15,21 +15,20 @@ class NetWorthScreen extends StatelessWidget {
     final l10n = AppLocalizations.of(context)!;
     final cs = Theme.of(context).colorScheme;
 
-    final snapshots = context
-        .select<AppProvider, List<dynamic>>((app) => app.netWorthSnapshots);
-    final totalAccounts =
-        context.select<AppProvider, double>((app) => app.totalBalanceAll);
-    final totalAssets =
-        context.select<AppProvider, double>((app) => app.totalAssetsValue);
-    final liveNetWorth = totalAccounts + totalAssets;
+    final app = context.watch<AppProvider>();
+    final snapshots = app.netWorthSnapshots;
+    final worth = app.netWorthInputs();
+    final totalAccounts = app.totalBalanceAll;
+    final totalAssets = app.totalAssetsValue;
+    final liveNetWorth = app.netWorthNow;
+    final otherParts = liveNetWorth - totalAccounts - totalAssets;
     final currency =
         context.select<AppProvider, String>((app) => app.settings.currency);
     String fmt(double v) => formatAmount(v, currency);
 
     final spots = <FlSpot>[];
     for (int i = 0; i < snapshots.length; i++) {
-      spots
-          .add(FlSpot(i.toDouble(), (snapshots[i].netWorth as num).toDouble()));
+      spots.add(FlSpot(i.toDouble(), worth.snapshotTotal(snapshots[i])));
     }
     // Append live current net worth point
     spots.add(FlSpot(snapshots.length.toDouble(), liveNetWorth));
@@ -66,8 +65,13 @@ class NetWorthScreen extends StatelessWidget {
                       fontFeatures: NexoTones.figures,
                       fontSize: 28,
                       fontWeight: FontWeight.w600,
-                      color: cs.primary,
+                      color: cs.onSurface,
                     ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Investimentos pela última cotação: ${fmt(otherParts)} com objetivos, dinheiro emprestado e dívidas.',
+                    style: TextStyle(fontSize: 12, color: cs.onSurfaceVariant),
                   ),
                 ],
               ),
@@ -144,7 +148,7 @@ class NetWorthScreen extends StatelessWidget {
                             const SizedBox(width: 6),
                             Expanded(
                               child: Text(
-                                'Contas e patrimônio',
+                                'Contas e cartões',
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
                                 style: TextStyle(

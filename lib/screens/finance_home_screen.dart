@@ -1115,14 +1115,15 @@ class _FinanceHomeScreenState extends State<FinanceHomeScreen>
                   ]),
                 ]));
 
-            // Same figure as the net worth screen: accounts plus assets.
-            final netWorth = app.totalBalanceAll + app.totalAssetsValue;
+            // Same figure as the net worth screen and the connector.
+            final netWorth = app.netWorthNow;
+            final worth = app.netWorthInputs();
             final history = [
               for (final snap in app.netWorthSnapshots.length > 90
                   ? app.netWorthSnapshots
                       .sublist(app.netWorthSnapshots.length - 90)
                   : app.netWorthSnapshots)
-                snap.netWorth,
+                worth.snapshotTotal(snap),
               netWorth,
             ];
             final monthAgo = app.netWorthSnapshots
@@ -1131,8 +1132,9 @@ class _FinanceHomeScreenState extends State<FinanceHomeScreen>
                         ?.isBefore(today.subtract(const Duration(days: 29))) ==
                     true)
                 .lastOrNull;
-            final netChange =
-                monthAgo == null ? null : netWorth - monthAgo.netWorth;
+            final netChange = monthAgo == null
+                ? null
+                : netWorth - worth.snapshotTotal(monthAgo);
             final netWorthCard = _Panel(
                 child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -1158,7 +1160,7 @@ class _FinanceHomeScreenState extends State<FinanceHomeScreen>
                     Text(
                         hidden
                             ? 'Evolução oculta no modo privado.'
-                            : 'Contas e bens somados. A evolução aparece com o uso diário.',
+                            : 'Contas, investimentos, bens e dívidas somados. A evolução aparece com o uso diário.',
                         style: Theme.of(context).textTheme.bodySmall),
                 ]));
 

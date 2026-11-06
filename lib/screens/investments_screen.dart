@@ -557,7 +557,8 @@ class _B3ReviewSheet extends StatelessWidget {
 
 /// Months back: cash plus what was put into investments (at cost), and the
 /// income the investments paid. Bars, not a market curve: this is what the
-/// person holds and put in, month by month.
+/// person holds and put in, month by month. Negative is real: a card bill
+/// bigger than what is in the accounts.
 class _HistoryCard extends StatelessWidget {
   const _HistoryCard({required this.positions});
   final List<InvestmentPosition> positions;
@@ -565,16 +566,12 @@ class _HistoryCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final app = context.watch<AppProvider>();
-    final points = netWorthHistory(
-        accounts: app.accounts,
-        transactions: app.transactions,
-        metadata: app.transactionMetadata,
-        operations: positions.expand((p) => p.operations).toList(),
-        convert: app.convertToMain,
-        defaultCurrency: app.settings.currency,
-        now: DateTime.now(),
-        months: 6);
-    final top = points.fold<double>(0, (m, p) => p.total > m ? p.total : m);
+    final data = app.netWorthInputs(positions);
+    final points = netWorthHistory(data, now: DateTime.now(), months: 6);
+    final top =
+        points.fold<double>(0, (m, p) => p.total.abs() > m ? p.total.abs() : m);
+    final last = points.last;
+    final atMarket = last.total - last.invested + data.marketValue;
     final hidden = app.settings.hideBalance;
     String money(double v) =>
         hidden ? '••••' : formatAmount(v, app.settings.currency);
@@ -591,10 +588,12 @@ class _HistoryCard extends StatelessWidget {
                         style: Theme.of(context).textTheme.labelSmall)),
                 Expanded(
                     child: NexoProgress(
-                        color: Theme.of(context).colorScheme.primary,
+                        color: p.total < 0
+                            ? NexoTones.expense(context)
+                            : Theme.of(context).colorScheme.primary,
                         value: top <= 0
                             ? 0
-                            : (p.total / top).clamp(0, 1).toDouble())),
+                            : (p.total.abs() / top).clamp(0, 1).toDouble())),
                 const SizedBox(width: 8),
                 SizedBox(
                     width: 112,
@@ -608,7 +607,9 @@ class _HistoryCard extends StatelessWidget {
             ),
           const SizedBox(height: 6),
           Text(
-              'Contas mais o que foi aportado, ao custo. Proventos nos últimos 6 meses: ${money(points.fold<double>(0, (s, p) => s + p.income))}.',
+              'Contas e cartões no fim de cada mês, mais investimentos ao custo, objetivos e bens, menos dívidas. Negativo é quando a fatura passa do que há nas contas.'
+              '${points.length < 6 ? ' Seus registros começam em ${DateFormat('MMMM', 'pt_BR').format(points.first.month)}.' : ''}'
+              ' Hoje, pela cotação: ${money(atMarket)}. Proventos nos últimos 6 meses: ${money(points.fold(0.0, (s, p) => s + p.income))}.',
               style: Theme.of(context).textTheme.bodySmall),
         ]));
   }
