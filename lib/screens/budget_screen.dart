@@ -295,6 +295,8 @@ class _BudgetCard extends StatelessWidget {
         : ratio >= .8
             ? NexoTones.warning(context)
             : cs.primary;
+    // The bar carries the brand; a number only takes color to warn.
+    final alert = ratio >= .8 ? color : null;
     final remaining = limit - spent;
     final category = app.categoryById(budget.categoryId);
     final name = category?.name ?? 'Categoria';
@@ -355,7 +357,7 @@ class _BudgetCard extends StatelessWidget {
                             bottom: window.partial
                                 ? 'de ${money(limit)} (proporcional)'
                                 : 'de ${money(limit)}',
-                            color: color),
+                            color: alert),
                       ]),
                       if (rule != null) ...[
                         const SizedBox(height: 8),
@@ -382,7 +384,7 @@ class _BudgetCard extends StatelessWidget {
                         const SizedBox(width: 8),
                         Text('${(ratio * 100).toStringAsFixed(0)}%',
                             style: TextStyle(
-                                fontWeight: FontWeight.w600, color: color)),
+                                fontWeight: FontWeight.w600, color: alert)),
                       ]),
                     ]))));
   }

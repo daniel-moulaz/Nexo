@@ -1597,7 +1597,7 @@ class _SpendableBodyState extends State<_SpendableBody> {
                   style: TextStyle(
                       fontSize: 28,
                       fontWeight: FontWeight.w600,
-                      color: cs.primary,
+                      color: cs.onSurface,
                       fontFeatures: NexoTones.figures)),
               const TextSpan(text: '  por dia'),
             ]))),
