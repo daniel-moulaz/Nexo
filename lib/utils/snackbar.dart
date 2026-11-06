@@ -9,7 +9,7 @@ void showAppSnackbar(BuildContext context, String message,
     SnackBar(
       content: Text(message),
       action: onUndo != null
-          ? SnackBarAction(label: 'Undo', onPressed: onUndo)
+          ? SnackBarAction(label: 'Desfazer', onPressed: onUndo)
           : null,
       behavior: SnackBarBehavior.floating,
       duration: const Duration(seconds: 3),

@@ -163,26 +163,25 @@ class _AssetCard extends StatelessWidget {
           // Actions
           Column(children: [
             IconButton(
+              tooltip: 'Editar',
               icon: const Icon(Icons.edit_outlined, size: 18),
-              padding: EdgeInsets.zero,
-              constraints: const BoxConstraints(),
-              visualDensity: VisualDensity.compact,
               onPressed: () =>
                   AssetsScreen._openSheet(context, existing: asset),
             ),
             IconButton(
+              tooltip: 'Excluir',
               icon:
                   Icon(Icons.delete_outline_rounded, size: 18, color: cs.error),
-              padding: EdgeInsets.zero,
-              constraints: const BoxConstraints(),
-              visualDensity: VisualDensity.compact,
               onPressed: () async {
-                AppHaptics.tap(context, HapticStrength.medium);
+                if (!await showDeleteConfirm(context, asset.name) ||
+                    !context.mounted) {
+                  return;
+                }
                 final undo = await context
                     .read<AppProvider>()
                     .deleteAssetWithUndo(asset.id);
                 if (context.mounted) {
-                  showAppSnackbar(context, '${asset.name} deleted',
+                  showAppSnackbar(context, 'Excluído: ${asset.name}',
                       onUndo: undo);
                 }
               },
@@ -220,7 +219,7 @@ class _AssetSheetState extends State<_AssetSheet> {
     final e = widget.existing;
     if (e != null) {
       _nameCtrl.text = e.name;
-      _valueCtrl.text = e.value.toStringAsFixed(2);
+      _valueCtrl.text = e.value.toStringAsFixed(2).replaceAll('.', ',');
       _notesCtrl.text = e.notes;
       _currency = e.currency;
     }

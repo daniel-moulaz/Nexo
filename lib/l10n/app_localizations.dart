@@ -733,7 +733,7 @@ abstract class AppLocalizations {
   /// No description provided for @lended_person_tapPlusToLog.
   ///
   /// In pt, this message translates to:
-  /// **'Toque em + para registrar dinheiro emprestado ou emprestado'**
+  /// **'Toque em + para registrar o que você emprestou ou pegou emprestado'**
   String get lended_person_tapPlusToLog;
 
   /// No description provided for @lended_person_name.
@@ -751,7 +751,7 @@ abstract class AppLocalizations {
   /// No description provided for @lended_person_lent.
   ///
   /// In pt, this message translates to:
-  /// **'Quaresma'**
+  /// **'Emprestado'**
   String get lended_person_lent;
 
   /// No description provided for @lended_person_borrowed.
@@ -889,7 +889,7 @@ abstract class AppLocalizations {
   /// No description provided for @transactions_lent.
   ///
   /// In pt, this message translates to:
-  /// **'Quaresma'**
+  /// **'Emprestado'**
   String get transactions_lent;
 
   /// No description provided for @transactions_borrowed.
@@ -1135,7 +1135,7 @@ abstract class AppLocalizations {
   /// No description provided for @backup_lentPeople.
   ///
   /// In pt, this message translates to:
-  /// **'Quaresma/Empréstimo — Pessoas'**
+  /// **'Dinheiro emprestado — Pessoas'**
   String get backup_lentPeople;
 
   /// No description provided for @backup_lentRecords.
@@ -1147,7 +1147,7 @@ abstract class AppLocalizations {
   /// No description provided for @backup_assets.
   ///
   /// In pt, this message translates to:
-  /// **'Ativos'**
+  /// **'Bens'**
   String get backup_assets;
 
   /// No description provided for @backup_categories.
@@ -1615,7 +1615,7 @@ abstract class AppLocalizations {
   /// No description provided for @more_assets.
   ///
   /// In pt, this message translates to:
-  /// **'Ativos'**
+  /// **'Bens'**
   String get more_assets;
 
   /// No description provided for @more_assetsSub.
@@ -1741,19 +1741,19 @@ abstract class AppLocalizations {
   /// No description provided for @wishlist_priorityLow.
   ///
   /// In pt, this message translates to:
-  /// **'Baixo'**
+  /// **'Baixa'**
   String get wishlist_priorityLow;
 
   /// No description provided for @wishlist_priorityMedium.
   ///
   /// In pt, this message translates to:
-  /// **'Médio'**
+  /// **'Média'**
   String get wishlist_priorityMedium;
 
   /// No description provided for @wishlist_priorityHigh.
   ///
   /// In pt, this message translates to:
-  /// **'Alto'**
+  /// **'Alta'**
   String get wishlist_priorityHigh;
 
   /// No description provided for @wishlist_notesOptional.
@@ -1867,7 +1867,7 @@ abstract class AppLocalizations {
   /// No description provided for @assets_totalAssets.
   ///
   /// In pt, this message translates to:
-  /// **'Ativo total'**
+  /// **'Total em bens'**
   String get assets_totalAssets;
 
   /// No description provided for @assets_items.
@@ -1879,31 +1879,31 @@ abstract class AppLocalizations {
   /// No description provided for @assets_noAssetsYet.
   ///
   /// In pt, this message translates to:
-  /// **'Ainda não há ativos'**
+  /// **'Ainda não há bens'**
   String get assets_noAssetsYet;
 
   /// No description provided for @assets_noAssetsYetSub.
   ///
   /// In pt, this message translates to:
-  /// **'Toque em + para adicionar um produto ou ativo'**
+  /// **'Toque em + para adicionar um bem'**
   String get assets_noAssetsYetSub;
 
   /// No description provided for @assets_editAsset.
   ///
   /// In pt, this message translates to:
-  /// **'Editar recurso'**
+  /// **'Editar bem'**
   String get assets_editAsset;
 
   /// No description provided for @assets_addAsset.
   ///
   /// In pt, this message translates to:
-  /// **'Adicionar ativo'**
+  /// **'Adicionar bem'**
   String get assets_addAsset;
 
   /// No description provided for @assets_productAssetName.
   ///
   /// In pt, this message translates to:
-  /// **'Nome do produto/ativo'**
+  /// **'Nome do bem'**
   String get assets_productAssetName;
 
   /// No description provided for @assets_value.
@@ -2149,7 +2149,7 @@ abstract class AppLocalizations {
   /// No description provided for @assets_assets.
   ///
   /// In pt, this message translates to:
-  /// **'Ativos'**
+  /// **'Bens'**
   String get assets_assets;
 
   /// No description provided for @backup_restoreBackup.
@@ -2467,7 +2467,7 @@ abstract class AppLocalizations {
   /// No description provided for @lended_person_active.
   ///
   /// In pt, this message translates to:
-  /// **'Ativo'**
+  /// **'Em aberto'**
   String get lended_person_active;
 
   /// No description provided for @lended_person_settled_.

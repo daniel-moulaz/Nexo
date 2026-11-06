@@ -61,12 +61,15 @@ class LendedPersonScreen extends StatelessWidget {
             icon: const Icon(Icons.more_vert),
             onSelected: (v) async {
               if (v == 'delete') {
-                AppHaptics.tap(context, HapticStrength.medium);
+                if (!await showDeleteConfirm(context, current.name) ||
+                    !context.mounted) {
+                  return;
+                }
                 final undo = await context
                     .read<AppProvider>()
                     .deleteLendedPersonWithUndo(current.id);
                 if (context.mounted) {
-                  showAppSnackbar(context, '${current.name} deleted',
+                  showAppSnackbar(context, 'Excluído: ${current.name}',
                       onUndo: undo);
                   Navigator.pop(context);
                 }

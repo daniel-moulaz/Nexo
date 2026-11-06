@@ -130,7 +130,8 @@ class SavingsGoalDetailScreen extends StatelessWidget {
                         currentGoal.currentAmount < currentGoal.targetAmount)
                       Text(
                           'Recomendado por mês: ${formatAmount((currentGoal.targetAmount - currentGoal.currentAmount) / ((currentGoal.targetDate!.difference(DateTime.now()).inDays / 30).ceil().clamp(1, 1200)), currentGoal.currency)}'),
-                    Text('${(progress * 100).toStringAsFixed(1)}%',
+                    Text(
+                        '${(progress * 100).toStringAsFixed(1).replaceAll('.', ',')}%',
                         style: TextStyle(
                             fontSize: 14,
                             fontWeight: FontWeight.w600,

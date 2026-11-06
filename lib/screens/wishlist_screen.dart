@@ -107,7 +107,12 @@ class _WishCard extends StatelessWidget {
               decoration: BoxDecoration(
                   color: pColor.withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(8)),
-              child: Text(item.priority.toUpperCase(),
+              child: Text(
+                  switch (item.priority) {
+                    'high' => 'Alta',
+                    'low' => 'Baixa',
+                    _ => 'Média'
+                  },
                   style: TextStyle(
                       fontSize: 12,
                       fontWeight: FontWeight.w500,
@@ -129,19 +134,24 @@ class _WishCard extends StatelessWidget {
         ]),
         trailing: Row(mainAxisSize: MainAxisSize.min, children: [
           IconButton(
+              tooltip: 'Editar',
               icon: const Icon(Icons.edit_outlined, size: 18),
               onPressed: () =>
                   WishlistScreen._openSheet(context, existing: item)),
           IconButton(
+              tooltip: 'Excluir',
               icon:
                   Icon(Icons.delete_outline_rounded, size: 18, color: cs.error),
               onPressed: () async {
-                AppHaptics.tap(context, HapticStrength.medium);
+                if (!await showDeleteConfirm(context, item.name) ||
+                    !context.mounted) {
+                  return;
+                }
                 final undo = await context
                     .read<AppProvider>()
                     .deleteWishlistWithUndo(item.id);
                 if (context.mounted) {
-                  showAppSnackbar(context, '${item.name} deleted',
+                  showAppSnackbar(context, 'Excluído: ${item.name}',
                       onUndo: undo);
                 }
               }),

@@ -53,7 +53,7 @@ class _CardInvoiceScreenState extends State<CardInvoiceScreen> {
     );
     final dueCtrl = TextEditingController(text: card.dueDay?.toString() ?? '');
     final limitCtrl = TextEditingController(
-      text: card.creditLimit?.toStringAsFixed(2) ?? '',
+      text: card.creditLimit?.toStringAsFixed(2).replaceAll('.', ',') ?? '',
     );
 
     final save = await showDialog<bool>(

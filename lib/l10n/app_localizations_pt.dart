@@ -364,7 +364,7 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get lended_person_tapPlusToLog =>
-      'Toque em + para registrar dinheiro emprestado ou emprestado';
+      'Toque em + para registrar o que você emprestou ou pegou emprestado';
 
   @override
   String get lended_person_name => 'Nome';
@@ -373,7 +373,7 @@ class AppLocalizationsPt extends AppLocalizations {
   String get lended_person_notesOptional => 'Notas (opcional)';
 
   @override
-  String get lended_person_lent => 'Quaresma';
+  String get lended_person_lent => 'Emprestado';
 
   @override
   String get lended_person_borrowed => 'Emprestado';
@@ -455,7 +455,7 @@ class AppLocalizationsPt extends AppLocalizations {
   String get transactions_expenses => 'Despesas';
 
   @override
-  String get transactions_lent => 'Quaresma';
+  String get transactions_lent => 'Emprestado';
 
   @override
   String get transactions_borrowed => 'Emprestado';
@@ -589,13 +589,13 @@ class AppLocalizationsPt extends AppLocalizations {
   String get backup_wishlist => 'Lista de desejos';
 
   @override
-  String get backup_lentPeople => 'Quaresma/Empréstimo — Pessoas';
+  String get backup_lentPeople => 'Dinheiro emprestado — Pessoas';
 
   @override
   String get backup_lentRecords => 'Emprestado/Empréstimo — Registros';
 
   @override
-  String get backup_assets => 'Ativos';
+  String get backup_assets => 'Bens';
 
   @override
   String get backup_categories => 'Categorias';
@@ -883,7 +883,7 @@ class AppLocalizationsPt extends AppLocalizations {
   }
 
   @override
-  String get more_assets => 'Ativos';
+  String get more_assets => 'Bens';
 
   @override
   String more_assetsSub(num count) {
@@ -965,13 +965,13 @@ class AppLocalizationsPt extends AppLocalizations {
   String get wishlist_targetPrice => 'Preço Alvo';
 
   @override
-  String get wishlist_priorityLow => 'Baixo';
+  String get wishlist_priorityLow => 'Baixa';
 
   @override
-  String get wishlist_priorityMedium => 'Médio';
+  String get wishlist_priorityMedium => 'Média';
 
   @override
-  String get wishlist_priorityHigh => 'Alto';
+  String get wishlist_priorityHigh => 'Alta';
 
   @override
   String get wishlist_notesOptional => 'Notas (opcional)';
@@ -1037,26 +1037,25 @@ class AppLocalizationsPt extends AppLocalizations {
   String get lended_saveChanges => 'Salvar alterações';
 
   @override
-  String get assets_totalAssets => 'Ativo total';
+  String get assets_totalAssets => 'Total em bens';
 
   @override
   String get assets_items => 'Itens';
 
   @override
-  String get assets_noAssetsYet => 'Ainda não há ativos';
+  String get assets_noAssetsYet => 'Ainda não há bens';
 
   @override
-  String get assets_noAssetsYetSub =>
-      'Toque em + para adicionar um produto ou ativo';
+  String get assets_noAssetsYetSub => 'Toque em + para adicionar um bem';
 
   @override
-  String get assets_editAsset => 'Editar recurso';
+  String get assets_editAsset => 'Editar bem';
 
   @override
-  String get assets_addAsset => 'Adicionar ativo';
+  String get assets_addAsset => 'Adicionar bem';
 
   @override
-  String get assets_productAssetName => 'Nome do produto/ativo';
+  String get assets_productAssetName => 'Nome do bem';
 
   @override
   String get assets_value => 'Valor';
@@ -1207,7 +1206,7 @@ class AppLocalizationsPt extends AppLocalizations {
   String get add_transaction_category => 'Categoria';
 
   @override
-  String get assets_assets => 'Ativos';
+  String get assets_assets => 'Bens';
 
   @override
   String get backup_restoreBackup => 'Restaurar Backup?';
@@ -1371,7 +1370,7 @@ class AppLocalizationsPt extends AppLocalizations {
   String get lended_person_remindMeAt => 'Lembrar-me às';
 
   @override
-  String get lended_person_active => 'Ativo';
+  String get lended_person_active => 'Em aberto';
 
   @override
   String get lended_person_settled_ => 'Quitado';

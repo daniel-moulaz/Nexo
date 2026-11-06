@@ -108,18 +108,25 @@ class _CatTile extends StatelessWidget {
                 fontSize: 12, color: cs.onSurface.withValues(alpha: 0.5))),
         trailing: Row(mainAxisSize: MainAxisSize.min, children: [
           IconButton(
+              tooltip: 'Editar',
               icon: const Icon(Icons.edit_outlined, size: 18),
               onPressed: () =>
                   CategoriesScreen._openSheet(context, existing: cat)),
           IconButton(
+              tooltip: 'Excluir',
               icon:
                   Icon(Icons.delete_outline_rounded, size: 18, color: cs.error),
               onPressed: () async {
+                if (!await showDeleteConfirm(context, cat.name) ||
+                    !context.mounted) {
+                  return;
+                }
                 final undo = await context
                     .read<AppProvider>()
                     .deleteCategoryWithUndo(cat.id);
                 if (context.mounted) {
-                  showAppSnackbar(context, '${cat.name} deleted', onUndo: undo);
+                  showAppSnackbar(context, 'Excluído: ${cat.name}',
+                      onUndo: undo);
                 }
               }),
         ]),
