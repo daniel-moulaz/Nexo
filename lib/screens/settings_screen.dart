@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../providers/app_provider.dart';
 import '../theme/app_theme.dart';
+import '../widgets/desktop_window_settings.dart';
 import '../widgets/shared_widgets.dart';
 import '../l10n/app_localizations.dart';
 import '../utils/haptics.dart';
@@ -473,6 +474,11 @@ class SettingsScreen extends StatelessWidget {
                       },
                     ),
                   ])),
+
+              if (PlatformCapabilities.windows) ...[
+                const SectionHeader(title: 'Windows'),
+                const DesktopWindowSettings(),
+              ],
 
               // ── Profile ───────────────────────────────────────────────────
               SectionHeader(title: l10n.settings_profile),

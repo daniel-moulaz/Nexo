@@ -9,6 +9,9 @@ import 'platform_capabilities.dart';
 abstract final class DesktopProfile {
   static bool isTest = false;
 
+  /// QA only: a test profile closes normally unless this is given.
+  static bool testTray = false;
+
   /// Empty for `--test-profile`; `pc2` for `--test-profile=pc2`. Each named
   /// profile is a separate synthetic device (data, preferences, PIN, session).
   static String testName = '';
@@ -22,6 +25,7 @@ abstract final class DesktopProfile {
       if (PlatformCapabilities.windows) {
         for (final argument in arguments) {
           if (argument == '--test-profile') isTest = true;
+          if (argument == '--qa-tray') testTray = true;
           if (argument.startsWith('--test-profile=')) {
             final name = argument.substring('--test-profile='.length);
             if (!RegExp(r'^[a-z0-9]{1,16}$').hasMatch(name)) {

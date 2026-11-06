@@ -53,14 +53,24 @@ int APIENTRY wWinMain(_In_ HINSTANCE instance, _In_opt_ HINSTANCE prev,
   if (!instance_mutex) return EXIT_FAILURE;
   if (::GetLastError() == ERROR_ALREADY_EXISTS) {
     ::CloseHandle(instance_mutex);
-    ::MessageBoxW(nullptr, L"O Nexo ja esta aberto nesta sessao do Windows.",
-        L"Nexo", MB_OK | MB_ICONINFORMATION);
+    // It may be in the tray: bring it back instead of warning about it.
+    const std::wstring running_title = test_profile
+        ? L"Nexo (teste local" + (test_name.empty() ? std::wstring() : L" " + test_name) + L")"
+        : std::wstring(L"Nexo");
+    HWND running = ::FindWindowW(L"FLUTTER_RUNNER_WIN32_WINDOW", running_title.c_str());
+    if (running) {
+      ::AllowSetForegroundWindow(ASFW_ANY);
+      ::PostMessageW(running, WM_APP + 2, 0, 0);
+    }
     return EXIT_SUCCESS;
   }
 
   project.set_dart_entrypoint_arguments(std::move(command_line_arguments));
 
   FlutterWindow window(project);
+  for (const auto& argument : GetCommandLineArguments()) {
+    if (argument == "--background") window.SetStartHidden(true);
+  }
   Win32Window::Point origin(10, 10);
   Win32Window::Size size(1280, 720);
   const std::wstring title = test_profile

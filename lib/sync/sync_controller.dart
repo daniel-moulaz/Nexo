@@ -144,7 +144,8 @@ class SyncController extends ChangeNotifier with WidgetsBindingObserver {
       _periodic = Timer.periodic(interval, (_) => syncNow());
       syncNow();
     } else if (state == AppLifecycleState.paused) {
-      _periodic?.cancel();
+      // In the Windows tray the app goes on working, window or not.
+      if (!PlatformCapabilities.windows) _periodic?.cancel();
       // Send what is pending before the system suspends the app.
       syncNow();
     }

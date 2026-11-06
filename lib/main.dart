@@ -24,6 +24,7 @@ import 'services/nexo_security.dart';
 import 'services/financial_reminders.dart';
 import 'widgets/security_gate.dart';
 import 'services/desktop_profile.dart';
+import 'services/desktop_window.dart';
 import 'screens/month_review_screen.dart';
 import 'sync/supabase_auth.dart';
 import 'sync/sync_config.dart';
@@ -74,6 +75,7 @@ Future<void> startNexo() async {
   final provider = AppProvider();
   await NexoSecurity.instance.load();
   await provider.load();
+  await DesktopWindow.start();
   await FinanceBootstrapService.apply(provider);
   final syncConfig = SyncConfig.current;
   SupabaseAuth.app = syncConfig == null ? null : SupabaseAuth(syncConfig);
