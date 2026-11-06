@@ -2,26 +2,9 @@ import 'dart:math' as math;
 
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
-import '../theme/nexo_type.dart';
+import '../theme/nexo_tokens.dart';
 
-/// Semantic money colors that read well on dark and light surfaces.
-abstract final class NexoTones {
-  static Color income(BuildContext context) =>
-      Theme.of(context).brightness == Brightness.dark
-          ? const Color(0xFF34D399)
-          : const Color(0xFF047857);
-  static Color expense(BuildContext context) =>
-      Theme.of(context).brightness == Brightness.dark
-          ? const Color(0xFFFB7185)
-          : const Color(0xFFBE123C);
-  static Color warning(BuildContext context) =>
-      Theme.of(context).brightness == Brightness.dark
-          ? const Color(0xFFFBBF24)
-          : const Color(0xFFB45309);
-
-  /// Numbers line up in columns and read as figures, not prose.
-  static const figures = [FontFeature.tabularFigures()];
-}
+export '../theme/nexo_tokens.dart';
 
 /// Rounded surface used by every home section.
 class NexoCard extends StatelessWidget {
@@ -39,12 +22,14 @@ class NexoCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    // Flat: a hairline border does the separating, not a tinted fill.
+    // On the dark theme the step between surfaces does the separating; on
+    // white over paper a hairline is still needed.
     final shape = RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(20),
-        side: gradient == null
-            ? BorderSide(color: cs.outlineVariant.withValues(alpha: .6))
-            : BorderSide.none);
+        borderRadius: BorderRadius.circular(NexoRadius.card),
+        side:
+            gradient == null && Theme.of(context).brightness == Brightness.light
+                ? BorderSide(color: cs.outlineVariant.withValues(alpha: .7))
+                : BorderSide.none);
     final content = Padding(padding: padding, child: child);
     // A Material surface keeps ink splashes of lists and buttons visible.
     if (gradient == null) {
@@ -83,9 +68,8 @@ class NexoSectionTitle extends StatelessWidget {
       Expanded(
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Text(title,
-              style: theme.textTheme.titleMedium?.copyWith(
-                  fontWeight:
-                      NexoType.weight(FontWeight.w800, FontWeight.w600))),
+              style: theme.textTheme.titleMedium
+                  ?.copyWith(fontWeight: FontWeight.w600)),
           if (subtitle != null)
             Text(subtitle!,
                 style: theme.textTheme.bodySmall
@@ -146,7 +130,7 @@ class NexoStatPill extends StatelessWidget {
                             maxLines: 2,
                             overflow: TextOverflow.ellipsis,
                             style: TextStyle(
-                                fontSize: NexoType.size(11.5, 12),
+                                fontSize: 12,
                                 height: 1.15,
                                 color: fg.withValues(alpha: .8))),
                       ),
@@ -158,8 +142,7 @@ class NexoStatPill extends StatelessWidget {
                       child: Text(value,
                           maxLines: 1,
                           style: TextStyle(
-                              fontWeight: NexoType.weight(
-                                  FontWeight.w800, FontWeight.w600),
+                              fontWeight: FontWeight.w600,
                               fontSize: 15,
                               color: valueColor ?? fg,
                               fontFeatures: NexoTones.figures)),
@@ -201,7 +184,7 @@ class NexoQuickAction extends StatelessWidget {
               height: 56,
               decoration: BoxDecoration(
                 color: primary ? cs.primary : cs.surfaceContainerHigh,
-                shape: BoxShape.circle,
+                borderRadius: BorderRadius.circular(NexoRadius.card),
               ),
               child: Icon(icon,
                   color: primary ? cs.onPrimary : cs.onSurface, size: 24),
@@ -211,10 +194,7 @@ class NexoQuickAction extends StatelessWidget {
               child: Text(label,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                      fontSize: 12,
-                      fontWeight:
-                          NexoType.weight(FontWeight.w600, FontWeight.w500))),
+                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500)),
             ),
           ]),
         ),
@@ -268,14 +248,12 @@ class NexoSavingsGauge extends StatelessWidget {
                   Text(percent,
                       style: TextStyle(
                           fontSize: size * .22,
-                          fontWeight:
-                              NexoType.weight(FontWeight.w900, FontWeight.w600),
+                          fontWeight: FontWeight.w600,
                           fontFeatures: NexoTones.figures)),
                   Text(label,
                       textAlign: TextAlign.center,
-                      style: TextStyle(
-                          fontSize: NexoType.size(11.5, 12),
-                          color: cs.onSurfaceVariant)),
+                      style:
+                          TextStyle(fontSize: 12, color: cs.onSurfaceVariant)),
                 ]),
               ),
             ),
@@ -472,8 +450,7 @@ class NexoCategoryDonut extends StatelessWidget {
               padding: const EdgeInsets.symmetric(horizontal: 22),
               child: Text(money(total),
                   style: TextStyle(
-                      fontWeight:
-                          NexoType.weight(FontWeight.w900, FontWeight.w600),
+                      fontWeight: FontWeight.w600,
                       fontFeatures: NexoTones.figures)),
             ),
           ),
@@ -510,8 +487,7 @@ class NexoCategoryDonut extends StatelessWidget {
                   alignment: Alignment.centerRight,
                   child: Text(money(s.value),
                       style: TextStyle(
-                          fontWeight:
-                              NexoType.weight(FontWeight.w700, FontWeight.w600),
+                          fontWeight: FontWeight.w600,
                           fontFeatures: NexoTones.figures)),
                 ),
               ),
@@ -594,25 +570,20 @@ class _NexoInsightCarouselState extends State<NexoInsightCarousel> {
                     Text(i.title,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                            fontWeight: NexoType.weight(
-                                FontWeight.w800, FontWeight.w600))),
+                        style: TextStyle(fontWeight: FontWeight.w600)),
                     const SizedBox(height: 2),
                     Text(i.subtitle,
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                         style: TextStyle(
-                            fontSize: NexoType.size(12.5, 13),
-                            color: cs.onSurfaceVariant)),
+                            fontSize: 13, color: cs.onSurfaceVariant)),
                   ]),
             ),
             if (i.action != null) ...[
               const SizedBox(width: 8),
               Text(i.action!,
-                  style: TextStyle(
-                      color: i.color,
-                      fontWeight:
-                          NexoType.weight(FontWeight.w800, FontWeight.w600))),
+                  style:
+                      TextStyle(color: i.color, fontWeight: FontWeight.w600)),
             ],
           ]),
         ),
@@ -694,9 +665,7 @@ class NexoMonthPill extends StatelessWidget {
             visualDensity: VisualDensity.compact,
             onPressed: onPrevious,
             icon: const Icon(Icons.chevron_left, size: 20)),
-        Text(label,
-            style: TextStyle(
-                fontWeight: NexoType.weight(FontWeight.w800, FontWeight.w600))),
+        Text(label, style: TextStyle(fontWeight: FontWeight.w600)),
         IconButton(
             tooltip: 'Próximo mês',
             visualDensity: VisualDensity.compact,
@@ -710,7 +679,7 @@ class NexoMonthPill extends StatelessWidget {
 /// Thin rounded progress bar that turns warm as it fills.
 class NexoProgress extends StatelessWidget {
   const NexoProgress(
-      {super.key, required this.value, this.height = 8, this.color});
+      {super.key, required this.value, this.height = 10, this.color});
   final double value;
   final double height;
 
@@ -727,13 +696,25 @@ class NexoProgress extends StatelessWidget {
             : value >= .8
                 ? NexoTones.warning(context)
                 : cs.primary);
+    // The same round stroke as the mark.
     return ClipRRect(
       borderRadius: BorderRadius.circular(height),
       child: SizedBox(
         height: height,
         child: Stack(children: [
           Container(color: cs.surfaceContainerHighest),
-          FractionallySizedBox(widthFactor: v, child: Container(color: color)),
+          TweenAnimationBuilder<double>(
+              tween: Tween(begin: 0, end: v),
+              duration: NexoMotion.of(context),
+              curve: NexoMotion.curve,
+              builder: (context, width, _) => FractionallySizedBox(
+                  alignment: Alignment.centerLeft,
+                  widthFactor: width,
+                  heightFactor: 1,
+                  child: DecoratedBox(
+                      decoration: BoxDecoration(
+                          color: color,
+                          borderRadius: BorderRadius.circular(height))))),
         ]),
       ),
     );
@@ -826,9 +807,8 @@ class NexoSpendingCalendar extends StatelessWidget {
               child: Center(
                   child: Text(n,
                       style: TextStyle(
-                          fontSize: NexoType.size(11, 12),
-                          fontWeight:
-                              NexoType.weight(FontWeight.w700, FontWeight.w500),
+                          fontSize: 12,
+                          fontWeight: FontWeight.w500,
                           color: cs.onSurfaceVariant)))),
       ]),
       const SizedBox(height: 6),
@@ -867,10 +847,8 @@ class NexoSpendingCalendar extends StatelessWidget {
                                     style: TextStyle(
                                         fontSize: 12,
                                         fontWeight: day == today
-                                            ? NexoType.weight(FontWeight.w900,
-                                                FontWeight.w500)
-                                            : NexoType.weight(FontWeight.w600,
-                                                FontWeight.w500))),
+                                            ? FontWeight.w500
+                                            : FontWeight.w500)),
                                 if (value > 0)
                                   FittedBox(
                                     fit: BoxFit.scaleDown,
@@ -879,7 +857,7 @@ class NexoSpendingCalendar extends StatelessWidget {
                                           horizontal: 2),
                                       child: Text(compact(value),
                                           style: TextStyle(
-                                              fontSize: NexoType.size(9.5, 12),
+                                              fontSize: 12,
                                               fontFeatures: NexoTones.figures)),
                                     ),
                                   ),

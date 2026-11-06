@@ -14,10 +14,10 @@ export interface SettingDef {
   default: unknown;
 }
 
-const seeds = ["violet", "blue", "green", "rose", "amber", "teal", "orange", "indigo", "cyan", "pink", "lime",
+const seeds = ["nexo", "violet", "blue", "green", "rose", "amber", "teal", "orange", "indigo", "cyan", "pink", "lime",
   "deep_purple", "crimson", "midnight", "forest", "mint", "olive", "sage", "sky", "navy", "cobalt", "ocean", "coral",
   "gold", "slate", "magenta", "turquoise", "brown", "lavender"];
-const fonts = ["default", "plus_jakarta_sans", "dm_sans", "inter", "nunito_sans", "space_grotesk", "outfit", "sora",
+const fonts = ["default", "plus_jakarta_sans", "dm_sans", "nunito_sans", "space_grotesk", "outfit", "sora",
   "poppins", "nunito"];
 export const homeCards = ["daily", "month", "week", "categories", "netWorth", "future", "budget", "cards"];
 
@@ -34,7 +34,7 @@ export const settingDefs: SettingDef[] = [
   { key: "dailyReminderTime", label: "Hora do lembrete diário (HH:mm)", kind: "time", default: "22:00" },
   { key: "hideBalance", label: "Esconder valores na tela", kind: "bool", default: false },
   { key: "themeMode", label: "Tema claro, escuro ou do sistema", kind: "enum", values: ["system", "light", "dark"], default: "dark" },
-  { key: "themeSeed", label: "Cor do tema", kind: "enum", values: seeds, default: "violet" },
+  { key: "themeSeed", label: "Cor do tema", kind: "enum", values: seeds, default: "nexo" },
   { key: "appFont", label: "Fonte do app", kind: "enum", values: fonts, default: "default" },
   { key: "amoledSurfaces", label: "Fundo preto puro no tema escuro", kind: "bool", default: false },
   { key: "dynamicColorEnabled", label: "Cores do papel de parede (Android)", kind: "bool", default: false },

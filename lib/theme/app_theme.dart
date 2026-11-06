@@ -3,10 +3,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
-import '../services/platform_capabilities.dart';
-import 'nexo_type.dart';
+import 'nexo_tokens.dart';
 
 const Map<String, Color> kSeedColors = {
+  'nexo': NexoBrand.tealDeep,
   'violet': Color(0xFF6750A4),
   'blue': Color(0xFF0061A4),
   'green': Color(0xFF386A1F),
@@ -39,6 +39,7 @@ const Map<String, Color> kSeedColors = {
 };
 
 const Map<String, String> kSeedLabels = {
+  'nexo': 'Nexo',
   'violet': 'Violeta',
   'blue': 'Azul',
   'green': 'Verde',
@@ -70,13 +71,12 @@ const Map<String, String> kSeedLabels = {
   'lavender': 'Lavanda',
 };
 
-Color seedColor(String key) => kSeedColors[key] ?? const Color(0xFF6750A4);
+Color seedColor(String key) => kSeedColors[key] ?? NexoBrand.tealDeep;
 
 const Map<String, String> kFonts = {
-  'default': 'Padrão do sistema',
+  'default': 'Inter (padrão do Nexo)',
   'plus_jakarta_sans': 'Plus Jakarta Sans',
   'dm_sans': 'DM Sans',
-  'inter': 'Inter',
   'nunito_sans': 'Nunito Sans',
   'space_grotesk': 'Space Grotesk',
   'outfit': 'Outfit',
@@ -91,7 +91,7 @@ const Map<String, String> kFonts = {
 const kBundledFont = 'Inter';
 
 TextTheme _applyFont(String font, TextTheme base) {
-  if (PlatformCapabilities.windows || font == 'inter') {
+  if (font == 'default' || font == 'inter') {
     return base.apply(fontFamily: kBundledFont);
   }
   switch (font) {
@@ -112,7 +112,7 @@ TextTheme _applyFont(String font, TextTheme base) {
     case 'nunito':
       return GoogleFonts.nunitoTextTheme(base);
     default:
-      return base;
+      return base.apply(fontFamily: kBundledFont);
   }
 }
 
@@ -135,6 +135,9 @@ ThemeData buildTheme({
   ColorScheme? dynamicScheme,
 }) {
   final ColorScheme base;
+  if (dynamicScheme == null && seed == 'nexo') {
+    return _base(_nexoScheme(dark, amoled), appFont);
+  }
   if (dynamicScheme != null) {
     base = (dark && amoled)
         ? dynamicScheme.copyWith(
@@ -162,6 +165,86 @@ ThemeData buildTheme({
         : _layered(seeded, seedColor, dark);
   }
   return _base(base, appFont);
+}
+
+/// The ink and paper of the mark as surfaces in layers: depth comes from the
+/// steps between them, not from shadows or outlines.
+ColorScheme _nexoScheme(bool dark, bool amoled) {
+  if (dark) {
+    return ColorScheme(
+      brightness: Brightness.dark,
+      primary: NexoBrand.teal,
+      onPrimary: const Color(0xFF04221D),
+      primaryContainer: const Color(0xFF123B39),
+      onPrimaryContainer: const Color(0xFFBFF5EA),
+      secondary: NexoBrand.onInkMuted,
+      onSecondary: NexoBrand.ink,
+      secondaryContainer: NexoBrand.inkHigh,
+      onSecondaryContainer: const Color(0xFFE2E8F0),
+      tertiary: const Color(0xFF8AB4F8),
+      onTertiary: NexoBrand.ink,
+      tertiaryContainer: const Color(0xFF1E3350),
+      onTertiaryContainer: const Color(0xFFD6E4FB),
+      error: NexoTones.expenseOnInk,
+      onError: const Color(0xFF3B0A14),
+      errorContainer: const Color(0xFF4A1522),
+      onErrorContainer: const Color(0xFFFFD9DF),
+      surface: amoled ? Colors.black : NexoBrand.ink,
+      onSurface: const Color(0xFFE8EDF3),
+      onSurfaceVariant: NexoBrand.onInkMuted,
+      surfaceContainerLowest: amoled ? Colors.black : const Color(0xFF0A0F18),
+      surfaceContainerLow:
+          amoled ? const Color(0xFF0D1119) : const Color(0xFF141C2A),
+      surfaceContainer:
+          amoled ? const Color(0xFF141A25) : const Color(0xFF1A2433),
+      surfaceContainerHigh:
+          amoled ? const Color(0xFF1B2331) : const Color(0xFF212D40),
+      surfaceContainerHighest: const Color(0xFF2A384D),
+      outline: const Color(0xFF64748B),
+      outlineVariant: NexoBrand.inkLine,
+      inverseSurface: const Color(0xFFE8EDF3),
+      onInverseSurface: NexoBrand.ink,
+      inversePrimary: NexoBrand.tealDeep,
+      shadow: Colors.black,
+      scrim: Colors.black,
+      surfaceTint: Colors.transparent,
+    );
+  }
+  return const ColorScheme(
+    brightness: Brightness.light,
+    primary: NexoBrand.tealDeep,
+    onPrimary: Colors.white,
+    primaryContainer: Color(0xFFCCF3EC),
+    onPrimaryContainer: Color(0xFF053B36),
+    secondary: Color(0xFF475569),
+    onSecondary: Colors.white,
+    secondaryContainer: Color(0xFFE2E8F0),
+    onSecondaryContainer: Color(0xFF1E293B),
+    tertiary: Color(0xFF1D4E89),
+    onTertiary: Colors.white,
+    tertiaryContainer: Color(0xFFD6E4FB),
+    onTertiaryContainer: Color(0xFF0F2A4A),
+    error: Color(0xFFBE123C),
+    onError: Colors.white,
+    errorContainer: Color(0xFFFFE1E6),
+    onErrorContainer: Color(0xFF5F0A20),
+    surface: Color(0xFFF2F4F7),
+    onSurface: Color(0xFF101826),
+    onSurfaceVariant: Color(0xFF4B5768),
+    surfaceContainerLowest: Colors.white,
+    surfaceContainerLow: Colors.white,
+    surfaceContainer: Color(0xFFE9EDF2),
+    surfaceContainerHigh: Color(0xFFE2E7EE),
+    surfaceContainerHighest: Color(0xFFD8DFE8),
+    outline: Color(0xFF7C8899),
+    outlineVariant: Color(0xFFD5DCE5),
+    inverseSurface: NexoBrand.ink,
+    onInverseSurface: NexoBrand.onInk,
+    inversePrimary: NexoBrand.teal,
+    shadow: Colors.black,
+    scrim: Colors.black,
+    surfaceTint: Colors.transparent,
+  );
 }
 
 /// Calm, layered surfaces (ink-blue at night, paper by day) tinted with a
@@ -228,28 +311,15 @@ TextTheme _typeRamp(TextTheme t) {
   );
 }
 
-/// The phone's look: headlines carry money, heavy and with tabular figures.
-TextTheme _phoneType(TextTheme t) {
-  const figures = [FontFeature.tabularFigures()];
-  return t.copyWith(
-    headlineSmall: t.headlineSmall
-        ?.copyWith(fontWeight: FontWeight.w800, fontFeatures: figures),
-    headlineMedium: t.headlineMedium
-        ?.copyWith(fontWeight: FontWeight.w800, fontFeatures: figures),
-    headlineLarge: t.headlineLarge
-        ?.copyWith(fontWeight: FontWeight.w900, fontFeatures: figures),
-  );
-}
-
 ThemeData _base(ColorScheme cs, String appFont) {
   final baseTextTheme = ThemeData(brightness: cs.brightness).textTheme;
-  final applied = _applyFont(appFont, baseTextTheme);
-  final phone = NexoType.phone;
-  final fontTextTheme = phone ? applied : _typeRamp(applied);
+  final fontTextTheme = _typeRamp(_applyFont(appFont, baseTextTheme));
+  final darkTheme = cs.brightness == Brightness.dark;
   return ThemeData(
     colorScheme: cs,
     useMaterial3: true,
-    textTheme: phone ? _phoneType(applied) : fontTextTheme,
+    textTheme: fontTextTheme,
+    splashFactory: InkSparkle.constantTurbulenceSeedSplashFactory,
     pageTransitionsTheme: const PageTransitionsTheme(builders: {
       TargetPlatform.android: CupertinoPageTransitionsBuilder(),
       TargetPlatform.iOS: CupertinoPageTransitionsBuilder(),
@@ -261,53 +331,54 @@ ThemeData _base(ColorScheme cs, String appFont) {
         scrolledUnderElevation: 0,
         backgroundColor: cs.surface,
         surfaceTintColor: Colors.transparent,
-        titleTextStyle: fontTextTheme.titleLarge?.copyWith(
-            fontWeight: phone ? FontWeight.w900 : null, color: cs.onSurface)),
+        titleTextStyle:
+            fontTextTheme.titleLarge?.copyWith(color: cs.onSurface)),
     navigationRailTheme: NavigationRailThemeData(
       backgroundColor: cs.surface,
       indicatorColor: cs.primaryContainer,
       indicatorShape: const StadiumBorder(),
     ),
     navigationBarTheme: NavigationBarThemeData(
-      height: 70,
+      height: 72,
       backgroundColor: cs.surfaceContainerLow,
       surfaceTintColor: Colors.transparent,
       indicatorColor: cs.primaryContainer,
       indicatorShape: const StadiumBorder(),
       labelTextStyle: WidgetStateProperty.resolveWith((states) {
         final style = fontTextTheme.labelMedium ?? const TextStyle();
-        final sized = phone
-            ? style.copyWith(fontSize: (style.fontSize ?? 12) - 1)
-            : style;
         return states.contains(WidgetState.selected)
-            ? sized.copyWith(
-                fontWeight: phone ? FontWeight.bold : FontWeight.w600)
-            : sized;
+            ? style.copyWith(fontWeight: FontWeight.w600, color: cs.primary)
+            : style.copyWith(color: cs.onSurfaceVariant);
       }),
     ),
     cardTheme: CardThemeData(
       shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(24),
-          side: BorderSide(color: cs.outlineVariant.withValues(alpha: .35))),
+          borderRadius: BorderRadius.circular(NexoRadius.card),
+          side: darkTheme
+              ? BorderSide.none
+              : BorderSide(color: cs.outlineVariant.withValues(alpha: .7))),
       elevation: 0,
       color: cs.surfaceContainerLow,
     ),
     chipTheme: ChipThemeData(
-      shape: StadiumBorder(
-          side: BorderSide(color: cs.outlineVariant.withValues(alpha: .6))),
+      shape: StadiumBorder(side: BorderSide(color: cs.outlineVariant)),
       backgroundColor: cs.surfaceContainerLow,
+      selectedColor: cs.primaryContainer,
+      checkmarkColor: cs.onPrimaryContainer,
     ),
     filledButtonTheme: FilledButtonThemeData(
         style: FilledButton.styleFrom(
             minimumSize: const Size(64, 48),
+            textStyle:
+                fontTextTheme.labelLarge?.copyWith(fontWeight: FontWeight.w600),
             shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(16)))),
+                borderRadius: BorderRadius.circular(NexoRadius.field)))),
     outlinedButtonTheme: OutlinedButtonThemeData(
         style: OutlinedButton.styleFrom(
             minimumSize: const Size(64, 48),
-            side: BorderSide(color: cs.outlineVariant),
+            side: BorderSide(color: cs.outline),
             shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(16)))),
+                borderRadius: BorderRadius.circular(NexoRadius.field)))),
     floatingActionButtonTheme: FloatingActionButtonThemeData(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20))),
     dialogTheme: DialogThemeData(
@@ -328,13 +399,14 @@ ThemeData _base(ColorScheme cs, String appFont) {
     ),
     inputDecorationTheme: InputDecorationTheme(
       filled: true,
-      fillColor: cs.surfaceContainer,
-      border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
+      fillColor: darkTheme ? cs.surfaceContainerLow : cs.surfaceContainerLowest,
+      border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(NexoRadius.field)),
       enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(14),
+          borderRadius: BorderRadius.circular(NexoRadius.field),
           borderSide: BorderSide(color: cs.outlineVariant)),
       focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(14),
+          borderRadius: BorderRadius.circular(NexoRadius.field),
           borderSide: BorderSide(color: cs.primary, width: 2)),
     ),
   );

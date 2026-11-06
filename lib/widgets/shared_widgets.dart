@@ -8,8 +8,7 @@ import '../screens/add_transaction_screen.dart';
 import 'package:provider/provider.dart';
 import 'package:shimmer/shimmer.dart';
 import '../providers/app_provider.dart';
-import 'nexo_ui.dart';
-import '../theme/nexo_type.dart';
+import 'nexo_brand.dart';
 
 // ── Empty state ───────────────────────────────────────────────────────────────
 class EmptyState extends StatelessWidget {
@@ -35,20 +34,32 @@ class EmptyState extends StatelessWidget {
         child: Padding(
       padding: const EdgeInsets.symmetric(horizontal: 32),
       child: Column(mainAxisSize: MainAxisSize.min, children: [
-        Icon(icon, size: 64, color: cs.onSurface.withValues(alpha: 0.2)),
-        const SizedBox(height: 16),
+        Stack(clipBehavior: Clip.none, children: [
+          Container(
+              width: 72,
+              height: 72,
+              decoration: BoxDecoration(
+                  color: cs.primaryContainer,
+                  borderRadius: BorderRadius.circular(NexoRadius.panel)),
+              child: Icon(icon, size: 32, color: cs.onPrimaryContainer)),
+          Positioned(
+              right: -10,
+              bottom: -10,
+              child: NexoMark(
+                  size: 30, first: cs.primary, second: cs.onSurfaceVariant)),
+        ]),
+        const SizedBox(height: NexoSpace.xl),
         Text(message,
             textAlign: TextAlign.center,
             style: TextStyle(
-                fontSize: 17,
+                fontSize: 16,
                 fontWeight: FontWeight.w600,
-                color: cs.onSurface.withValues(alpha: 0.5))),
+                color: cs.onSurface)),
         if (subMessage != null) ...[
           const SizedBox(height: 6),
           Text(subMessage!,
               textAlign: TextAlign.center,
-              style: TextStyle(
-                  fontSize: 13, color: cs.onSurface.withValues(alpha: 0.35))),
+              style: TextStyle(fontSize: 13, color: cs.onSurfaceVariant)),
         ],
         if (action != null && onAction != null) ...[
           const SizedBox(height: 14),
@@ -69,9 +80,9 @@ class TransactionSkeleton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    final isDark = cs.brightness == Brightness.dark;
-    final baseColor = isDark ? Colors.grey[800]! : Colors.grey[300]!;
-    final highlightColor = isDark ? Colors.grey[700]! : Colors.grey[100]!;
+
+    final baseColor = cs.surfaceContainerHigh;
+    final highlightColor = cs.surfaceContainerHighest;
 
     return Shimmer.fromColors(
       baseColor: baseColor,
@@ -140,15 +151,9 @@ class SectionHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Padding(
         padding: const EdgeInsets.fromLTRB(4, 16, 0, 6),
-        child: NexoType.phone
-            ? Text(title.toUpperCase(),
-                style: NexoType.phoneSection(Theme.of(context)
-                    .colorScheme
-                    .onSurface
-                    .withValues(alpha: 0.5)))
-            : Text(title,
-                style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                    color: Theme.of(context).colorScheme.onSurfaceVariant)),
+        child: Text(title,
+            style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                color: Theme.of(context).colorScheme.onSurfaceVariant)),
       );
 }
 
@@ -161,7 +166,9 @@ class CategoryDot extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    final color = category != null ? Color(category!.colorValue) : cs.primary;
+    final color = category != null
+        ? NexoTones.category(context, Color(category!.colorValue))
+        : cs.primary;
     // iconCodePoint actually stores a 1-based index into kCategoryIconOptions.
     // 0 means "auto" (use name heuristic). This avoids non-constant IconData()
     // calls that break Flutter's icon tree-shaking in release builds.
@@ -170,41 +177,58 @@ class CategoryDot extends StatelessWidget {
     if (storedIndex > 0 && storedIndex <= kCategoryIconOptions.length) {
       icon = kCategoryIconOptions[storedIndex - 1].icon; // const IconData ✓
     } else {
-      icon = _catIcon(category?.name ?? '');
+      icon = categoryAutoIcon(category?.name ?? '');
     }
     return Container(
       width: size,
       height: size,
       decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.15),
-        borderRadius: BorderRadius.circular(size / 4),
+        color: color.withValues(alpha: 0.16),
+        borderRadius: BorderRadius.circular(size * .3),
       ),
-      child: Icon(icon, color: color, size: size * 0.48),
+      child: Icon(icon, color: color, size: size * 0.5),
     );
   }
+}
 
-  IconData _catIcon(String name) {
-    final n = name.toLowerCase();
-    if (n.contains('food') || n.contains('dining')) {
-      return Icons.restaurant_outlined;
-    }
-    if (n.contains('transport') || n.contains('car')) {
-      return Icons.directions_car_outlined;
-    }
-    if (n.contains('shop')) return Icons.shopping_bag_outlined;
-    if (n.contains('bill') || n.contains('util')) return Icons.receipt_outlined;
-    if (n.contains('health') || n.contains('med')) {
-      return Icons.favorite_outline;
-    }
-    if (n.contains('entertain')) return Icons.movie_outlined;
-    if (n.contains('edu')) return Icons.school_outlined;
-    if (n.contains('salary') || n.contains('wage')) return Icons.work_outline;
-    if (n.contains('freelance')) return Icons.laptop_outlined;
-    if (n.contains('invest')) return Icons.trending_up_outlined;
-    if (n.contains('gift')) return Icons.card_giftcard_outlined;
-    if (n.contains('business')) return Icons.business_outlined;
-    return Icons.label_outline_rounded;
+/// An icon from a category's name, for those without one of their own.
+IconData categoryAutoIcon(String name) {
+  final n = name.toLowerCase();
+  bool has(List<String> words) => words.any(n.contains);
+  if (has(['aliment', 'comida', 'mercado', 'restaurante', 'food', 'dining'])) {
+    return Icons.restaurant_outlined;
   }
+  if (has(['transporte', 'carro', 'uber', 'combust', 'transport', 'car'])) {
+    return Icons.directions_car_outlined;
+  }
+  if (has(['passage', 'viage', 'ônibus', 'onibus', 'travel'])) {
+    return Icons.directions_bus_outlined;
+  }
+  if (has(['moradia', 'aluguel', 'casa', 'contas', 'bill', 'util', 'home'])) {
+    return Icons.home_outlined;
+  }
+  if (has(['saúde', 'saude', 'farmácia', 'farmacia', 'health', 'med'])) {
+    return Icons.favorite_outline;
+  }
+  if (has(['lazer', 'cinema', 'entretenimento', 'entertain'])) {
+    return Icons.movie_outlined;
+  }
+  if (has(['assinatura', 'streaming', 'subscription'])) {
+    return Icons.subscriptions_outlined;
+  }
+  if (has(['educa', 'curso', 'livro', 'edu'])) return Icons.school_outlined;
+  if (has(['compra', 'roupa', 'shop'])) return Icons.shopping_bag_outlined;
+  if (has(['aposta', 'jogo', 'bet'])) return Icons.casino_outlined;
+  if (has(['salário', 'salario', 'salary', 'wage'])) return Icons.work_outline;
+  if (has(['freela', 'negócio', 'negocio', 'business'])) {
+    return Icons.laptop_outlined;
+  }
+  if (has(['invest', 'bolsa', 'ações', 'acoes'])) {
+    return Icons.trending_up_outlined;
+  }
+  if (has(['presente', 'gift'])) return Icons.card_giftcard_outlined;
+  if (has(['ajuste'])) return Icons.tune;
+  return Icons.label_outline_rounded;
 }
 
 // ── Account type icon ─────────────────────────────────────────────────────────
@@ -339,24 +363,23 @@ class AccountCardPicker extends StatelessWidget {
                   AccountTypeIcon(
                       type: acc.type,
                       size: 14,
-                      color: sel ? Colors.white : color),
+                      color: sel ? NexoTones.on(color) : color),
                   const SizedBox(height: 3),
                   Text(acc.name,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
-                          fontSize: NexoType.size(11, 12),
-                          fontWeight:
-                              NexoType.weight(FontWeight.w700, FontWeight.w500),
-                          color: sel ? Colors.white : color)),
+                          fontSize: 12,
+                          fontWeight: FontWeight.w500,
+                          color: sel ? NexoTones.on(color) : color)),
                   Text(formatAmount(acc.balance, acc.currency),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
                           fontFeatures: NexoTones.figures,
-                          fontSize: NexoType.size(9, 12),
+                          fontSize: 12,
                           color: sel
-                              ? Colors.white.withValues(alpha: 0.8)
+                              ? NexoTones.on(color).withValues(alpha: 0.8)
                               : cs.onSurface.withValues(alpha: 0.5))),
                 ],
               ),
@@ -398,8 +421,8 @@ class _NoneCard extends StatelessWidget {
           const SizedBox(height: 4),
           Text(l10n.shared_widgets_none,
               style: TextStyle(
-                  fontSize: NexoType.size(11, 12),
-                  fontWeight: NexoType.weight(FontWeight.w600, FontWeight.w500),
+                  fontSize: 12,
+                  fontWeight: FontWeight.w500,
                   color:
                       sel ? cs.primary : cs.onSurface.withValues(alpha: 0.6))),
         ]),
@@ -445,15 +468,14 @@ class CategoryChipPicker extends StatelessWidget {
                     width: 8,
                     height: 8,
                     decoration: BoxDecoration(
-                        color: sel ? Colors.white : color,
+                        color: sel ? NexoTones.on(color) : color,
                         shape: BoxShape.circle)),
                 const SizedBox(width: 6),
                 Text(cat.name,
                     style: TextStyle(
                         fontSize: 12,
-                        fontWeight:
-                            NexoType.weight(FontWeight.w600, FontWeight.w500),
-                        color: sel ? Colors.white : color)),
+                        fontWeight: FontWeight.w500,
+                        color: sel ? NexoTones.on(color) : color)),
               ]),
             ),
           );
@@ -579,9 +601,7 @@ Future<String?> showCurrencyPicker(BuildContext context,
                           dense: true,
                           leading: Text(cur.symbol,
                               style: TextStyle(
-                                  fontWeight: NexoType.weight(
-                                      FontWeight.w800, FontWeight.w600),
-                                  fontSize: 16)),
+                                  fontWeight: FontWeight.w600, fontSize: 16)),
                           title: Text('${cur.code} — ${cur.name}'),
                           selected: current == cur.code,
                           selectedColor: Theme.of(ctx).colorScheme.primary,
@@ -706,7 +726,7 @@ class _TypeOptionCard extends StatelessWidget {
             Text(label,
                 style: TextStyle(
                   color: color,
-                  fontWeight: NexoType.weight(FontWeight.w700, FontWeight.w600),
+                  fontWeight: FontWeight.w600,
                   fontSize: 16,
                 )),
           ],

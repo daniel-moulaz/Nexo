@@ -73,7 +73,7 @@ class AppSettings {
 
   AppSettings({
     this.currency = 'BRL',
-    this.themeSeed = 'violet',
+    this.themeSeed = 'nexo',
     this.themeMode = 'dark',
     this.weekStart = 'monday',
     this.hideBalance = false,
@@ -172,10 +172,10 @@ class AppSettings {
   };
 
   static AppSettings fromJson(Map<String, dynamic> j) {
-    String seed = (j['themeSeed'] as String?) ?? 'violet';
+    String seed = (j['themeSeed'] as String?) ?? 'nexo';
     bool wasAmoled = seed == 'pitch_black';
     if (wasAmoled) seed = 'midnight';
-    if (!validSeeds.contains(seed)) seed = 'violet';
+    if (!validSeeds.contains(seed)) seed = 'nexo';
 
     String mode;
     bool legacyAmoled = false;
@@ -291,6 +291,15 @@ class AppProvider extends ChangeNotifier {
     final raw = prefs.getString('settings');
     if (raw != null) {
       settings = AppSettings.fromJson(jsonDecode(raw) as Map<String, dynamic>);
+      // Once, for those who had another color: the app now has its own. Any
+      // other theme can still be picked in Configurações.
+      if (prefs.getBool('nexo_brand_theme_v1') != true) {
+        settings.themeSeed = 'nexo';
+        settings.amoledSurfaces = false;
+        settings.dynamicColorEnabled = false;
+        await prefs.setBool('nexo_brand_theme_v1', true);
+        await prefs.setString('settings', jsonEncode(settings.toJson()));
+      }
     }
     // With sync active the seed waits for the first sync round, so the
     // other device's values arrive before this one writes its own.
