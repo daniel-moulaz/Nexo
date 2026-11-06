@@ -200,19 +200,23 @@ class InvestmentRepository {
   /// how a sale came to read as a salary.
   Future<String> _cashCategory(DatabaseExecutor tx, String type) async {
     final id = cashCategoryId(type);
+    // One the person already has counts: never a second with the same name.
     final found = await tx.query('categories',
-        columns: ['id'], where: 'id=?', whereArgs: [id]);
-    if (found.isEmpty) {
-      await tx.insert(
-          'categories',
-          AppCategory(
-                  id: id,
-                  name: 'Investimentos',
-                  type: type,
-                  colorValue: 0xFF00695C,
-                  iconCodePoint: Icons.show_chart.codePoint)
-              .toMap());
-    }
+        columns: ['id'],
+        where:
+            "id=? OR (type=? AND LOWER(name) IN ('investimentos', 'investment'))",
+        whereArgs: [id, type],
+        limit: 1);
+    if (found.isNotEmpty) return found.single['id'] as String;
+    await tx.insert(
+        'categories',
+        AppCategory(
+                id: id,
+                name: 'Investimentos',
+                type: type,
+                colorValue: 0xFF00695C,
+                iconCodePoint: Icons.show_chart.codePoint)
+            .toMap());
     return id;
   }
 

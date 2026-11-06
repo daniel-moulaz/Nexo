@@ -1,6 +1,6 @@
 # Opções de marca
 
-Propostas para substituir o N dourado, ainda sem escolha. Nada aqui entra no app: `assets/brand/` e os ícones do Android e do Windows continuam com a logo atual.
+Propostas que substituíram o N dourado. O dono escolheu o **Engate** em 06/11/2026; as outras ficam como registro.
 
 Abra `comparacao.html` para ver tudo lado a lado. Cada pasta traz uma opção:
 

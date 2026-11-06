@@ -79,12 +79,24 @@ void main() {
     final byId = {
       for (final t in await DBHelper.getTransactions()) t.id: t.categoryId
     };
-    expect(byId['investment:buy'], 'investments-expense');
-    expect(byId['investment:sell'], 'investments-income');
-    expect(byId['investment:income'], 'investments-income');
     final categories = await DBHelper.getCategories();
-    expect(categories.where((c) => c.name == 'Investimentos').length, 2,
-        reason: 'one of each type, created once');
+    String name(String? id) => categories.firstWhere((c) => c.id == id).name;
+    expect(byId['investment:buy'], 'investments-expense');
+    expect(name(byId['investment:sell']), anyOf('Investimentos', 'Investment'));
+    expect(byId['investment:income'], byId['investment:sell']);
+    expect(
+        categories.where((c) =>
+            c.type == 'income' &&
+            ['investimentos', 'investment'].contains(c.name.toLowerCase())),
+        hasLength(1),
+        reason: 'the one that exists is used, not a second one');
+  });
+
+  test('a category the person named Investimentos is the one used', () async {
+    await DBHelper.insertCategory(AppCategory(
+        id: 'minha', name: 'Investimentos', type: 'expense', colorValue: 0));
+    await repo.create(asset(), op('buy', 'buy', 10, 10000));
+    expect((await DBHelper.getTransactions()).single.categoryId, 'minha');
   });
   test('sale credits cash once, proventos are income, reversal is atomic',
       () async {

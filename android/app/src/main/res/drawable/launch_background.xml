@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
   Launch window before the Flutter engine draws its first frame: the system
-  background color with the brand mark (gold N) centered at 96dp. The mark
+  background color with the brand mark centered at 96dp. The mark
   ships as one PNG per density (drawable-*dpi/splash_mark.png), so launchers
   that use the bitmap's intrinsic size still get 96dp. On Android 12+ the
   system splash uses the adaptive launcher icon instead.

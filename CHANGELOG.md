@@ -1,6 +1,8 @@
 # Changelog
 
 ## [1.14.0] - 2026-11-06
+### Marca
+- **Nova logo:** o Engate, dois ganchos que se prendem e formam o N. Troca o ícone do Android, a abertura, a notificação e o ícone do Windows.
 ### Pedidos do Claude
 - **Em sequência:** corrigir um lançamento ou quitar um empréstimo recém-criado funciona na hora, mesmo com o primeiro pedido ainda pendente ou sem ter sincronizado.
 - **Bandeja do Windows:** fechar a janela deixa o Nexo perto do relógio, gravando os pedidos a cada 20 segundos; ele também pode iniciar com o Windows. Para sair, use o ícone.

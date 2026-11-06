@@ -1,7 +1,3 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!-- Nexo mark: gold N on near-black. Source of assets/brand/*. -->
-<svg width="512" height="512" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
-  <rect width="512" height="512" rx="112" fill="#0B1118"/>
-  <path d="M160 352 V168 l192 184 V168" fill="none" stroke="#F2C14E" stroke-width="46" stroke-linecap="round" stroke-linejoin="round"/>
-  <circle cx="352" cy="168" r="34" fill="#F2C14E"/>
-</svg>
+<!-- Nexo mark (Engate): two hooks that hold each other form the N. Source of assets/brand/*. -->
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 100 100"><rect width="100" height="100" rx="22" fill="#0E1420"/><g transform="translate(12 12) scale(0.76)"><path d="M25 81V38C25 21 39 16 50 27L60 37" fill="none" stroke="#5EEAD4" stroke-width="15" stroke-linecap="round" stroke-linejoin="round"/><path d="M75 19V62C75 79 61 84 50 73L40 63" fill="none" stroke="#F8FAFC" stroke-width="15" stroke-linecap="round" stroke-linejoin="round"/></g></svg>

@@ -1,14 +1,16 @@
 # Marca do Nexo
 
-`nexo-mark.svg` é a fonte: um N dourado (#F2C14E) de traço único sobre fundo
-quase preto (#0B1118), cantos de 112/512. Escolhida em 27/10/2026 entre três
-propostas.
+`nexo-mark.svg` é a fonte: o **Engate**, dois ganchos que se prendem e formam o N, em
+#5EEAD4 e #F8FAFC sobre #0E1420. Escolhido em 06/11/2026 entre oito propostas, que
+continuam em `opcoes/` com a página de comparação. No fundo claro as cores são #0F766E e
+#0F172A.
 
-Os PNGs em `assets/brand/` (ícone completo, primeiro plano adaptativo com a
-marca ocupando ~46% da tela, dentro da zona segura de 66%, monocromático para
-ícones temáticos do Android 13+, e a marca sozinha para o splash) foram
-rasterizados a partir desse SVG. Os ícones do Android e o `.ico` do Windows
-são gerados por `dart run flutter_launcher_icons` (configuração no
-`pubspec.yaml`, com `adaptive_icon_foreground_inset: 0` porque o primeiro
-plano já traz a margem). `ic_launcher_round.xml` é cópia de `ic_launcher.xml`;
-as camadas antigas em `mipmap-*` e `drawable/` foram removidas.
+Os PNGs em `assets/brand/` (ícone completo, primeiro plano adaptativo dentro da zona segura de 66
+em 108, monocromático para ícones temáticos do Android 13+ e abertura) saem de `opcoes/gerar.py`.
+A abertura usa o ícone com fundo, porque um dos traços é branco e a janela pode ser clara.
+`ic_notification.png` é a marca em branco: o Android só usa o desenho.
+
+As camadas do Android vêm de `dart run flutter_launcher_icons` (configuração no `pubspec.yaml`, com
+`adaptive_icon_foreground_inset: 0` porque o primeiro plano já traz a margem). O `app_icon.ico` do
+Windows é o de `opcoes/engate/`, com sete tamanhos: depois de rodar a ferramenta, copie-o de volta
+para `windows/runner/resources/`, porque ela grava um só.
