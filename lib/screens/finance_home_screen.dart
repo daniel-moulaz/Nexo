@@ -14,6 +14,7 @@ import '../services/finance_rules.dart';
 import '../services/transaction_metadata_service.dart';
 import '../services/week_summary.dart';
 import '../services/spendable.dart';
+import '../services/card_limit_alerts.dart';
 import '../services/charge_alerts.dart';
 import '../services/cancel_intents.dart';
 import '../services/bank_snapshots.dart';
@@ -839,6 +840,21 @@ class _FinanceHomeScreenState extends State<FinanceHomeScreen>
                   },
                   action: 'Ver',
                   onTap: () => _chargeAlert(app, alert)));
+            }
+            for (final alert in hidden
+                ? const <CardLimitAlert>[]
+                : cardLimitAlerts(
+                    accounts: app.accounts,
+                    recurring: app.recurring,
+                    now: now)) {
+              insights.add(NexoInsight(
+                  icon: Icons.credit_score_outlined,
+                  color: NexoTones.expense(context),
+                  title: '${alert.charge.name} não cabe em ${alert.card.name}',
+                  subtitle:
+                      '${money(alert.amount)} em ${ptShortDate(alert.date)}; o limite terá ${money(alert.free)} livres. Faltam ${money(alert.short)}.',
+                  action: 'Ver cartão',
+                  onTap: () => app.tabIndexNotifier.value = 3));
             }
             for (final card in app.accounts.where((a) => a.type == 'credit')) {
               final bank = BankSnapshots.linkedTo(_bank, card.id);

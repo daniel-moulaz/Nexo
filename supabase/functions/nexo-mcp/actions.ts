@@ -3,7 +3,7 @@
 // rules (balances, cards, transfers). The answer says "pendente" until the
 // app confirms; get_request_status tells the outcome.
 import { analyze, cents, day, isNeutral, type Ledger, meta, metadataIndex, money, num, type Row, text } from "./finance.ts";
-import { callTool, ToolInputError, type ToolDefinition } from "./tools.ts";
+import { callTool, cardLimitAlerts, ToolInputError, type ToolDefinition } from "./tools.ts";
 import { callMoreAction, moreActions } from "./more_actions.ts";
 import { allActions, callAllAction } from "./all_actions.ts";
 import { callParityAction, extendedTransactionEdit, parityActions } from "./parity_actions.ts";
@@ -597,6 +597,7 @@ async function dispatchAction(name: string, args: Args, l: Ledger, today: string
         budgets_over: (budgets ?? []).filter((b) => (b.used_percent ?? 0) >= 100)
           .map((b) => ({ category: b.category, used_percent: b.used_percent })),
         due_next_3_days: [...(upcoming.pending_expenses ?? []), ...(upcoming.recurring_expected ?? [])],
+        card_limit_alerts: cardLimitAlerts(l, today),
         bank_data: await bankFreshness(deps, today),
         note: "Transferências, reservas e pendentes não contam como gasto. Se bank_data disser que hoje ainda não chegou, gastos do banco podem faltar.",
       };

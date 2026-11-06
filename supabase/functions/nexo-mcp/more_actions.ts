@@ -209,6 +209,7 @@ export const moreActions: (ToolDefinition & { destructive?: boolean })[] = [
         from_account_id: idField,
         amount: amountField,
         invoice: { type: "string", enum: ["closed", "current"], description: "Padrão closed" },
+        date: { ...dateField, description: "Quando foi pago (AAAA-MM-DD). Padrão: hoje." },
       },
       required: ["card_id", "from_account_id"],
       additionalProperties: false,
@@ -584,7 +585,7 @@ export async function callMoreAction(name: string, rawArgs: unknown, l: Ledger, 
       return pending(q.id, "Movimentação do objetivo");
     }
     case "pay_card_invoice": {
-      only(args, ["card_id", "from_account_id", "amount", "invoice"]);
+      only(args, ["card_id", "from_account_id", "amount", "invoice", "date"]);
       const card = account(l, str(args, "card_id", 256));
       if (text(card.type) !== "credit") throw new ToolInputError("card_id deve ser um cartão de crédito.");
       const from = account(l, str(args, "from_account_id", 256));
@@ -595,6 +596,11 @@ export async function callMoreAction(name: string, rawArgs: unknown, l: Ledger, 
       };
       const c = amountCents(args, false);
       if (c !== undefined) body.amount_cents = c;
+      const paid = dateArg(args, "date");
+      if (paid !== undefined) {
+        if (paid > today) throw new ToolInputError("date não pode ser no futuro.");
+        body.date = paid;
+      }
       return pending((await enqueue("invoice.pay", body)).id, "Pagamento da fatura");
     }
     default:

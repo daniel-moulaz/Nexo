@@ -860,6 +860,29 @@ await test('investment cash: category and text by the connector, money in Invest
   await assert.rejects(pact(q, 'update_transactions', { ids: ['investment:op1'], set: { kind: 'normal' } }, l), /Nenhum/);
 });
 
+await test('invoice paid on a given day, and never in the future', async () => {
+  const q = smartQueue();
+  await pact(q, 'pay_card_invoice', { card_id: 'nu', from_account_id: 'main', amount: 10, date: '2026-10-27' });
+  assert.equal(q.items.at(-1).args.date, '2026-10-27');
+  await pact(q, 'pay_card_invoice', { card_id: 'nu', from_account_id: 'main', amount: 11 });
+  assert.equal(q.items.at(-1).args.date, undefined);
+  await assert.rejects(pact(q, 'pay_card_invoice', { card_id: 'nu', from_account_id: 'main', amount: 12, date: '2026-11-30' }), /futuro/);
+});
+
+await test('card limit alert: a recurring charge that will not fit', async () => {
+  const q = smartQueue();
+  const rec = (id, amount, next_date, extra = {}) => ({ id, name: id, amount, account_id: 'nu', payment_type: 'expense', next_date: `${next_date}T12:00:00.000`, ...extra });
+  const l = { ...scenario, balances: { ...scenario.balances, nu: -640_000000 }, recurring: [rec('Assinatura', 120, '2026-11-14')] };
+  const alerts = callTool('get_upcoming_bills', { days: 30 }, l, tday).card_limit_alerts;
+  assert.deepEqual(alerts, [{ card: 'Nubank', charge: 'Assinatura', date: '2026-11-14', amount: 120, limit_free: 10, short: 110 }]);
+  assert.equal((await pact(q, 'get_daily_digest', {}, l)).card_limit_alerts.length, 1);
+  const fits = { ...l, balances: { ...l.balances, nu: 0 } };
+  assert.deepEqual(callTool('get_upcoming_bills', { days: 30 }, fits, tday).card_limit_alerts, []);
+  // In date order, the second is what no longer fits.
+  const two = { ...l, balances: { ...l.balances, nu: -500_000000 }, recurring: [rec('depois', 100, '2026-11-20'), rec('antes', 100, '2026-11-10')] };
+  assert.equal(callTool('get_upcoming_bills', { days: 30 }, two, tday).card_limit_alerts[0].charge, 'depois');
+});
+
 await test('goals show their movements, so a withdrawal explains a zero', async () => {
   const q = smartQueue();
   const l = { ...scenario, goals: [{ id: 'g', name: 'Reserva', target_amount: 1000, current_amount: 0 }],

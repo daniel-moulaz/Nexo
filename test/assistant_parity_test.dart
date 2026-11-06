@@ -737,6 +737,29 @@ void main() {
     expect(positions.where((p) => !p.investment.archived), hasLength(1));
   });
 
+  test('invoice paid on a given day keeps that day', () async {
+    await app.addTransaction(expense('compra', 80,
+        account: 'nu',
+        date: DateTime.now().subtract(const Duration(days: 40))));
+    final paid = await send('invoice.pay', {
+      'card_id': 'nu',
+      'from_account_id': 'bank',
+      'amount_cents': 8000,
+      'invoice': 'closed',
+      'date': DateTime.now()
+          .subtract(const Duration(days: 1))
+          .toIso8601String()
+          .substring(0, 10),
+    });
+    expect(paid.$1, 'done', reason: '$paid');
+    final yesterday = DateTime.now().subtract(const Duration(days: 1));
+    final out = (await DBHelper.getTransactions())
+        .where((t) => t.accountId == 'bank')
+        .single;
+    expect([out.date.year, out.date.month, out.date.day],
+        [yesterday.year, yesterday.month, yesterday.day]);
+  });
+
   test('a request can build on one still waiting, applied in order', () async {
     queue.add('t1', 'transaction.add', {
       'type': 'expense',

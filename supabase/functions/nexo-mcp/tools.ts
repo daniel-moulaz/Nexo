@@ -176,6 +176,36 @@ function shift(dayIso: string, days: number): string {
   return isoDay(d);
 }
 
+/// Same walk as the app's cardLimitAlerts: each card's recurring charges in
+/// date order, from what is left today. The first that does not fit stops it.
+export function cardLimitAlerts(l: Ledger, today: string, days = 30) {
+  const until = shift(today, days);
+  const out: Record<string, unknown>[] = [];
+  for (const card of l.accounts) {
+    const limit = cents(num(card.credit_limit));
+    if (card.type !== "credit" || limit <= 0) continue;
+    const owed = -Math.round((l.balances[text(card.id)] ?? 0) / 10000);
+    let free = limit - Math.max(owed, 0);
+    const charges = l.recurring
+      .filter((r) => r.account_id === card.id && r.payment_type !== "income")
+      .map((r) => ({ r, next: day(text(r.next_date)), amount: cents(num(r.amount)) }))
+      .filter(({ r, next }) => next <= until && (typeof r.end_date !== "string" || next <= day(r.end_date)))
+      .sort((a, b) => a.next.localeCompare(b.next));
+    for (const c of charges) {
+      if (c.amount > free) {
+        const left = Math.max(free, 0);
+        out.push({
+          card: text(card.name), charge: text(c.r.name), date: c.next, amount: money(c.amount),
+          limit_free: money(left), short: money(c.amount - left),
+        });
+        break;
+      }
+      free -= c.amount;
+    }
+  }
+  return out;
+}
+
 export function callTool(name: string, rawArgs: unknown, l: Ledger, today: string): Record<string, unknown> {
   const args = (rawArgs ?? {}) as Args;
   if (typeof args !== "object" || Array.isArray(args)) throw new ToolInputError("Argumentos inválidos.");
@@ -360,7 +390,10 @@ export function callTool(name: string, rawArgs: unknown, l: Ledger, today: strin
           name: text(r.name), amount: money(cents(num(r.amount))), next_date: next,
           account: accountName(l, text(r.account_id)), overdue: next < today, kind: "previsto",
         }));
-      return { from: today, until, pending_expenses: pending, recurring_expected: recurring };
+      return {
+        from: today, until, pending_expenses: pending, recurring_expected: recurring,
+        card_limit_alerts: cardLimitAlerts(l, today, days),
+      };
     }
     case "get_investment_summary": {
       only(args, []);

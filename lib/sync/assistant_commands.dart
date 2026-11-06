@@ -636,8 +636,10 @@ class AssistantCommands {
     final card = _account(a['card_id']);
     final from = _account(a['from_account_id']);
     if (card.type != 'credit') throw StateError('Não é um cartão de crédito.');
-    final now = DateTime.now();
-    var cycle = BillingCycle.forDate(now, card.statementDay, card.dueDay);
+    // The invoice is the one open or closed on the day it was paid.
+    final paidOn =
+        a['date'] == null ? DateTime.now() : _day(a['date'] as String?);
+    var cycle = BillingCycle.forDate(paidOn, card.statementDay, card.dueDay);
     if (a['invoice'] != 'current') {
       cycle = BillingCycle.forDate(
           cycle.start.subtract(const Duration(days: 1)),
@@ -672,6 +674,7 @@ class AssistantCommands {
         toId: card.id,
         fromAmount: amount,
         invoiceCycleEnd: cycle.end,
+        occurredAt: paidOn,
         note: 'Pagamento da fatura ${card.name}');
     return {'message': 'Fatura paga: R\$ ${amount.toStringAsFixed(2)}.'};
   }
