@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nexo/database/database_platform.dart';
 import 'package:nexo/database/db_helper.dart';
+import 'package:nexo/investments/investment_models.dart';
 import 'package:nexo/investments/investment_repository.dart';
 import 'package:nexo/models/models.dart';
 import 'package:nexo/models/transaction_metadata.dart';
@@ -734,6 +735,109 @@ void main() {
     expect(await balance('bank'), 950);
     final positions = await InvestmentRepository().load();
     expect(positions.where((p) => !p.investment.archived), hasLength(1));
+  });
+
+  test('a request can build on one still waiting, applied in order', () async {
+    queue.add('t1', 'transaction.add', {
+      'type': 'expense',
+      'amount_cents': 2500,
+      'description': 'Lançado agora',
+      'account_id': 'bank',
+      'category_id': 'food_exp',
+      'date': '2026-10-29',
+    });
+    queue.add(
+        't2', 'transaction.update', {'id': 'assistant:t1', 'account_id': 'nu'});
+    queue.add('l1', 'lended.add', {
+      'person': 'Pessoa fictícia',
+      'type': 'lent',
+      'amount_cents': 4000,
+      'date': '2026-10-29',
+      'due_date': null,
+      'notes': '',
+    });
+    queue.add('l2', 'lended.settle', {'id': 'assistant-lend:l1'});
+    await assistant.run(datasetId: 'd', deviceId: 'device');
+    expect(queue.finished['t2']!.$1, 'done');
+    expect(queue.finished['l2']!.$1, 'done');
+    final moved = (await DBHelper.getTransactions())
+        .firstWhere((t) => t.id == 'assistant:t1');
+    expect(moved.accountId, 'nu');
+    expect(await balance('bank'), 1000, reason: 'moved off the account');
+    expect(app.lended.firstWhere((x) => x.id == 'assistant-lend:l1').isSettled,
+        isTrue);
+    // The server cannot see a pending entry's type; the app refuses here.
+    final refused = await send('transaction.update',
+        {'id': 'assistant:t1', 'category_id': 'salary_inc'});
+    expect(refused.$1, 'rejected');
+  });
+
+  test('investment cash: category and text change, money stays put', () async {
+    await capture();
+    final repo = InvestmentRepository();
+    final at = DateTime(2026, 10, 20);
+    final item = Investment(
+        id: 'asset',
+        name: 'Ativo fictício',
+        assetClass: investmentClasses.first,
+        priceMicros: 10 * investmentScale,
+        priceAt: at,
+        ticker: 'TEST3',
+        institution: '');
+    await repo.create(
+        item,
+        InvestmentOperation(
+            id: 'buy',
+            investmentId: 'asset',
+            kind: 'buy',
+            quantity: 10 * investmentScale,
+            cents: 10000,
+            date: at,
+            createdAt: at,
+            cashAccountId: 'bank'));
+    await app.reloadFromStorage();
+    final before = await balance('bank');
+    final moved = await send('transaction.update',
+        {'id': 'investment:buy', 'category_id': 'food_exp', 'note': 'x'});
+    expect(moved.$1, 'done');
+    expect(await balance('bank'), before);
+    final entry = (await DBHelper.getTransactions()).single;
+    expect(entry.categoryId, 'food_exp');
+    expect((await metaOf(entry.id)).excludeFromSpending, isTrue,
+        reason: 'still not consumption');
+    final amount = await send(
+        'transaction.update', {'id': 'investment:buy', 'amount_cents': 1});
+    expect(amount.$1, 'rejected');
+    final bulk = await send('transaction.bulk_update', {
+      'ids': ['investment:buy'],
+      'category_id': 'investments-expense'
+    });
+    expect(bulk.$1, 'done');
+    expect((await DBHelper.getTransactions()).single.categoryId,
+        'investments-expense');
+  });
+
+  test('undoing the first investment keeps the shared category', () async {
+    await capture();
+    final add = await send(
+        'investment.add',
+        {
+          'name': 'Ativo fictício',
+          'asset_class': investmentClasses.first,
+          'ticker': 'TEST3',
+          'institution': '',
+          'date': '2026-10-20',
+          'quantity_micros': 10 * investmentScale,
+          'cents': 10000,
+          'cash_account_id': 'bank',
+        },
+        id: 'first');
+    expect(add.$1, 'done', reason: '$add');
+    expect((await undo('first')).$1, 'done');
+    expect(
+        (await DBHelper.getCategories())
+            .any((c) => c.id == 'investments-expense'),
+        isTrue);
   });
 
   test('undo is refused when something changed after; account comes back',

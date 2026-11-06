@@ -316,6 +316,14 @@ class AssistantCommands {
     }
   }
 
+  /// The server cannot check this for an entry still being created.
+  void _categoryOf(Object? id, String type) {
+    _category(id);
+    if (app.categories.firstWhere((c) => c.id == id).type != type) {
+      throw StateError('A categoria não é do tipo deste lançamento.');
+    }
+  }
+
   Future<AppTransaction?> _transaction(String id) async {
     for (final t in await DBHelper.getTransactions()) {
       if (t.id == id) return t;
@@ -365,7 +373,9 @@ class AssistantCommands {
         final account = a.containsKey('account_id')
             ? _account(a['account_id'])
             : app.accountById(original.accountId);
-        if (a.containsKey('category_id')) _category(a['category_id']);
+        if (a.containsKey('category_id')) {
+          _categoryOf(a['category_id'], original.type);
+        }
         await app.updateTransaction(
             AppTransaction(
                 id: original.id,

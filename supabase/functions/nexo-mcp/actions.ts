@@ -2,7 +2,7 @@
 // a request that one of the person's devices applies with the app's own
 // rules (balances, cards, transfers). The answer says "pendente" until the
 // app confirms; get_request_status tells the outcome.
-import { analyze, cents, day, isNeutral, type Ledger, meta, metadataIndex, money, num, text } from "./finance.ts";
+import { analyze, cents, day, isNeutral, type Ledger, meta, metadataIndex, money, num, type Row, text } from "./finance.ts";
 import { callTool, ToolInputError, type ToolDefinition } from "./tools.ts";
 import { callMoreAction, moreActions } from "./more_actions.ts";
 import { allActions, callAllAction } from "./all_actions.ts";
@@ -274,18 +274,26 @@ function account(l: Ledger, id: string | undefined) {
 function category(l: Ledger, id: string | undefined, type: string) {
   const c = l.categories.find((x) => text(x.id) === id);
   if (!c) throw new ToolInputError("Categoria não encontrada. Use get_categories para ver os ids.");
-  if (text(c.type) && text(c.type) !== type) {
+  // A type is unknown only for something still being created; the app checks.
+  if (type && text(c.type) && text(c.type) !== type) {
     throw new ToolInputError(`A categoria ${text(c.name)} é de ${text(c.type) === "income" ? "receita" : "despesa"}.`);
   }
   return c;
 }
 
-function editable(l: Ledger, id: string) {
+/// Investment cash keeps its money in step with the portfolio, so only what
+/// does not touch money can change here.
+const investmentCashFields = ["id", "category_id", "description", "note"];
+
+function editable(l: Ledger, id: string, args?: Args) {
   const tx = l.transactions.find((t) => text(t.id) === id);
   if (!tx) throw new ToolInputError("Lançamento não encontrado. Use list_transactions para ver os ids.");
   const m = meta(metadataIndex(l).get(id));
   if (id.startsWith("investment:") || m.source.startsWith("investment:")) {
-    throw new ToolInputError("Movimentações de investimento são alteradas na aba Investir do app.");
+    if (!args || Object.keys(args).some((k) => !investmentCashFields.includes(k))) {
+      throw new ToolInputError(
+        "Numa movimentação de investimento só categoria, descrição e observação mudam aqui. Valor, conta e data são alterados na aba Investir do app.");
+    }
   }
   return tx;
 }
@@ -316,27 +324,44 @@ export const createdIdPrefix: Record<string, string> = {
   "wishlist.add": "assistant-wish:", "rule.save": "assistant-rule:",
 };
 
+/// What a tool may reference before it reaches the ledger. Recurring entries
+/// and loans stay out: their tools compute with the stored amounts, which a
+/// placeholder does not have.
+const pendingTargets: Record<string, { kinds: string[]; rows: keyof Ledger }> = {
+  "assistant": { kinds: ["transaction.add", "transaction.create"], rows: "transactions" },
+  "assistant-cat": { kinds: ["category.add"], rows: "categories" },
+  "assistant-acc": { kinds: ["account.add"], rows: "accounts" },
+  "assistant-goal": { kinds: ["goal.add"], rows: "goals" },
+  "assistant-inv": { kinds: ["investment.add"], rows: "investments" },
+  "assistant-lend": { kinds: ["lended.add"], rows: "lended" },
+  "assistant-asset": { kinds: ["asset.add"], rows: "assets" },
+  "assistant-wish": { kinds: ["wishlist.add"], rows: "wishlist" },
+};
+
 /// Ledger with placeholders for things that pending requests will create,
-/// so tools accept their ids (e.g. a category created a moment ago).
+/// so tools accept their ids (e.g. a category created a moment ago, or an
+/// entry to fix). The same goes for a request already recorded whose result
+/// has not synced yet. Requests are applied in order, and the app checks.
 async function withPending(l: Ledger, args: Record<string, unknown>, deps: ActionDeps): Promise<Ledger> {
   const refs = new Set<string>();
   const scan = (v: unknown) => {
-    if (typeof v === "string" && /^assistant-(cat|acc|goal):[0-9a-f-]{36}$/.test(v)) refs.add(v);
+    if (typeof v === "string" && /^assistant(-[a-z]+)?:[0-9a-f-]{36}$/.test(v)) refs.add(v);
     else if (Array.isArray(v)) v.forEach(scan);
     else if (v && typeof v === "object") Object.values(v).forEach(scan);
   };
   scan(args);
   if (!refs.size) return l;
-  const out = { ...l, categories: [...l.categories], accounts: [...l.accounts], goals: [...(l.goals ?? [])] };
+  const out = { ...l } as Ledger;
   for (const ref of refs) {
     const [prefix, id] = ref.split(":");
-    const known = prefix === "assistant-cat" ? out.categories : prefix === "assistant-acc" ? out.accounts : out.goals;
+    const target = pendingTargets[prefix];
+    if (!target) continue;
+    const known = [...((out[target.rows] ?? []) as Row[])];
     if (known.some((r) => r.id === ref)) continue;
     const r = await deps.request(id);
-    const kind = { "assistant-cat": "category.add", "assistant-acc": "account.add", "assistant-goal": "goal.add" }[prefix];
-    if (!r || r.kind !== kind || r.status === "rejected") continue;
-    // Its type is unknown here; the app checks it when applying, in order.
+    if (!r || !target.kinds.includes(r.kind) || r.status === "rejected") continue;
     known.push({ id: ref, name: "(sendo criado)", type: "", currency: l.mainCurrency });
+    (out as unknown as Record<string, Row[]>)[target.rows] = known;
   }
   return out;
 }
@@ -447,7 +472,7 @@ async function dispatchAction(name: string, args: Args, l: Ledger, today: string
       only(args, ["id", "amount", "description", "category_id", "account_id", "date", "note", "type", "subcategory",
         "status", "due_date", "kind", "recurring_income_id"]);
       const id = str(args, "id", 256)!;
-      const tx = editable(l, id);
+      const tx = editable(l, id, args);
       if (meta(metadataIndex(l).get(id)).source.startsWith("transfer:")) {
         throw new ToolInputError("Para mudar uma transferência, apague-a (as duas pontas) e registre de novo.");
       }

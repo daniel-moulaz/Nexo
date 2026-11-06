@@ -346,7 +346,7 @@ const isPlain = (l: Ledger, t: Row) => {
 };
 
 /// Entries chosen by ids or by a filter, for batch tools.
-function select(l: Ledger, args: Args, opts: { allowAdjustments?: boolean } = {}) {
+function select(l: Ledger, args: Args, opts: { allowAdjustments?: boolean; allowInvestments?: boolean } = {}) {
   const metas = metadataIndex(l);
   const ids = args.ids;
   let rows: Row[];
@@ -387,7 +387,9 @@ function select(l: Ledger, args: Args, opts: { allowAdjustments?: boolean } = {}
         (search === undefined || `${text(t.description)} ${text(t.note)}`.toLowerCase().includes(search));
     });
   }
-  const skipped = rows.filter((t) => !isPlain(l, t) ||
+  const investment = (t: Row) => text(t.id).startsWith("investment:") ||
+    meta(metas.get(text(t.id))).source.startsWith("investment:");
+  const skipped = rows.filter((t) => (!isPlain(l, t) && !(opts.allowInvestments && investment(t))) ||
     (!opts.allowAdjustments && meta(metas.get(text(t.id))).source === "opening_balance"));
   const chosen = rows.filter((t) => !skipped.includes(t));
   if (chosen.length > 200) {
@@ -612,7 +614,8 @@ export async function callParityAction(name: string, rawArgs: unknown, l: Ledger
       if (!set || typeof set !== "object" || Array.isArray(set)) throw new ToolInputError("set é obrigatório.");
       only(set, ["category_id", "subcategory", "kind"]);
       if (!Object.keys(set).length) throw new ToolInputError("Informe em set o que deve mudar.");
-      const { chosen, skipped, byFilter } = select(l, args);
+      // Category and subcategory touch no money, so investment cash can take them.
+      const { chosen, skipped, byFilter } = select(l, args, { allowInvestments: set.kind === undefined });
       if (set.category_id !== undefined) {
         const c = category(l, set.category_id);
         const wrong = chosen.find((t) => t.type !== (text(c.type) || "expense"));
@@ -1075,15 +1078,16 @@ export function extendedTransactionEdit(l: Ledger, args: Args): Args | null {
   const tx = find(l.transactions, args.id);
   if (!tx) throw new ToolInputError("Lançamento não encontrado. Use list_transactions para ver os ids.");
   const body: Args = { id: text(tx.id) };
+  // Empty only for an entry still being created: the app checks it, in order.
   const type = args.type ?? tx.type;
-  if (type !== "expense" && type !== "income") throw new ToolInputError("type deve ser expense ou income.");
+  if (type !== "" && type !== "expense" && type !== "income") throw new ToolInputError("type deve ser expense ou income.");
   if (args.type !== undefined) body.type = type;
   if (args.amount !== undefined) body.amount_cents = reais(args.amount, "amount");
   if (args.description !== undefined) body.description = str(args, "description", 80);
   if (args.account_id !== undefined) body.account_id = text(account(l, args.account_id).id);
   if (args.category_id !== undefined || args.type !== undefined) {
     const c = category(l, args.category_id ?? tx.category_id);
-    if ((text(c.type) || "expense") !== type) {
+    if (type !== "" && (text(c.type) || "expense") !== type) {
       throw new ToolInputError(`A categoria ${text(c.name)} é de ${text(c.type) === "income" ? "receita" : "despesa"}; mande category_id do tipo certo.`);
     }
     body.category_id = text(c.id);
@@ -1106,7 +1110,7 @@ export function extendedTransactionEdit(l: Ledger, args: Args): Args | null {
   if (args.recurring_income_id !== undefined) {
     const r = find(l.recurring, args.recurring_income_id);
     if (!r || r.payment_type !== "income") throw new ToolInputError("recurring_income_id deve ser uma receita recorrente (get_recurring).");
-    if (tx.type !== "income") throw new ToolInputError("Só uma receita pode contar como a renda do mês.");
+    if (tx.type !== "" && tx.type !== "income") throw new ToolInputError("Só uma receita pode contar como a renda do mês.");
     body.recurring_income_id = text(r.id);
   }
   return body;

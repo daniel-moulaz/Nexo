@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart' show Icons;
 import 'package:sqflite/sqflite.dart';
 import '../database/db_helper.dart';
 import 'investment_models.dart';
@@ -191,6 +192,30 @@ class InvestmentRepository {
     }
   }
 
+  /// The same id on every device, so two of them never create it twice.
+  static String cashCategoryId(String type) =>
+      type == 'expense' ? 'investments-expense' : 'investments-income';
+
+  /// Investment cash used to take the first category of its type, which is
+  /// how a sale came to read as a salary.
+  Future<String> _cashCategory(DatabaseExecutor tx, String type) async {
+    final id = cashCategoryId(type);
+    final found = await tx.query('categories',
+        columns: ['id'], where: 'id=?', whereArgs: [id]);
+    if (found.isEmpty) {
+      await tx.insert(
+          'categories',
+          AppCategory(
+                  id: id,
+                  name: 'Investimentos',
+                  type: type,
+                  colorValue: 0xFF00695C,
+                  iconCodePoint: Icons.show_chart.codePoint)
+              .toMap());
+    }
+    return id;
+  }
+
   Future<void> _cash(
       DatabaseExecutor tx, InvestmentOperation op, String name) async {
     if (op.cashAccountId == null) return;
@@ -204,8 +229,7 @@ class InvestmentRepository {
           'Selecione uma conta de saldo em reais, sem ser cartão ou ouro.');
     }
     final type = cashDebit(op) ? 'expense' : 'income';
-    final categories = await tx.query('categories',
-        where: 'type=?', whereArgs: [type], limit: 1);
+    final categoryId = await _cashCategory(tx, type);
     final id = cashId(op.id);
     await tx.insert(
         'transactions',
@@ -216,8 +240,7 @@ class InvestmentRepository {
           description:
               '${cashDebit(op) ? 'Aporte' : op.kind == 'sell' ? 'Resgate' : 'Provento'} · $name',
           accountId: op.cashAccountId!,
-          categoryId:
-              categories.isEmpty ? '' : categories.single['id'] as String,
+          categoryId: categoryId,
           date: op.date,
           currency: 'BRL',
           note: 'Vinculado a Investir. Revise a operação na carteira.',

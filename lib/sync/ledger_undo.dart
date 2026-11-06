@@ -129,6 +129,12 @@ abstract final class LedgerUndo {
           if (e['table'] == 'accounts' && e['before'] == null) e['key']
       };
       for (final e in entities.reversed) {
+        // Shared by every later investment entry: it outlives this request.
+        if (e['table'] == 'categories' &&
+            e['before'] == null &&
+            '${e['key']}'.startsWith('investments-')) {
+          continue;
+        }
         await LedgerCapture.writeRow(
             txn, e['table'] as String, e['key'] as String, _map(e['before']));
       }

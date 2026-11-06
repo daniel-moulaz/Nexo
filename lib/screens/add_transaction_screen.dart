@@ -450,6 +450,8 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
                 const Text(
                     'Esta movimentação está vinculada à carteira. Revise ou exclua a operação em Investimentos para atualizar posição e saldo juntos.'),
                 const SizedBox(height: 16),
+                _InvestmentCashCategory(widget.existing!),
+                const SizedBox(height: 16),
                 FilledButton.icon(
                     icon: const Icon(Icons.trending_up),
                     label: const Text('Abrir Investimentos'),
@@ -1131,5 +1133,34 @@ class _WarningCard extends StatelessWidget {
         ],
       ),
     );
+  }
+}
+
+/// Value, account and date belong to the portfolio; the category does not.
+class _InvestmentCashCategory extends StatelessWidget {
+  const _InvestmentCashCategory(this.entry);
+  final AppTransaction entry;
+
+  @override
+  Widget build(BuildContext context) {
+    final app = context.watch<AppProvider>();
+    final current =
+        app.transactions.where((t) => t.id == entry.id).firstOrNull ?? entry;
+    final options = app.categories.where((c) => c.type == entry.type).toList();
+    return DropdownButtonFormField<String>(
+        initialValue: options.any((c) => c.id == current.categoryId)
+            ? current.categoryId
+            : null,
+        decoration: const InputDecoration(labelText: 'Categoria'),
+        items: [
+          for (final c in options)
+            DropdownMenuItem(value: c.id, child: Text(c.name))
+        ],
+        onChanged: (id) {
+          if (id == null || id == current.categoryId) return;
+          app.updateTransaction(
+              AppTransaction.fromMap({...current.toMap(), 'category_id': id}),
+              current);
+        });
   }
 }

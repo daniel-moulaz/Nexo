@@ -543,6 +543,17 @@ export async function callMoreAction(name: string, rawArgs: unknown, l: Ledger, 
             missing: money(Math.max(target - saved, 0)),
             target_date: g.target_date ? day(text(g.target_date)) : undefined,
             completed: g.is_completed === 1 || g.is_completed === true,
+            // Without these, a withdrawal made in the app looks like a lost deposit.
+            movements: (l.contributions ?? [])
+              .filter((c) => c.goal_id === g.id)
+              .sort((a, b) => text(b.date).localeCompare(text(a.date)))
+              .slice(0, 10)
+              .map((c) => ({
+                date: day(text(c.date)),
+                kind: c.type === "withdrawal" ? "retirada" : "guardado",
+                amount: money(cents(num(c.amount))),
+                note: text(c.note) || undefined,
+              })),
           };
         }),
       };

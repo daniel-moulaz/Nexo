@@ -929,6 +929,7 @@ class AppProvider extends ChangeNotifier {
   Future<void> _reloadLedger() async {
     transactions = await DBHelper.getTransactions();
     accounts = await DBHelper.getAccounts();
+    categories = await DBHelper.getCategories();
     transactionMetadata = await TransactionMetadataService.instance
         .getForMany(transactions.map((t) => t.id));
     TransactionMetadataService.instance.revision.value++;
@@ -1005,15 +1006,21 @@ class AppProvider extends ChangeNotifier {
       AppTransaction updated, AppTransaction original,
       {TransactionMetadata? metadata}) async {
     final old = await TransactionMetadataService.instance.getFor(original.id);
-    if (original.id.startsWith('investment:') ||
-        old.source.startsWith('investment:')) {
+    final investment = original.id.startsWith('investment:') ||
+        old.source.startsWith('investment:');
+    if (investment &&
+        (updated.amount != original.amount ||
+            updated.type != original.type ||
+            updated.accountId != original.accountId ||
+            updated.currency != original.currency ||
+            !updated.date.isAtSameMomentAs(original.date))) {
       throw const FormatException(
           'Revise esta movimentação em Investimentos para manter conta e carteira consistentes.');
     }
     if (old.source.startsWith('transfer:'))
       throw StateError(
           'Para alterar uma transferência, exclua o par e registre novamente.');
-    final meta = metadata ?? old;
+    final meta = investment ? old : metadata ?? old;
     final db = await DBHelper.database;
     await ledgerTransaction(db, 'transaction.update', (txn) async {
       if (!old.isPending && old.affectsBalance) {
@@ -1089,17 +1096,20 @@ class AppProvider extends ChangeNotifier {
   // ── Batch changes (assistant and, later, multi-select screens) ─────────
 
   /// Ids of [ids] that are plain entries: not transfers, investment cash or
-  /// balance adjustments, which have their own rules.
-  Future<void> _requirePlain(DatabaseExecutor txn, List<String> ids) async {
+  /// balance adjustments, which have their own rules. [investments] lets
+  /// investment cash through, for changes that do not touch money.
+  Future<void> _requirePlain(DatabaseExecutor txn, List<String> ids,
+      {bool investments = false}) async {
     for (final id in ids) {
-      if (id.startsWith('investment:')) {
+      if (id.startsWith('investment:') && !investments) {
         throw const FormatException(
             'Movimentações de investimento são alteradas em Investir.');
       }
       final rows = await txn.query('transaction_metadata',
           columns: ['source'], where: 'transaction_id = ?', whereArgs: [id]);
       final source = rows.isEmpty ? '' : rows.single['source'] as String;
-      if (source.startsWith('transfer:') || source.startsWith('investment:')) {
+      if (source.startsWith('transfer:') ||
+          (source.startsWith('investment:') && !investments)) {
         throw const FormatException(
             'Transferências e investimentos não entram em alterações em lote.');
       }
@@ -1137,7 +1147,8 @@ class AppProvider extends ChangeNotifier {
     }
     final db = await DBHelper.database;
     await ledgerTransaction(db, 'transaction.bulk_update', (txn) async {
-      await _requirePlain(txn, ids);
+      // Investment cash has no spending kind of its own to change.
+      await _requirePlain(txn, ids, investments: expenseClass == null);
       final rows = await _stored(txn, ids);
       if (categoryId != null) {
         final cats = await txn

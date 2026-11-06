@@ -71,6 +71,21 @@ void main() {
     expect(await balance(), 900);
   });
 
+  test('investment cash has its own category, whatever comes first in the list',
+      () async {
+    await repo.create(asset(), op('buy', 'buy', 10, 10000));
+    await repo.record(op('sell', 'sell', 5, 6000, day: 1));
+    await repo.record(op('income', 'income', 0, 500, day: 2));
+    final byId = {
+      for (final t in await DBHelper.getTransactions()) t.id: t.categoryId
+    };
+    expect(byId['investment:buy'], 'investments-expense');
+    expect(byId['investment:sell'], 'investments-income');
+    expect(byId['investment:income'], 'investments-income');
+    final categories = await DBHelper.getCategories();
+    expect(categories.where((c) => c.name == 'Investimentos').length, 2,
+        reason: 'one of each type, created once');
+  });
   test('sale credits cash once, proventos are income, reversal is atomic',
       () async {
     await repo.create(asset(), op('buy', 'buy', 10, 10000));
@@ -193,7 +208,9 @@ void main() {
     final app = AppProvider();
     final tx = (await DBHelper.getTransactions()).single;
     await expectLater(app.deleteTransaction(tx.id), throwsFormatException);
-    await expectLater(app.updateTransaction(tx, tx), throwsFormatException);
+    final changed = AppTransaction.fromMap({...tx.toMap(), 'amount': 1.0});
+    await expectLater(
+        app.updateTransaction(changed, tx), throwsFormatException);
     expect(await balance(), 900);
     app.dispose();
   });

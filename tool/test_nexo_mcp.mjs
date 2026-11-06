@@ -825,6 +825,53 @@ await test('parity: idempotency key, retried calls and ids of what is being crea
   await assert.rejects(pact(q, 'add_transaction', { type: 'expense', amount: 31, description: 'x', account_id: 'main', category_id: 'assistant-cat:00000000-0000-4000-8000-00000000abcd' }), ToolInputError);
 });
 
+await test('requests build on a pending one: entry, money lent and more', async () => {
+  const q = smartQueue();
+  const tx = await pact(q, 'add_transaction', { type: 'expense', amount: 25, description: 'Lanche', account_id: 'main', category_id: 'bar' });
+  await pact(q, 'update_transaction', { id: tx.new_id, account_id: 'main', note: 'mudou' });
+  assert.equal(q.items.at(-1).kind, 'transaction.update');
+  assert.equal(q.items.at(-1).args.id, tx.new_id);
+  await pact(q, 'update_transaction', { id: tx.new_id, status: 'pending' });
+  assert.equal(q.items.at(-1).kind, 'transaction.edit');
+  await pact(q, 'delete_transaction', { id: tx.new_id });
+  assert.equal(q.items.at(-1).kind, 'transaction.delete');
+  const lent = await pact(q, 'add_lended', { person: 'Pessoa', type: 'lent', amount: 40, date: tday });
+  await pact(q, 'settle_lended', { id: lent.new_id });
+  assert.deepEqual([q.items.at(-1).kind, q.items.at(-1).args.id], ['lended.settle', lent.new_id]);
+  // Recorded but not synced yet counts too; refused and unknown ids do not.
+  q.items.find((x) => x.id === tx.request_id).status = 'done';
+  await pact(q, 'update_transaction', { id: tx.new_id, note: 'de novo' });
+  q.items.find((x) => x.id === tx.request_id).status = 'rejected';
+  await assert.rejects(pact(q, 'update_transaction', { id: tx.new_id, note: 'x' }), /não encontrado/);
+  await assert.rejects(pact(q, 'settle_lended', { id: 'assistant-lend:00000000-0000-4000-8000-000000000099' }), /não encontrado/);
+  // A new_id of the wrong kind is not accepted as an entry.
+  await assert.rejects(pact(q, 'update_transaction', { id: `assistant:${lent.request_id}`, note: 'x' }), /não encontrado/);
+});
+
+await test('investment cash: category and text by the connector, money in Investir', async () => {
+  const q = smartQueue();
+  const l = { ...scenario, transactions: [...scenario.transactions, { id: 'investment:op1', type: 'expense', amount: 10, account_id: 'main', category_id: 'bar', date: '2026-10-20T12:00:00.000', description: 'Aporte · Ativo' }] };
+  await pact(q, 'update_transaction', { id: 'investment:op1', category_id: 'bar', note: 'x' }, l);
+  assert.equal(q.items.at(-1).kind, 'transaction.update');
+  await assert.rejects(pact(q, 'update_transaction', { id: 'investment:op1', amount: 5 }, l), /aba Investir/);
+  await assert.rejects(pact(q, 'update_transaction', { id: 'investment:op1', account_id: 'main' }, l), /aba Investir/);
+  await pact(q, 'update_transactions', { ids: ['investment:op1'], set: { category_id: 'bar' } }, l);
+  assert.deepEqual(q.items.at(-1).args.ids, ['investment:op1']);
+  await assert.rejects(pact(q, 'update_transactions', { ids: ['investment:op1'], set: { kind: 'normal' } }, l), /Nenhum/);
+});
+
+await test('goals show their movements, so a withdrawal explains a zero', async () => {
+  const q = smartQueue();
+  const l = { ...scenario, goals: [{ id: 'g', name: 'Reserva', target_amount: 1000, current_amount: 0 }],
+    contributions: [
+      { id: 'c1', goal_id: 'g', amount: 100, type: 'contribution', date: '2026-10-29T12:00:00', note: '' },
+      { id: 'c2', goal_id: 'g', amount: 100, type: 'withdrawal', date: '2026-11-01T12:00:00', note: 'usei' },
+      { id: 'c3', goal_id: 'outro', amount: 7, type: 'contribution', date: '2026-11-02T12:00:00', note: '' }] };
+  const g = (await pact(q, 'get_goals', {}, l)).goals[0];
+  assert.deepEqual(g.movements.map((m) => [m.date, m.kind, m.amount]), [['2026-11-01', 'retirada', 100], ['2026-10-29', 'guardado', 100]]);
+  assert.equal(g.saved, 0);
+});
+
 await test('parity: budgets in full or proportional, with the shared week start', async () => {
   const q = smartQueue();
   const b = Object.fromEntries((await pact(q, 'get_budgets', {})).budgets.map((x) => [x.id, x]));
