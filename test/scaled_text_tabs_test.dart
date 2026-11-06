@@ -8,6 +8,7 @@ import 'package:nexo/l10n/app_localizations.dart';
 import 'package:nexo/models/models.dart';
 import 'package:nexo/providers/app_provider.dart';
 import 'package:nexo/screens/main_shell.dart';
+import 'package:nexo/theme/app_theme.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
@@ -137,7 +138,7 @@ void main() {
               locale: const Locale('pt'),
               localizationsDelegates: AppLocalizations.localizationsDelegates,
               supportedLocales: AppLocalizations.supportedLocales,
-              theme: ThemeData(useMaterial3: true),
+              theme: buildTheme(seed: 'nexo', dark: false),
               builder: (context, child) => MediaQuery(
                   data: MediaQuery.of(context)
                       .copyWith(textScaler: const TextScaler.linear(1.5)),
@@ -151,6 +152,33 @@ void main() {
       expect(tester.takeException(), isNull);
       await tester.pumpWidget(const SizedBox());
       app.dispose();
+    });
+
+    testWidgets('${tab.key}: everything tappable is at least 44 px',
+        (tester) async {
+      tester.view.physicalSize = const Size(412, 915);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+      final handle = tester.ensureSemantics();
+      final app = fixture();
+      app.tabIndexNotifier.value = tab.value;
+      await tester.pumpWidget(ChangeNotifierProvider.value(
+          value: app,
+          child: MaterialApp(
+              locale: const Locale('pt'),
+              localizationsDelegates: AppLocalizations.localizationsDelegates,
+              supportedLocales: AppLocalizations.supportedLocales,
+              theme: buildTheme(seed: 'nexo', dark: false),
+              home: const MainShell())));
+      for (var i = 0; i < 12; i++) {
+        await tester.runAsync(
+            () => Future<void>.delayed(const Duration(milliseconds: 40)));
+        await tester.pump(const Duration(milliseconds: 100));
+      }
+      await expectLater(tester, meetsGuideline(iOSTapTargetGuideline));
+      await tester.pumpWidget(const SizedBox());
+      app.dispose();
+      handle.dispose();
     });
   }
 }

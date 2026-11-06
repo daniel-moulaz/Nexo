@@ -16,7 +16,7 @@ double _contrast(Color a, Color b) {
 
 /// Colors written straight in screens and widgets. It may only go down: new
 /// code reads the tokens. What is left is mostly each account's own card.
-const _literalColorsAllowed = 49;
+const _literalColorsAllowed = 24;
 
 void main() {
   for (final dark in [true, false]) {
@@ -104,6 +104,43 @@ void main() {
     }
   });
 
+  test('chart series stand out from their card', () {
+    for (final dark in [true, false]) {
+      final card =
+          buildTheme(seed: 'nexo', dark: dark).colorScheme.surfaceContainerLow;
+      final series = dark ? NexoChart.seriesDark : NexoChart.seriesLight;
+      for (final color in series) {
+        expect(_contrast(color, card), greaterThanOrEqualTo(3),
+            reason: '$color on $card');
+      }
+    }
+  });
+
+  testWidgets('a series past the palette reads as others', (tester) async {
+    late BuildContext context;
+    await tester.pumpWidget(MaterialApp(
+        theme: buildTheme(seed: 'nexo', dark: true),
+        home: Builder(builder: (c) {
+          context = c;
+          return const SizedBox();
+        })));
+    final others = Theme.of(context).colorScheme.onSurfaceVariant;
+    expect(NexoChart.slot(context, 0), NexoChart.seriesDark.first);
+    expect(NexoChart.slot(context, 6), others);
+    expect(NexoChart.slot(context, 9), others);
+  });
+
+  testWidgets('no motion when the system asks for none', (tester) async {
+    late BuildContext context;
+    await tester.pumpWidget(MediaQuery(
+        data: const MediaQueryData(disableAnimations: true),
+        child: Builder(builder: (c) {
+          context = c;
+          return const SizedBox();
+        })));
+    expect(NexoMotion.of(context), Duration.zero);
+  });
+
   test('a fill always gets readable text', () {
     for (final fill in const [
       NexoBrand.teal,
@@ -139,7 +176,7 @@ void main() {
   for (final dark in [true, false]) {
     final name = dark ? 'escuro' : 'claro';
     testWidgets('components, $name', (tester) async {
-      tester.view.physicalSize = const Size(400, 420);
+      tester.view.physicalSize = const Size(400, 560);
       tester.view.devicePixelRatio = 1;
       addTearDown(tester.view.resetPhysicalSize);
       addTearDown(tester.view.resetDevicePixelRatio);
@@ -159,6 +196,14 @@ void main() {
             NexoProgress(value: .9),
             SizedBox(height: 12),
             NexoProgress(value: 1.2),
+            SizedBox(height: 12),
+            NexoMonthPill(
+                label: 'Novembro 2026', onPrevious: null, onNext: null),
+            SizedBox(height: 12),
+            NexoStatusTag(
+                label: 'Esperando o app',
+                icon: Icons.schedule,
+                color: NexoBrand.tealDeep),
           ])));
       await tester.pumpAndSettle();
       await expectLater(find.byType(RepaintBoundary).first,
