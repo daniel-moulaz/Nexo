@@ -49,6 +49,8 @@ export function cardInvoices(l: Ledger, today: string, cardId?: string, withItem
     for (const tx of l.transactions) {
       if (tx.account_id !== card.id) continue;
       const m = meta(metas.get(text(tx.id)));
+      // A credit still forecast has not happened: it lowers nothing yet.
+      if (tx.type === "income" && m.status === "pending") continue;
       if (isNeutral(tx, m) && m.source !== "opening_balance" && !m.source.startsWith("shared_bill:")) continue;
       const s = slot(cycleFor(day(text(tx.date)), closing, dueDay));
       s.total += (tx.type === "income" ? -1 : 1) * cents(num(tx.amount));

@@ -19,8 +19,19 @@ class EntryDefaults {
     for (final tx in recent) {
       final account =
           accounts.where((a) => a.id == tx.accountId && !a.isGold).firstOrNull;
-      if (account != null) return account;
+      if (account == null) continue;
+      if (type == 'income' && account.type == 'credit') continue;
+      return account;
     }
-    return null;
+    return type == 'income'
+        ? accounts.where((a) => a.type != 'credit' && !a.isGold).firstOrNull
+        : null;
+  }
+
+  /// What is left of a card's limit, or null when it does not apply.
+  static double? freeLimit(Account account) {
+    final limit = account.creditLimit;
+    if (account.type != 'credit' || limit == null || limit <= 0) return null;
+    return limit + (account.balance < 0 ? account.balance : 0);
   }
 }

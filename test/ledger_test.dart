@@ -447,6 +447,28 @@ void main() {
     expect(r.progress, closeTo(progress, .000001));
   }
 
+  test('Paid before its date, the entry says today and the schedule stays',
+      () async {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final due = today.add(const Duration(days: 3));
+    final r = RecurringPayment(
+        id: 'early',
+        name: 'Early',
+        accountId: 'bank',
+        categoryId: 'food',
+        amount: 100,
+        freqVal: 1,
+        freqUnit: 'months',
+        startDate: due,
+        nextDate: due);
+    await DBHelper.insertRecurring(r);
+    await app.markRecurringPaid(r);
+    expect(app.transactions.single.date, today);
+    expect(app.transactions.single.id, contains(due.toIso8601String()));
+    expect((await DBHelper.getRecurringHistory('early')).single.date, due);
+  });
+
   test('Normal recurring payment counts as paid and consumes one occurrence',
       () async {
     final r = recurringFixture();

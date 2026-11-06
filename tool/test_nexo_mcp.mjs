@@ -468,6 +468,12 @@ await test('card invoices: the bank split, payment after closing, limit used', a
   assert.deepEqual([nov.closing_date, nov.purchases_from, nov.total, nov.status],
     ['2026-11-19', '2026-10-19', 213.59, 'aberta']);
   assert.equal(r.cards[0].limit_used_percent, Math.round(634.51 / 650 * 100));
+  const forecast = { ...card,
+    transactions: [...card.transactions, { id: 'credit', type: 'income', amount: 50, description: 'previsto',
+      account_id: 'nu', category_id: 'freelance', date: '2026-10-25T12:00:00.000' }],
+    metadata: [...(card.metadata ?? []), { transaction_id: 'credit', status: 'pending' }] };
+  const after = await act(q, 'get_card_invoices', { card_id: 'nu' }, forecast);
+  assert.equal(after.cards[0].invoices[0].total, 213.59, 'a credit still forecast lowers nothing');
   assert.equal(q.items.length, 0, 'reading never queues');
 });
 await test('refusals the assistant can act on; status says how long it waits', async () => {

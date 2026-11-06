@@ -94,6 +94,17 @@ class _TransferScreenState extends State<TransferScreen> {
             ? app.convertBetween(inputAmount, fromCurrency, toCurrency)
             : null;
 
+    if (transferable.length < 2) {
+      return Scaffold(
+        appBar: AppBar(title: Text(l10n.transfer_transfer)),
+        body: const EmptyState(
+            icon: Icons.swap_horiz,
+            message: 'Transferir pede duas contas',
+            subMessage:
+                'Crie outra conta em Contas e cartões. Para pagar o cartão, use Pagar fatura na tela dele.'),
+      );
+    }
+
     return Scaffold(
       appBar: AppBar(
         title: Text(l10n.transfer_transfer,

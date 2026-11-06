@@ -250,7 +250,7 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
 
   void _setType(String type) {
     if (type == 'transfer') {
-      Navigator.of(context).push(
+      Navigator.of(context).pushReplacement(
         MaterialPageRoute(builder: (_) => const TransferScreen()),
       );
       return;
@@ -258,6 +258,18 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
     final app = context.read<AppProvider>();
     setState(() {
       _type = type;
+      // Money coming in rarely lands on a card: start from where it does.
+      if (!isEdit && type == 'income') {
+        final account = EntryDefaults.recentAccount(
+            app.accounts.where((a) => !a.isGold).toList(),
+            app.transactions,
+            app.transactionMetadata,
+            type);
+        if (account != null) {
+          _accountId = account.id;
+          _currency = account.currency;
+        }
+      }
       _selectFirstCategory(app, type);
       _subcategory = '';
       _status = 'paid';
@@ -280,6 +292,42 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
               ? 'Já existe um lançamento parecido. Deseja salvar mesmo assim?'
               : 'Existem ${duplicates.length} lançamentos parecidos. Deseja salvar mesmo assim?',
         ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: const Text('Revisar'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: const Text('Salvar mesmo assim'),
+          ),
+        ],
+      ),
+    );
+    return result == true;
+  }
+
+  /// A purchase above the limit may be real, so this asks and never blocks.
+  Future<bool> _confirmLimit(Account card, double amount) async {
+    final previous = widget.existing;
+    final already = previous != null &&
+            previous.accountId == card.id &&
+            previous.type == 'expense'
+        ? previous.amount
+        : 0.0;
+    final free = EntryDefaults.freeLimit(card);
+    if (_type != 'expense' ||
+        _status == 'pending' ||
+        free == null ||
+        amount - already <= free + .005) {
+      return true;
+    }
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Passa do limite do cartão'),
+        content: Text(
+            '${card.name} tem ${formatAmount(free < 0 ? 0 : free, card.currency)} de limite livre, e este lançamento é de ${formatAmount(amount - already, card.currency)}.'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(dialogContext, false),
@@ -328,6 +376,7 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
     final app = context.read<AppProvider>();
     final account = app.accountById(_accountId!);
     if (account == null) return;
+    if (!await _confirmLimit(account, amount) || !mounted) return;
     final txCurrency = _currency.isEmpty ? account.currency : _currency;
     final storedCurrency = txCurrency == account.currency ? '' : txCurrency;
     final id = widget.existing?.id ?? app.newId();

@@ -1640,6 +1640,10 @@ class AppProvider extends ChangeNotifier {
       final occurrenceId =
           recovery?.id ?? 'recurring:${r.id}:${date.toIso8601String()}';
       if (!skip) {
+        // Paid before its date: the money moved today, so the entry says
+        // today. The schedule and the occurrence keep the original date.
+        final now = DateTime.now();
+        final today = DateTime(now.year, now.month, now.day);
         final tx = AppTransaction(
             id: occurrenceId,
             type: r.paymentType,
@@ -1647,7 +1651,7 @@ class AppProvider extends ChangeNotifier {
             description: r.name,
             accountId: r.accountId,
             categoryId: r.categoryId,
-            date: date,
+            date: date.isAfter(today) ? today : date,
             note: r.notes);
         await txn.insert('transactions', tx.toMap());
         await txn.insert(
