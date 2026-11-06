@@ -1085,9 +1085,12 @@ await test('parity: trend, net worth, cash projection and grouped spending', asy
   assert.equal(trend.months[1].income, 1867.26, 'the old adjustment still counts as income until converted');
   assert.equal(trend.average_spending, 999);
   const nw = await pact(q, 'get_net_worth', {});
-  assert.deepEqual([nw.accounts, nw.card_debt, nw.investments, nw.assets, nw.loans_outstanding, nw.lent_to_others],
-    [2000, -300, 600, 8000, -9100, 50]);
-  assert.equal(nw.net_worth, 2000 - 300 + 600 + 8000 - 9100 + 50);
+  assert.deepEqual([nw.accounts, nw.card_debt, nw.investments, nw.goals, nw.assets, nw.loans_outstanding, nw.lent_to_others],
+    [2000, -300, 600, 100, 8000, -9100, 50]);
+  assert.equal(nw.net_worth, 2000 - 300 + 600 + 100 + 8000 - 9100 + 50, 'a goal took the money out of the account: it still counts');
+  const bookkeeping = await pact(q, 'get_net_worth', {}, { ...scenario, contributions: [
+    { id: 'n', goal_id: 'trip', amount: 500, type: 'contribution', date: '2026-10-07T12:00:00', account_id: '' }] });
+  assert.equal(bookkeeping.goals, 0, 'a reserve without an account never left it');
   const cash = await pact(q, 'get_cash_projection', { until: '2026-11-30' });
   assert.equal(cash.starting_cash, 2000);
   const whats = cash.timeline.map((t) => t.what);

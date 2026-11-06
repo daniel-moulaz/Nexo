@@ -996,11 +996,17 @@ export async function callParityAction(name: string, rawArgs: unknown, l: Ledger
         if (x.type === "borrowed") borrowed += cents(num(x.amount));
         else lent += cents(num(x.amount));
       }
+      // A goal takes the money out of the account: it is still the person's.
+      // Without an account the reserve was only bookkeeping.
+      let goals = 0;
+      for (const c of (l.contributions ?? []).filter((c) => text(c.account_id))) {
+        goals += (c.type === "withdrawal" ? -1 : 1) * cents(num(c.amount));
+      }
       const investments = cents(invest.reference_total);
-      const total = cash + cards + investments + assets - loans + lent - borrowed;
+      const total = cash + cards + investments + assets + goals - loans + lent - borrowed;
       return {
         currency: l.mainCurrency,
-        accounts: money(cash), card_debt: money(cards), investments: money(investments), assets: money(assets),
+        accounts: money(cash), card_debt: money(cards), investments: money(investments), goals: money(goals), assets: money(assets),
         loans_outstanding: money(-loans), lent_to_others: money(lent), borrowed_from_others: money(-borrowed),
         net_worth: money(total),
         not_converted: Object.keys(others).length ? Object.fromEntries(Object.entries(others).map(([c, v]) => [c, money(v)])) : undefined,
