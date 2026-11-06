@@ -1,5 +1,15 @@
 # Changelog
 
+## [1.15.1] - 2026-11-06
+### Patrimônio
+- **Investir:** o mês atual deixa de descontar uma receita recebida antes da data, como um salário adiantado. Ela já está no saldo.
+- **Antes do primeiro registro:** o card não inventa mais meses. Ele começa no mês do primeiro lançamento.
+- **Venda:** sai da carteira pelo custo do que foi vendido, não pelo valor recebido.
+- **Mês negativo:** aparece com sinal e barra vermelha, em vez de barra vazia. O texto do card explica o que entra na conta e mostra o valor de hoje pela cotação.
+- **Uma regra só:** Hoje, a tela de Patrimônio e o card agora somam contas, cartões, investimentos, bens, objetivos e dinheiro emprestado, menos dívidas. Antes, Hoje e Patrimônio ignoravam investimentos.
+- **Objetivos:** aportar tira da conta, mas o dinheiro continua seu e agora conta no patrimônio, inclusive no conector.
+- **Evolução:** os registros diários antigos ganham na leitura o que não guardavam, sem mudar o banco.
+
 ## [1.15.0] - 2026-11-06
 ### Identidade
 - **Uma cara só:** o app ganha a tinta azul-escura e o teal do Engate, igual no celular e no Windows. Sai o preto com contornos; entram superfícies em camadas.
