@@ -1,5 +1,24 @@
 # Changelog
 
+## [1.14.0] - 2026-11-06
+### Pedidos do Claude
+- **Em sequência:** corrigir um lançamento ou quitar um empréstimo recém-criado funciona na hora, mesmo com o primeiro pedido ainda pendente ou sem ter sincronizado.
+- **Bandeja do Windows:** fechar a janela deixa o Nexo perto do relógio, gravando os pedidos a cada 20 segundos; ele também pode iniciar com o Windows. Para sair, use o ícone.
+- **Investimentos:** movimentações nascem na categoria "Investimentos", e não mais na primeira da lista (era por isso que uma venda aparecia como "Salário"). Categoria, descrição e observação podem ser editadas, na tela e pelo conector.
+- **Objetivos:** o conector mostra os movimentos de cada objetivo, para uma retirada não parecer um aporte perdido.
+### Planejamento
+- **Orçamento variável:** base mais uma % do lucro do mês na categoria, com a base como piso. A tela mostra base, lucro e limite.
+- **Dividir conta:** sua parte fica como gasto; a dos outros vira a receber, sem mudar saldo nem fatura. O dinheiro recebido entra sem contar como receita.
+- **Alerta de limite:** o Hoje e o conector avisam quando uma recorrente não vai caber no limite livre do cartão.
+- **Meta automática:** um objetivo pode seguir os custos fixos (meses de recorrentes mais alimentação mínima).
+- **Fatura com data:** `pay_card_invoice` aceita o dia do pagamento.
+- **Tipos de gasto:** aviso quando um tipo passa de 150% da meta, e no conector quando há gasto em categoria sem tipo.
+### Conciliação
+- **Roda sozinha:** depois de sincronizar, não só ao abrir "Para revisar"; as decisões chegam ao servidor.
+- **Pix para você mesmo:** reconhecido pelo nome do perfil, mesmo sem o outro lado à vista.
+- **Pix ou cartão:** um movimento do banco contra um lançamento no cartão (ou o contrário) é apontado e nunca ligado sozinho.
+- **Conector:** `list_suggestions` mostra o que provavelmente já está lançado. Código fracionário (BPAC11F) vale pelo ativo base.
+
 ## [1.13.2] - 2026-11-06
 ### Celular
 - O celular volta ao visual anterior, com títulos pesados e rótulos compactos. A tipografia da 1.13.1 continua valendo só no Windows, que não muda nesta versão. As correções da 1.13.1 (cor do patrimônio, plurais, texto cortado) seguem valendo nos dois.

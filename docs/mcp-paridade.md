@@ -97,6 +97,14 @@ Legenda: **ok** cobre o que a tela faz, com os mesmos números e as mesmas regra
 | Registro "feito pelo Claude" no app | Sincronizar dispositivos › Feito pelo Claude | ok | |
 | O que dá para fazer | describe_app_capabilities | ok | gerado do código; o teste confere com a lista de ferramentas |
 
+## Acréscimos da 1.14.0
+
+- Pedidos encadeados: `new_id` de lançamento, empréstimo pessoal, investimento, bem e desejo vale antes de sincronizar. Recorrentes e empréstimos ficam de fora: suas ferramentas calculam com valores que o registro provisório não tem.
+- `update_transaction` e `update_transactions` aceitam movimentação de investimento só para categoria, descrição e observação.
+- `split_bill` e `settle_lended` com `account_id`; `pay_card_invoice` com `date`.
+- `get_goals` traz `movements` e `auto_target`; `get_budgets` traz `variable_limit`; `get_upcoming_bills` e `get_daily_digest` trazem `card_limit_alerts`; `get_spending_types` traz `alerts`; `list_suggestions` traz `probably_recorded`.
+- Novas configurações compartilhadas: `budgetRules` e `emergencyPlan`.
+
 ## Fora do conector, e por quê
 
 | Ação do app | Motivo |
