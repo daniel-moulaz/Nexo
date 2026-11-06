@@ -525,7 +525,7 @@ class _LoanSheetState extends State<LoanSheet> {
               // Account Card Picker
               // Transfer Account Card Picker
               Text(
-                'Transfer Loan Amount To',
+                'Depositar o empréstimo em',
                 style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
               ),
               const SizedBox(height: 6),
@@ -539,7 +539,7 @@ class _LoanSheetState extends State<LoanSheet> {
 
               // Installment Account Card Picker
               Text(
-                'Pay Installments From',
+                'Pagar as parcelas de',
                 style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
               ),
               const SizedBox(height: 6),

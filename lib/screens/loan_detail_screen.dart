@@ -215,7 +215,7 @@ class _LoanDetailScreenState extends State<LoanDetailScreen> {
                                 formatAmount(_loan.principal, cur))),
                         Expanded(
                           child: _DetailStat(
-                            'Interest Rate',
+                            'Juros ao ano',
                             _loan.interestRate != null &&
                                     _loan.interestRate! > 0
                                 ? '${_loan.interestRate}%'
@@ -229,7 +229,7 @@ class _LoanDetailScreenState extends State<LoanDetailScreen> {
                       children: [
                         Expanded(
                             child: _DetailStat(
-                                'Duration',
+                                'Duração',
                                 l10n.loans_durationMonths(
                                     _loan.durationMonths))),
                         Expanded(

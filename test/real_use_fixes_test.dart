@@ -122,6 +122,23 @@ void main() {
     }
   });
 
+  test('no English left on the loan screens', () {
+    for (final f in [
+      'lib/screens/loans_screen.dart',
+      'lib/screens/loan_detail_screen.dart'
+    ]) {
+      final text = File(f).readAsStringSync();
+      for (final bad in [
+        'Transfer Loan',
+        'Pay Installments',
+        "'Interest Rate'",
+        "'Duration'"
+      ]) {
+        expect(text.contains(bad), isFalse, reason: bad);
+      }
+    }
+  });
+
   test('nothing says deleted or Undo to the person', () {
     for (final dir in ['lib/screens', 'lib/widgets', 'lib/utils']) {
       for (final f in Directory(dir).listSync().whereType<File>()) {
