@@ -12,7 +12,7 @@ import '../services/notification_inbox.dart' show NotificationInbox;
 
 class DBHelper {
   static Database? _db;
-  static const int _version = 27;
+  static const int _version = 28;
 
   /// Public accessor for the current DB/backup schema version, so UI code
   /// (e.g. the Backup screen) never has to hardcode a copy that can drift
@@ -494,6 +494,7 @@ class DBHelper {
     if (oldV < 22) await _createImportRules(db);
     if (oldV < 23) await _createSuggestions(db);
     if (oldV < 24) await InvestmentRepository.createSchema(db);
+    if (oldV < 28) await InvestmentRepository.addCurrency(db);
     if (oldV < 27) await createSharedSettings(db);
     if (oldV < 26) {
       // Kind of spending of a category (envelopes by share of income).
@@ -845,12 +846,17 @@ class DBHelper {
           conflictAlgorithm: ConflictAlgorithm.replace));
   static Future<void> validateInvestmentCashAccount(
       DatabaseExecutor db, Account a) async {
-    if (a.currency == 'BRL' && !['credit', 'gold'].contains(a.type)) return;
-    if ((await db.query('investment_operations',
-            where: 'cash_account_id=?', whereArgs: [a.id], limit: 1))
-        .isNotEmpty) {
-      throw const FormatException(
-          'Esta conta está vinculada a investimentos e precisa continuar como conta de saldo em reais.');
+    // A linked account keeps the currency of its assets: dollar stocks move
+    // a dollar account.
+    final linked = await db.rawQuery(
+        'SELECT DISTINCT i.currency AS currency FROM investment_operations o '
+        'JOIN investments i ON i.id = o.investment_id WHERE o.cash_account_id=?',
+        [a.id]);
+    if (linked.isEmpty) return;
+    if (['credit', 'gold'].contains(a.type) ||
+        linked.any((r) => (r['currency'] ?? 'BRL') != a.currency)) {
+      throw FormatException(
+          'Esta conta está vinculada a investimentos e precisa continuar como conta de saldo em ${linked.first['currency'] ?? 'BRL'}.');
     }
   }
 

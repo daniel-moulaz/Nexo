@@ -195,11 +195,20 @@ void main() {
     await db.execute(
         'ALTER TABLE investment_operations DROP COLUMN cash_account_id');
     await db.execute('ALTER TABLE investments DROP COLUMN archived');
+    // Schema 28: dollar assets.
+    await db.execute('ALTER TABLE investments DROP COLUMN currency');
+    await db.execute('ALTER TABLE investments DROP COLUMN fx_micros');
+    await db.execute('ALTER TABLE investment_operations DROP COLUMN brl_cents');
+    await db.execute('ALTER TABLE investment_operations DROP COLUMN tax_cents');
     await db.execute('ALTER TABLE categories DROP COLUMN envelope');
     await db.execute('DROP TABLE shared_settings');
     await db.setVersion(24);
     await DBHelper.close();
-    expect(await (await DBHelper.database).getVersion(), 27);
+    expect(await (await DBHelper.database).getVersion(), 28);
+    // v28 brings the currency back with reais for every old row.
+    final upgraded = (await repo.load()).single;
+    expect(upgraded.investment.currency, 'BRL');
+    expect(upgraded.cost, 10000);
     // v26 adds the kind of spending to categories.
     expect(
         (await (await DBHelper.database)

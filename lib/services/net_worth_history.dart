@@ -185,7 +185,7 @@ List<NetWorthPoint> netWorthHistory(NetWorthInputs data,
       if (o.kind == 'income' &&
           d.year == month.year &&
           d.month == month.month) {
-        income += o.cents / 100;
+        income += o.mainCents / 100;
       }
     }
     points.add(NetWorthPoint(

@@ -165,7 +165,7 @@ class _PortfolioChartsState extends State<PortfolioCharts> {
                 !o.date.isAfter(now) &&
                 o.date.toLocal().year == month.year &&
                 o.date.toLocal().month == month.month)
-            .fold(0, (v, o) => v + o.cents)
+            .fold(0, (v, o) => v + o.mainCents)
     ];
     if (values.every((v) => v == 0))
       return const Text(

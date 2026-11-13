@@ -544,7 +544,26 @@ class AppProvider extends ChangeNotifier {
 
   Future<void> refreshRates() => _loadRates(forceNetwork: true);
 
+  /// Reais per unit of [currency] today, in millionths, from the same rates
+  /// the accounts use. Null without rates.
+  int? fxMicros(String currency) {
+    if (currency == 'BRL') return 1000000;
+    final rate = convertBetween(1, currency, 'BRL');
+    if (rate == null || !rate.isFinite || rate <= 0) return null;
+    return (rate * 1000000).round();
+  }
+
   Future<void> _refreshGoldBalances() async {
+    // Dollar stocks follow the rate of the dollar accounts.
+    for (final c in investmentCurrencies.where((c) => c != 'BRL')) {
+      final fx = fxMicros(c);
+      if (fx == null) continue;
+      try {
+        await InvestmentRepository().refreshFx(c, fx);
+      } catch (_) {
+        // A rate is a convenience: the last one stays.
+      }
+    }
     if (exchangeRates.isEmpty) return;
     if (!exchangeRates.containsKey('XAU')) return;
 
@@ -1499,7 +1518,9 @@ class AppProvider extends ChangeNotifier {
       id: newId(),
       type: 'expense',
       amount: fromAmount,
-      description: 'Transferência enviada',
+      description: fromCurrency == toCurrency
+          ? 'Transferência enviada'
+          : 'Câmbio enviado',
       accountId: fromId,
       categoryId: catId,
       date: now,
@@ -1510,7 +1531,9 @@ class AppProvider extends ChangeNotifier {
       id: newId(),
       type: 'income',
       amount: creditAmount,
-      description: 'Transferência recebida',
+      description: fromCurrency == toCurrency
+          ? 'Transferência recebida'
+          : 'Câmbio recebido',
       accountId: toId,
       categoryId: catId,
       date: now,

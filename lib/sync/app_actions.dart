@@ -110,6 +110,8 @@ const appInternalWrites = <String, String>{
   'setting.seed':
       'copia para o acervo as configurações que o aparelho já tinha',
   'gold.refresh': 'recalcula contas em ouro pela cotação; nunca é decisão',
+  'investment.fx':
+      'atualiza o câmbio do dia dos ativos em dólar, como a cotação; cada aparelho lê o seu',
   'bootstrap.normalize': 'ajuste automático da abertura do app',
   'backup.restore':
       'substitui o acervo inteiro por um arquivo do aparelho; só pela tela, com o arquivo',

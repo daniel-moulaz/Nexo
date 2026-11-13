@@ -184,4 +184,26 @@ Future<void> seedDemoInvestments() async {
             date: start,
             createdAt: start));
   }
+  // A fictitious US stock kept at another broker, bought with the dollar
+  // at 5,10 and shown today at 5,40.
+  await repo.create(
+      Investment(
+          id: 'asset-us',
+          name: 'Empresa americana de exemplo',
+          assetClass: 'Ações',
+          ticker: 'DEMO',
+          institution: 'Corretora no exterior',
+          priceMicros: 140 * investmentScale,
+          priceAt: DateTime.now(),
+          currency: 'USD',
+          fxMicros: 5400000),
+      InvestmentOperation(
+          id: 'op-us',
+          investmentId: 'asset-us',
+          kind: 'buy',
+          quantity: 2500000,
+          cents: 30000,
+          brlCents: 153000,
+          date: start,
+          createdAt: start));
 }

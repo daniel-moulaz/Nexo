@@ -1,5 +1,6 @@
 import 'package:excel/excel.dart';
 import 'text_normalize.dart';
+import '../investments/investment_models.dart' show normalizeTicker;
 
 /// One trade from the B3 investor area export ("Negociação", Excel).
 /// Columns the file carries: Data do Negócio, Tipo de Movimentação
@@ -87,8 +88,7 @@ abstract final class B3Import {
         trades.add(B3Trade(
             date: date,
             kind: kind,
-            ticker:
-                tickerText.trim().toUpperCase().replaceAll(RegExp(r'F$'), ''),
+            ticker: normalizeTicker(tickerText),
             institution: text('institution').trim(),
             market: text('market').trim(),
             quantity: qty.round(),

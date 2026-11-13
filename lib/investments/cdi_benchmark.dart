@@ -84,8 +84,8 @@ CdiComparison? compareWithCdi(
       if (day.isBefore(first)) return null;
       final f = series.factor(day, now);
       cdi += switch (op.kind) {
-        'buy' || 'opening' => op.cents * f,
-        _ => -op.cents * f, // sell, income: money that left the portfolio
+        'buy' || 'opening' => op.mainCents * f,
+        _ => -op.mainCents * f, // sell, income: money that left the portfolio
       };
       if (since == null || day.isBefore(since)) since = day;
     }

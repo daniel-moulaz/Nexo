@@ -19,15 +19,35 @@ class InvestmentRepository {
       ticker TEXT NOT NULL, institution TEXT NOT NULL,
       price_micros INTEGER NOT NULL CHECK(price_micros >= 0),
       price_at TEXT NOT NULL, price_source TEXT NOT NULL,
-      archived INTEGER NOT NULL DEFAULT 0)''');
+      archived INTEGER NOT NULL DEFAULT 0,
+      currency TEXT NOT NULL DEFAULT 'BRL',
+      fx_micros INTEGER NOT NULL DEFAULT 1000000)''');
     await db.execute('''CREATE TABLE IF NOT EXISTS investment_operations (
       id TEXT PRIMARY KEY, investment_id TEXT NOT NULL,
       kind TEXT NOT NULL CHECK(kind IN ('buy','sell','opening','income')),
       quantity INTEGER NOT NULL CHECK(quantity >= 0),
       cents INTEGER NOT NULL CHECK(cents >= 0),
-      date TEXT NOT NULL, created_at TEXT NOT NULL, cash_account_id TEXT)''');
+      date TEXT NOT NULL, created_at TEXT NOT NULL, cash_account_id TEXT,
+      brl_cents INTEGER, tax_cents INTEGER NOT NULL DEFAULT 0)''');
     await db.execute(
         'CREATE INDEX IF NOT EXISTS investment_ops_asset ON investment_operations(investment_id)');
+  }
+
+  /// Schema 28: assets in dollars. Only adds columns, whose defaults are
+  /// exactly what every existing row already meant (reais).
+  static Future<void> addCurrency(DatabaseExecutor db) async {
+    Future<void> add(String table, String column, String type) async {
+      final columns = await db.rawQuery('PRAGMA table_info($table)');
+      if (!columns.any((c) => c['name'] == column)) {
+        await db.execute('ALTER TABLE $table ADD COLUMN $column $type');
+      }
+    }
+
+    await add('investments', 'currency', "TEXT NOT NULL DEFAULT 'BRL'");
+    await add('investments', 'fx_micros', 'INTEGER NOT NULL DEFAULT 1000000');
+    await add('investment_operations', 'brl_cents', 'INTEGER');
+    await add(
+        'investment_operations', 'tax_cents', 'INTEGER NOT NULL DEFAULT 0');
   }
 
   static List<InvestmentPosition> decode(
@@ -62,7 +82,7 @@ class InvestmentRepository {
     await ledgerTransaction(db, 'investment.create', (tx) async {
       await tx.insert('investments', item.toMap());
       await tx.insert('investment_operations', opening.toMap());
-      await _cash(tx, opening, item.name);
+      await _cash(tx, opening, item.name, currency: item.currency);
     });
     revision.value++;
   }
@@ -91,7 +111,8 @@ class InvestmentRepository {
       InvestmentPosition(Investment.fromMap(rows.single),
           [...entries.map(InvestmentOperation.fromMap), op]);
       await tx.insert('investment_operations', op.toMap());
-      await _cash(tx, op, rows.single['name'] as String);
+      await _cash(tx, op, rows.single['name'] as String,
+          currency: rows.single['currency'] as String? ?? 'BRL');
       await tx.update('investments', {'archived': 0},
           where: 'id=?', whereArgs: [op.investmentId]);
     });
@@ -149,6 +170,10 @@ class InvestmentRepository {
         .map((r) =>
             InvestmentOperation.fromMap(Map<String, dynamic>.from(r as Map)))
         .toList();
+    final currencies = {
+      for (final r in (data['investments'] as List? ?? []))
+        (r as Map)['id']: (r['currency'] as String?) ?? 'BRL'
+    };
     final transactions = {
       for (final r in (data['transactions'] as List? ?? [])) (r as Map)['id']: r
     };
@@ -165,12 +190,13 @@ class InvestmentRepository {
       final tx = transactions[id],
           meta = metadata[id],
           account = accounts[op.cashAccountId];
+      final currency = currencies[op.investmentId] ?? 'BRL';
       if (account == null ||
-          account['currency'] != 'BRL' ||
+          account['currency'] != currency ||
           ['credit', 'gold'].contains(account['type']) ||
           tx == null ||
           tx['account_id'] != op.cashAccountId ||
-          tx['currency'] != 'BRL' ||
+          tx['currency'] != currency ||
           tx['amount'] is! num ||
           !(tx['amount'] as num).isFinite ||
           ((tx['amount'] as num) * 100).round() != op.cents ||
@@ -220,17 +246,21 @@ class InvestmentRepository {
     return id;
   }
 
-  Future<void> _cash(
-      DatabaseExecutor tx, InvestmentOperation op, String name) async {
+  /// Money for an asset leaves and returns in the asset's own currency: a
+  /// dollar stock moves a dollar account, and changing reais into dollars is
+  /// a separate step (an exchange between accounts).
+  Future<void> _cash(DatabaseExecutor tx, InvestmentOperation op, String name,
+      {required String currency}) async {
     if (op.cashAccountId == null) return;
     op.validate();
     final accounts = await tx
         .query('accounts', where: 'id=?', whereArgs: [op.cashAccountId]);
     if (accounts.length != 1 ||
-        accounts.single['currency'] != 'BRL' ||
+        accounts.single['currency'] != currency ||
         ['credit', 'gold'].contains(accounts.single['type'])) {
-      throw const FormatException(
-          'Selecione uma conta de saldo em reais, sem ser cartão ou ouro.');
+      throw FormatException(currency == 'BRL'
+          ? 'Selecione uma conta de saldo em reais, sem ser cartão ou ouro.'
+          : 'Selecione uma conta em $currency, como a conta em dólar da corretora. Para trocar reais por dólares, faça antes um câmbio entre as contas.');
     }
     final type = cashDebit(op) ? 'expense' : 'income';
     final categoryId = await _cashCategory(tx, type);
@@ -246,7 +276,7 @@ class InvestmentRepository {
           accountId: op.cashAccountId!,
           categoryId: categoryId,
           date: op.date,
-          currency: 'BRL',
+          currency: currency,
           note: 'Vinculado a Investir. Revise a operação na carteira.',
         ).toMap());
     await tx.insert(
@@ -279,7 +309,8 @@ class InvestmentRepository {
       final asset = (await tx.query('investments',
               where: 'id=?', whereArgs: [op.investmentId]))
           .single;
-      await _cash(tx, op, asset['name'] as String);
+      await _cash(tx, op, asset['name'] as String,
+          currency: asset['currency'] as String? ?? 'BRL');
       await tx.update('investment_operations', {'cash_account_id': accountId},
           where: 'id=?', whereArgs: [operationId]);
     });
@@ -307,12 +338,17 @@ class InvestmentRepository {
     revision.value++;
   }
 
-  Future<void> price(String id, int micros, DateTime at, String source) async {
+  /// [fxMicros] is the rate of the day for an asset in another currency;
+  /// without it the last rate stays.
+  Future<void> price(String id, int micros, DateTime at, String source,
+      {int? fxMicros}) async {
     if (micros < 0 ||
         micros > 1000000000000 ||
-        !['manual', 'brapi'].contains(source)) {
+        (fxMicros != null && (fxMicros <= 0 || fxMicros > 1000 * fxScale)) ||
+        !['manual', 'brapi', 'mercado'].contains(source)) {
       throw const FormatException('Cotação inválida.');
     }
+    final market = source != 'manual';
     final db = await database();
     // A market quote is fetched by each device; only a price typed by the
     // person is a decision worth sending to another device.
@@ -321,17 +357,35 @@ class InvestmentRepository {
           await tx.query('investments', where: 'id=?', whereArgs: [id]);
       if (rows.isEmpty) return;
       final item = Investment.fromMap(rows.single);
-      if (source == 'brapi' && at.isBefore(item.priceAt)) return;
+      if (market && at.isBefore(item.priceAt)) return;
       await tx.update(
           'investments',
           {
             'price_micros': micros,
             'price_at': at.toUtc().toIso8601String(),
-            'price_source': source
+            'price_source': source,
+            if (item.foreign && fxMicros != null) 'fx_micros': fxMicros
           },
           where: 'id=?',
           whereArgs: [id]);
-    }, scope: source == 'brapi' ? LedgerScope.derived : LedgerScope.user);
+    }, scope: market ? LedgerScope.derived : LedgerScope.user);
     revision.value++;
+  }
+
+  /// Today's rate for every asset in [currency], as the accounts use it, so
+  /// a dollar account and a dollar stock never disagree in reais. Each
+  /// device reads the rate itself, like a quote.
+  Future<void> refreshFx(String currency, int fxMicros) async {
+    if (currency == 'BRL' || fxMicros <= 0 || fxMicros > 1000 * fxScale) {
+      return;
+    }
+    final db = await database();
+    var changed = 0;
+    await ledgerTransaction(db, 'investment.fx', (tx) async {
+      changed = await tx.update('investments', {'fx_micros': fxMicros},
+          where: 'currency=? AND fx_micros<>?',
+          whereArgs: [currency, fxMicros]);
+    }, scope: LedgerScope.derived);
+    if (changed > 0) revision.value++;
   }
 }
