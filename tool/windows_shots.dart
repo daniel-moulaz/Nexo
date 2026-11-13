@@ -156,4 +156,22 @@ Future<void> main(List<String> args) async {
           supportedLocales: AppLocalizations.supportedLocales,
           theme: buildTheme(seed: 'nexo', dark: dark),
           home: const MainShell())));
+  // --scroll=<px>: the lower part of a long screen, after it has loaded.
+  final scroll = double.tryParse(_arg(args, 'scroll') ?? '');
+  if (scroll != null) {
+    Future<void>.delayed(const Duration(seconds: 4), () {
+      void visit(Element e) {
+        if (e is StatefulElement && e.state is ScrollableState) {
+          final s = e.state as ScrollableState;
+          if (s.axisDirection == AxisDirection.down &&
+              s.position.maxScrollExtent > 0) {
+            s.position.jumpTo(scroll.clamp(0, s.position.maxScrollExtent));
+          }
+        }
+        e.visitChildren(visit);
+      }
+
+      WidgetsBinding.instance.rootElement?.visitChildren(visit);
+    });
+  }
 }

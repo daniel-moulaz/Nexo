@@ -538,13 +538,13 @@ final Map<String, NumberFormat> _numberFormatCache = {};
 
 String formatAmount(double amount, String code) {
   final info = currencyInfo(code);
-  final cacheKey = '$code:${code == 'BRL' ? 'pt_BR' : 'default'}';
+  // The app speaks Portuguese: every currency reads with a decimal comma,
+  // and the dollar is "US$" so it is never mistaken for reais.
   final fmt = _numberFormatCache.putIfAbsent(
-    cacheKey,
+    code,
     () => NumberFormat.currency(
-      locale: code == 'BRL' ? 'pt_BR' : null,
-      // pt_BR already separates the symbol with a space; other locales don't.
-      symbol: code == 'BRL' ? info.symbol : '${info.symbol} ',
+      locale: 'pt_BR',
+      symbol: code == 'USD' ? 'US\$' : info.symbol,
       decimalDigits: 2,
     ),
   );

@@ -8,6 +8,7 @@
 - **Carteira por corretora, moeda e país,** além de classe. Tocar num grupo filtra a lista.
 - **Cotação dos EUA** pelo servidor do Nexo (função `market-quotes`, Finnhub). A chave fica no servidor; o app manda só os tickers. Sem a chave, o último preço fica, com a data.
 - **Câmbio do dia:** o mesmo das contas em dólar, então conta e ação em dólar nunca discordam em reais.
+- **Dólar em português:** valores em outra moeda usam vírgula e "US$" (antes: "$ 350.00"), em contas, transferências e na carteira.
 - **Ticker:** o fracionário da B3 (BBAS3F) vira o ativo base também no formulário e na importação; tickers dos EUA de uma letra ou com ponto (F, BRK.B) passam a valer.
 ### Câmbio
 - **Transferir entre moedas** pede o valor que chegou e mostra o câmbio efetivo e quanto ficou abaixo da cotação de referência (spread, IOF e tarifas). Os lançamentos se chamam "Câmbio enviado" e "Câmbio recebido" e não contam como gasto nem receita.
