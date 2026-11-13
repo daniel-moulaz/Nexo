@@ -901,7 +901,9 @@ class _SyncSettingsScreenState extends State<SyncSettingsScreen> {
           if (SyncController.instance case final sync?)
             ListenableBuilder(
                 listenable: sync,
-                builder: (context, _) => sync.bound && sync.real
+                // Test profiles too: their connector only reaches the
+                // synthetic dataset (the server scopes it to one dataset).
+                builder: (context, _) => sync.bound
                     ? Column(
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: _mcpSection(sync, theme))

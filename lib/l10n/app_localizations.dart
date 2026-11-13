@@ -259,7 +259,7 @@ abstract class AppLocalizations {
   /// No description provided for @settings_privacySubtitle.
   ///
   /// In pt, this message translates to:
-  /// **'Todos os dados armazenados localmente — 100% offline'**
+  /// **'Os dados ficam neste aparelho; a sincronização é opcional'**
   String get settings_privacySubtitle;
 
   /// No description provided for @settings_github.
@@ -973,7 +973,7 @@ abstract class AppLocalizations {
   /// No description provided for @onboarding_yourPersonalTracker.
   ///
   /// In pt, this message translates to:
-  /// **'Seu rastreador financeiro pessoal 100% offline.\nJá possui um backup de outro dispositivo ou uma instalação anterior?'**
+  /// **'Seu controle financeiro pessoal. Tudo fica neste aparelho; sincronizar com outro é opcional.\nJá possui um backup de outro dispositivo ou uma instalação anterior?'**
   String get onboarding_yourPersonalTracker;
 
   /// No description provided for @onboarding_restoring.
@@ -2539,7 +2539,7 @@ abstract class AppLocalizations {
   /// No description provided for @onboarding_firstWhatShouldWeCal.
   ///
   /// In pt, this message translates to:
-  /// **'Primeiro, como devemos chamá-lo?'**
+  /// **'Primeiro, qual é o seu nome?'**
   String get onboarding_firstWhatShouldWeCal;
 
   /// No description provided for @onboarding_defaultCurrency.

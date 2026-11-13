@@ -91,7 +91,7 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get settings_privacySubtitle =>
-      'Todos os dados armazenados localmente — 100% offline';
+      'Os dados ficam neste aparelho; a sincronização é opcional';
 
   @override
   String get settings_github => 'Github';
@@ -505,7 +505,7 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get onboarding_yourPersonalTracker =>
-      'Seu rastreador financeiro pessoal 100% offline.\nJá possui um backup de outro dispositivo ou uma instalação anterior?';
+      'Seu controle financeiro pessoal. Tudo fica neste aparelho; sincronizar com outro é opcional.\nJá possui um backup de outro dispositivo ou uma instalação anterior?';
 
   @override
   String get onboarding_restoring => 'Restaurando...';
@@ -1408,7 +1408,7 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get onboarding_firstWhatShouldWeCal =>
-      'Primeiro, como devemos chamá-lo?';
+      'Primeiro, qual é o seu nome?';
 
   @override
   String get onboarding_defaultCurrency => 'Moeda Padrão';

@@ -735,7 +735,7 @@ class _PageThree extends StatelessWidget {
               ('cash', l10n.onboarding_cash, 'payments'),
               ('savings', l10n.onboarding_savings, 'savings'),
               ('credit', 'Cartão de crédito', 'credit_card'),
-              ('debit', 'Debit Card', 'credit_card'),
+              ('debit', 'Cartão de débito', 'credit_card'),
               ('wallet', l10n.onboarding_wallet, 'account_balance_wallet'),
             ])
               GestureDetector(
@@ -909,7 +909,7 @@ class _PageFour extends StatelessWidget {
             child: Row(children: [
               for (final opt in [
                 ('credit', 'Cartão de crédito', 'credit_card'),
-                ('debit', 'Debit Card', 'credit_card'),
+                ('debit', 'Cartão de débito', 'credit_card'),
               ])
                 GestureDetector(
                   onTap: () => onType(opt.$1),
