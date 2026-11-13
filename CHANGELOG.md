@@ -1,5 +1,25 @@
 # Changelog
 
+## [1.16.0] - 2026-11-13
+### Ações dos EUA
+- **Moeda por ativo:** um investimento pode ser em reais (B3) ou em dólar (EUA). Cada operação em dólar guarda também o valor em reais do dia, e toda soma da carteira e do patrimônio continua em reais, sem contar duas vezes.
+- **Detalhe em duas moedas:** custo e valor em dólar, câmbio médio pago, câmbio de hoje, e o resultado separado em efeito do preço e efeito do câmbio.
+- **Proventos dos EUA:** líquido, imposto retido na fonte e valor em reais do dia. Só registro; o app não calcula imposto.
+- **Carteira por corretora, moeda e país,** além de classe. Tocar num grupo filtra a lista.
+- **Cotação dos EUA** pelo servidor do Nexo (função `market-quotes`, Finnhub). A chave fica no servidor; o app manda só os tickers. Sem a chave, o último preço fica, com a data.
+- **Câmbio do dia:** o mesmo das contas em dólar, então conta e ação em dólar nunca discordam em reais.
+- **Ticker:** o fracionário da B3 (BBAS3F) vira o ativo base também no formulário e na importação; tickers dos EUA de uma letra ou com ponto (F, BRK.B) passam a valer.
+### Câmbio
+- **Transferir entre moedas** pede o valor que chegou e mostra o câmbio efetivo e quanto ficou abaixo da cotação de referência (spread, IOF e tarifas). Os lançamentos se chamam "Câmbio enviado" e "Câmbio recebido" e não contam como gasto nem receita.
+- **Compra em dólar** sai de uma conta em dólar; uma conta em reais é recusada com a explicação.
+### Conector
+- `add_investment` e `record_investment_operation` aceitam `currency`, `fx_rate` e `tax_withheld`; `get_investments` e `get_investment_summary` trazem moeda, corretora, país, totais por grupo e os dois efeitos.
+- `add_transfer` entre moedas exige `received_amount`.
+- `get_net_worth` converte contas em dólar pelo câmbio que o app guardou (`rates_used`).
+- `get_request_status` mostra o último contato de cada aparelho enquanto o pedido espera.
+### Banco
+- Schema 28: só acrescenta quatro colunas (`investments.currency`, `investments.fx_micros`, `investment_operations.brl_cents`, `investment_operations.tax_cents`), com padrão em reais. Celular e PC precisam ir juntos para a 1.16.0.
+
 ## [1.15.1] - 2026-11-06
 ### Patrimônio
 - **Investir:** o mês atual deixa de descontar uma receita recebida antes da data, como um salário adiantado. Ela já está no saldo.

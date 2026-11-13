@@ -1,7 +1,7 @@
 name: nexo
 description: Nexo — controle financeiro pessoal brasileiro com dados locais.
 publish_to: 'none'
-version: 1.15.1+57
+version: 1.16.0+58
 
 environment:
   sdk: '>=3.3.0 <4.0.0'

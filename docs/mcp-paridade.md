@@ -45,6 +45,7 @@ Legenda: **ok** cobre o que a tela faz, com os mesmos números e as mesmas regra
 | Apagar em lote por filtro | delete_transactions | ok | dry_run; estorna saldos |
 | Acertos antigos como receita → ajuste neutro | convert_to_balance_adjustment | ok | saldo igual; deixa de ser receita |
 | Transferir | add_transfer | ok | |
+| Câmbio entre contas de moedas diferentes | add_transfer (`received_amount`) | ok | obrigatório o valor que chegou; não é gasto nem receita |
 | Orçamentos: ver | get_budgets | ok | semana da configuração compartilhada; limite cheio e proporcional |
 | Orçamentos: criar, alterar | set_budget, update_budget | ok | `full_period`: cheio ou proporcional no mês de criação |
 | Orçamentos: apagar | delete_budget | ok | |
@@ -69,8 +70,9 @@ Legenda: **ok** cobre o que a tela faz, com os mesmos números e as mesmas regra
 | Recorrentes: ver, efetivar, pular | get_recurring, pay_recurring, skip_recurring | ok | valor real diferente do previsto |
 | Recorrentes: criar, alterar, excluir | add_recurring, update_recurring, delete_recurring | ok | frequência, tipo, observação, lembrete, sem fim |
 | Agenda: contas a vencer | get_upcoming_bills, get_cash_projection | ok | |
-| Investir: carteira | get_investment_summary, get_investments | ok | operações com id |
+| Investir: carteira | get_investment_summary, get_investments | ok | operações com id; em reais, com `by_institution`, `by_currency`, `by_country` |
 | Investir: cadastrar, operar, preço | add_investment, record_investment_operation, update_investment_price | ok | |
+| Investir: ação dos EUA (dólar) | add_investment (`currency` USD, `fx_rate`), record_investment_operation (`fx_rate`, `tax_withheld`) | ok | custo em dólar e em reais da data; conta em dólar; efeito do preço e do câmbio em get_investments |
 | Investir: retirar da carteira | archive_investment | ok | só posição zerada |
 | Investir: apagar operação | delete_investment_operation | ok | estorna a conta |
 | Investir: vincular operação antiga a conta | link_investment_operation | ok | |
@@ -104,6 +106,19 @@ Legenda: **ok** cobre o que a tela faz, com os mesmos números e as mesmas regra
 - `split_bill` e `settle_lended` com `account_id`; `pay_card_invoice` com `date`.
 - `get_goals` traz `movements` e `auto_target`; `get_budgets` traz `variable_limit`; `get_upcoming_bills` e `get_daily_digest` trazem `card_limit_alerts`; `get_spending_types` traz `alerts`; `list_suggestions` traz `probably_recorded`.
 - Novas configurações compartilhadas: `budgetRules` e `emergencyPlan`.
+
+## Acréscimos da 1.16.0 (ações dos EUA)
+
+- Ativo com moeda (`BRL` ou `USD`). Cada operação em dólar guarda também o valor em reais do dia
+  (`brl_cents`, do `fx_rate`), e o ativo guarda o câmbio do último preço (`fx_micros`). Toda soma
+  da carteira e do patrimônio fica em reais, sem contar duas vezes. Regra única em
+  `lib/investments/investment_models.dart` e `supabase/functions/nexo-mcp/portfolio.ts`.
+- `get_net_worth` converte as contas em dólar pelo câmbio que o app guardou nos ativos em dólar
+  (`rates_used`); sem ativo em dólar, elas continuam em `not_converted`.
+- `add_transfer` entre moedas diferentes exige `received_amount`; o app lança "Câmbio enviado" e
+  "Câmbio recebido".
+- Cotação dos EUA pela função `market-quotes` (Finnhub, chave no servidor). Câmbio diário da
+  função interna `investment.fx`, como a cotação: cada aparelho lê o seu.
 
 ## Fora do conector, e por quê
 
