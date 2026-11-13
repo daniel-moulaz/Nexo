@@ -824,6 +824,22 @@ try {
     assert.equal((await service('nexo_mcp_token_state', [hashOf('nexo_mcp_nada')])).state, 'unknown');
     await denies(() => user(A, tx => rpc(tx, 'nexo_mcp_token_state', [hashOf(made.token)])), '42501');
   });
+  await db.exec(await readFile(new URL('../supabase/migrations/202611130002_market_history.sql', import.meta.url), 'utf8'));
+  await test('market history: closes per day, quotes win over the first fill, service only', async () => {
+    const rows = (list) => JSON.stringify(list.map(([day, c]) => ({ symbol: 'NVDA', day, close_micros: c })));
+    assert.equal(await service('nexo_market_store', [rows([['2026-11-12', 140000000]]), 'quote']), 1);
+    await service('nexo_market_store', [rows([['2026-11-12', 141000000]]), 'quote']);
+    await service('nexo_market_store', [rows([['2026-11-11', 138000000], ['2026-11-12', 1]]), 'backfill']);
+    const h = await service('nexo_market_history', ['NVDA', 3650]);
+    assert.deepEqual(h.points.map((p) => [p.day, Number(p.close_micros)]), [['2026-11-11', 138000000], ['2026-11-12', 141000000]]);
+    assert.equal(h.backfilled, true);
+    await denies(() => service('nexo_market_store', [rows([['2026-11-13', 0]]), 'quote']));
+    await denies(() => service('nexo_market_store', [JSON.stringify([{ symbol: 'nvda', day: '2026-11-13', close_micros: 1 }]), 'quote']));
+    for (const role of ['anon', 'authenticated']) {
+      await denies(() => user(A, tx => rpc(tx, 'nexo_market_history', ['NVDA', 30]), role), '42501');
+      await denies(() => user(A, tx => rpc(tx, 'nexo_market_store', [rows([['2026-11-13', 5]]), 'quote']), role), '42501');
+    }
+  });
   console.log(`SQL LAB: ${passed} tests passed; synthetic local data only.`);
 } finally {
   await db.close();

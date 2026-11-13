@@ -2,6 +2,7 @@
 // type stripping): `node tool/test_market_quotes.mjs`. No network.
 import assert from 'node:assert/strict';
 import { clearCache, parse, quotes, RateLimited, symbols } from '../supabase/functions/market-quotes/quotes.ts';
+import { closesFromQuotes, historySymbol, marketDay, parseAlphaVantage } from '../supabase/functions/market-quotes/history.ts';
 
 let passed = 0;
 async function test(name, action) {
@@ -57,4 +58,30 @@ await test('the provider limit is reported as such', async () => {
   await assert.rejects(quotes(['NVDA'], 'k', fetcher, now), RateLimited);
 });
 
+await test('each quote is the close of its market day (New York date)', () => {
+  // 23:30 in Brasília on the 13th is still the 13th in New York; 01:00 UTC is the day before there.
+  assert.equal(marketDay('2026-11-14T01:00:00.000Z'), '2026-11-13');
+  assert.equal(marketDay('2026-11-13T15:00:00.000Z'), '2026-11-13');
+  assert.equal(marketDay('nada'), null);
+  assert.deepEqual(closesFromQuotes([{ symbol: 'NVDA', price: 142.5, currency: 'USD', time: '2026-11-13T20:59:00.000Z' }]),
+    [{ symbol: 'NVDA', day: '2026-11-13', close_micros: 142500000 }]);
+});
+await test('history asks for one plain ticker', () => {
+  assert.equal(historySymbol({ history: 'NVDA' }), 'NVDA');
+  for (const bad of [{}, { history: 'nvda' }, { history: ['NVDA'] }, { history: 'A B' }]) {
+    assert.throws(() => historySymbol(bad));
+  }
+});
+await test('the optional first fill keeps sane closes only, oldest first', () => {
+  const data = { 'Time Series (Daily)': {
+    '2026-11-12': { '4. close': '140.10' },
+    '2026-11-11': { '4. close': '138.00' },
+    '2026-11-20': { '4. close': '150.00' },
+    '2026-11-10': { '4. close': '-1' },
+    'ontem': { '4. close': '1' },
+  } };
+  assert.deepEqual(parseAlphaVantage('NVDA', data, '2026-11-13').map((r) => [r.day, r.close_micros]),
+    [['2026-11-11', 138000000], ['2026-11-12', 140100000]]);
+  assert.deepEqual(parseAlphaVantage('NVDA', { Note: 'limite' }, '2026-11-13'), [], 'rate-limit note: nothing');
+});
 console.log(`\n${passed} passed`);
