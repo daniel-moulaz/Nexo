@@ -61,7 +61,11 @@ export const instructions =
   "fica proporcional, a menos que full_period seja true. " +
   "Ações dos EUA: o ativo tem currency USD, valores em dólar e fx_rate (reais por dólar do dia, da nota da corretora). Trocar " +
   "reais por dólares é add_transfer com received_amount (o que chegou), nunca gasto. Compra em dólar sai de uma conta em dólar. " +
-  "Ticker fracionário da B3 (BBAS3F) é o mesmo ativo (BBAS3). Valores da carteira e do patrimônio vêm em reais.";
+  "Ticker fracionário da B3 (BBAS3F) é o mesmo ativo (BBAS3). Valores da carteira e do patrimônio vêm em reais. " +
+  "Vários lançamentos de uma vez (itens de um print ou extrato): add_transactions, primeiro com dry_run para mostrar a lista e os " +
+  "possible_duplicates; se um item parecer já lançado, pergunte antes. O celular grava mesmo com o app fechado (em segundos " +
+  "com o aviso do servidor, ou em até 15 minutos); get_request_status mostra a última conferência de cada aparelho. " +
+  "Não peça para a pessoa abrir o app, a não ser que o pedido espere há mais de 20 minutos ou espere uma atualização.";
 
 type Json = Record<string, unknown>;
 const rpcError = (id: unknown, code: number, message: string) => ({

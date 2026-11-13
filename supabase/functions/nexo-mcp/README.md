@@ -19,20 +19,26 @@ Matriz de cobertura, regras e evidências: [`docs/mcp-paridade.md`](../../../doc
 | `more_actions.ts` | Recorrentes, orçamentos, categorias, objetivos, fatura |
 | `all_actions.ts` | Contas, objetivos, investimentos (reais e dólar), empréstimos, emprestado, bens, desejos, faturas |
 | `portfolio.ts` | Posição em duas moedas, a mesma regra do app: custo em reais da data, efeito do preço e do câmbio |
+| `queue.ts` | Versão mínima por pedido (dólar pede a 1.16.0) e a mensagem de endereço recusado |
+| `push.ts` | Aviso silencioso aos celulares (Firebase Cloud Messaging), opcional |
 | `parity_actions.ts` | Paridade com as telas: tipos de gasto, configurações, lotes, desfazer, análises, banco × Nexo |
 | `envelopes.ts`, `settings.ts`, `invoices.ts` | Tipos de gasto, registro de configurações e faturas, espelhando o app |
 
 ## Ciclo de um pedido
 
-1. A ferramenta valida contra o espelho e chama `nexo_mcp_enqueue_v2` (tipo `entidade.acao`,
-   argumentos, chave opcional). A mesma chave, ou o mesmo pedido em 10 minutos, devolve o
-   primeiro (`deduplicated: true`).
-2. Um aparelho com o app aberto pega o pedido (`nexo_mcp_claim`): um por vez por acervo, do mais
-   antigo ao mais novo.
-3. O app aplica pelos mesmos métodos das telas e devolve `done` (com o que mudou, para desfazer)
+1. A ferramenta valida contra o espelho e chama `nexo_mcp_enqueue_v3` (tipo `entidade.acao`,
+   argumentos, chave opcional, versão mínima do app). A mesma chave, ou o mesmo pedido em 10
+   minutos, devolve o primeiro (`deduplicated: true`). Sem a migration da 1.17.0, cai para
+   `nexo_mcp_enqueue_v2`.
+2. Com o segredo `FCM_SERVICE_ACCOUNT`, a função manda um aviso silencioso aos celulares do
+   acervo. Sem ele, o celular confere sozinho a cada 15 minutos; o PC na bandeja, a cada 20 s.
+3. Um aparelho pega o pedido (`nexo_mcp_claim`): um por vez por acervo, do mais antigo ao mais
+   novo. Um aparelho abaixo da versão mínima, ou que não conhece o tipo, deixa o pedido para
+   outro, sem pular a fila (`docs/FILA_DO_CLAUDE_2026_11.md`).
+4. O app aplica pelos mesmos métodos das telas e devolve `done` (com o que mudou, para desfazer)
    ou `rejected` (com o motivo).
-4. `get_request_status` diz "gravado no Nexo", "pendente" ou "recusado"; `undo_request` desfaz;
-   `list_requests` lista.
+5. `get_request_status` diz "gravado no Nexo", "pendente" ou "recusado", com a última
+   conferência de cada aparelho; `undo_request` desfaz; `list_requests` lista.
 
 O app informa os tipos que sabe aplicar (`nexo_mcp_report_device`); o servidor recusa na hora o
 tipo que nenhum aparelho conhece ("atualize o app").
@@ -62,7 +68,14 @@ Configurações → Conectores → Adicionar conector personalizado, nome Nexo, 
 no app (Sincronizar dispositivos → Claude (IA) → Conectar ao Claude). O Claude avisa que "não
 foi possível determinar como este servidor faz login": é esperado, porque a chave está na URL
 e não há login. Escolha **Continuar mesmo assim**. Se as ferramentas não aparecerem, a chave
-foi desconectada ou a URL foi copiada cortada: gere outra no app.
+foi desconectada ou a URL foi copiada cortada: a resposta 401 diz qual dos dois. Gere outra no
+app (menu do conector › Gerar outro endereço): o histórico de pedidos fica, porque pertence ao
+acervo, e o endereço antigo só para depois que o novo aparece. Remover e adicionar de novo o
+conector no Claude tira o Nexo das conversas já abertas ("MCP server removed from
+configuration"): abra uma conversa nova.
+
+O endereço não expira sozinho. OAuth exigiria publicar `/.well-known` na raiz do domínio, o que
+uma função do Supabase não faz sem domínio próprio (pago); por isso a chave continua no endereço.
 
 ## Cotações dos EUA (`market-quotes`)
 
@@ -78,3 +91,10 @@ supabase functions deploy market-quotes --no-verify-jwt
 ```
 
 Sem a chave, a função responde 503 e o app mantém o último preço, com a data.
+
+Histórico: cada cotação pedida também vira o fechamento daquele dia em
+`nexo_market_private.daily_closes` (migration `202611130002_market_history.sql`), e `{"history":
+"NVDA"}` devolve os fechamentos guardados para o gráfico do app. Com o segredo opcional
+`ALPHAVANTAGE_API_KEY` (plano grátis, 25 consultas por dia), o primeiro gráfico de um ticker vem
+preenchido com os últimos ~100 pregões, uma vez só. Sem ele, o gráfico começa no dia em que o
+ativo passa a ser consultado.

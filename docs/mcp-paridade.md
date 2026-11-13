@@ -120,6 +120,26 @@ Legenda: **ok** cobre o que a tela faz, com os mesmos números e as mesmas regra
 - Cotação dos EUA pela função `market-quotes` (Finnhub, chave no servidor). Câmbio diário da
   função interna `investment.fx`, como a cotação: cada aparelho lê o seu.
 
+## Acréscimos da 1.17.0 (fila com o app fechado)
+
+| Tela ou caso | Ferramenta | Situação |
+|---|---|---|
+| Vários lançamentos de um print ou extrato | `add_transactions` (até 20; `dry_run`; tudo conferido antes; reenviar o mesmo lote não duplica) | ok |
+| Lançamento que parece já existir | `add_transaction` e `add_transactions` devolvem `possible_duplicates` (mesmo tipo e valor em até 3 dias, qualquer conta) | ok |
+| Confirmar sugestão do banco já lançada à mão | `confirm_suggestion` não envia e explica; `allow_duplicate: true` para gastos diferentes | ok |
+| Corrigir um lançamento ainda pendente | `update_transaction` com o `new_id` do pedido (já existia; agora com teste) | ok |
+| Fila do Claude (tela nova) | `get_request_status`: `last_queue_check` e `wakes_on_request` por aparelho, `waiting_for_app_update` | ok |
+| Ler print do iFood no app | fora do conector: o Claude lê o print sozinho e usa `add_transactions` | n/a |
+
+- Pedidos com campos em dólar levam `min_build` 58. Um aparelho com versão menor, ou que nunca
+  informou aquele tipo de pedido, não pega o pedido. Ele espera na fila, na ordem, até um
+  aparelho que saiba gravar (`202611130001_claude_queue.sql`).
+- Depois de cada pedido novo, a função manda um aviso silencioso (FCM) aos celulares do acervo,
+  quando o segredo `FCM_SERVICE_ACCOUNT` existe. Sem ele, o celular confere a cada 15 minutos.
+  Detalhes e medidas em `docs/FILA_DO_CLAUDE_2026_11.md`.
+- Endereço recusado: a resposta 401 diz se o endereço foi desconectado no app, e em que dia, ou
+  se está incompleto, e como gerar outro sem perder o histórico.
+
 ## Fora do conector, e por quê
 
 | Ação do app | Motivo |
