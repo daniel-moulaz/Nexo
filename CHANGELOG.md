@@ -1,5 +1,33 @@
 # Changelog
 
+## [1.17.0] - 2026-11-13
+### Fila do Claude com o app fechado
+- **O celular grava os pedidos do Claude com o app fechado:** confere a fila sozinho a cada 15 minutos e, com o Firebase configurado (grátis, opcional), na hora em que o servidor avisa. Medido num Xiaomi com a economia de bateria padrão: 9 min do pedido ao registro, passada de 8 s, e o agendamento continua depois de arrastar o app para fora dos recentes.
+- **Uma só parte do app mexe no banco por vez:** com o app vivo, ele mesmo grava; sem ele, um motor sem tela grava, e o app que abrir nesse meio-tempo espera. Pedido gravado e não confirmado ao servidor nunca é gravado de novo.
+- **Tela Fila do Claude** (Sincronizar dispositivos › Claude): o que espera no servidor, a última conferência de cada aparelho, os interruptores e os ajustes de bateria do Xiaomi. Notificação "Feito pelo Claude" sem valores.
+- **PC:** "Iniciar com o Windows" liga sozinho uma vez, com a bandeja ligada; o Windows abrindo o Nexo de novo não mostra a janela.
+### Versões diferentes nos aparelhos
+- Um pedido com campos em dólar exige a 1.16.0. Um aparelho mais velho, ou que não conhece o tipo do pedido, não grava errado: deixa o pedido para outro, sem furar a fila.
+- Dados de um aparelho mais novo que este não consegue guardar: a sincronização para com "Atualize o Nexo neste aparelho" (antes dizia "Sem conexão") e nada fica pela metade. Hoje mostra o aviso quando a sincronização precisa da pessoa.
+### Conector
+- `add_transactions`: até 20 lançamentos de uma vez, todos conferidos antes, com `dry_run` e reenvio sem duplicar.
+- `possible_duplicates` em `add_transaction`. `confirm_suggestion` não cria um segundo lançamento para um gasto já lançado à mão (o lanche de R$ 37, o iFood no Pix lançado no cartão); `allow_duplicate` para gastos diferentes.
+- `get_request_status` mostra a última conferência de cada aparelho e se o pedido espera uma atualização. Endereço recusado diz se foi desconectado (e quando) ou se está cortado.
+- No app: uso de cada conector (última chamada, pedidos em 7 dias) e "Gerar outro endereço", que mantém o histórico. Cada acervo lista só os próprios conectores.
+- "Pedido enviado ao Nexo (Despesa)" no lugar de "Despesa enviado".
+### Ações dos EUA
+- **Gráfico de preço em dólar:** cada cotação vira o fechamento do dia no servidor; com `ALPHAVANTAGE_API_KEY` (grátis, opcional), o primeiro gráfico vem com ~100 pregões. Todo gráfico mostra o preço médio pago como linha tracejada.
+### Lançar
+- **Ler print do iFood:** na despesa, "Ler print" lê no próprio celular o total, o restaurante, a data e a forma de pagamento. Pix escolhe a conta, crédito escolhe o cartão. Quando algo não fecha, o aviso diz o quê. Nada é salvo sem a pessoa.
+- Apresentação inicial em português e sem supor o gênero: "Cartão de débito", "qual é o seu nome?". O app não se diz mais "100% offline".
+### Segurança e privacidade
+- Teste que tenta ler cada tabela do servidor como outra pessoa e como anônimo: nenhuma linha vaza, e nenhuma função do Nexo atende quem não entrou.
+- O registro de diagnóstico não guarda os valores de uma gravação recusada pelo SQLite.
+### Para testar
+- `flutter build apk --profile` (ou `--debug`) gera o "Nexo teste" (`com.ma.expensy.teste`), ao lado do app de uso diário, só com acervos fictícios e sem Open Finance.
+### Servidor
+- Migrations `202611130001_claude_queue.sql` (fila, avisos, estado) e `202611130002_market_history.sql` (fechamentos dos EUA). Schema local continua 28.
+
 ## [1.16.0] - 2026-11-13
 ### Ações dos EUA
 - **Moeda por ativo:** um investimento pode ser em reais (B3) ou em dólar (EUA). Cada operação em dólar guarda também o valor em reais do dia, e toda soma da carteira e do patrimônio continua em reais, sem contar duas vezes.
