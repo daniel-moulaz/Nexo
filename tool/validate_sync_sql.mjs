@@ -747,6 +747,80 @@ try {
     await denies(() => user(B, tx => rpc(tx, 'nexo_mcp_bank_accounts', [bConn.id])), '42501');
     await denies(() => user(B, tx => rpc(tx, 'nexo_mcp_link_bank_account', [bConn.id, 'acc-bank', 'y'])), '42501');
   });
+  // ── Queue with the app closed (13/11/2026) ───────────────────────────
+  await db.exec(await readFile(new URL('../supabase/migrations/202611130001_claude_queue.sql', import.meta.url), 'utf8'));
+  await test('queue: an old device waits for the dollar request, a new one takes it, in order', async () => {
+    const { conn } = parity;
+    await db.query(`update nexo_mcp_private.commands set status = 'done' where owner_id = $1`, [A]);
+    const old = randomUUID(), fresh = randomUUID();
+    const kinds = ['investment.operation', 'transaction.add'];
+    await user(A, tx => rpc(tx, 'nexo_mcp_report_device', [conn.dataset_id, old, '1.15.1+57', kinds, '{}']));
+    await user(A, tx => rpc(tx, 'nexo_mcp_report_device', [conn.dataset_id, fresh, '1.17.0+59', kinds, '{}']));
+    const dollar = await service('nexo_mcp_enqueue_v3', [conn.id, 'investment.operation',
+      JSON.stringify({ brl_cents: 55000 }), 'usd-1', 58]);
+    const after = await service('nexo_mcp_enqueue_v3', [conn.id, 'transaction.add',
+      JSON.stringify({ amount_cents: 3700 }), 'lanche-1', null]);
+    assert.equal(await user(A, tx => rpc(tx, 'nexo_mcp_claim', [conn.dataset_id, old])), null,
+      'the old app neither records it wrong nor skips ahead');
+    const status = await user(A, tx => rpc(tx, 'nexo_mcp_queue_status', [conn.dataset_id]));
+    assert.equal(status.pending, 2);
+    assert.equal(status.waiting_for_update, 0, 'one device can apply it');
+    assert.ok(status.devices.find(d => d.device_id === old).checked_at, 'the check is recorded');
+    const claimed = await user(A, tx => rpc(tx, 'nexo_mcp_claim', [conn.dataset_id, fresh]));
+    assert.equal(claimed.id, dollar.id);
+    await user(A, tx => rpc(tx, 'nexo_mcp_finish', [dollar.id, 'done', '{}']));
+    assert.equal((await user(A, tx => rpc(tx, 'nexo_mcp_claim', [conn.dataset_id, old]))).id, after.id,
+      'what the old app knows, it still applies');
+    await user(A, tx => rpc(tx, 'nexo_mcp_finish', [after.id, 'done', '{}']));
+    // A kind the device never listed waits too, instead of being refused.
+    await user(A, tx => rpc(tx, 'nexo_mcp_report_device', [conn.dataset_id, fresh, '1.17.0+59', [...kinds, 'transfer.add'], '{}']));
+    const transfer = await service('nexo_mcp_enqueue_v3', [conn.id, 'transfer.add', '{}', 'cambio-1', null]);
+    assert.equal(await user(A, tx => rpc(tx, 'nexo_mcp_claim', [conn.dataset_id, old])), null);
+    assert.equal((await user(A, tx => rpc(tx, 'nexo_mcp_claim', [conn.dataset_id, fresh]))).id, transfer.id);
+    await user(A, tx => rpc(tx, 'nexo_mcp_finish', [transfer.id, 'done', '{}']));
+    // With no device new enough, the status says the queue waits for an update.
+    const waits = await service('nexo_mcp_enqueue_v3', [conn.id, 'transaction.add', '{}', 'futuro-1', 9999]);
+    assert.equal((await user(A, tx => rpc(tx, 'nexo_mcp_queue_status', [conn.dataset_id]))).waiting_for_update, 1);
+    await db.query(`update nexo_mcp_private.commands set status = 'done' where id = $1`, [waits.id]);
+    await denies(() => service('nexo_mcp_enqueue_v3', [conn.id, 'transaction.add', '{}', 'x-1', 0]), '22023');
+    await denies(() => user(A, tx => rpc(tx, 'nexo_mcp_enqueue_v3', [conn.id, 'transaction.add', '{}', 'x-2', null])), '42501');
+  });
+  await test('queue: push tokens per device, read only by the function, only the owner', async () => {
+    const { conn } = parity;
+    const phoneDevice = randomUUID(), token = 'fcm_' + 'a'.repeat(60);
+    await user(A, tx => rpc(tx, 'nexo_push_register', [conn.dataset_id, phoneDevice, token]));
+    assert.deepEqual((await service('nexo_push_targets', [conn.id])).map(t => t.token), [token]);
+    // The same installation under a new device id keeps one entry.
+    const again = randomUUID();
+    await user(A, tx => rpc(tx, 'nexo_push_register', [conn.dataset_id, again, token]));
+    assert.deepEqual((await service('nexo_push_targets', [conn.id])).map(t => t.device_id), [again]);
+    await denies(() => user(B, tx => rpc(tx, 'nexo_push_register', [conn.dataset_id, randomUUID(), token])), '42501');
+    await denies(() => user(A, tx => rpc(tx, 'nexo_push_register', [conn.dataset_id, again, 'x y'])), '22023');
+    for (const role of ['anon', 'authenticated']) {
+      await denies(() => user(A, tx => rpc(tx, 'nexo_push_targets', [conn.id]), role), '42501');
+      await denies(() => user(A, tx => tx.query('select * from nexo_mcp_private.push_tokens'), role));
+    }
+    await service('nexo_push_forget', [conn.id, token]);
+    assert.deepEqual(await service('nexo_push_targets', [conn.id]), []);
+    await user(A, tx => rpc(tx, 'nexo_push_register', [conn.dataset_id, again, token]));
+    await user(A, tx => rpc(tx, 'nexo_push_register', [conn.dataset_id, again, null]));
+    assert.deepEqual(await service('nexo_push_targets', [conn.id]), [], 'turned off in the app');
+  });
+  await test('queue: connector status and why a token stopped working', async () => {
+    const status = await user(A, tx => rpc(tx, 'nexo_mcp_connector_status', []));
+    const current = status.find(s => s.id === parity.conn.id);
+    assert.ok(current.requests >= 4 && current.requests_7d >= 4);
+    assert.deepEqual(await user(B, tx => rpc(tx, 'nexo_mcp_connector_status', [])).then(s => s.some(x => x.id === parity.conn.id)), false);
+    const made = await user(A, tx => rpc(tx, 'nexo_mcp_create_connector', [parity.conn.dataset_id, 'Para revogar']));
+    const hashOf = t => createHash('sha256').update(t).digest('hex');
+    assert.equal((await service('nexo_mcp_token_state', [hashOf(made.token)])).state, 'active');
+    await user(A, tx => rpc(tx, 'nexo_mcp_revoke_connector', [made.id]));
+    const revoked = await service('nexo_mcp_token_state', [hashOf(made.token)]);
+    assert.equal(revoked.state, 'revoked');
+    assert.ok(revoked.revoked_at);
+    assert.equal((await service('nexo_mcp_token_state', [hashOf('nexo_mcp_nada')])).state, 'unknown');
+    await denies(() => user(A, tx => rpc(tx, 'nexo_mcp_token_state', [hashOf(made.token)])), '42501');
+  });
   console.log(`SQL LAB: ${passed} tests passed; synthetic local data only.`);
 } finally {
   await db.close();
