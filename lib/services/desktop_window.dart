@@ -10,6 +10,7 @@ import 'platform_capabilities.dart';
 abstract final class DesktopWindow {
   static const _channel = MethodChannel('nexo/window');
   static const _keepKey = 'nexo_keep_in_tray';
+  static const _autostartDefaultKey = 'nexo_autostart_default_v1';
 
   static Future<bool> keepInTray() async =>
       (await SharedPreferences.getInstance()).getBool(_keepKey) ?? true;
@@ -22,6 +23,16 @@ abstract final class DesktopWindow {
         DesktopProfile.isTest ? DesktopProfile.testTray : await keepInTray();
     try {
       await _channel.invokeMethod<void>('setKeepInTray', keep);
+      // 1.17.0, once: the PC is the assistant's second way in, so with the
+      // tray on it also starts with Windows (switch in Fila do Claude and
+      // in Configurações). A choice made later is never overridden.
+      final prefs = await SharedPreferences.getInstance();
+      if (!DesktopProfile.isTest &&
+          keep &&
+          prefs.getBool(_autostartDefaultKey) != true) {
+        if (!await startsWithWindows()) await setStartWithWindows(true);
+        await prefs.setBool(_autostartDefaultKey, true);
+      }
     } on MissingPluginException {
       // An entrypoint without the runner channel.
     }

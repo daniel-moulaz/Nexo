@@ -53,6 +53,11 @@ int APIENTRY wWinMain(_In_ HINSTANCE instance, _In_opt_ HINSTANCE prev,
   if (!instance_mutex) return EXIT_FAILURE;
   if (::GetLastError() == ERROR_ALREADY_EXISTS) {
     ::CloseHandle(instance_mutex);
+    // Started by Windows (or a scheduled task) while already running in
+    // the tray: nothing to do, and no window should pop up.
+    for (const auto& argument : command_line_arguments) {
+      if (argument == "--background") return EXIT_SUCCESS;
+    }
     // It may be in the tray: bring it back instead of warning about it.
     const std::wstring running_title = test_profile
         ? L"Nexo (teste local" + (test_name.empty() ? std::wstring() : L" " + test_name) + L")"
