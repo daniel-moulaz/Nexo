@@ -264,6 +264,23 @@ await test('a lunch already in the ledger is flagged as a possible duplicate, in
   assert.equal(preview.items[0].possible_duplicates[0].id, 'manual-lanche');
 });
 
+await test('a bank suggestion already typed by hand is not confirmed into a second entry', async () => {
+  const q = queue();
+  // The fixture suggestion: R$ 32,90 on 2026-10-19. A manual iFood on the card, a day later.
+  const manual = { id: 'manual-ifood', type: 'expense', amount: 32.9, description: 'iFood', account_id: 'card',
+    category_id: 'food_exp', date: '2026-10-20T12:00:00.000' };
+  const l = { ...withIncome, transactions: [...withIncome.transactions, manual] };
+  const held = await act(q, 'confirm_suggestion', { id: 'pluggy:a', account_id: 'bank', category_id: 'food_exp' }, l);
+  assert.equal(held.status, 'não enviado');
+  assert.equal(held.possible_duplicates[0].id, 'manual-ifood');
+  assert.match(held.message, /ignore_suggestions/);
+  assert.equal(q.items.length, 0, 'nothing queued');
+  const forced = await act(q, 'confirm_suggestion', { id: 'pluggy:a', account_id: 'bank', category_id: 'food_exp',
+    allow_duplicate: true }, l);
+  assert.equal(forced.status, 'pendente');
+  assert.equal(q.items[0].args.allow_duplicate, undefined, 'the flag never reaches the app');
+});
+
 await test('an entry still pending can be fixed before it is recorded', async () => {
   const q = queue();
   const created = await act(q, 'add_transaction', { type: 'expense', amount: 32.9, description: 'iFood', account_id: 'card', category_id: 'food_exp' });

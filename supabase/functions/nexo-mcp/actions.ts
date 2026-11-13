@@ -248,6 +248,7 @@ const baseActions: (ToolDefinition & { destructive?: boolean })[] = [
         description: { type: "string", minLength: 1, maxLength: 80 },
         subcategory: { type: "string", maxLength: 60 },
         note: { type: "string", maxLength: 200 },
+        allow_duplicate: { type: "boolean", description: "true: confirma mesmo havendo lançamento parecido (gastos diferentes de mesmo valor)" },
       },
       required: ["id", "account_id", "category_id"],
       additionalProperties: false,
@@ -707,9 +708,32 @@ async function dispatchAction(name: string, args: Args, l: Ledger, today: string
       };
     }
     case "confirm_suggestion": {
-      only(args, ["id", "account_id", "category_id", "type", "description", "subcategory", "note"]);
+      only(args, ["id", "account_id", "category_id", "type", "description", "subcategory", "note", "allow_duplicate"]);
       const id = str(args, "id", 80)!;
       if (!/^pluggy:[0-9A-Za-z-]{1,64}$/.test(id)) throw new ToolInputError("id de sugestão inválido.");
+      if (args.allow_duplicate !== undefined && typeof args.allow_duplicate !== "boolean") {
+        throw new ToolInputError("allow_duplicate deve ser verdadeiro ou falso.");
+      }
+      // A bank movement already typed by hand (the R$ 37 lunch, an iFood
+      // paid by Pix but entered on the card) must not become a second entry.
+      if (args.allow_duplicate !== true) {
+        const s = (await deps.suggestions(200)).find((x) => String(x.id) === id);
+        if (s) {
+          const kind = s.kind === "income" ? "income" : "expense";
+          const day = new Intl.DateTimeFormat("en-CA", { timeZone: "America/Sao_Paulo" })
+            .format(new Date(Number(s.occurred_at)));
+          const twins = similarTransactions(l, { type: kind, amount: Number(s.amount_cents) / 100, date: day });
+          if (twins.length) {
+            return {
+              status: "não enviado",
+              possible_duplicates: twins,
+              message: "Já existe lançamento com o mesmo valor em até 3 dias; confirmar criaria outro. Se for o mesmo gasto, " +
+                "ignore a sugestão (ignore_suggestions) e, se a conta estiver errada, corrija o lançamento existente. " +
+                "Se forem gastos diferentes, chame de novo com allow_duplicate: true.",
+            };
+          }
+        }
+      }
       const type = args.type;
       if (type !== undefined && type !== "expense" && type !== "income") {
         throw new ToolInputError("type deve ser expense ou income.");
