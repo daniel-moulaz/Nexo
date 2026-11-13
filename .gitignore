@@ -69,3 +69,6 @@ supabase/.temp/
 /docs/RELATORIO_EVOLUCAO_2026_10_28.md
 /docs/REVISAO_SOBREPOSICOES_2026_10.md
 /docs/ROADMAP_2026_11.md
+
+# Firebase values for the silent push (optional, per installation)
+android/firebase.local.properties

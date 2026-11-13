@@ -113,6 +113,20 @@ void main() {
         'note': '',
       };
 
+  test('a request applied in another isolate is not applied again', () async {
+    queue.add('r9', 'transaction.add', expense());
+    await run();
+    expect(assistant.handled, 1, reason: 'the queue status counts it');
+    // The phone's headless pass recorded it but the server never heard:
+    // the app's own isolate claims it again and must only report it.
+    final second = AssistantCommands(queue, app);
+    queue.add('r9', 'transaction.add', expense());
+    await second.run(datasetId: 'd', deviceId: 'device');
+    expect(second.handled, 1);
+    expect(queue.finished['r9']!.$1, 'done');
+    expect(await balance('bank'), closeTo(967.1, 1e-9), reason: 'debited once');
+  });
+
   test('a request becomes one transaction with the app rules', () async {
     queue.add('r1', 'transaction.add', expense());
     await run();

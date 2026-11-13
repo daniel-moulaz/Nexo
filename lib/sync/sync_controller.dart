@@ -131,6 +131,18 @@ class SyncController extends ChangeNotifier with WidgetsBindingObserver {
     if (bound) await syncNow();
   }
 
+  /// One pass (and one more if it left something to send) without timers or
+  /// listeners: the phone's headless check of the assistant's queue.
+  Future<void> runOnce() async {
+    final binding = await _binding(await DBHelper.database);
+    bound = binding != null;
+    datasetId = binding?['dataset_id'] as String?;
+    deviceId = binding?['device_id'] as String?;
+    if (!bound) return;
+    await syncNow();
+    if (pending > 0) await syncNow();
+  }
+
   void _changed() {
     _debounce?.cancel();
     _debounce = Timer(debounce, syncNow);

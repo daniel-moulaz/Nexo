@@ -29,18 +29,21 @@ import 'screens/month_review_screen.dart';
 import 'sync/supabase_auth.dart';
 import 'sync/sync_config.dart';
 import 'sync/sync_controller.dart';
-import 'services/inbox_reconciler.dart';
-import 'services/notification_inbox.dart';
 import 'services/pluggy_inbox.dart';
 import 'sync/mcp_connectors.dart';
 import 'sync/assistant_commands.dart';
 import 'services/receipt_scan_mlkit.dart';
 import 'investments/foreign_quotes.dart';
+import 'sync/claude_queue.dart';
+import 'sync/claude_queue_runner.dart';
 
 final GlobalKey<NavigatorState> rootNavigatorKey = GlobalKey<NavigatorState>();
 
 void main(List<String> arguments) async {
   WidgetsFlutterBinding.ensureInitialized();
+  // A headless pass of the assistant's queue may be writing: wait for it
+  // before this isolate opens the database.
+  await ClaudeQueue.waitForHeadless();
   wireReceiptScan();
   try {
     await DesktopProfile.initialize(arguments);
@@ -95,27 +98,11 @@ Future<void> startNexo() async {
     McpConnectors.instance = McpConnectors(syncConfig, SupabaseAuth.app!);
     SupabaseForeignQuotes.instance =
         SupabaseForeignQuotes(syncConfig, SupabaseAuth.app!);
-    final assistant = AssistantCommands.instance = AssistantCommands(
-        SupabaseAssistantRemote(syncConfig, SupabaseAuth.app!), provider);
-    SyncController.instance?.afterSync = () async {
-      final sync = SyncController.instance!;
-      if (!sync.bound || sync.datasetId == null || sync.deviceId == null) {
-        return;
-      }
-      // After a round, the other device's settings are already here.
-      await provider.seedSharedSettings();
-      await assistant.run(datasetId: sync.datasetId!, deviceId: sync.deviceId!);
-      await InboxReconciler.background(
-          pending: NotificationInbox.pending,
-          transactions: provider.transactions,
-          metadata: provider.transactionMetadata,
-          accounts: provider.accounts,
-          profileName: provider.settings.userName,
-          push: () async => PluggyInbox.instance?.sync());
-    };
+    wireAssistant(provider, syncConfig);
+    ClaudeQueue.listen(runQueueInApp);
   }
   // Never blocks opening the app: offline or signed out just waits.
-  unawaited(SyncController.instance?.start());
+  unawaited(SyncController.instance?.start().then((_) => _queueInBackground()));
   NexoSecurity.instance.addListener(provider.updateHomeWidgets);
   provider
       .addListener(() => FinancialReminders.instance.requestRefresh(provider));
@@ -128,6 +115,37 @@ Future<void> startNexo() async {
       child: const NexoApp(),
     ),
   );
+}
+
+/// The phone checks the assistant's queue with the app closed: every 15
+/// minutes and, with Firebase configured, as soon as the server asks.
+Future<void> _queueInBackground() async {
+  final sync = SyncController.instance;
+  if (!ClaudeQueue.supported || sync == null || !sync.bound) return;
+  await ClaudeQueue.schedule();
+  final remote = AssistantCommands.instance?.remote;
+  if (remote is! SupabaseAssistantRemote) return;
+  try {
+    await ClaudeQueue.registerPush(sync.datasetId!, sync.deviceId!,
+        (token) => remote.registerPush(sync.datasetId!, sync.deviceId!, token));
+  } catch (_) {
+    // A server without the 1.17.0 migration: the 15-minute check remains.
+  }
+}
+
+/// Entry point of the headless engine started by `NexoBackground.kt`.
+@pragma('vm:entry-point')
+Future<void> nexoBackgroundQueue() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  Map<String, Object?> result;
+  try {
+    final source =
+        await ClaudeQueue.channel.invokeMethod<String>('source') ?? 'periodic';
+    result = (await runHeadlessQueue(source)).toJson();
+  } catch (e) {
+    result = {'error': '${e.runtimeType}'};
+  }
+  await ClaudeQueue.channel.invokeMethod<void>('done', result);
 }
 
 class NexoApp extends StatefulWidget {

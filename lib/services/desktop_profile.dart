@@ -53,7 +53,8 @@ abstract final class DesktopProfile {
           // Without the plugin (unit tests) this is not a test build.
         }
       }
-      if (isTest && PlatformCapabilities.windows) SharedPreferences.setPrefix('nexo_windows_qa$qaSuffix.');
+      if (isTest && PlatformCapabilities.windows)
+        SharedPreferences.setPrefix('nexo_windows_qa$qaSuffix.');
       _configured = true;
     }
     await DatabasePlatform.initialize(

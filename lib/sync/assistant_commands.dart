@@ -158,6 +158,77 @@ class SupabaseAssistantRemote implements AssistantRemote {
     final r = await _rpc('nexo_mcp_undo_data', {'p_id': id});
     return r is Map ? r.cast<String, Object?>() : null;
   }
+
+  /// This phone's push token for the silent wake-up; null removes it.
+  Future<void> registerPush(String datasetId, String deviceId, String? token) =>
+      _rpc('nexo_push_register', {
+        'p_dataset_id': datasetId,
+        'p_device_id': deviceId,
+        'p_token': token,
+      });
+
+  /// The queue on the server and each device's last check, or null on a
+  /// server without the 1.17.0 migration.
+  Future<QueueStatus?> queueStatus(String datasetId) async {
+    try {
+      final r =
+          await _rpc('nexo_mcp_queue_status', {'p_dataset_id': datasetId});
+      return r is Map ? QueueStatus.fromJson(r.cast<String, Object?>()) : null;
+    } on StateError catch (e) {
+      if (e.message == 'assistant_http_404') return null;
+      rethrow;
+    }
+  }
+}
+
+/// What the server knows about the assistant's queue.
+class QueueStatus {
+  const QueueStatus(
+      {required this.pending,
+      required this.waitingForUpdate,
+      this.oldestPendingAt,
+      this.lastDoneAt,
+      this.devices = const []});
+  final int pending, waitingForUpdate;
+  final DateTime? oldestPendingAt, lastDoneAt;
+  final List<QueueDevice> devices;
+
+  static DateTime? _time(Object? v) =>
+      v is String ? DateTime.tryParse(v)?.toLocal() : null;
+
+  factory QueueStatus.fromJson(Map<String, Object?> j) => QueueStatus(
+          pending: (j['pending'] as num?)?.toInt() ?? 0,
+          waitingForUpdate: (j['waiting_for_update'] as num?)?.toInt() ?? 0,
+          oldestPendingAt: _time(j['oldest_pending_at']),
+          lastDoneAt: _time(j['last_done_at']),
+          devices: [
+            for (final d in (j['devices'] as List? ?? const []).cast<Map>())
+              QueueDevice(
+                  id: d['device_id'] as String,
+                  version: d['app_version'] as String? ?? '?',
+                  seenAt: _time(d['seen_at']),
+                  checkedAt: _time(d['checked_at']),
+                  push: d['push'] == true)
+          ]);
+}
+
+class QueueDevice {
+  const QueueDevice(
+      {required this.id,
+      required this.version,
+      this.seenAt,
+      this.checkedAt,
+      this.push = false});
+  final String id, version;
+  final DateTime? seenAt, checkedAt;
+  final bool push;
+
+  /// The last time it was in touch, check or report.
+  DateTime? get lastContact => checkedAt == null
+      ? seenAt
+      : seenAt == null || checkedAt!.isAfter(seenAt!)
+          ? checkedAt
+          : seenAt;
 }
 
 /// Applies the assistant's requests on this device through the same
@@ -172,6 +243,9 @@ class AssistantCommands {
 
   static const _appliedKey = 'nexo_assistant_applied_v1';
   Future<int>? _running;
+
+  /// Requests this instance claimed and finished, for the queue status.
+  int handled = 0;
   DateTime? _reportedAt;
   String? _deviceId;
 
@@ -244,12 +318,17 @@ class AssistantCommands {
         await _remember(applied);
       }
       await remote.finish(command.id, status, result);
+      handled++;
     }
     return count;
   }
 
   Future<Map<String, Map<String, dynamic>>> _applied() async {
-    final raw = (await SharedPreferences.getInstance()).getString(_appliedKey);
+    final prefs = await SharedPreferences.getInstance();
+    // The phone may have applied requests in a headless pass (another
+    // isolate): read what it recorded, never a stale copy.
+    await prefs.reload();
+    final raw = prefs.getString(_appliedKey);
     if (raw == null) return {};
     return (jsonDecode(raw) as Map).map(
         (k, v) => MapEntry(k as String, (v as Map).cast<String, dynamic>()));

@@ -44,6 +44,7 @@ class MainActivity : FlutterFragmentActivity() {
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
+        NexoBackground.attach(flutterEngine, this)
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "nexo/privacy")
             .setMethodCallHandler { call, result ->
                 val p = getSharedPreferences("nexo_automation", 0)
@@ -86,6 +87,11 @@ class MainActivity : FlutterFragmentActivity() {
                     eventSink = null
                 }
             })
+    }
+
+    override fun cleanUpFlutterEngine(flutterEngine: FlutterEngine) {
+        NexoBackground.detach(flutterEngine)
+        super.cleanUpFlutterEngine(flutterEngine)
     }
 
     override fun onNewIntent(intent: Intent) {

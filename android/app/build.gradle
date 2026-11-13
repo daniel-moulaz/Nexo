@@ -4,6 +4,15 @@ plugins {
     id "dev.flutter.flutter-gradle-plugin"
 }
 
+// Firebase (silent push for the assistant's queue) is optional: without
+// android/firebase.local.properties the build works and the queue runs
+// every 15 minutes. The values are not secret, but stay out of the repo.
+def firebaseProperties = new Properties()
+def firebasePropertiesFile = rootProject.file('firebase.local.properties')
+if (firebasePropertiesFile.exists()) {
+    firebasePropertiesFile.withInputStream { firebaseProperties.load(it) }
+}
+
 def keystoreProperties = new Properties()
 def keystorePropertiesFile = rootProject.file('key.properties')
 if (keystorePropertiesFile.exists()) {
@@ -33,6 +42,10 @@ android {
         versionCode = flutter.versionCode
         versionName = flutter.versionName
         manifestPlaceholders = [appLabel: "Nexo"]
+        resValue "string", "nexo_fcm_app_id", firebaseProperties.getProperty('appId', '')
+        resValue "string", "nexo_fcm_api_key", firebaseProperties.getProperty('apiKey', '')
+        resValue "string", "nexo_fcm_project_id", firebaseProperties.getProperty('projectId', '')
+        resValue "string", "nexo_fcm_sender_id", firebaseProperties.getProperty('senderId', '')
     }
 
     signingConfigs {
@@ -72,6 +85,9 @@ dependencies {
     testImplementation 'junit:junit:4.13.2'
     // Required for flutter_local_notifications on Android < API 26
     coreLibraryDesugaring 'com.android.tools:desugar_jdk_libs:2.1.4'
+    // The assistant's queue with the app closed (NexoBackground.kt).
+    implementation 'androidx.work:work-runtime-ktx:2.10.0'
+    implementation 'com.google.firebase:firebase-messaging:24.1.0'
 }
 
 flutter {
