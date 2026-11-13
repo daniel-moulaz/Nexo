@@ -284,7 +284,7 @@ function account(l: Ledger, id: string | undefined, noCredit = false) {
 const pending = (id: string, what: string) => ({
   request_id: id,
   status: "pendente",
-  message: `${what} enviado ao Nexo. Ele é gravado quando o app estiver aberto no celular ou no PC; confira com get_request_status.`,
+  message: `${what} enviado ao Nexo. O celular ou o PC grava sozinho, mesmo com o app fechado (em segundos com o aviso do servidor, ou na checagem de 15 em 15 min); confira com get_request_status.`,
 });
 function changes(args: Args, base: Args, fields: [string, (a: Args) => unknown][]): Args {
   const out: Args = { ...base };

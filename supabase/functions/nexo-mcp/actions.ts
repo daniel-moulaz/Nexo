@@ -29,6 +29,35 @@ export interface ActionDeps {
   ignoreSuggestions(ids: string[] | null, beforeMs: number | null): Promise<number>;
   /// When each bank was last refreshed (absent on older servers).
   bankStatus?(): Promise<Record<string, unknown>[]>;
+  /// The queue and each device's last check (absent or null on older servers).
+  queue?(): Promise<Record<string, unknown> | null>;
+}
+
+/// Devices as get_request_status shows them: version, last contact, last
+/// check of the queue, and whether the server can wake it.
+async function queueView(deps: ActionDeps, l: Ledger) {
+  const q = deps.queue ? await deps.queue() : null;
+  if (!q) {
+    return { devices: (l.devices ?? []).map((d) => ({ app_version: d.app_version, last_seen: d.seen_at })) };
+  }
+  const devices = (q.devices as Record<string, unknown>[] ?? []).map((d) => ({
+    app_version: d.app_version, last_seen: d.seen_at, last_queue_check: d.checked_at ?? undefined,
+    wakes_on_request: d.push === true,
+  }));
+  return { devices, queue_pending: q.pending, waiting_for_app_update: Number(q.waiting_for_update ?? 0) > 0 || undefined };
+}
+
+async function waitingStep(deps: ActionDeps): Promise<string> {
+  const q = deps.queue ? await deps.queue() : null;
+  if (q && Number(q.waiting_for_update ?? 0) > 0) {
+    return "Este pedido precisa de uma versão mais nova do Nexo do que a dos aparelhos (por exemplo, valores em dólar pedem a 1.16.0). " +
+      "Ele fica na fila, sem gravar errado, até um aparelho atualizado abrir.";
+  }
+  const push = q && (q.devices as Record<string, unknown>[] ?? []).some((d) => d.push === true);
+  return (push
+    ? "O celular foi avisado e grava em segundos, mesmo com o app fechado (a economia de bateria pode atrasar). "
+    : "O celular confere a fila sozinho a cada 15 minutos, mesmo com o app fechado (a economia de bateria pode atrasar); abrir o app grava na hora. ") +
+    "O PC na bandeja grava em até 20 s. Em devices, last_queue_check mostra a última conferência de cada aparelho.";
 }
 
 /// "Dados do banco até…": the assistant must not read an empty day as no
@@ -223,7 +252,7 @@ const baseActions: (ToolDefinition & { destructive?: boolean })[] = [
   {
     name: "get_request_status",
     title: "Situação de um pedido",
-    description: "Diz se um pedido de lançamento, correção ou exclusão já foi gravado pelo Nexo, ainda espera o app abrir, ou foi recusado (com o motivo).",
+    description: "Diz se um pedido de lançamento, correção ou exclusão já foi gravado pelo Nexo, ainda está na fila (com a última conferência de cada aparelho) ou foi recusado (com o motivo).",
     inputSchema: {
       type: "object",
       properties: { id: { type: "string" } },
@@ -305,11 +334,11 @@ function editable(l: Ledger, id: string, args?: Args) {
 const pending = (id: string, what: string) => ({
   request_id: id,
   status: "pendente",
-  message: `${what} enviado ao Nexo. Ele é gravado quando o app estiver aberto no celular ou no PC; confira com get_request_status.`,
+  message: `${what} enviado ao Nexo. O celular ou o PC grava sozinho, mesmo com o app fechado (em segundos com o aviso do servidor, ou na checagem de 15 em 15 min); confira com get_request_status.`,
 });
 
 const statusText: Record<string, string> = {
-  pending: "pendente: aguardando o app do Nexo abrir",
+  pending: "pendente: na fila, aguardando um aparelho gravar",
   applying: "em andamento no app",
   done: "gravado no Nexo",
   rejected: "recusado pelo Nexo",
@@ -662,15 +691,11 @@ async function dispatchAction(name: string, args: Args, l: Ledger, today: string
         undoable: r.status === "done" && !undone_at && !!undo && !(undo as Record<string, unknown>).too_large,
         undone_at: undone_at ?? undefined,
         waiting_minutes: minutes,
-        // Who could record it: each device reports itself about once an hour
-        // while open, so a stale one tells the person what to open.
-        devices: waiting
-          ? (l.devices ?? []).map((d) => ({ app_version: d.app_version, last_seen: d.seen_at }))
-          : undefined,
+        // Who could record it and when each device last looked at the queue.
+        ...(waiting ? await queueView(deps, l) : {}),
         next_step: !waiting ? undefined : r.status === "applying"
           ? "Um aparelho está gravando agora; consulte de novo em alguns segundos."
-          : "Será gravado quando o Nexo estiver aberto no celular ou no PC (o PC aberto grava em até 20 s). " +
-            "No PC, o Nexo fica na bandeja perto do relógio ao fechar a janela; em devices, last_seen mostra o último contato de cada aparelho.",
+          : await waitingStep(deps),
       };
     }
     default: {

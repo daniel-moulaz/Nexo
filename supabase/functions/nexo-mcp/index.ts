@@ -4,11 +4,31 @@
 // never leaves the function; queries are always scoped to the connector owner.
 import type { Ledger, Row } from "./finance.ts";
 import { type Connector, createHandler } from "./mcp.ts";
+import { parseServiceAccount, wake } from "./push.ts";
+import { minBuildFor } from "./queue.ts";
 
 declare const Deno: {
   env: { get(name: string): string | undefined };
   serve(handler: (request: Request) => Response | Promise<Response>): void;
 };
+declare const EdgeRuntime: { waitUntil(promise: Promise<unknown>): void } | undefined;
+
+const pushAccount = parseServiceAccount(Deno.env.get("FCM_SERVICE_ACCOUNT"));
+
+/// Wakes the phone after a new request; never delays or fails the answer.
+function wakeDevices(c: Connector) {
+  if (!pushAccount) return;
+  const job = (async () => {
+    try {
+      const targets = await rpc("nexo_push_targets", { p_connector_id: c.id }) as { token: string }[];
+      const result = await wake(targets ?? [], pushAccount);
+      for (const token of result.gone) await rpc("nexo_push_forget", { p_connector_id: c.id, p_token: token });
+    } catch {
+      // A server without the 1.17.0 migration, or FCM down: the 15-minute check remains.
+    }
+  })();
+  if (typeof EdgeRuntime !== "undefined") EdgeRuntime.waitUntil(job);
+}
 
 const url = Deno.env.get("SUPABASE_URL")!;
 // Legacy service-role JWT or a new `sb_secret_` key, whichever exists.
@@ -51,6 +71,9 @@ const handler = createHandler({
     const row = await rpc("nexo_mcp_authenticate", { p_token_hash: await sha256(token) }) as Row | null;
     if (!row || typeof row.id !== "string") return null;
     return { id: row.id, ownerId: String(row.owner_id), datasetId: String(row.dataset_id) };
+  },
+  async tokenState(token) {
+    return await rpc("nexo_mcp_token_state", { p_token_hash: await sha256(token) }) as { state: string; revoked_at?: string } | null;
   },
   async load(c: Connector): Promise<Ledger> {
     const data = await rpc("nexo_mcp_ledger", { p_connector_id: c.id }) as {
@@ -98,13 +121,31 @@ const handler = createHandler({
   actions(c: Connector) {
     return {
       enqueue: async (kind, args, key) => {
+        const minBuild = minBuildFor(kind, args);
+        let queued: { id: string; status: string; deduplicated?: boolean };
         try {
-          return await rpc("nexo_mcp_enqueue_v2", { p_connector_id: c.id, p_kind: kind, p_args: args, p_key: key ?? null }) as
-            { id: string; status: string; deduplicated?: boolean };
+          queued = await rpc("nexo_mcp_enqueue_v3", {
+            p_connector_id: c.id, p_kind: kind, p_args: args, p_key: key ?? null, p_min_build: minBuild,
+          }) as typeof queued;
         } catch (error) {
-          // Before the parity migration: the older queue, without keys.
           if (!(error instanceof Error) || !error.message.startsWith("rpc_404")) throw error;
-          return await rpc("nexo_mcp_enqueue", { p_connector_id: c.id, p_kind: kind, p_args: args }) as { id: string; status: string };
+          try {
+            // Before the 1.17.0 migration: no minimum build on the server.
+            queued = await rpc("nexo_mcp_enqueue_v2", { p_connector_id: c.id, p_kind: kind, p_args: args, p_key: key ?? null }) as typeof queued;
+          } catch (older) {
+            // Before the parity migration: the older queue, without keys.
+            if (!(older instanceof Error) || !older.message.startsWith("rpc_404")) throw older;
+            queued = await rpc("nexo_mcp_enqueue", { p_connector_id: c.id, p_kind: kind, p_args: args }) as typeof queued;
+          }
+        }
+        if (!queued.deduplicated) wakeDevices(c);
+        return queued;
+      },
+      queue: async () => {
+        try {
+          return await rpc("nexo_mcp_queue_service", { p_connector_id: c.id }) as Record<string, unknown>;
+        } catch {
+          return null;
         }
       },
       recent: async (limit) => await rpc("nexo_mcp_recent", { p_connector_id: c.id, p_limit: limit }) as Record<string, unknown>[],

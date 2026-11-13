@@ -487,7 +487,85 @@ await test('refusals the assistant can act on; status says how long it waits', a
   q.items[0].created_at = new Date(Date.now() - 7 * 60000).toISOString();
   const s = await act(q, 'get_request_status', { id: request_id });
   assert.equal(s.waiting_minutes, 7);
-  assert.match(s.next_step, /Nexo estiver aberto/);
+  assert.match(s.next_step, /a cada 15 minutos, mesmo com o app fechado/);
+  // 1.17.0: the queue view shows each device's last check and the wake-up.
+  q.deps.queue = async () => ({ pending: 1, waiting_for_update: 0, devices: [
+    { app_version: '1.17.0+59', seen_at: '2026-11-13T12:00:00Z', checked_at: '2026-11-13T12:10:00Z', push: true }] });
+  const woken = await act(q, 'get_request_status', { id: request_id });
+  assert.deepEqual(woken.devices[0], { app_version: '1.17.0+59', last_seen: '2026-11-13T12:00:00Z',
+    last_queue_check: '2026-11-13T12:10:00Z', wakes_on_request: true });
+  assert.match(woken.next_step, /foi avisado e grava em segundos/);
+  q.deps.queue = async () => ({ pending: 1, waiting_for_update: 1, devices: [] });
+  const old = await act(q, 'get_request_status', { id: request_id });
+  assert.equal(old.waiting_for_app_update, true);
+  assert.match(old.next_step, /sem gravar errado/);
+});
+await test('queue rules: dollar requests need the dollar build, others any version', async () => {
+  const { minBuildFor } = await import('../supabase/functions/nexo-mcp/queue.ts');
+  assert.equal(minBuildFor('investment.operation', { brl_cents: 55000, cents: 10000 }), 58);
+  assert.equal(minBuildFor('investment.add', { currency: 'USD', ticker: 'NVDA' }), 58);
+  assert.equal(minBuildFor('transfer.add', { amount_cents: 55000, received_cents: 10000 }), 58);
+  assert.equal(minBuildFor('investment.add', { currency: 'BRL', ticker: 'BBAS3' }), null);
+  assert.equal(minBuildFor('transaction.add', { amount_cents: 3700 }), null);
+  assert.equal(minBuildFor('transfer.add', { amount_cents: 100 }), null);
+});
+await test('connection: a revoked or broken address says what to do; a new one works', async () => {
+  const { unauthorizedMessage } = await import('../supabase/functions/nexo-mcp/queue.ts');
+  const good = 'nexo_mcp_' + 'b'.repeat(64), revoked = 'nexo_mcp_' + 'c'.repeat(64);
+  const handler = createHandler({
+    authenticate: async (t) => t === good ? { id: 'k2', ownerId: 'o', datasetId: 'd' } : null,
+    tokenState: async (t) => t === revoked ? { state: 'revoked', revoked_at: '2026-11-12T15:00:00Z' } : { state: 'unknown' },
+    load: async () => ledger, audit: async () => {}, today: () => today, actions: () => queue().deps,
+  });
+  const call = (token, body) => handler(new Request(`https://x.supabase.co/functions/v1/nexo-mcp/${token}`, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }));
+  const init = { jsonrpc: '2.0', id: 1, method: 'initialize', params: { protocolVersion: '2025-06-18', capabilities: {}, clientInfo: { name: 't', version: '1' } } };
+  const old = await call(revoked, init);
+  assert.equal(old.status, 401);
+  assert.match(old.headers.get('WWW-Authenticate'), /invalid_token/);
+  assert.match((await old.json()).error.message, /desconectado no app em 12\/11\/2026.*histórico de pedidos fica/);
+  const cut = await call(good.slice(0, 30), init);
+  assert.match((await cut.json()).error.message, /colado inteiro/);
+  // Reconnecting: the new address initializes and lists the tools.
+  const fresh = await call(good, init);
+  assert.equal(fresh.status, 200);
+  assert.ok((await fresh.json()).result.serverInfo);
+  const list = await (await call(good, { jsonrpc: '2.0', id: 2, method: 'tools/list' })).json();
+  assert.ok(list.result.tools.some((t) => t.name === 'get_request_status'));
+  assert.match(unauthorizedMessage(null), /Mais › Sincronizar dispositivos/);
+});
+await test('push: a silent wake-up per device, signed with the service account; dead tokens reported', async () => {
+  const { wake, parseServiceAccount, clearTokenCache } = await import('../supabase/functions/nexo-mcp/push.ts');
+  const { generateKeyPairSync } = await import('node:crypto');
+  const { privateKey } = generateKeyPairSync('rsa', { modulusLength: 2048 });
+  const account = parseServiceAccount(JSON.stringify({ client_email: 'nexo@exemplo.iam.gserviceaccount.com',
+    private_key: privateKey.export({ type: 'pkcs8', format: 'pem' }), project_id: 'nexo-teste' }));
+  assert.ok(account);
+  assert.equal(parseServiceAccount('{"client_email": 1}'), null);
+  assert.equal(parseServiceAccount(undefined), null);
+  clearTokenCache();
+  const calls = [];
+  const fetcher = async (url, init) => {
+    calls.push({ url, init });
+    if (url.includes('oauth2')) return new Response(JSON.stringify({ access_token: 'ya29.x', expires_in: 3600 }));
+    const token = JSON.parse(init.body).message.token;
+    if (token === 'morto') return new Response('{"error":{"status":"NOT_FOUND","details":[{"errorCode":"UNREGISTERED"}]}}', { status: 404 });
+    return new Response('{"name":"m"}');
+  };
+  const r = await wake([{ token: 'vivo' }, { token: 'morto' }], account, fetcher, Date.parse('2026-11-13T12:00:00Z'));
+  assert.deepEqual([r.sent, r.gone, r.failed], [1, ['morto'], 0]);
+  const assertion = new URLSearchParams(calls[0].init.body).get('assertion');
+  assert.equal(assertion.split('.').length, 3, 'a signed JWT');
+  const claims = JSON.parse(Buffer.from(assertion.split('.')[1], 'base64url').toString());
+  assert.equal(claims.scope, 'https://www.googleapis.com/auth/firebase.messaging');
+  const message = JSON.parse(calls[1].init.body).message;
+  assert.deepEqual(message.data, { kind: 'queue' }, 'nothing about the request travels');
+  assert.equal(message.android.priority, 'HIGH');
+  assert.match(calls[1].url, /projects\/nexo-teste\/messages:send/);
+  // The access token is reused; without an account nothing is sent.
+  await wake([{ token: 'vivo' }], account, fetcher, Date.parse('2026-11-13T12:05:00Z'));
+  assert.equal(calls.filter((c) => c.url.includes('oauth2')).length, 1);
+  assert.deepEqual(await wake([{ token: 'vivo' }], null, fetcher), { sent: 0, gone: [], failed: 0 });
 });
 await test('ignoring in batch can be previewed first', async () => {
   const q = queue();

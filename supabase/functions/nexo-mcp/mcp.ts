@@ -2,6 +2,7 @@
 // Read tools answer from the synced ledger; change tools only queue requests
 // that the app applies. Authentication and data are injected so the whole
 // request path is testable without a network or a database.
+import { unauthorizedMessage } from "./queue.ts";
 import type { Ledger } from "./finance.ts";
 import { type ActionDeps, actions, callAction } from "./actions.ts";
 import { readOnlyMore } from "./more_actions.ts";
@@ -21,6 +22,8 @@ export interface Connector {
 export interface Deps {
   /// Resolves the bearer token (hashed by the caller) to a live connector.
   authenticate(token: string): Promise<Connector | null>;
+  /// Why [token] was refused, for a clearer message (absent: generic).
+  tokenState?(token: string): Promise<{ state: string; revoked_at?: string } | null>;
   load(connector: Connector): Promise<Ledger>;
   audit(connector: Connector, tool: string, ok: boolean): Promise<void>;
   today(): string; // YYYY-MM-DD in the person's time zone
@@ -151,7 +154,16 @@ export function createHandler(deps: Deps) {
     const token = header.startsWith("Bearer ") ? header.slice(7).trim() : fromPath;
     const connector = /^nexo_mcp_[A-Za-z0-9]{40,128}$/.test(token) ? await deps.authenticate(token) : null;
     if (!connector) {
-      return json(rpcError(null, -32001, "Unauthorized"), 401, { "WWW-Authenticate": 'Bearer realm="nexo"' });
+      let state: { state: string; revoked_at?: string } | null = null;
+      if (/^nexo_mcp_[A-Za-z0-9]{40,128}$/.test(token) && deps.tokenState) {
+        try {
+          state = await deps.tokenState(token);
+        } catch {
+          // The generic message is still right.
+        }
+      }
+      return json(rpcError(null, -32001, unauthorizedMessage(state)), 401,
+        { "WWW-Authenticate": 'Bearer realm="nexo", error="invalid_token"' });
     }
     const length = Number(request.headers.get("Content-Length") ?? "0");
     if (length > 64 * 1024) return json(rpcError(null, -32600, "Request too large"), 413);
