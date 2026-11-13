@@ -35,6 +35,7 @@ import 'services/pluggy_inbox.dart';
 import 'sync/mcp_connectors.dart';
 import 'sync/assistant_commands.dart';
 import 'services/receipt_scan_mlkit.dart';
+import 'investments/foreign_quotes.dart';
 
 final GlobalKey<NavigatorState> rootNavigatorKey = GlobalKey<NavigatorState>();
 
@@ -89,6 +90,8 @@ Future<void> startNexo() async {
     PluggyInbox.instance =
         PluggyInbox(SupabasePluggyRemote(syncConfig, SupabaseAuth.app!));
     McpConnectors.instance = McpConnectors(syncConfig, SupabaseAuth.app!);
+    SupabaseForeignQuotes.instance =
+        SupabaseForeignQuotes(syncConfig, SupabaseAuth.app!);
     final assistant = AssistantCommands.instance = AssistantCommands(
         SupabaseAssistantRemote(syncConfig, SupabaseAuth.app!), provider);
     SyncController.instance?.afterSync = () async {
