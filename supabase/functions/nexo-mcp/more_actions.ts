@@ -273,7 +273,7 @@ function recurring(l: Ledger, id: string | undefined) {
 const pending = (id: string, what: string) => ({
   request_id: id,
   status: "pendente",
-  message: `${what} enviado ao Nexo. O celular ou o PC grava sozinho, mesmo com o app fechado (em segundos com o aviso do servidor, ou na checagem de 15 em 15 min); confira com get_request_status.`,
+  message: `Pedido enviado ao Nexo (${what}). O celular ou o PC grava sozinho, mesmo com o app fechado (em segundos com o aviso do servidor, ou na checagem de 15 em 15 min); confira com get_request_status.`,
 });
 const unit: Record<string, string> = { daily: "days", weekly: "weeks", monthly: "months", yearly: "years" };
 const unitLabel: Record<string, string> = { days: "dia(s)", weeks: "semana(s)", months: "mês(es)", years: "ano(s)" };

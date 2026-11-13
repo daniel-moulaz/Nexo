@@ -334,7 +334,7 @@ function editable(l: Ledger, id: string, args?: Args) {
 const pending = (id: string, what: string) => ({
   request_id: id,
   status: "pendente",
-  message: `${what} enviado ao Nexo. O celular ou o PC grava sozinho, mesmo com o app fechado (em segundos com o aviso do servidor, ou na checagem de 15 em 15 min); confira com get_request_status.`,
+  message: `Pedido enviado ao Nexo (${what}). O celular ou o PC grava sozinho, mesmo com o app fechado (em segundos com o aviso do servidor, ou na checagem de 15 em 15 min); confira com get_request_status.`,
 });
 
 const statusText: Record<string, string> = {
