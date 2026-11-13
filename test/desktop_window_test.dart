@@ -29,11 +29,23 @@ void main() {
 
   test('stays in the tray by default, and the choice is remembered', () async {
     await DesktopWindow.start();
-    expect(calls.single.arguments, true);
+    expect(calls.first.arguments, true);
     await DesktopWindow.setKeepInTray(false);
     calls.clear();
     await DesktopWindow.start();
     expect(calls.single.arguments, false);
+  });
+
+  test('starts with Windows once, with the tray on; a later choice stays',
+      () async {
+    await DesktopWindow.start();
+    expect(calls.map((c) => c.method),
+        ['setKeepInTray', 'startsWithWindows', 'setStartWithWindows']);
+    expect(calls.last.arguments, true);
+    // The person turned it off afterwards: never turned on again.
+    calls.clear();
+    await DesktopWindow.start();
+    expect(calls.map((c) => c.method), ['setKeepInTray']);
   });
 
   test('a test profile closes normally unless asked', () async {
