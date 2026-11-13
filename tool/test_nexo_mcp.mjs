@@ -1203,4 +1203,58 @@ await test('parity: creating like the form, and the bank side by side with the N
   assert.deepEqual((await pact(old, 'get_bank_accounts', {})).accounts, []);
 });
 
+await test('dollar stocks: rate required, dollar account only, totals in reais', async () => {
+  const q = queue();
+  const dollars = {
+    ...everything,
+    accounts: [...everything.accounts, { id: 'usd2', name: 'Conta em dólar', type: 'bank', currency: 'USD' }],
+    balances: { ...everything.balances, usd2: 50_000_000 }, // US$ 50
+    investments: [...everything.investments, {
+      id: 'us1', name: 'Ação EUA fictícia', asset_class: 'Ações', ticker: 'NVDA', institution: 'Corretora EUA',
+      price_micros: 120_000_000, price_at: '2026-10-20T00:00:00.000Z', archived: 0, currency: 'USD', fx_micros: 5_500_000,
+    }],
+    investmentOperations: [...everything.investmentOperations,
+      { id: 'us-op', investment_id: 'us1', kind: 'buy', quantity: 10_000_000, cents: 100_000, brl_cents: 500_000,
+        date: '2026-10-02T00:00:00.000Z', created_at: '2026-10-02T00:00:00.000Z' }],
+  };
+  // Adding: dollars and the rate of the day become reais once.
+  await assert.rejects(act(q, 'add_investment', { name: 'X', asset_class: 'Ações', ticker: 'AAPL', currency: 'USD', quantity: 1, total: 200, date: '2026-10-10' }, dollars), /fx_rate/);
+  await assert.rejects(act(q, 'add_investment', { name: 'X', asset_class: 'Ações', currency: 'USD', fx_rate: 5.4, quantity: 1, total: 200, date: '2026-10-10', cash_account_id: 'bank' }, dollars), /add_transfer/);
+  await assert.rejects(act(q, 'add_investment', { name: 'X', asset_class: 'Ações', fx_rate: 5.4, quantity: 1, total: 200, date: '2026-10-10' }, dollars), /fx_rate só vale/);
+  await act(q, 'add_investment', { name: 'X', asset_class: 'Ações', ticker: 'brk.b', institution: 'Corretora EUA', currency: 'USD', fx_rate: 5.4, quantity: 0.5, total: 200, date: '2026-10-10', cash_account_id: 'usd2' }, dollars);
+  assert.deepEqual(
+    (({ ticker, currency, cents, brl_cents, fx_micros, cash_account_id }) => ({ ticker, currency, cents, brl_cents, fx_micros, cash_account_id }))(q.items.at(-1).args),
+    { ticker: 'BRK.B', currency: 'USD', cents: 20000, brl_cents: 108000, fx_micros: 5_400_000, cash_account_id: 'usd2' });
+  // A dividend: net, withheld and the reais of the day.
+  await act(q, 'record_investment_operation', { investment_id: 'us1', kind: 'income', total: 7, tax_withheld: 3, fx_rate: 5.2, date: '2026-10-15', cash_account_id: 'usd2' }, dollars);
+  assert.deepEqual([q.items.at(-1).args.cents, q.items.at(-1).args.tax_cents, q.items.at(-1).args.brl_cents], [700, 300, 3640]);
+  await assert.rejects(act(q, 'record_investment_operation', { investment_id: 'us1', kind: 'buy', quantity: 1, total: 5, fx_rate: 5, tax_withheld: 1, date: '2026-10-15' }, dollars), /só vale para provento/);
+  await assert.rejects(act(q, 'record_investment_operation', { investment_id: 'us1', kind: 'buy', quantity: 1, total: 5, date: '2026-10-15' }, dollars), /fx_rate/);
+  // Reading: the same split as the app.
+  const inv = (await act(q, 'get_investments', {}, dollars)).investments.find((i) => i.id === 'us1');
+  assert.deepEqual([inv.currency, inv.value_brl, inv.cost_brl, inv.price_effect_brl, inv.fx_effect_brl, inv.average_price], ['USD', 6600, 5000, 1100, 500, 100]);
+  const summary = callTool('get_investment_summary', {}, dollars, today);
+  assert.equal(summary.reference_total, 2 + 6600);
+  assert.deepEqual(summary.by_currency, { BRL: 2, USD: 6600 });
+  assert.deepEqual(summary.by_country, { Brasil: 2, EUA: 6600 });
+  assert.equal(summary.by_institution['Corretora EUA'], 6600);
+  // Net worth: the dollar account at the same rate, the stock once.
+  const before = await act(q, 'get_net_worth', {}, everything);
+  const after = await act(q, 'get_net_worth', {}, dollars);
+  assert.equal(Math.round((after.investments - before.investments) * 100), 660000);
+  assert.equal(Math.round((after.accounts - before.accounts) * 100), Math.round((50 + before.not_converted.USD) * 550), 'every dollar account at 5,50');
+  assert.deepEqual(after.rates_used, { USD: 5.5 });
+  assert.equal(after.not_converted?.USD, undefined);
+});
+
+await test('exchange between currencies needs what arrived', async () => {
+  const q = queue();
+  const l = withIncome; // already has a dollar account, usd
+  await assert.rejects(act(q, 'add_transfer', { from_account_id: 'bank', to_account_id: 'usd', amount: 550 }, l), /received_amount/);
+  await assert.rejects(act(q, 'add_transfer', { from_account_id: 'bank', to_account_id: 'card', amount: 10, received_amount: 10 }, l), /moedas diferentes/);
+  const r = await act(q, 'add_transfer', { from_account_id: 'bank', to_account_id: 'usd', amount: 550, received_amount: 100 }, l);
+  assert.match(r.message ?? JSON.stringify(r), /Câmbio/);
+  assert.deepEqual([q.items[0].args.amount_cents, q.items[0].args.received_cents], [55000, 10000]);
+});
+
 console.log(`NEXO MCP: ${passed} tests passed; synthetic fixture only.`);

@@ -17,7 +17,8 @@ Matriz de cobertura, regras e evidências: [`docs/mcp-paridade.md`](../../../doc
 | `tools.ts` | Leituras básicas: resumo, contas, categorias, lançamentos, contas a vencer, carteira |
 | `actions.ts` | Fila de pedidos, status, idempotência, ids do que está sendo criado, lançar/corrigir/apagar, Open Finance |
 | `more_actions.ts` | Recorrentes, orçamentos, categorias, objetivos, fatura |
-| `all_actions.ts` | Contas, objetivos, investimentos, empréstimos, emprestado, bens, desejos, faturas |
+| `all_actions.ts` | Contas, objetivos, investimentos (reais e dólar), empréstimos, emprestado, bens, desejos, faturas |
+| `portfolio.ts` | Posição em duas moedas, a mesma regra do app: custo em reais da data, efeito do preço e do câmbio |
 | `parity_actions.ts` | Paridade com as telas: tipos de gasto, configurações, lotes, desfazer, análises, banco × Nexo |
 | `envelopes.ts`, `settings.ts`, `invoices.ts` | Tipos de gasto, registro de configurações e faturas, espelhando o app |
 
@@ -54,3 +55,26 @@ supabase functions deploy nexo-mcp --no-verify-jwt
 
 O conector usa token próprio (no fim da URL ou em `Authorization: Bearer`), não a sessão do
 Supabase; por isso a verificação de JWT fica desligada.
+
+### Adicionar no Claude
+
+Configurações → Conectores → Adicionar conector personalizado, nome Nexo, URL inteira gerada
+no app (Sincronizar dispositivos → Claude (IA) → Conectar ao Claude). O Claude avisa que "não
+foi possível determinar como este servidor faz login": é esperado, porque a chave está na URL
+e não há login. Escolha **Continuar mesmo assim**. Se as ferramentas não aparecerem, a chave
+foi desconectada ou a URL foi copiada cortada: gere outra no app.
+
+## Cotações dos EUA (`market-quotes`)
+
+Função separada, chamada pelo app com a sessão do Supabase da pessoa dona
+(`NEXO_QUOTES_OWNER`, ou `NEXO_PLUGGY_OWNER` se ausente). Recebe só tickers (até 20) e
+devolve o preço em dólar e a hora da última negociação, pelo `/quote` da Finnhub. A chave
+fica no segredo `FINNHUB_API_KEY` e nunca chega ao app. Respostas valem 1 minuto em memória.
+
+```
+node tool/test_market_quotes.mjs
+supabase secrets set FINNHUB_API_KEY=...        # chave gratuita em finnhub.io
+supabase functions deploy market-quotes --no-verify-jwt
+```
+
+Sem a chave, a função responde 503 e o app mantém o último preço, com a data.

@@ -104,6 +104,10 @@ const baseActions: (ToolDefinition & { destructive?: boolean })[] = [
         from_account_id: { type: "string" },
         to_account_id: { type: "string" },
         amount: amountField,
+        received_amount: {
+          ...amountField,
+          description: "Câmbio entre contas de moedas diferentes: quanto chegou na conta de destino, na moeda dela (ex.: dólares creditados no Inter Global). Obrigatório nesse caso; a taxa efetiva, com spread e IOF, sai daí.",
+        },
         date: dateField,
         note: { type: "string", maxLength: 200 },
       },
@@ -458,15 +462,30 @@ async function dispatchAction(name: string, args: Args, l: Ledger, today: string
       return pending(r.id, type === "expense" ? "Despesa" : "Receita");
     }
     case "add_transfer": {
-      only(args, ["from_account_id", "to_account_id", "amount", "date", "note"]);
+      only(args, ["from_account_id", "to_account_id", "amount", "received_amount", "date", "note"]);
       const from = account(l, str(args, "from_account_id", 256));
       const to = account(l, str(args, "to_account_id", 256));
       if (text(from.id) === text(to.id)) throw new ToolInputError("Escolha contas diferentes.");
-      const r = await deps.enqueue("transfer.add", {
+      const exchange = (text(from.currency) || l.mainCurrency) !== (text(to.currency) || l.mainCurrency);
+      if (exchange && args.received_amount === undefined) {
+        throw new ToolInputError(`Câmbio de ${text(from.currency)} para ${text(to.currency)}: informe received_amount, o valor que chegou na conta de destino.`);
+      }
+      if (!exchange && args.received_amount !== undefined) {
+        throw new ToolInputError("received_amount só vale entre contas de moedas diferentes.");
+      }
+      const body: Record<string, unknown> = {
         from_account_id: text(from.id), to_account_id: text(to.id), amount_cents: amountCents(args),
         date: date(args, "date", today, true), note: str(args, "note", 200, false) ?? "",
-      });
-      return pending(r.id, "Transferência");
+      };
+      if (exchange) {
+        try {
+          body.received_cents = amountCents({ amount: args.received_amount });
+        } catch {
+          throw new ToolInputError("received_amount deve ser um valor positivo, com até 2 casas, na moeda da conta de destino.");
+        }
+      }
+      const r = await deps.enqueue("transfer.add", body);
+      return pending(r.id, exchange ? "Câmbio" : "Transferência");
     }
     case "update_transaction": {
       only(args, ["id", "amount", "description", "category_id", "account_id", "date", "note", "type", "subcategory",
@@ -643,9 +662,15 @@ async function dispatchAction(name: string, args: Args, l: Ledger, today: string
         undoable: r.status === "done" && !undone_at && !!undo && !(undo as Record<string, unknown>).too_large,
         undone_at: undone_at ?? undefined,
         waiting_minutes: minutes,
+        // Who could record it: each device reports itself about once an hour
+        // while open, so a stale one tells the person what to open.
+        devices: waiting
+          ? (l.devices ?? []).map((d) => ({ app_version: d.app_version, last_seen: d.seen_at }))
+          : undefined,
         next_step: !waiting ? undefined : r.status === "applying"
           ? "Um aparelho está gravando agora; consulte de novo em alguns segundos."
-          : "Será gravado quando o Nexo estiver aberto no celular ou no PC (o PC aberto grava em até 20 s).",
+          : "Será gravado quando o Nexo estiver aberto no celular ou no PC (o PC aberto grava em até 20 s). " +
+            "No PC, o Nexo fica na bandeja perto do relógio ao fechar a janela; em devices, last_seen mostra o último contato de cada aparelho.",
       };
     }
     default: {

@@ -55,7 +55,10 @@ export const instructions =
   "receita de ajuste; acertos antigos lançados como receita viram ajuste neutro com convert_to_balance_adjustment. " +
   "Retirar de um objetivo devolve dinheiro à conta; se a reserva era só contábil, use move_goal com move_money false. " +
   "Orçamento por tipo de gasto: get_spending_types, set_category_type e set_spending_targets. Orçamento criado no meio do mês " +
-  "fica proporcional, a menos que full_period seja true.";
+  "fica proporcional, a menos que full_period seja true. " +
+  "Ações dos EUA: o ativo tem currency USD, valores em dólar e fx_rate (reais por dólar do dia, da nota da corretora). Trocar " +
+  "reais por dólares é add_transfer com received_amount (o que chegou), nunca gasto. Compra em dólar sai de uma conta em dólar. " +
+  "Ticker fracionário da B3 (BBAS3F) é o mesmo ativo (BBAS3). Valores da carteira e do patrimônio vêm em reais.";
 
 type Json = Record<string, unknown>;
 const rpcError = (id: unknown, code: number, message: string) => ({

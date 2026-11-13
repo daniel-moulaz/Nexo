@@ -10,6 +10,7 @@ import { balanceCents, callTool, ToolInputError, type ToolDefinition } from "./t
 import { envelopeById, envelopes, spendingTypes } from "./envelopes.ts";
 import { checkSetting, settingDefs, sharedSettings } from "./settings.ts";
 import { cardInvoices } from "./invoices.ts";
+import { FX_SCALE, lastRate, ratio } from "./portfolio.ts";
 
 type Args = Record<string, unknown>;
 export type Enqueue = (kind: string, args: Record<string, unknown>) => Promise<{ id: string; status: string }>;
@@ -975,10 +976,21 @@ export async function callParityAction(name: string, rawArgs: unknown, l: Ledger
       only(args, []);
       let cash = 0, cards = 0;
       const others: Record<string, number> = {};
+      // A dollar account at the rate the app saved with the dollar stocks,
+      // so the two never disagree; without one it stays apart.
+      const rates: Record<string, number> = {};
       for (const a of l.accounts) {
-        const b = balanceCents(l, text(a.id));
-        if (text(a.currency) !== l.mainCurrency || a.type === "gold") {
-          others[text(a.currency) || "?"] = (others[text(a.currency) || "?"] ?? 0) + b;
+        let b = balanceCents(l, text(a.id));
+        const c = text(a.currency) || "?";
+        if (c !== l.mainCurrency && a.type !== "gold" && l.mainCurrency === "BRL") {
+          const r = rates[c] ?? lastRate(l.investments, c);
+          if (r) {
+            rates[c] = r;
+            b = ratio(b, r, FX_SCALE);
+          }
+        }
+        if ((c !== l.mainCurrency && !rates[c]) || a.type === "gold") {
+          others[c] = (others[c] ?? 0) + balanceCents(l, text(a.id));
           continue;
         }
         if (a.type === "credit") cards += b;
@@ -1010,6 +1022,7 @@ export async function callParityAction(name: string, rawArgs: unknown, l: Ledger
         loans_outstanding: money(-loans), lent_to_others: money(lent), borrowed_from_others: money(-borrowed),
         net_worth: money(total),
         not_converted: Object.keys(others).length ? Object.fromEntries(Object.entries(others).map(([c, v]) => [c, money(v)])) : undefined,
+        rates_used: Object.keys(rates).length ? Object.fromEntries(Object.entries(rates).map(([c, r]) => [c, r / FX_SCALE])) : undefined,
         note: "Empréstimos pelo valor principal menos o que já foi pago (sem juros futuros). Investimentos pela última cotação. Bens que repetem uma conta ou investimento contam duas vezes: confira.",
       };
     }

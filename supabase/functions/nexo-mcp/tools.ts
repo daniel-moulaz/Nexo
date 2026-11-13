@@ -4,6 +4,7 @@ import {
   analyze, cents, currencyOf, day, isNeutral, isoDay, type Ledger, meta, metadataIndex,
   money, monthFilter, num, previousMonth, type Row, text,
 } from "./finance.ts";
+import { countryOf, FX_SCALE, position } from "./portfolio.ts";
 
 export class ToolInputError extends Error {}
 
@@ -400,22 +401,35 @@ export function callTool(name: string, rawArgs: unknown, l: Ledger, today: strin
       const positions = l.investments
         .filter((i) => i.archived !== 1)
         .map((i) => {
-          const ops = l.investmentOperations.filter((o) => o.investment_id === i.id);
-          const quantity = ops.reduce((q, o) => q + (o.kind === "sell" ? -num(o.quantity) : o.kind === "income" ? 0 : num(o.quantity)), 0);
-          const units = quantity / 1e6;
-          const price = num(i.price_micros) / 1e6;
+          const p = position(i, l.investmentOperations);
+          const foreign = p.currency !== "BRL";
           return {
             name: text(i.name), ticker: text(i.ticker) || undefined, asset_class: text(i.asset_class),
-            quantity: units, last_price: price, price_date: day(text(i.price_at)),
-            price_source: text(i.price_source), reference_value: Math.round(units * price * 100) / 100,
+            institution: text(i.institution) || undefined, currency: p.currency, country: countryOf(p.currency),
+            quantity: p.quantity / 1e6, last_price: num(i.price_micros) / 1e6, price_date: day(text(i.price_at)),
+            price_source: text(i.price_source),
+            reference_value: p.value / 100, cost: p.cost / 100,
+            ...(foreign ? {
+              value_in_currency: p.nativeValue / 100, cost_in_currency: p.nativeCost / 100,
+              rate: p.fxMicros / FX_SCALE, price_effect: p.priceEffect / 100, fx_effect: p.fxEffect / 100,
+            } : {}),
           };
         })
         .filter((p) => p.quantity > 0);
+      const by = (key: "institution" | "currency" | "country") => {
+        const out: Record<string, number> = {};
+        for (const p of positions) {
+          const k = (key === "institution" ? p.institution : p[key]) ?? "Sem corretora";
+          out[k] = Math.round(((out[k] ?? 0) + p.reference_value) * 100) / 100;
+        }
+        return out;
+      };
       return {
         currency: "BRL",
         positions,
         reference_total: Math.round(positions.reduce((s, p) => s + p.reference_value, 0) * 100) / 100,
-        note: "Valor de referência pela última cotação registrada; não é saldo de conta nem rentabilidade.",
+        by_institution: by("institution"), by_currency: by("currency"), by_country: by("country"),
+        note: "Valores em reais pela última cotação registrada e, para ativos em dólar, pelo câmbio que o app guardou com o preço (rate). price_effect é o que a ação andou; fx_effect, o que o câmbio andou sobre o custo. Não é saldo de conta nem rentabilidade.",
       };
     }
     default:

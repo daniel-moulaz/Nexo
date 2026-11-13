@@ -5,6 +5,30 @@
 import { cents, day, type Ledger, money, num, type Row, text } from "./finance.ts";
 import { balanceCents, ToolInputError, type ToolDefinition } from "./tools.ts";
 import { cardInvoices } from "./invoices.ts";
+import { countryOf, FX_SCALE, position } from "./portfolio.ts";
+
+const currencyField = {
+  type: "string", enum: ["BRL", "USD"],
+  description: "Moeda do ativo: BRL (B3, Rico) ou USD (ações dos EUA, como no Inter Global). Padrão BRL.",
+};
+const rateField = {
+  type: "number", exclusiveMinimum: 0, maximum: 1000,
+  description: "Ativo em USD: reais por dólar no dia da operação (o da nota da corretora ou do câmbio feito). Obrigatório em USD.",
+};
+
+/// Reais per dollar as millionths, required for a foreign asset.
+function fxArg(args: Args, currency: string, required: boolean): number | undefined {
+  if (currency === "BRL") {
+    if (args.fx_rate !== undefined) throw new ToolInputError("fx_rate só vale para ativo em USD.");
+    return undefined;
+  }
+  const v = args.fx_rate;
+  if (v === undefined && !required) return undefined;
+  if (typeof v !== "number" || !Number.isFinite(v) || v <= 0 || v > 1000) {
+    throw new ToolInputError("Ativo em USD: informe fx_rate, os reais por dólar do dia (ex.: 5.42).");
+  }
+  return Math.round(v * FX_SCALE);
+}
 
 type Args = Record<string, unknown>;
 type Enqueue = (kind: string, args: Record<string, unknown>) => Promise<{ id: string; status: string }>;
@@ -92,34 +116,39 @@ export const allActions: (ToolDefinition & { destructive?: boolean })[] = [
   },
   {
     name: "get_investments", title: "Ativos da carteira",
-    description: "Lista os investimentos com id, quantidade e último preço, para registrar operações ou atualizar preço.",
+    description: "Lista os investimentos com id, moeda, corretora, quantidade, preço médio e último preço (na moeda do ativo), e o valor e custo em reais, para registrar operações ou atualizar preço.",
     inputSchema: obj({}),
   },
   {
     name: "add_investment", title: "Novo investimento",
     description:
-      "Cadastra um ativo. Com cash_account_id é uma compra que sai da conta (não é gasto); sem conta é uma posição que você já tinha.",
+      "Cadastra um ativo. Com cash_account_id é uma compra que sai da conta (não é gasto); sem conta é uma posição que você já tinha. Ativo dos EUA: currency USD, total em dólares, fx_rate do dia e, se movimentar conta, uma conta em dólar (troque reais por dólares antes com add_transfer e received_amount). Ticker fracionário da B3 (BBAS3F) vira o ativo base (BBAS3).",
     inputSchema: obj({
       name: { type: "string", minLength: 1, maxLength: 80 },
       asset_class: { type: "string", enum: ["Ações", "FIIs", "ETFs", "Renda fixa", "Cripto", "Outros"] },
-      ticker: { type: "string", maxLength: 12 }, institution: { type: "string", maxLength: 60 },
-      quantity: { type: "number", exclusiveMinimum: 0, maximum: 1000000 }, total: amountField, date: dateField,
+      ticker: { type: "string", maxLength: 12 },
+      institution: { type: "string", maxLength: 60, description: "Corretora onde fica guardado (Rico, Inter Global…)." },
+      currency: currencyField, fx_rate: rateField,
+      quantity: { type: "number", exclusiveMinimum: 0, maximum: 1000000 },
+      total: { ...amountField, description: "Valor total na moeda do ativo, com taxas." }, date: dateField,
       cash_account_id: idField,
     }, ["name", "asset_class", "quantity", "total", "date"]),
   },
   {
     name: "record_investment_operation", title: "Compra, venda ou provento",
-    description: "Registra compra/aporte, venda/resgate ou provento de um ativo. Com cash_account_id movimenta a conta (não é gasto; provento entra como receita).",
+    description: "Registra compra/aporte, venda/resgate ou provento de um ativo. Com cash_account_id movimenta a conta da moeda do ativo (não é gasto; provento entra como receita). Ativo em USD pede fx_rate; provento dos EUA: total é o líquido que chegou e tax_withheld o imposto retido na fonte.",
     inputSchema: obj({
       investment_id: idField, kind: { type: "string", enum: ["buy", "sell", "income"] },
       quantity: { type: "number", exclusiveMinimum: 0, maximum: 1000000, description: "Obrigatório em compra e venda" },
-      total: amountField, date: dateField, cash_account_id: idField,
+      total: { ...amountField, description: "Valor total na moeda do ativo." }, date: dateField, cash_account_id: idField,
+      fx_rate: rateField,
+      tax_withheld: { type: "number", minimum: 0, maximum: 1000000000, description: "Só provento: imposto retido na fonte, na moeda do ativo." },
     }, ["investment_id", "kind", "total", "date"]),
   },
   {
     name: "update_investment_price", title: "Atualizar preço",
-    description: "Informa o preço atual por unidade de um ativo (renda fixa, cripto e outros sem cotação automática).",
-    inputSchema: obj({ investment_id: idField, price: amountField, date: dateField }, ["investment_id", "price"]),
+    description: "Informa o preço atual por unidade de um ativo, na moeda dele (renda fixa, cripto e outros sem cotação automática). Ativo em USD aceita fx_rate para o câmbio do dia.",
+    inputSchema: obj({ investment_id: idField, price: amountField, date: dateField, fx_rate: rateField }, ["investment_id", "price"]),
   },
   {
     name: "get_loans", title: "Empréstimos e financiamentos",
@@ -426,57 +455,100 @@ export async function callAllAction(name: string, rawArgs: unknown, l: Ledger, t
       return {
         investments: l.investments.map((i) => {
           const ops = l.investmentOperations.filter((o) => o.investment_id === i.id);
-          const micros = ops.reduce((q, o) => q + (o.kind === "sell" ? -num(o.quantity) : o.kind === "income" ? 0 : num(o.quantity)), 0);
+          const p = position(i, l.investmentOperations);
+          const foreign = p.currency !== "BRL";
           return {
             id: text(i.id), name: text(i.name), ticker: text(i.ticker) || undefined, asset_class: text(i.asset_class),
-            quantity: micros / 1e6, last_price: num(i.price_micros) / 1e6, price_date: day(text(i.price_at)),
+            institution: text(i.institution) || undefined, currency: p.currency, country: countryOf(p.currency),
+            quantity: p.quantity / 1e6, last_price: num(i.price_micros) / 1e6, price_date: day(text(i.price_at)),
+            average_price: p.quantity > 0 ? Math.round(p.nativeCost / (p.quantity / 1e6)) / 100 : undefined,
+            value_brl: money(p.value), cost_brl: money(p.cost),
+            ...(foreign ? { rate: p.fxMicros / FX_SCALE, price_effect_brl: money(p.priceEffect), fx_effect_brl: money(p.fxEffect) } : {}),
             archived: i.archived === 1,
             operations: ops.map((o) => ({
               id: text(o.id), kind: text(o.kind), date: day(text(o.date)), quantity: num(o.quantity) / 1e6,
               total: money(num(o.cents)), cash_account_id: text(o.cash_account_id) || undefined,
+              ...(o.brl_cents === null || o.brl_cents === undefined ? {} : { total_brl: money(num(o.brl_cents)) }),
+              ...(num(o.tax_cents) > 0 ? { tax_withheld: money(num(o.tax_cents)) } : {}),
             })).sort((a, b) => a.date.localeCompare(b.date)),
           };
         }),
       };
     }
     case "add_investment": {
-      only(args, ["name", "asset_class", "ticker", "institution", "quantity", "total", "date", "cash_account_id"]);
+      only(args, ["name", "asset_class", "ticker", "institution", "currency", "fx_rate", "quantity", "total", "date", "cash_account_id"]);
       const date = dateArg(args, "date", true)!;
       if (date > today) throw new ToolInputError("date não pode ser no futuro.");
+      const currency = args.currency === undefined ? "BRL" : oneOf(args, "currency", ["BRL", "USD"]);
+      const fx = fxArg(args, currency, true);
+      const rawTicker = (str(args, "ticker", 12, false) ?? "").toUpperCase();
+      if (rawTicker && !/^[A-Z0-9][A-Z0-9.\-]{0,11}$/.test(rawTicker)) throw new ToolInputError("ticker inválido.");
+      const total = reais(args, "total")!;
       const body: Args = {
         name: str(args, "name", 80),
         asset_class: oneOf(args, "asset_class", ["Ações", "FIIs", "ETFs", "Renda fixa", "Cripto", "Outros"]),
         // The fractional market (BPAC11F) is the same asset as BPAC11.
-        ticker: (str(args, "ticker", 12, false) ?? "").toUpperCase().replace(/^([A-Z]{4}\d{1,2})F$/, "$1"),
+        ticker: currency === "BRL" ? rawTicker.replace(/^([A-Z]{4}\d{1,2})F$/, "$1") : rawTicker,
         institution: str(args, "institution", 60, false) ?? "",
-        quantity_micros: quantityMicros(args, true), cents: reais(args, "total"), date,
+        quantity_micros: quantityMicros(args, true), cents: total, date,
       };
-      if (args.cash_account_id !== undefined) body.cash_account_id = text(account(l, str(args, "cash_account_id", 256), true).id);
+      if (currency !== "BRL") {
+        body.currency = currency;
+        body.fx_micros = fx;
+        body.brl_cents = Math.round(total * fx! / FX_SCALE);
+      }
+      if (args.cash_account_id !== undefined) {
+        const a = account(l, str(args, "cash_account_id", 256), true);
+        if ((text(a.currency) || "BRL") !== currency) {
+          throw new ToolInputError(`Use uma conta em ${currency}. Para trocar reais por dólares, registre antes o câmbio com add_transfer e received_amount.`);
+        }
+        body.cash_account_id = text(a.id);
+      }
       return pending((await enqueue("investment.add", body)).id, "Novo investimento");
     }
     case "record_investment_operation": {
-      only(args, ["investment_id", "kind", "quantity", "total", "date", "cash_account_id"]);
+      only(args, ["investment_id", "kind", "quantity", "total", "date", "cash_account_id", "fx_rate", "tax_withheld"]);
       const inv = find(l.investments, args.investment_id);
       if (!inv) throw new ToolInputError("Investimento não encontrado. Use get_investments.");
+      const currency = text(inv.currency) || "BRL";
       const kind = oneOf(args, "kind", ["buy", "sell", "income"]);
       const date = dateArg(args, "date", true)!;
       if (date > today) throw new ToolInputError("date não pode ser no futuro.");
+      const fx = fxArg(args, currency, true);
+      const total = reais(args, "total")!;
       const body: Args = {
-        investment_id: text(inv.id), kind, cents: reais(args, "total"), date,
+        investment_id: text(inv.id), kind, cents: total, date,
         quantity_micros: kind === "income" ? 0 : quantityMicros(args, true),
         created_at: new Date().toISOString(),
       };
+      if (fx !== undefined) body.brl_cents = Math.round(total * fx / FX_SCALE);
+      if (args.tax_withheld !== undefined) {
+        if (kind !== "income") throw new ToolInputError("tax_withheld só vale para provento.");
+        const t = args.tax_withheld;
+        if (typeof t !== "number" || !Number.isFinite(t) || t < 0 || t > 1e9) throw new ToolInputError("tax_withheld inválido.");
+        body.tax_cents = Math.round(t * 100);
+      }
       if (kind === "income" && args.quantity !== undefined) throw new ToolInputError("Provento não tem quantidade.");
-      if (args.cash_account_id !== undefined) body.cash_account_id = text(account(l, str(args, "cash_account_id", 256), true).id);
+      if (args.cash_account_id !== undefined) {
+        const a = account(l, str(args, "cash_account_id", 256), true);
+        if ((text(a.currency) || "BRL") !== currency) {
+          throw new ToolInputError(`Este ativo é em ${currency}: use uma conta em ${currency}.`);
+        }
+        body.cash_account_id = text(a.id);
+      }
       return pending((await enqueue("investment.operation", body)).id, "Operação");
     }
     case "update_investment_price": {
-      only(args, ["investment_id", "price", "date"]);
+      only(args, ["investment_id", "price", "date", "fx_rate"]);
       const inv = find(l.investments, args.investment_id);
       if (!inv) throw new ToolInputError("Investimento não encontrado. Use get_investments.");
       const date = dateArg(args, "date");
       if (date && date > today) throw new ToolInputError("date não pode ser no futuro.");
-      const q = await enqueue("investment.price", { investment_id: text(inv.id), price_cents: reais(args, "price"), date: date ?? null });
+      const fx = fxArg(args, text(inv.currency) || "BRL", false);
+      const q = await enqueue("investment.price", {
+        investment_id: text(inv.id), price_cents: reais(args, "price"), date: date ?? null,
+        ...(fx === undefined ? {} : { fx_micros: fx }),
+      });
       return pending(q.id, "Preço");
     }
     case "get_loans": {
