@@ -85,10 +85,13 @@ Future<void> startNexo() async {
   SyncController.instance = SyncController.forApp(
       syncConfig, SupabaseAuth.app, provider.reloadFromStorage,
       real: !DesktopProfile.isTest);
-  // Open Finance reads real bank data: never in a Windows test profile.
-  if (syncConfig != null && !DesktopProfile.isTest) {
-    PluggyInbox.instance =
-        PluggyInbox(SupabasePluggyRemote(syncConfig, SupabaseAuth.app!));
+  // Open Finance reads real bank data: never in a test profile. The
+  // assistant does work there, on the synthetic dataset the server allows.
+  if (syncConfig != null) {
+    if (!DesktopProfile.isTest) {
+      PluggyInbox.instance =
+          PluggyInbox(SupabasePluggyRemote(syncConfig, SupabaseAuth.app!));
+    }
     McpConnectors.instance = McpConnectors(syncConfig, SupabaseAuth.app!);
     SupabaseForeignQuotes.instance =
         SupabaseForeignQuotes(syncConfig, SupabaseAuth.app!);

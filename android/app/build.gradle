@@ -32,6 +32,7 @@ android {
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
+        manifestPlaceholders = [appLabel: "Nexo"]
     }
 
     signingConfigs {
@@ -46,6 +47,18 @@ android {
     }
 
     buildTypes {
+        // Test builds (`flutter build apk --profile` or `--debug`) install
+        // beside the daily app: another package, its own data, synthetic
+        // datasets only (see DesktopProfile.initialize). Release is untouched.
+        debug {
+            applicationIdSuffix ".teste"
+            manifestPlaceholders = [appLabel: "Nexo teste"]
+        }
+        profile {
+            applicationIdSuffix ".teste"
+            manifestPlaceholders = [appLabel: "Nexo teste"]
+            signingConfig signingConfigs.debug
+        }
         release {
             signingConfig signingConfigs.release.storeFile != null ? signingConfigs.release : signingConfigs.debug
             minifyEnabled true
