@@ -22,6 +22,7 @@ import '../services/balance_check.dart';
 import '../services/liquidity.dart';
 import 'due_plan_screen.dart';
 import '../utils/finance_input.dart';
+import '../widgets/sync_attention.dart';
 import '../widgets/analysis_widgets.dart';
 import '../widgets/cash_timeline_chart.dart';
 import '../widgets/nexo_ui.dart';
@@ -1324,6 +1325,7 @@ class _FinanceHomeScreenState extends State<FinanceHomeScreen>
                             child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.stretch,
                                 children: [
+                                  const SyncAttention(),
                                   if (app.accounts.isEmpty)
                                     Padding(
                                         padding:

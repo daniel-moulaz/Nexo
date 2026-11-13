@@ -23,6 +23,19 @@ enum LedgerSyncStatus {
   authenticationRequired,
   deviceRevoked,
   busy,
+
+  /// Another device sent data this version cannot store (a newer schema).
+  /// Nothing was applied or lost; this device must be updated.
+  updateRequired,
+}
+
+/// True for SQLite's refusal of a column or table this version lacks: the
+/// data came from a newer app on another device.
+bool isNewerSchemaError(Object error) {
+  final text = error.toString();
+  return text.contains('has no column named') ||
+      text.contains('no such column') ||
+      text.contains('no such table');
 }
 
 /// A local operation the server could not accept as is. It was reverted

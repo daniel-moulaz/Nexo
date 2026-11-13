@@ -237,6 +237,36 @@ void main() {
     pc.dispose();
   });
 
+  test('data from a newer app asks for an update instead of "no connection"',
+      () async {
+    await pair();
+    await use('phone');
+    // The phone runs a newer schema: its rows carry a column the PC lacks.
+    await (await DBHelper.database)
+        .execute('ALTER TABLE accounts ADD COLUMN future_note TEXT');
+    final phone = controller();
+    await phone.start();
+    await phone.idle;
+    await (await provider()).addTransaction(expense('newer', 10));
+    await Future<void>.delayed(const Duration(milliseconds: 80));
+    await phone.idle;
+    expect(phone.pending, 0);
+    phone.dispose();
+
+    await use('pc');
+    final pc = controller();
+    await pc.start();
+    await pc.idle;
+    expect(pc.status, LedgerSyncStatus.updateRequired);
+    expect(pc.summary, contains('versão mais nova'));
+    expect(pc.summary, contains('nada foi perdido'));
+    expect((await DBHelper.getAccounts()).single.balance, 1000,
+        reason: 'nothing half-applied');
+    expect((await DBHelper.getTransactions()).map((t) => t.id),
+        isNot(contains('newer')));
+    pc.dispose();
+  });
+
   test('offline work waits in the queue and leaves when the network returns',
       () async {
     await pair();

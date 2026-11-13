@@ -220,7 +220,10 @@ class SyncController extends ChangeNotifier with WidgetsBindingObserver {
     } catch (e) {
       Diagnostics.note('sync', e);
       // A rejected page leaves cursor and data untouched; try again later.
-      status = LedgerSyncStatus.retryLater;
+      // A newer app on the other device is not a network problem: say so.
+      status = isNewerSchemaError(e)
+          ? LedgerSyncStatus.updateRequired
+          : LedgerSyncStatus.retryLater;
     } finally {
       running = false;
       notifyListeners();
@@ -245,6 +248,8 @@ class SyncController extends ChangeNotifier with WidgetsBindingObserver {
         LedgerSyncStatus.deviceRevoked =>
           'Este aparelho foi desconectado do acervo.',
         LedgerSyncStatus.busy => 'Sincronizando…',
+        LedgerSyncStatus.updateRequired =>
+          'O outro aparelho está numa versão mais nova do Nexo. Atualize este aparelho para receber o que veio de lá; nada foi perdido e o que você grava aqui fica guardado.',
       };
 
   /// First device: its current data becomes the dataset.
