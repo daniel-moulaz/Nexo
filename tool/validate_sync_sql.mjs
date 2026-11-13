@@ -766,6 +766,9 @@ try {
     assert.equal(status.pending, 2);
     assert.equal(status.waiting_for_update, 0, 'one device can apply it');
     assert.ok(status.devices.find(d => d.device_id === old).checked_at, 'the check is recorded');
+    assert.deepEqual(await service('nexo_mcp_queue_service', [conn.id]), status, 'the connector sees the same');
+    await denies(() => user(A, tx => rpc(tx, 'nexo_mcp_queue_service', [conn.id])), '42501');
+    await denies(() => user(B, tx => tx.query(`select nexo_mcp_private.queue_status($1, $2)`, [A, conn.dataset_id])));
     const claimed = await user(A, tx => rpc(tx, 'nexo_mcp_claim', [conn.dataset_id, fresh]));
     assert.equal(claimed.id, dollar.id);
     await user(A, tx => rpc(tx, 'nexo_mcp_finish', [dollar.id, 'done', '{}']));

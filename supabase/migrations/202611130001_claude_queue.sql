@@ -66,7 +66,33 @@ begin
 end;
 $$;
 
--- What the "Fila do Claude" screen shows: the queue and each device.
+-- What the "Fila do Claude" screen (and get_request_status) shows.
+create or replace function nexo_mcp_private.queue_status(p_owner uuid, p_dataset_id uuid)
+returns jsonb language sql stable security definer set search_path = '' as $$
+  select jsonb_build_object(
+    'pending', (select count(*) from nexo_mcp_private.commands
+      where owner_id = p_owner and dataset_id = p_dataset_id and status in ('pending', 'applying')),
+    'oldest_pending_at', (select min(created_at) from nexo_mcp_private.commands
+      where owner_id = p_owner and dataset_id = p_dataset_id and status in ('pending', 'applying')),
+    'waiting_for_update', (select count(*) from nexo_mcp_private.commands c
+      where c.owner_id = p_owner and c.dataset_id = p_dataset_id and c.status = 'pending'
+        and c.min_build is not null
+        and not exists (select 1 from nexo_mcp_private.capabilities d
+          where d.owner_id = p_owner and d.dataset_id = p_dataset_id
+            and nexo_mcp_private.build_of(d.app_version) >= c.min_build)),
+    'last_done_at', (select max(finished_at) from nexo_mcp_private.commands
+      where owner_id = p_owner and dataset_id = p_dataset_id and status in ('done', 'rejected')),
+    'devices', coalesce((select jsonb_agg(jsonb_build_object(
+        'device_id', d.device_id, 'app_version', d.app_version,
+        'seen_at', d.seen_at, 'checked_at', d.checked_at,
+        'push', exists (select 1 from nexo_mcp_private.push_tokens t
+          where t.owner_id = p_owner and t.dataset_id = p_dataset_id and t.device_id = d.device_id))
+        order by d.seen_at desc)
+      from nexo_mcp_private.capabilities d
+      where d.owner_id = p_owner and d.dataset_id = p_dataset_id
+        and d.seen_at > now() - interval '60 days'), '[]'::jsonb));
+$$;
+
 create or replace function public.nexo_mcp_queue_status(p_dataset_id uuid)
 returns jsonb language plpgsql security definer set search_path = '' as $$
 declare v_user uuid := auth.uid();
@@ -74,28 +100,7 @@ begin
   if v_user is null then
     raise exception using errcode = '42501', message = 'authentication_required';
   end if;
-  return jsonb_build_object(
-    'pending', (select count(*) from nexo_mcp_private.commands
-      where owner_id = v_user and dataset_id = p_dataset_id and status in ('pending', 'applying')),
-    'oldest_pending_at', (select min(created_at) from nexo_mcp_private.commands
-      where owner_id = v_user and dataset_id = p_dataset_id and status in ('pending', 'applying')),
-    'waiting_for_update', (select count(*) from nexo_mcp_private.commands c
-      where c.owner_id = v_user and c.dataset_id = p_dataset_id and c.status = 'pending'
-        and c.min_build is not null
-        and not exists (select 1 from nexo_mcp_private.capabilities d
-          where d.owner_id = v_user and d.dataset_id = p_dataset_id
-            and nexo_mcp_private.build_of(d.app_version) >= c.min_build)),
-    'last_done_at', (select max(finished_at) from nexo_mcp_private.commands
-      where owner_id = v_user and dataset_id = p_dataset_id and status in ('done', 'rejected')),
-    'devices', coalesce((select jsonb_agg(jsonb_build_object(
-        'device_id', d.device_id, 'app_version', d.app_version,
-        'seen_at', d.seen_at, 'checked_at', d.checked_at,
-        'push', exists (select 1 from nexo_mcp_private.push_tokens t
-          where t.owner_id = v_user and t.dataset_id = p_dataset_id and t.device_id = d.device_id))
-        order by d.seen_at desc)
-      from nexo_mcp_private.capabilities d
-      where d.owner_id = v_user and d.dataset_id = p_dataset_id
-        and d.seen_at > now() - interval '60 days'), '[]'::jsonb));
+  return nexo_mcp_private.queue_status(v_user, p_dataset_id);
 end;
 $$;
 
@@ -200,6 +205,20 @@ begin
 end;
 $$;
 
+-- The same status for the connector (service_role).
+create or replace function public.nexo_mcp_queue_service(p_connector_id uuid)
+returns jsonb language plpgsql security definer set search_path = '' as $$
+declare v_row nexo_mcp_private.connectors%rowtype;
+begin
+  select * into v_row from nexo_mcp_private.connectors
+    where id = p_connector_id and revoked_at is null;
+  if not found then
+    raise exception using errcode = '42501', message = 'connector_unavailable';
+  end if;
+  return nexo_mcp_private.queue_status(v_row.owner_id, v_row.dataset_id);
+end;
+$$;
+
 -- FCM said the token no longer exists: forget it.
 create or replace function public.nexo_push_forget(p_connector_id uuid, p_token text)
 returns void language plpgsql security definer set search_path = '' as $$
@@ -230,6 +249,9 @@ end;
 $$;
 
 revoke all on function nexo_mcp_private.build_of(text) from public, anon, authenticated;
+revoke all on function nexo_mcp_private.queue_status(uuid, uuid) from public, anon, authenticated;
+revoke all on function public.nexo_mcp_queue_service(uuid) from public, anon, authenticated;
+grant execute on function public.nexo_mcp_queue_service(uuid) to service_role;
 revoke all on function public.nexo_push_register(uuid, uuid, text) from public, anon;
 revoke all on function public.nexo_mcp_queue_status(uuid) from public, anon;
 revoke all on function public.nexo_mcp_connector_status() from public, anon;
