@@ -151,17 +151,21 @@ class AssistantMoreCommands {
         final date = _day(a['date']);
         final cents = (a['cents'] as num).toInt();
         final quantity = (a['quantity_micros'] as num).toInt();
+        final currency = a['currency'] as String? ?? 'BRL';
         await investments.create(
             Investment(
                 id: id,
                 name: (a['name'] as String).trim(),
                 assetClass: a['asset_class'] as String,
-                ticker: (a['ticker'] as String? ?? '').toUpperCase(),
+                ticker: normalizeTicker(a['ticker'] as String? ?? '',
+                    currency: currency),
                 institution: a['institution'] as String? ?? '',
                 priceMicros: roundedRatio(cents, 10000 * investmentScale,
                     quantity), // cents per unit → micros
                 priceAt: date,
-                priceSource: 'entrada'),
+                priceSource: 'entrada',
+                currency: currency,
+                fxMicros: (a['fx_micros'] as num?)?.toInt() ?? fxScale),
             InvestmentOperation(
                 id: 'assistant-invop:$commandId',
                 investmentId: id,
@@ -170,7 +174,8 @@ class AssistantMoreCommands {
                 cents: cents,
                 date: date,
                 createdAt: DateTime.now(),
-                cashAccountId: a['cash_account_id'] as String?));
+                cashAccountId: a['cash_account_id'] as String?,
+                brlCents: (a['brl_cents'] as num?)?.toInt()));
         await app.refreshInvestmentCash();
         return {'investment_id': id, 'message': 'Investimento cadastrado.'};
       case 'investment.operation':
@@ -185,7 +190,9 @@ class AssistantMoreCommands {
             date: _day(a['date']),
             // Same time for a retried request: record() compares rows.
             createdAt: DateTime.parse(a['created_at'] as String),
-            cashAccountId: a['cash_account_id'] as String?));
+            cashAccountId: a['cash_account_id'] as String?,
+            brlCents: (a['brl_cents'] as num?)?.toInt(),
+            taxCents: (a['tax_cents'] as num?)?.toInt() ?? 0));
         await app.refreshInvestmentCash();
         return {'message': 'Operação registrada.'};
       case 'investment.price':
@@ -193,7 +200,8 @@ class AssistantMoreCommands {
             a['investment_id'] as String,
             (a['price_cents'] as num).toInt() * 10000,
             a['date'] == null ? DateTime.now() : _day(a['date']),
-            'manual');
+            'manual',
+            fxMicros: (a['fx_micros'] as num?)?.toInt());
         return {'message': 'Preço atualizado.'};
       case 'loan.pay':
       case 'loan.skip':

@@ -447,6 +447,32 @@ void main() {
     expect(r.progress, closeTo(progress, .000001));
   }
 
+  test('An exchange moves what really left and arrived, and is no spending',
+      () async {
+    await DBHelper.insertAccount(Account(
+        id: 'usd',
+        name: 'Conta em dólar',
+        type: 'bank',
+        balance: 0,
+        currency: 'USD',
+        colorValue: 0));
+    app.accounts = await DBHelper.getAccounts();
+    // R$ 550 out, US$ 100 in: a rate of 5,50 with spread and IOF inside,
+    // whatever the market rate of the app says.
+    await app.addTransfer(
+        fromId: 'bank', toId: 'usd', fromAmount: 550, toAmount: 100);
+    final accounts = await DBHelper.getAccounts();
+    expect(accounts.firstWhere((a) => a.id == 'bank').balance, 450);
+    expect(accounts.firstWhere((a) => a.id == 'usd').balance, 100);
+    final legs = app.transactions.where((t) => t.amount > 0).toList();
+    expect(legs.map((t) => t.description).toSet(),
+        {'Câmbio enviado', 'Câmbio recebido'});
+    for (final t in legs) {
+      expect(app.transactionMetadata[t.id]?.source, startsWith('transfer:'));
+      expect(app.categoryLabel(t), 'Transferência');
+    }
+  });
+
   test('Paid before its date, the entry says today and the schedule stays',
       () async {
     final now = DateTime.now();

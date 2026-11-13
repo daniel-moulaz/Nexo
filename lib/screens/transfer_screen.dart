@@ -18,6 +18,9 @@ class TransferScreen extends StatefulWidget {
 class _TransferScreenState extends State<TransferScreen> {
   final _amtCtrl = TextEditingController();
   final _noteCtrl = TextEditingController();
+
+  /// Exchange between currencies: what actually arrived, from the bank.
+  final _receivedCtrl = TextEditingController();
   String? _fromId;
   String? _toId;
   bool _submitted = false;
@@ -41,6 +44,7 @@ class _TransferScreenState extends State<TransferScreen> {
   void dispose() {
     _amtCtrl.dispose();
     _noteCtrl.dispose();
+    _receivedCtrl.dispose();
     super.dispose();
   }
 
@@ -50,12 +54,20 @@ class _TransferScreenState extends State<TransferScreen> {
     if (_fromId == null || _toId == null || _fromId == _toId) return;
     final amount = parseMoney(_amtCtrl.text);
     if (amount == null || amount <= 0) return;
+    final app = context.read<AppProvider>();
+    final cross = app.accountById(_fromId!)?.currency !=
+        app.accountById(_toId!)?.currency;
+    final received = cross ? parseMoney(_receivedCtrl.text) : null;
+    // An exchange at a guessed rate would put a wrong balance in the dollar
+    // account: the amount that arrived is required.
+    if (cross && (received == null || received <= 0)) return;
     setState(() => _saving = true);
     try {
       await context.read<AppProvider>().addTransfer(
             fromId: _fromId!,
             toId: _toId!,
             fromAmount: amount,
+            toAmount: received,
             note: _noteCtrl.text.trim(),
           );
     } catch (_) {
@@ -294,6 +306,17 @@ class _TransferScreenState extends State<TransferScreen> {
                 ),
               ],
 
+              if (isCrossCurrency) ...[
+                _ExchangeFields(
+                    controller: _receivedCtrl,
+                    sent: inputAmount,
+                    fromCurrency: fromCurrency,
+                    toCurrency: toCurrency,
+                    reference: convertedAmount,
+                    submitted: _submitted,
+                    onChanged: () => setState(() {})),
+                const SizedBox(height: 12),
+              ],
               // ── Amount field ──────────────────────────────────────────────
               TextField(
                 controller: _amtCtrl,
@@ -334,6 +357,64 @@ class _TransferScreenState extends State<TransferScreen> {
             ]),
           )),
     );
+  }
+}
+
+/// Changing money between currencies: the bank tells what arrived; the rate
+/// paid, with spread and IOF inside, comes from the two amounts.
+class _ExchangeFields extends StatelessWidget {
+  const _ExchangeFields(
+      {required this.controller,
+      required this.sent,
+      required this.fromCurrency,
+      required this.toCurrency,
+      required this.reference,
+      required this.submitted,
+      required this.onChanged});
+  final TextEditingController controller;
+  final double? sent, reference;
+  final String fromCurrency, toCurrency;
+  final bool submitted;
+  final VoidCallback onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final received = parseMoney(controller.text);
+    final hasBoth =
+        sent != null && sent! > 0 && received != null && received > 0;
+    // Rate as reais per foreign unit, whichever way the money went.
+    final brlPerUnit = !hasBoth
+        ? null
+        : fromCurrency == 'BRL'
+            ? sent! / received
+            : toCurrency == 'BRL'
+                ? received / sent!
+                : null;
+    final cost = hasBoth && reference != null && reference! > 0
+        ? (reference! - received) / reference! * 100
+        : null;
+    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      TextField(
+        controller: controller,
+        keyboardType: const TextInputType.numberWithOptions(decimal: true),
+        decoration: InputDecoration(
+          labelText: 'Valor que chegou ($toCurrency)',
+          helperText:
+              'Como no comprovante do câmbio. Câmbio não é gasto nem receita.',
+          errorText: submitted && (received == null || received <= 0)
+              ? 'Informe quanto chegou na conta de destino'
+              : null,
+        ),
+        onChanged: (_) => onChanged(),
+      ),
+      if (brlPerUnit != null) ...[
+        const SizedBox(height: 8),
+        Text(
+            'Câmbio efetivo: R\$ ${brlPerUnit.toStringAsFixed(4).replaceAll('.', ',')} por ${fromCurrency == 'BRL' ? toCurrency : fromCurrency}'
+            '${cost != null && cost > 0 ? ' · ${cost.toStringAsFixed(1).replaceAll('.', ',')}% abaixo da cotação de referência (spread, IOF e tarifas)' : ''}',
+            style: Theme.of(context).textTheme.bodySmall),
+      ],
+    ]);
   }
 }
 

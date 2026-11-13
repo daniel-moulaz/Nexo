@@ -7,6 +7,7 @@ import '../investments/cdi_benchmark.dart';
 import '../investments/investment_models.dart';
 import '../investments/investment_repository.dart';
 import '../investments/investment_quotes.dart';
+import '../investments/foreign_quotes.dart';
 import '../providers/app_provider.dart';
 import '../theme/app_theme.dart';
 import '../utils/finance_input.dart';
@@ -28,6 +29,12 @@ String _money(BuildContext context, int cents) =>
     context.read<AppProvider>().settings.hideBalance
         ? '••••'
         : formatAmount(cents / 100, 'BRL');
+
+/// An amount in the currency of the asset (dollars for a US stock).
+String _moneyIn(BuildContext context, int cents, String currency) =>
+    context.read<AppProvider>().settings.hideBalance
+        ? '••••'
+        : formatAmount(cents / 100, currency);
 String _quantity(int units) =>
     NumberFormat('0.######', 'pt_BR').format(units / investmentScale);
 const _trackingNotice =
@@ -44,7 +51,10 @@ class _InvestmentsScreenState extends State<InvestmentsScreen> {
   final repository = InvestmentRepository();
   late Future<List<InvestmentPosition>> _data;
   bool _refreshing = false;
-  String _search = '', _class = 'Todas';
+  String _search = '', _class = 'Todas', _groupBy = 'Classe';
+
+  /// Only positions of this group of [_groupBy]; null shows all.
+  String? _group;
   bool _showArchived = false;
   String? _quoteStatus;
   @override
@@ -76,7 +86,11 @@ class _InvestmentsScreenState extends State<InvestmentsScreen> {
 
   Future<void> _autoQuotes() async {
     try {
-      if (await InvestmentQuoteSettings.enabled() && mounted) await _quotes();
+      if ((await InvestmentQuoteSettings.enabled() ||
+              SupabaseForeignQuotes.instance != null) &&
+          mounted) {
+        await _quotes(auto: true);
+      }
     } catch (_) {
       if (mounted)
         setState(() => _quoteStatus =
@@ -84,25 +98,33 @@ class _InvestmentsScreenState extends State<InvestmentsScreen> {
     }
   }
 
-  Future<void> _quotes() async {
+  /// One round for both markets: the B3 through brapi (when configured) and
+  /// the United States through the Nexo server. A failure in one keeps the
+  /// last price of the other untouched.
+  Future<void> _quotes({bool auto = false}) async {
     if (_refreshing) return;
     setState(() => _refreshing = true);
     try {
-      if (!await InvestmentQuoteSettings.enabled()) {
-        if (mounted) await _settings();
-        return;
-      }
-      final positions = (await repository.load())
+      final quotable = (await repository.load())
           .where((p) => p.quantity > 0 && p.investment.canQuote)
           .toList();
-      if (positions.isEmpty) {
-        if (mounted)
+      final foreign = quotable.where((p) => p.investment.foreign).toList();
+      final brapiOn = await InvestmentQuoteSettings.enabled();
+      final positions = brapiOn
+          ? quotable.where((p) => !p.investment.foreign).toList()
+          : <InvestmentPosition>[];
+      if (positions.isEmpty && foreign.isEmpty) {
+        if (!brapiOn && !auto && quotable.isNotEmpty) {
+          if (mounted) await _settings();
+          return;
+        }
+        if (mounted && !auto)
           setState(() => _quoteStatus =
-              'Cadastre uma ação, FII ou ETF brasileiro com ticker para consultar. Renda fixa e cripto usam preço manual.');
+              'Cadastre uma ação, FII ou ETF com ticker para consultar. Renda fixa e cripto usam preço manual.');
         return;
       }
       if (!await InvestmentQuoteSettings.claimRefresh()) {
-        if (mounted)
+        if (mounted && !auto)
           setState(() => _quoteStatus =
               'Consultas limitadas a uma rodada a cada 15 minutos. Os últimos valores continuam disponíveis.');
         return;
@@ -110,6 +132,34 @@ class _InvestmentsScreenState extends State<InvestmentsScreen> {
       final token = await InvestmentQuoteSettings.token();
       var updated = 0;
       String? failure;
+      if (foreign.isNotEmpty) {
+        final source = SupabaseForeignQuotes.instance;
+        final fx = mounted ? context.read<AppProvider>().fxMicros('USD') : null;
+        if (source == null) {
+          failure =
+              'Cotação dos EUA precisa da sua conta em Sincronizar dispositivos.';
+        } else {
+          try {
+            final tickers = foreign.map((p) => p.investment.ticker).toSet();
+            final got = await source.fetch(tickers);
+            for (final p in foreign) {
+              final q = got[p.investment.ticker];
+              if (q == null) continue;
+              await repository.price(
+                  p.investment.id, q.priceMicros, q.date, 'mercado',
+                  fxMicros: fx);
+            }
+            updated += got.length;
+            final missing = tickers.difference(got.keys.toSet());
+            if (missing.isNotEmpty) {
+              failure =
+                  'Sem cotação para ${missing.join(', ')}. Confira o código ou informe o preço.';
+            }
+          } on QuoteFailure catch (e) {
+            failure = e.message;
+          }
+        }
+      }
       // Deduplicate tickers and serialize requests for the free API plan.
       final tickers = positions.map((p) => p.investment.ticker).toSet();
       for (final ticker in tickers.take(20)) {
@@ -203,6 +253,7 @@ class _InvestmentsScreenState extends State<InvestmentsScreen> {
                 .where((p) =>
                     (_showArchived || !p.investment.archived) &&
                     (_class == 'Todas' || p.investment.assetClass == _class) &&
+                    (_group == null || portfolioGroup(p, _groupBy) == _group) &&
                     '${p.investment.name} ${p.investment.ticker} ${p.investment.institution}'
                         .toLowerCase()
                         .contains(_search.toLowerCase()))
@@ -210,11 +261,7 @@ class _InvestmentsScreenState extends State<InvestmentsScreen> {
               ..sort((a, b) => b.value.compareTo(a.value));
             int sum(int Function(InvestmentPosition) pick) =>
                 all.fold(0, (v, p) => v + pick(p));
-            final groups = <String, int>{};
-            for (final p in all.where((p) => p.value > 0)) {
-              groups.update(p.investment.assetClass, (v) => v + p.value,
-                  ifAbsent: () => p.value);
-            }
+            final groups = portfolioGroups(all, _groupBy);
             final now = DateTime.now();
             final monthly = all
                 .expand((p) => p.operations)
@@ -222,7 +269,7 @@ class _InvestmentsScreenState extends State<InvestmentsScreen> {
                     o.kind == 'buy' &&
                     o.date.toLocal().year == now.year &&
                     o.date.toLocal().month == now.month)
-                .fold(0, (v, o) => v + o.cents);
+                .fold(0, (v, o) => v + o.mainCents);
             return SingleChildScrollView(
                 padding: const EdgeInsets.fromLTRB(16, 8, 16, 100),
                 child: Center(
@@ -238,7 +285,7 @@ class _InvestmentsScreenState extends State<InvestmentsScreen> {
                                       crossAxisAlignment:
                                           CrossAxisAlignment.start,
                                       children: [
-                                        const Text('Sua carteira · BRL',
+                                        const Text('Sua carteira, em reais',
                                             style: TextStyle(
                                                 fontSize: 16,
                                                 fontWeight: FontWeight.w600)),
@@ -351,14 +398,54 @@ class _InvestmentsScreenState extends State<InvestmentsScreen> {
                                 const SizedBox(height: 24),
                                 LayoutBuilder(builder: (context, c) {
                                   final allocation = AnalysisCard(
-                                      title: 'Distribuição por classe',
-                                      child: private
-                                          ? const Text(
-                                              'Distribuição oculta no modo privado.')
-                                          : _Allocation(
-                                              groups: groups,
-                                              onClass: (v) =>
-                                                  setState(() => _class = v)));
+                                      title: 'Distribuição da carteira',
+                                      child: Column(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.stretch,
+                                          children: [
+                                            SingleChildScrollView(
+                                              scrollDirection: Axis.horizontal,
+                                              child: SegmentedButton<String>(
+                                                  showSelectedIcon: false,
+                                                  segments: [
+                                                    for (final g
+                                                        in portfolioDimensions)
+                                                      ButtonSegment(
+                                                          value: g,
+                                                          label: Text(g))
+                                                  ],
+                                                  selected: {_groupBy},
+                                                  onSelectionChanged: (v) =>
+                                                      setState(() {
+                                                        _groupBy = v.single;
+                                                        _group = null;
+                                                      })),
+                                            ),
+                                            const SizedBox(height: 12),
+                                            if (_group != null)
+                                              Align(
+                                                  alignment:
+                                                      Alignment.centerLeft,
+                                                  child: InputChip(
+                                                      label: Text('Só $_group'),
+                                                      onDeleted: () => setState(
+                                                          () =>
+                                                              _group = null))),
+                                            private
+                                                ? const Text(
+                                                    'Distribuição oculta no modo privado.')
+                                                : _Allocation(
+                                                    groups: groups,
+                                                    onClass: (v) =>
+                                                        setState(() {
+                                                          if (_groupBy ==
+                                                              'Classe') {
+                                                            _class = v;
+                                                          } else {
+                                                            _group = v;
+                                                          }
+                                                        })),
+                                          ]));
                                   final results = AnalysisCard(
                                       title: 'Resultados registrados',
                                       child: Column(
@@ -749,9 +836,46 @@ class _CdiCardState extends State<_CdiCard> {
 
 String _source(Investment i) => '${switch (i.priceSource) {
       'brapi' => 'brapi',
+      'mercado' => 'Cotação dos EUA',
       'entrada' => 'Preço de entrada',
       _ => 'Preço manual'
-    }} · ${ptDate(i.priceAt.toLocal())}';
+    }} · ${ptDate(i.priceAt.toLocal())}${i.foreign ? ' · US\$ 1 = ${_rate(i.fxMicros)}' : ''}';
+
+/// Ways to split the portfolio: what it is, where it is kept, in which
+/// currency and in which country it trades.
+const portfolioDimensions = ['Classe', 'Corretora', 'Moeda', 'País'];
+
+String portfolioGroup(InvestmentPosition p, String dimension) =>
+    switch (dimension) {
+      'Corretora' => p.investment.institution.trim().isEmpty
+          ? 'Sem corretora'
+          : p.investment.institution.trim(),
+      'Moeda' => p.investment.currency,
+      'País' => p.investment.country,
+      _ => p.investment.assetClass,
+    };
+
+/// Value in reais of each group, only positions worth something.
+Map<String, int> portfolioGroups(
+    List<InvestmentPosition> all, String dimension) {
+  final out = <String, int>{};
+  for (final p in all.where((p) => p.value > 0)) {
+    out.update(portfolioGroup(p, dimension), (v) => v + p.value,
+        ifAbsent: () => p.value);
+  }
+  return out;
+}
+
+/// A rate in reais per unit of foreign currency.
+String _rate(int micros) =>
+    'R\$ ${NumberFormat('0.0000', 'pt_BR').format(micros / fxScale)}';
+
+/// Where the asset is kept and where it trades, for the card and the detail.
+String _place(Investment i) => [
+      i.assetClass,
+      if (i.institution.isNotEmpty) i.institution,
+      if (i.foreign) '${i.country} · ${i.currency}',
+    ].join(' · ');
 
 /// Price return on remaining cost, deliberately not time-weighted performance.
 class _PositionChange extends StatelessWidget {
@@ -825,14 +949,13 @@ class _PositionCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final p = position;
     final private = context.watch<AppProvider>().settings.hideBalance;
-    final average = p.quantity == 0
-        ? null
-        : roundedRatio(p.cost, investmentScale, p.quantity);
+    final average = p.averageCost;
+    final currency = p.investment.currency;
     final price = private
         ? '••••'
         : NumberFormat.currency(
                 locale: 'pt_BR',
-                symbol: 'R\$',
+                symbol: currency == 'USD' ? 'US\$' : 'R\$',
                 decimalDigits: p.investment.priceMicros % 10000 == 0 ? 2 : 6)
             .format(p.investment.priceMicros / investmentScale);
     return Card(
@@ -861,13 +984,13 @@ class _PositionCard extends StatelessWidget {
                                 ? FontWeight.w600
                                 : FontWeight.normal)),
                     Text(
-                        '${p.investment.assetClass} · ${p.quantity == 0 ? 'Posição encerrada' : private ? '••••' : '${_quantity(p.quantity)} unidades'}',
+                        '${_place(p.investment)} · ${p.quantity == 0 ? 'Posição encerrada' : private ? '••••' : '${_quantity(p.quantity)} unidades'}',
                         style: Theme.of(context).textTheme.bodySmall),
                   ])),
               const Icon(Icons.chevron_right),
             ]),
             const SizedBox(height: 12),
-            if (p.investment.canQuote)
+            if (p.investment.canQuote && !p.investment.foreign)
               InvestmentMarketInfo(
                   ticker: p.investment.ticker, priceAt: p.investment.priceAt),
             if (p.quantity > 0)
@@ -878,13 +1001,15 @@ class _PositionCard extends StatelessWidget {
             AnalysisMetrics(values: [
               ('Valor atual', _money(context, p.value)),
               ('Custo da posição', _money(context, p.cost)),
+              if (p.investment.foreign)
+                ('Valor em dólar', _moneyIn(context, p.nativeValue, currency)),
               (
                 'Preço médio',
                 private
                     ? '••••'
                     : average == null
                         ? '—'
-                        : _money(context, average)
+                        : _moneyIn(context, average, currency)
               ),
               ('Último preço', price),
             ]),
@@ -1006,7 +1131,7 @@ class _InvestmentDetailState extends State<_InvestmentDetail> {
                                         .textTheme
                                         .headlineSmall),
                                 Text(
-                                    '${p.investment.assetClass} · ${p.investment.institution} ${p.investment.ticker}'),
+                                    '${_place(p.investment)}${p.investment.ticker.isEmpty ? '' : ' · ${p.investment.ticker}'}'),
                                 const SizedBox(height: 16),
                                 AnalysisMetrics(values: [
                                   (
@@ -1020,30 +1145,30 @@ class _InvestmentDetailState extends State<_InvestmentDetail> {
                                   ),
                                   (
                                     'Preço médio',
-                                    private
-                                        ? '••••'
-                                        : p.quantity == 0
-                                            ? '—'
-                                            : _money(
-                                                context,
-                                                roundedRatio(
-                                                    p.cost,
-                                                    investmentScale,
-                                                    p.quantity))
+                                    private || p.averageCost == null
+                                        ? (private ? '••••' : '—')
+                                        : _moneyIn(context, p.averageCost!,
+                                            p.investment.currency)
                                   )
                                 ]),
                                 const SizedBox(height: 12),
                                 if (p.quantity > 0)
                                   _PositionChange(
                                       change: p.unrealized, cost: p.cost),
+                                if (p.investment.foreign) ...[
+                                  const SizedBox(height: 16),
+                                  _ForeignBreakdown(position: p),
+                                ],
                                 const SizedBox(height: 12),
                                 Text(_source(p.investment)),
-                                if (p.investment.canQuote) ...[
+                                if (p.investment.canQuote &&
+                                    !p.investment.foreign) ...[
                                   const SizedBox(height: 16),
                                   InvestmentPriceChart(
                                       ticker: p.investment.ticker),
                                 ],
-                                if (p.investment.canQuote)
+                                if (p.investment.canQuote &&
+                                    !p.investment.foreign)
                                   InvestmentMarketInfo(
                                       ticker: p.investment.ticker,
                                       priceAt: p.investment.priceAt,
@@ -1112,14 +1237,16 @@ class _InvestmentDetailState extends State<_InvestmentDetail> {
                                       child: ListTile(
                                           title: Text(op.label),
                                           subtitle: Text(
-                                              '${ptDate(op.date.toLocal())} · ${_money(context, op.cents)}${op.kind == 'income' ? '' : ' · ${private ? '••••' : _quantity(op.quantity)} un.'}\n${op.cashAccountId == null ? 'Sem movimentação em conta' : 'Conta: ${context.read<AppProvider>().accountById(op.cashAccountId!)?.name ?? 'Vinculada'}'}'),
+                                              '${ptDate(op.date.toLocal())} · ${_moneyIn(context, op.cents, p.investment.currency)}${p.investment.foreign ? ' (${_money(context, op.mainCents)}${op.fxMicros == null ? '' : ' a ${_rate(op.fxMicros!)}'})' : ''}${op.kind == 'income' ? (op.taxCents > 0 ? ' · retido ${_moneyIn(context, op.taxCents, p.investment.currency)}' : '') : ' · ${private ? '••••' : _quantity(op.quantity)} un.'}\n${op.cashAccountId == null ? 'Sem movimentação em conta' : 'Conta: ${context.read<AppProvider>().accountById(op.cashAccountId!)?.name ?? 'Vinculada'}'}'),
                                           onTap: op.cashAccountId == null &&
                                                   op.cents > 0
                                               ? () => showDialog<void>(
                                                   context: context,
                                                   builder: (_) =>
                                                       _LinkCashDialog(
-                                                          operation: op))
+                                                          operation: op,
+                                                          currency: p.investment
+                                                              .currency))
                                               : null,
                                           trailing: IconButton(
                                               tooltip: 'Excluir operação',
@@ -1177,6 +1304,43 @@ class _InvestmentDetailState extends State<_InvestmentDetail> {
   }
 }
 
+/// A dollar position in reais: what the stock did and what the rate did,
+/// which add up to the change shown above.
+class _ForeignBreakdown extends StatelessWidget {
+  final InvestmentPosition position;
+  const _ForeignBreakdown({required this.position});
+  @override
+  Widget build(BuildContext context) {
+    final p = position;
+    final c = p.investment.currency;
+    return AnalysisCard(
+        title: 'Em dólar e em reais',
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          AnalysisMetrics(values: [
+            ('Valor em dólar', _moneyIn(context, p.nativeValue, c)),
+            ('Custo em dólar', _moneyIn(context, p.nativeCost, c)),
+            (
+              'Câmbio médio pago',
+              p.averageFx == null ? '—' : _rate(p.averageFx!)
+            ),
+            ('Câmbio de hoje', _rate(p.investment.fxMicros)),
+          ]),
+          const SizedBox(height: 12),
+          AnalysisMetrics(values: [
+            ('Efeito do preço', _money(context, p.priceEffect)),
+            ('Efeito do câmbio', _money(context, p.fxEffect)),
+            if (p.nativeIncome > 0)
+              ('Proventos', _moneyIn(context, p.nativeIncome, c)),
+            if (p.nativeTax > 0)
+              ('Imposto retido', _moneyIn(context, p.nativeTax, c)),
+          ]),
+          const SizedBox(height: 8),
+          const Text(
+              'Efeito do preço: quanto a ação andou, convertido pelo câmbio de hoje. Efeito do câmbio: quanto o dólar andou sobre o que você pagou. Somados, dão a variação acima. Sem apuração de imposto.'),
+        ]));
+  }
+}
+
 void _message(BuildContext context, String message) =>
     ScaffoldMessenger.of(context)
         .showSnackBar(SnackBar(content: Text(message)));
@@ -1193,22 +1357,36 @@ class _OperationDialogState extends State<_OperationDialog> {
       ticker = TextEditingController(),
       institution = TextEditingController(),
       quantity = TextEditingController(),
-      amount = TextEditingController();
+      amount = TextEditingController(),
+      fx = TextEditingController(),
+      tax = TextEditingController();
   final id = const Uuid().v4(), assetId = const Uuid().v4();
-  String assetClass = 'Ações', kind = 'buy';
+  String assetClass = 'Ações', kind = 'buy', currency = 'BRL';
   String? cashAccount;
   DateTime date = DateTime.now();
   String? error;
   bool busy = false;
+  bool get foreign => currency != 'BRL';
+  String get symbol => currency == 'USD' ? 'US\$' : 'R\$';
   @override
   void initState() {
     super.initState();
     if (widget.position != null) kind = 'buy';
+    currency = widget.position?.investment.currency ?? 'BRL';
+    if (foreign) _suggestFx();
+  }
+
+  /// Today's rate as a starting point; the broker's note has the real one.
+  void _suggestFx() {
+    final micros = context.read<AppProvider>().fxMicros(currency);
+    fx.text = micros == null
+        ? ''
+        : NumberFormat('0.0000', 'pt_BR').format(micros / fxScale);
   }
 
   @override
   void dispose() {
-    for (final c in [name, ticker, institution, quantity, amount]) {
+    for (final c in [name, ticker, institution, quantity, amount, fx, tax]) {
       c.dispose();
     }
     super.dispose();
@@ -1223,6 +1401,20 @@ class _OperationDialogState extends State<_OperationDialog> {
     }
     final units = kind == 'income' ? 0 : parseInvestmentQuantity(quantity.text);
     final value = parseMoney(amount.text);
+    final rate = foreign ? parseMoney(fx.text) : 1.0;
+    final withheld = foreign && kind == 'income' && tax.text.trim().isNotEmpty
+        ? parseMoney(tax.text)
+        : 0.0;
+    if (rate == null || rate <= 0 || rate > 1000) {
+      setState(() => error =
+          'Informe o câmbio do dia em reais por dólar, como na nota da corretora.');
+      return;
+    }
+    if (withheld == null || withheld < 0) {
+      setState(
+          () => error = 'Imposto retido inválido. Use vírgula para decimais.');
+      return;
+    }
     if (units == null ||
         value == null ||
         value < 0 ||
@@ -1246,7 +1438,9 @@ class _OperationDialogState extends State<_OperationDialog> {
           createdAt: DateTime.now(),
           cashAccountId: kind == 'opening' || (cashAccount ?? '').isEmpty
               ? null
-              : cashAccount);
+              : cashAccount,
+          brlCents: foreign ? (value * 100 * rate).round() : null,
+          taxCents: (withheld * 100).round());
       final repository = InvestmentRepository();
       if (widget.position == null) {
         await repository.create(
@@ -1254,11 +1448,13 @@ class _OperationDialogState extends State<_OperationDialog> {
                 id: assetId,
                 name: name.text.trim(),
                 assetClass: assetClass,
-                ticker: ticker.text.trim().toUpperCase(),
+                ticker: normalizeTicker(ticker.text, currency: currency),
                 institution: institution.text.trim(),
                 priceMicros: roundedRatio(op.cents, 10000000000, units),
                 priceAt: date,
-                priceSource: 'entrada'),
+                priceSource: 'entrada',
+                currency: currency,
+                fxMicros: foreign ? (rate * fxScale).round() : fxScale),
             op);
       } else {
         await repository.record(op);
@@ -1281,6 +1477,15 @@ class _OperationDialogState extends State<_OperationDialog> {
     } finally {
       if (mounted) setState(() => busy = false);
     }
+  }
+
+  /// The total in reais the rate gives, so a typo in the rate shows up.
+  String _brlLine() {
+    final value = parseMoney(amount.text), rate = parseMoney(fx.text);
+    if (value == null || rate == null || value <= 0 || rate <= 0) {
+      return 'Da nota da corretora ou do câmbio que você fez.';
+    }
+    return 'Em reais: ${formatAmount(value * rate, 'BRL')}. Fica guardado para separar o efeito do câmbio.';
   }
 
   @override
@@ -1312,20 +1517,42 @@ class _OperationDialogState extends State<_OperationDialog> {
                               DropdownMenuItem(value: c, child: Text(c))
                           ],
                           onChanged: (v) => setState(() => assetClass = v!)),
+                      const SizedBox(height: 12),
+                      SegmentedButton<String>(
+                          segments: const [
+                            ButtonSegment(
+                                value: 'BRL', label: Text('Reais · Brasil')),
+                            ButtonSegment(
+                                value: 'USD', label: Text('Dólar · EUA')),
+                          ],
+                          selected: {
+                            currency
+                          },
+                          onSelectionChanged: busy
+                              ? null
+                              : (v) => setState(() {
+                                    currency = v.single;
+                                    cashAccount = null;
+                                    if (foreign) _suggestFx();
+                                  })),
+                      const SizedBox(height: 8),
                       TextField(
                           controller: ticker,
                           maxLength: 12,
                           textCapitalization: TextCapitalization.characters,
-                          decoration: const InputDecoration(
+                          decoration: InputDecoration(
                               labelText: 'Ticker (opcional)',
-                              helperText:
-                                  'Ex.: PETR4. Online: ações, FIIs e ETFs brasileiros, conforme cobertura.')),
+                              helperText: foreign
+                                  ? 'Ex.: NVDA. Cotação pelo servidor do Nexo, com atraso.'
+                                  : 'Ex.: PETR4 (BBAS3F vira BBAS3). Online: ações, FIIs e ETFs, conforme cobertura.')),
                       TextField(
                           controller: institution,
                           maxLength: 120,
-                          decoration: const InputDecoration(
-                              labelText:
-                                  'Corretora ou instituição (opcional)')),
+                          decoration: InputDecoration(
+                              labelText: 'Corretora ou instituição (opcional)',
+                              helperText: foreign
+                                  ? 'Onde a ação fica guardada, como Inter Global.'
+                                  : 'Onde fica guardado, como Rico.')),
                     ],
                     DropdownButtonFormField<String>(
                         initialValue: kind,
@@ -1366,11 +1593,36 @@ class _OperationDialogState extends State<_OperationDialog> {
                             decimal: true),
                         decoration: InputDecoration(
                             labelText: kind == 'opening'
-                                ? 'Custo total de aquisição (R\$)'
-                                : 'Valor total da operação (R\$)',
+                                ? 'Custo total de aquisição ($symbol)'
+                                : kind == 'income'
+                                    ? 'Valor que chegou ($symbol)'
+                                    : 'Valor total da operação ($symbol)',
                             helperText: kind == 'sell'
                                 ? 'Valor líquido recebido, após taxas.'
-                                : 'Na compra, inclua as taxas no custo.')),
+                                : kind == 'income'
+                                    ? 'Líquido, depois do imposto retido.'
+                                    : 'Na compra, inclua as taxas no custo.'),
+                        onChanged: (_) => setState(() {})),
+                    if (foreign) ...[
+                      TextField(
+                          controller: fx,
+                          keyboardType: const TextInputType.numberWithOptions(
+                              decimal: true),
+                          decoration: InputDecoration(
+                              labelText: 'Câmbio do dia (R\$ por US\$)',
+                              helperText: _brlLine()),
+                          onChanged: (_) => setState(() {})),
+                      if (kind == 'income')
+                        TextField(
+                            controller: tax,
+                            keyboardType: const TextInputType.numberWithOptions(
+                                decimal: true),
+                            decoration: const InputDecoration(
+                                labelText:
+                                    'Imposto retido na fonte (US\$, opcional)',
+                                helperText:
+                                    'Só registro: fica guardado para a declaração, não muda o saldo.')),
+                    ],
                     TextButton.icon(
                         onPressed: () async {
                           final picked = await showDatePicker(
@@ -1404,7 +1656,7 @@ class _OperationDialogState extends State<_OperationDialog> {
                           for (final a in context
                               .read<AppProvider>()
                               .cashAccounts
-                              .where((a) => a.currency == 'BRL'))
+                              .where((a) => a.currency == currency))
                             DropdownMenuItem(
                                 value: a.id,
                                 child: Text(a.name,
@@ -1424,6 +1676,9 @@ class _OperationDialogState extends State<_OperationDialog> {
                                   : kind == 'sell'
                                       ? 'O total será acrescentado ao saldo disponível. Resgate não entra como nova receita de trabalho.'
                                       : 'O valor será acrescentado ao saldo e registrado como receita de provento.'),
+                      if (foreign)
+                        const Text(
+                            'Aparecem só contas em dólar. Para levar reais até lá, faça antes um câmbio em Transferir.'),
                     ] else
                       const Text(
                           'Posição antiga: informa apenas o que você já possui, sem descontar dinheiro novamente.'),
@@ -1444,7 +1699,8 @@ class _OperationDialogState extends State<_OperationDialog> {
 
 class _LinkCashDialog extends StatefulWidget {
   final InvestmentOperation operation;
-  const _LinkCashDialog({required this.operation});
+  final String currency;
+  const _LinkCashDialog({required this.operation, this.currency = 'BRL'});
   @override
   State<_LinkCashDialog> createState() => _LinkCashDialogState();
 }
@@ -1481,7 +1737,7 @@ class _LinkCashDialogState extends State<_LinkCashDialog> {
                     for (final a in context
                         .read<AppProvider>()
                         .cashAccounts
-                        .where((a) => a.currency == 'BRL'))
+                        .where((a) => a.currency == widget.currency))
                       DropdownMenuItem(value: a.id, child: Text(a.name))
                   ],
                   onChanged: busy ? null : (v) => setState(() => account = v),
@@ -1563,7 +1819,9 @@ class _PriceDialogState extends State<_PriceDialog> {
                   keyboardType:
                       const TextInputType.numberWithOptions(decimal: true),
                   decoration: InputDecoration(
-                      labelText: 'Preço por unidade (R\$)', errorText: error)),
+                      labelText:
+                          'Preço por unidade (${widget.position.investment.foreign ? 'US\$' : 'R\$'})',
+                      errorText: error)),
               const SizedBox(height: 12),
               const Text(
                   'Atualiza somente a avaliação da posição. Não gera rendimento recebido nem altera o custo de aquisição.')
@@ -1588,7 +1846,9 @@ class _PriceDialogState extends State<_PriceDialog> {
                               widget.position.investment.id,
                               (value * investmentScale).round(),
                               DateTime.now(),
-                              'manual');
+                              'manual',
+                              fxMicros: context.read<AppProvider>().fxMicros(
+                                  widget.position.investment.currency));
                           if (context.mounted) Navigator.pop(context);
                         } catch (_) {
                           if (mounted)

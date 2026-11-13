@@ -362,10 +362,15 @@ class AssistantCommands {
             fromId: from.id,
             toId: to.id,
             fromAmount: _reais(a['amount_cents']),
+            toAmount: a['received_cents'] == null
+                ? null
+                : _reais(a['received_cents']),
             note: a['note'] as String? ?? '',
             occurredAt: _day(a['date'] as String?));
         return {
-          'message': 'Transferência lançada de ${from.name} para ${to.name}.'
+          'message': from.currency == to.currency
+              ? 'Transferência lançada de ${from.name} para ${to.name}.'
+              : 'Câmbio lançado de ${from.name} para ${to.name}.'
         };
       case 'transaction.update':
         final original = await _transaction(a['id'] as String) ??

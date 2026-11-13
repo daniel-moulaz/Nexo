@@ -145,7 +145,7 @@ void main() {
     testWidgets('portfolio responsive ${size.width}', (tester) async {
       await tester.runAsync(seed);
       await mount(tester, size, dark: size.width == 412);
-      expect(find.text('Sua carteira · BRL'), findsOneWidget);
+      expect(find.text('Sua carteira, em reais'), findsOneWidget);
       expect(tester.takeException(), isNull);
       if (const bool.fromEnvironment('CAPTURE_REVIEW')) {
         await tester.runAsync(() async {
@@ -215,7 +215,7 @@ void main() {
     expect(gain.style!.color, const Color(0xFF3F6212));
     expect(loss.style!.color, const Color(0xFFBE123C));
     expect(tester.getTopLeft(find.text('Empresa de demonstração')).dy,
-        lessThan(tester.getTopLeft(find.text('Distribuição por classe')).dy));
+        lessThan(tester.getTopLeft(find.text('Distribuição da carteira')).dy));
     expect(find.textContaining('Não é o rendimento do dia.'), findsOneWidget);
     expect(await tester.runAsync(() => DBHelper.getTransactions()), isEmpty);
     await tester.pumpWidget(const SizedBox());
@@ -243,6 +243,64 @@ void main() {
     expect(find.text('Sem base percentual'), findsNWidgets(2));
     expect(find.textContaining('Infinity'), findsNothing);
     expect(find.textContaining('NaN'), findsNothing);
+    await tester.pumpWidget(const SizedBox());
+  });
+  testWidgets('a dollar stock through the form: rate, reais and the split',
+      (tester) async {
+    await mount(tester, const Size(1280, 900));
+    await tester.tap(find.byTooltip('Adicionar investimento'));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextField).at(0), 'Ação dos EUA');
+    await tester.tap(find.text('Dólar · EUA'));
+    await tester.pumpAndSettle();
+    final fields = find.byType(TextField);
+    await tester.enterText(fields.at(1), 'nvda');
+    await tester.enterText(fields.at(2), 'Corretora EUA');
+    await tester.enterText(fields.at(3), '0,5');
+    await tester.enterText(fields.at(4), '100,00');
+    await tester.enterText(fields.at(5), '5,00');
+    await tester.pumpAndSettle();
+    expect(find.textContaining('Em reais: R\$'), findsOneWidget);
+    await tester
+        .ensureVisible(find.byKey(const ValueKey('investment-cash-account')));
+    await tester.tap(find.byKey(const ValueKey('investment-cash-account')));
+    await tester.pumpAndSettle();
+    // Only dollar accounts (none here) besides "already recorded".
+    await tester.tap(find.text('Não movimentar conta (já registrado)').last);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Salvar'));
+    await settle(tester);
+    final created =
+        await settleUntil(tester, () => repo.load(), (l) => l.length == 1);
+    final p = created.single;
+    expect([p.investment.currency, p.investment.ticker], ['USD', 'NVDA']);
+    expect([p.nativeCost, p.cost], [10000, 50000]);
+    // The dollar went to 5,50 and the share to US$ 240.
+    await tester.runAsync(() async {
+      await repo.price(
+          p.investment.id, 240 * investmentScale, DateTime.now(), 'manual');
+      await repo.refreshFx('USD', 5500000);
+    });
+    await settle(tester);
+    await tester.ensureVisible(find.text('Moeda'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Moeda'));
+    await tester.pumpAndSettle();
+    expect(find.text('USD'), findsWidgets);
+    final card = find.byKey(ValueKey('investment-position-${p.investment.id}'));
+    await tester.ensureVisible(card);
+    await tester.pumpAndSettle();
+    await tester.tap(card);
+    await settle(tester);
+    expect(find.text('Em dólar e em reais'), findsOneWidget);
+    expect(find.text('Efeito do câmbio'), findsOneWidget);
+    expect(find.text('Efeito do preço'), findsOneWidget);
+    final after = (await tester.runAsync(() => repo.load()))!.single;
+    expect(after.value, 66000); // US$ 120 × 5,50
+    expect(after.priceEffect, 11000); // US$ 20 × 5,50
+    expect(after.fxEffect, 5000); // US$ 100 × 0,50
+    expect(await tester.runAsync(() => DBHelper.getTransactions()), isEmpty);
+    expect(tester.takeException(), isNull);
     await tester.pumpWidget(const SizedBox());
   });
   testWidgets(
