@@ -209,8 +209,11 @@ class _SyncSettingsScreenState extends State<SyncSettingsScreen> {
         const SizedBox(height: 8),
         const Text(
             'Deixa o Claude consultar seus dados e fazer no Nexo o mesmo que você faz no app, como "lança R\$ 32,90 de iFood no Nubank". Cada pedido é gravado pelo app, no celular ou no PC, com as regras normais, mesmo com o app fechado. Ele não movimenta dinheiro de verdade, só o seu registro. Tudo fica em "Feito pelo Claude", com Desfazer. Você pode desconectar quando quiser.'),
-        for (final c
-            in (_mcp ?? const <McpConnector>[]).where((c) => !c.revoked))
+        // Only this dataset's connectors: a test profile must never offer
+        // to disconnect (or renew) the real one, and vice versa.
+        for (final c in (_mcp ?? const <McpConnector>[]).where((c) =>
+            !c.revoked &&
+            (c.datasetId == null || c.datasetId == sync.datasetId)))
           ListTile(
             contentPadding: EdgeInsets.zero,
             leading: const Icon(Icons.smart_toy_outlined),

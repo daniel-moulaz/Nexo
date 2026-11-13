@@ -8,7 +8,7 @@ import 'sync_config.dart';
 
 class McpConnector {
   const McpConnector(this.id, this.label, this.lastUsed, this.revoked,
-      {this.requests7d, this.lastRequest, this.createdAt});
+      {this.requests7d, this.lastRequest, this.createdAt, this.datasetId});
   final String id, label;
   final DateTime? lastUsed;
   final bool revoked;
@@ -16,6 +16,9 @@ class McpConnector {
   /// Requests in the last 7 days and the latest one (1.17.0 servers).
   final int? requests7d;
   final DateTime? lastRequest, createdAt;
+
+  /// The dataset this connector reads; null on very old servers.
+  final String? datasetId;
 }
 
 /// A problem the person can act on.
@@ -108,7 +111,8 @@ class McpConnectors {
             _time(c['last_used_at']), c['revoked_at'] != null,
             requests7d: detailed ? (c['requests_7d'] as num?)?.toInt() : null,
             lastRequest: _time(c['last_request_at']),
-            createdAt: _time(c['created_at']))
+            createdAt: _time(c['created_at']),
+            datasetId: c['dataset_id'] as String?)
     ];
   }
 
