@@ -9,6 +9,7 @@ import '../services/pluggy_inbox.dart';
 import '../sync/assistant_commands.dart';
 import '../sync/mcp_connectors.dart';
 import 'assistant_history_screen.dart';
+import 'claude_queue_screen.dart';
 import '../sync/supabase_auth.dart';
 import '../sync/supabase_sync_transport.dart';
 import '../sync/sync_config.dart';
@@ -87,7 +88,11 @@ class _SyncSettingsScreenState extends State<SyncSettingsScreen> {
     }
   }
 
-  Future<void> _connectClaude(SyncController sync) async {
+  /// A new address. With [replacing], the old one is disconnected only
+  /// after the new one was shown: the history of requests stays (it belongs
+  /// to the dataset, not to the address).
+  Future<void> _connectClaude(SyncController sync,
+      {McpConnector? replacing}) async {
     final dataset = sync.datasetId;
     if (dataset == null) return;
     String? address;
@@ -116,8 +121,12 @@ class _SyncSettingsScreenState extends State<SyncSettingsScreen> {
                       SelectableText(address!,
                           style: const TextStyle(fontFamily: 'monospace')),
                       const SizedBox(height: 12),
+                      Text(replacing == null
+                          ? 'No Claude: Configurações → Conectores → Adicionar conector personalizado. Nome: Nexo. URL: cole este endereço. Depois, numa conversa, ative o conector Nexo.'
+                          : 'No Claude: Configurações → Conectores → Nexo → remova o antigo e adicione de novo com este endereço. O endereço antigo para de funcionar quando você tocar em Pronto. O histórico de pedidos continua.'),
+                      const SizedBox(height: 8),
                       const Text(
-                          'No Claude: Configurações → Conectores → Adicionar conector personalizado. Nome: Nexo. URL: cole este endereço. Depois, numa conversa, ative o conector Nexo.'),
+                          'Se o Claude disser que não conseguiu determinar como fazer login, é normal: este endereço já leva a chave. Toque em "Continuar" (ou "Adicionar mesmo assim").'),
                       const SizedBox(height: 8),
                       // The server is plain MCP over HTTP: any client works.
                       ExpansionTile(
@@ -161,6 +170,24 @@ class _SyncSettingsScreenState extends State<SyncSettingsScreen> {
                     child: const Text('Pronto')),
               ],
             ));
+    if (replacing != null && mounted) await _revokeMcp(replacing);
+  }
+
+  static String _connectorUse(McpConnector c) {
+    final f = DateFormat('dd/MM HH:mm');
+    if (c.lastUsed == null) return 'Ainda não usado';
+    final parts = ['Última chamada: ${f.format(c.lastUsed!)}'];
+    if (c.requests7d != null) {
+      parts.add(c.requests7d == 1
+          ? '1 pedido em 7 dias'
+          : '${c.requests7d} pedidos em 7 dias');
+    }
+    // No call for days: the address may have left the Claude settings.
+    if (DateTime.now().difference(c.lastUsed!).inDays >= 3) {
+      parts.add(
+          'sem uso há dias; se o Claude não acha o Nexo, gere outro endereço');
+    }
+    return parts.join(' · ');
   }
 
   Future<void> _revokeMcp(McpConnector c) async {
@@ -181,20 +208,26 @@ class _SyncSettingsScreenState extends State<SyncSettingsScreen> {
         Text('Claude (IA)', style: theme.textTheme.titleMedium),
         const SizedBox(height: 8),
         const Text(
-            'Deixa o Claude consultar seus dados e fazer no Nexo o mesmo que você faz no app, como "lança R\$ 32,90 de iFood no Nubank". Cada pedido é gravado pelo app aberto (celular ou PC) com as regras normais. Ele não movimenta dinheiro de verdade, só o seu registro. Tudo fica em "Feito pelo Claude", com Desfazer. Você pode desconectar quando quiser.'),
+            'Deixa o Claude consultar seus dados e fazer no Nexo o mesmo que você faz no app, como "lança R\$ 32,90 de iFood no Nubank". Cada pedido é gravado pelo app, no celular ou no PC, com as regras normais, mesmo com o app fechado. Ele não movimenta dinheiro de verdade, só o seu registro. Tudo fica em "Feito pelo Claude", com Desfazer. Você pode desconectar quando quiser.'),
         for (final c
             in (_mcp ?? const <McpConnector>[]).where((c) => !c.revoked))
           ListTile(
             contentPadding: EdgeInsets.zero,
             leading: const Icon(Icons.smart_toy_outlined),
             title: Text(c.label),
-            subtitle: Text(c.lastUsed == null
-                ? 'Ainda não usado'
-                : 'Último uso: ${DateFormat('dd/MM HH:mm').format(c.lastUsed!)}'),
-            trailing: IconButton(
-                tooltip: 'Desconectar',
-                onPressed: _busy ? null : () => _revokeMcp(c),
-                icon: const Icon(Icons.link_off)),
+            subtitle: Text(_connectorUse(c)),
+            trailing: PopupMenuButton<String>(
+                tooltip: 'Opções do conector',
+                enabled: !_busy,
+                onSelected: (v) => v == 'renew'
+                    ? _connectClaude(sync, replacing: c)
+                    : _revokeMcp(c),
+                itemBuilder: (_) => const [
+                      PopupMenuItem(
+                          value: 'renew', child: Text('Gerar outro endereço')),
+                      PopupMenuItem(
+                          value: 'revoke', child: Text('Desconectar')),
+                    ]),
           ),
         if (AssistantCommands.instance != null && sync.datasetId != null)
           ListTile(
@@ -207,6 +240,25 @@ class _SyncSettingsScreenState extends State<SyncSettingsScreen> {
                 builder: (_) => AssistantHistoryScreen(
                     assistant: AssistantCommands.instance!,
                     datasetId: sync.datasetId!))),
+          ),
+        if (AssistantCommands.instance != null && sync.datasetId != null)
+          ListTile(
+            contentPadding: EdgeInsets.zero,
+            leading: const Icon(Icons.schedule_send_outlined),
+            title: const Text('Fila do Claude'),
+            subtitle: const Text(
+                'O que está esperando e quando cada aparelho conferiu'),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () {
+              final remote = AssistantCommands.instance!.remote;
+              Navigator.of(context).push(MaterialPageRoute(
+                  builder: (_) => ClaudeQueueScreen(
+                      load: () async => remote is SupabaseAssistantRemote
+                          ? remote.queueStatus(sync.datasetId!)
+                          : null,
+                      thisDevice: sync.deviceId,
+                      checkNow: sync.syncNow)));
+            },
           ),
         const SizedBox(height: 8),
         OutlinedButton.icon(

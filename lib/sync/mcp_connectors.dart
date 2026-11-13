@@ -7,10 +7,15 @@ import 'supabase_auth.dart';
 import 'sync_config.dart';
 
 class McpConnector {
-  const McpConnector(this.id, this.label, this.lastUsed, this.revoked);
+  const McpConnector(this.id, this.label, this.lastUsed, this.revoked,
+      {this.requests7d, this.lastRequest, this.createdAt});
   final String id, label;
   final DateTime? lastUsed;
   final bool revoked;
+
+  /// Requests in the last 7 days and the latest one (1.17.0 servers).
+  final int? requests7d;
+  final DateTime? lastRequest, createdAt;
 }
 
 /// A problem the person can act on.
@@ -84,18 +89,28 @@ class McpConnectors {
         .toString();
   }
 
-  Future<List<McpConnector>> list() async => [
-        for (final c
-            in (await _rpc('nexo_mcp_list_connectors', const {}) as List? ??
-                const []))
-          McpConnector(
-              (c as Map)['id'] as String,
-              c['label'] as String,
-              c['last_used_at'] == null
-                  ? null
-                  : DateTime.tryParse(c['last_used_at'] as String)?.toLocal(),
-              c['revoked_at'] != null)
-      ];
+  static DateTime? _time(Object? v) =>
+      v is String ? DateTime.tryParse(v)?.toLocal() : null;
+
+  /// Connectors with their use; an older server gives the plain list.
+  Future<List<McpConnector>> list() async {
+    Object? rows;
+    var detailed = true;
+    try {
+      rows = await _rpc('nexo_mcp_connector_status', const {});
+    } on McpUnavailable {
+      detailed = false;
+      rows = await _rpc('nexo_mcp_list_connectors', const {});
+    }
+    return [
+      for (final c in (rows as List? ?? const []).cast<Map>())
+        McpConnector(c['id'] as String, c['label'] as String,
+            _time(c['last_used_at']), c['revoked_at'] != null,
+            requests7d: detailed ? (c['requests_7d'] as num?)?.toInt() : null,
+            lastRequest: _time(c['last_request_at']),
+            createdAt: _time(c['created_at']))
+    ];
+  }
 
   Future<void> revoke(String id) =>
       _rpc('nexo_mcp_revoke_connector', {'p_id': id});
