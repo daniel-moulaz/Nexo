@@ -377,5 +377,42 @@ void main() {
       }, now);
       expect(got.keys, ['D']);
     });
+
+    test(
+        'history: the server closes, in order, at the same date here and there',
+        () async {
+      late Map body;
+      final got = await source(MockClient((r) async {
+        body = jsonDecode(r.body) as Map;
+        return http.Response(
+            jsonEncode({
+              'symbol': 'NVDA',
+              'currency': 'USD',
+              'points': [
+                {'day': '2026-11-12', 'close_micros': 141000000},
+                {'day': '2026-11-11', 'close_micros': 138000000},
+                {'day': '2026-11-10', 'close_micros': 0},
+              ],
+              'backfilled': false
+            }),
+            200);
+      })).history('NVDA');
+      expect(body, {'history': 'NVDA'});
+      expect(got.points.map((p) => p.price), [138, 141]);
+      expect(got.points.first.date, DateTime.utc(2026, 11, 11, 12));
+    });
+
+    test('history from an older server says it is not published yet', () async {
+      await expectLater(
+          source(MockClient((_) async => http.Response('{}', 503)))
+              .history('NVDA'),
+          throwsA(isA<QuoteFailure>().having(
+              (e) => e.message, 'message', contains('Histórico dos EUA'))));
+      expect(
+          () => SupabaseForeignQuotes.parseHistory(
+              {'symbol': 'AAPL', 'points': []}, 'NVDA', DateTime.now()),
+          throwsFormatException,
+          reason: 'another ticker is never drawn');
+    });
   });
 }

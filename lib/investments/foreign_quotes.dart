@@ -4,6 +4,7 @@ import 'package:http/http.dart' as http;
 
 import '../sync/supabase_auth.dart';
 import '../sync/sync_config.dart';
+import 'investment_history.dart';
 import 'investment_quotes.dart';
 
 /// Quotes outside the B3 (US stocks and ETFs), read by the Nexo server so the
@@ -13,7 +14,13 @@ abstract interface class ForeignQuoteSource {
   Future<Map<String, InvestmentQuote>> fetch(Set<String> tickers);
 }
 
-class SupabaseForeignQuotes implements ForeignQuoteSource {
+/// Daily closes kept by the Nexo server (US stocks have no free history).
+abstract interface class ForeignHistorySource {
+  Future<PriceHistory> history(String ticker);
+}
+
+class SupabaseForeignQuotes
+    implements ForeignQuoteSource, ForeignHistorySource {
   SupabaseForeignQuotes(this.config, this.auth,
       {http.Client Function()? clientFactory,
       this.timeout = const Duration(seconds: 20)})
@@ -27,10 +34,7 @@ class SupabaseForeignQuotes implements ForeignQuoteSource {
 
   static final _ticker = RegExp(r'^[A-Z0-9][A-Z0-9.\-]{0,11}$');
 
-  @override
-  Future<Map<String, InvestmentQuote>> fetch(Set<String> tickers) async {
-    final asked = tickers.where(_ticker.hasMatch).take(20).toList();
-    if (asked.isEmpty) return {};
+  Future<Object?> _post(Map<String, Object?> body) async {
     final token = await auth.accessToken();
     if (token == null) {
       throw const QuoteFailure(
@@ -45,11 +49,13 @@ class SupabaseForeignQuotes implements ForeignQuoteSource {
                 'Authorization': 'Bearer $token',
                 'Content-Type': 'application/json',
               },
-              body: jsonEncode({'symbols': asked}))
+              body: jsonEncode(body))
           .timeout(timeout);
       if (response.statusCode != 200) {
         throw QuoteFailure(switch (response.statusCode) {
           404 => 'Cotação dos EUA ainda não publicada no servidor.',
+          503 when body.containsKey('history') =>
+            'Histórico dos EUA ainda não publicado no servidor.',
           503 => 'Cotação dos EUA sem chave configurada no servidor.',
           429 =>
             'Limite de cotações dos EUA atingido. Tente em alguns minutos.',
@@ -60,7 +66,7 @@ class SupabaseForeignQuotes implements ForeignQuoteSource {
       if (response.bodyBytes.length > 64 * 1024) {
         throw const FormatException();
       }
-      return parse(jsonDecode(response.body), asked.toSet(), DateTime.now());
+      return jsonDecode(response.body);
     } on QuoteFailure {
       rethrow;
     } catch (_) {
@@ -69,6 +75,50 @@ class SupabaseForeignQuotes implements ForeignQuoteSource {
     } finally {
       client.close();
     }
+  }
+
+  @override
+  Future<Map<String, InvestmentQuote>> fetch(Set<String> tickers) async {
+    final asked = tickers.where(_ticker.hasMatch).take(20).toList();
+    if (asked.isEmpty) return {};
+    final body = await _post({'symbols': asked});
+    try {
+      return parse(body, asked.toSet(), DateTime.now());
+    } catch (_) {
+      throw const QuoteFailure(
+          'Não foi possível obter a cotação dos EUA. O último valor foi preservado.');
+    }
+  }
+
+  @override
+  Future<PriceHistory> history(String ticker) async {
+    if (!_ticker.hasMatch(ticker)) throw const QuoteFailure('Código inválido.');
+    final body = await _post({'history': ticker});
+    try {
+      return parseHistory(body, ticker, DateTime.now());
+    } catch (_) {
+      throw const QuoteFailure('Histórico dos EUA em formato inesperado.');
+    }
+  }
+
+  /// The server's closes ({day, close_micros}) for [ticker], oldest first.
+  static PriceHistory parseHistory(Object? body, String ticker, DateTime now) {
+    if (body is! Map || body['symbol'] != ticker) throw const FormatException();
+    final rows = body['points'];
+    if (rows is! List || rows.length > 400) throw const FormatException();
+    final points = <PricePoint>[];
+    for (final row in rows) {
+      if (row is! Map) continue;
+      final day = DateTime.tryParse('${row['day']}');
+      final c = row['close_micros'];
+      if (day == null || c is! num || c <= 0 || c > 1000000000000) continue;
+      // Noon UTC of the market day: the same date in Brazil and New York.
+      final at = DateTime.utc(day.year, day.month, day.day, 12);
+      if (at.isAfter(now.toUtc().add(const Duration(days: 1)))) continue;
+      points.add(PricePoint(at, c / 1000000));
+    }
+    points.sort((a, b) => a.date.compareTo(b.date));
+    return PriceHistory(List.unmodifiable(points), now);
   }
 
   /// Keeps only a positive dollar price for a ticker that was asked for,

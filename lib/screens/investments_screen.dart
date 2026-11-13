@@ -1161,11 +1161,14 @@ class _InvestmentDetailState extends State<_InvestmentDetail> {
                                 ],
                                 const SizedBox(height: 12),
                                 Text(_source(p.investment)),
-                                if (p.investment.canQuote &&
-                                    !p.investment.foreign) ...[
+                                if (p.investment.canQuote) ...[
                                   const SizedBox(height: 16),
                                   InvestmentPriceChart(
-                                      ticker: p.investment.ticker),
+                                      ticker: p.investment.ticker,
+                                      foreign: p.investment.foreign,
+                                      averageCost: p.averageCost == null
+                                          ? null
+                                          : p.averageCost! / 100),
                                 ],
                                 if (p.investment.canQuote &&
                                     !p.investment.foreign)
