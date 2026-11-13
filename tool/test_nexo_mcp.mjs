@@ -217,6 +217,61 @@ await test('lançar queues a request with validated ids and exact cents', async 
   assert.equal(q.items[1].args.date, '2026-10-05');
 });
 
+await test('several entries at once: all checked first, previewed, never duplicated on resend', async () => {
+  const q = queue();
+  const keys = new Map();
+  q.deps.enqueue = async (kind, args, key) => {
+    if (key && keys.has(key)) return { id: keys.get(key), status: 'pending', deduplicated: true };
+    const id = `00000000-0000-4000-8000-${String(q.items.length).padStart(12, '0')}`;
+    q.items.push({ id, kind, args, key }); if (key) keys.set(key, id);
+    return { id, status: 'pending' };
+  };
+  const coffee = { type: 'expense', amount: 5, description: 'Café', account_id: 'bank', category_id: 'food_exp', date: '2026-10-20' };
+  const items = [coffee, coffee, { ...coffee, amount: 37, description: 'Lanche' }];
+  // One bad item: nothing is sent.
+  await assert.rejects(act(q, 'add_transactions', { items: [...items, { ...coffee, account_id: 'nope' }] }),
+    (e) => e instanceof ToolInputError && /Item 4: .*Nada foi enviado/.test(e.message));
+  assert.equal(q.items.length, 0);
+  const preview = await act(q, 'add_transactions', { items, dry_run: true });
+  assert.equal(preview.dry_run, true);
+  assert.equal(preview.items[1].same_as_item, 1, 'two equal coffees are pointed out');
+  assert.equal(q.items.length, 0, 'the preview sends nothing');
+  const sent = await act(q, 'add_transactions', { items });
+  assert.equal(sent.requests.length, 3);
+  assert.equal(q.items.length, 3, 'two equal coffees stay two entries');
+  assert.ok(sent.requests[0].new_id.startsWith('assistant:'));
+  const again = await act(q, 'add_transactions', { items });
+  assert.equal(q.items.length, 3, 'resending the same batch duplicates nothing');
+  assert.ok(again.requests.every((r) => r.deduplicated));
+  await assert.rejects(act(q, 'add_transactions', { items: [] }), ToolInputError);
+  await assert.rejects(act(q, 'add_transactions', { items: Array(21).fill(coffee) }), ToolInputError);
+});
+
+await test('a lunch already in the ledger is flagged as a possible duplicate, in any account', async () => {
+  const q = queue();
+  const lunch = { id: 'manual-lanche', type: 'expense', amount: 37, description: 'Lanche', account_id: 'bank',
+    category_id: 'food_exp', date: '2026-10-19T12:00:00.000' };
+  const l = { ...withIncome, transactions: [...withIncome.transactions, lunch] };
+  const r = await act(q, 'add_transaction', { type: 'expense', amount: 37, description: 'iFood', account_id: 'card',
+    category_id: 'food_exp', date: '2026-10-20' }, l);
+  assert.deepEqual(r.possible_duplicates.map((d) => d.id), ['manual-lanche']);
+  assert.match(r.duplicate_note, /undo_request/);
+  const far = await act(q, 'add_transaction', { type: 'expense', amount: 37, description: 'iFood', account_id: 'card',
+    category_id: 'food_exp', date: '2026-10-28' }, l);
+  assert.equal(far.possible_duplicates, undefined, 'a week later is another lunch');
+  const preview = await act(q, 'add_transactions', { items: [{ type: 'expense', amount: 37, description: 'iFood',
+    account_id: 'card', category_id: 'food_exp', date: '2026-10-21' }], dry_run: true }, l);
+  assert.equal(preview.items[0].possible_duplicates[0].id, 'manual-lanche');
+});
+
+await test('an entry still pending can be fixed before it is recorded', async () => {
+  const q = queue();
+  const created = await act(q, 'add_transaction', { type: 'expense', amount: 32.9, description: 'iFood', account_id: 'card', category_id: 'food_exp' });
+  await act(q, 'update_transaction', { id: created.new_id, amount: 23.9 });
+  assert.equal(q.items[1].args.id, created.new_id, 'the fix points to the entry being created');
+  assert.equal(q.items[1].args.amount_cents, 2390);
+});
+
 await test('lançar refuses what the app would refuse, before queueing', async () => {
   const q = queue();
   const bad = [

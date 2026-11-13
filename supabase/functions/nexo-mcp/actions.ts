@@ -123,6 +123,43 @@ const baseActions: (ToolDefinition & { destructive?: boolean })[] = [
     },
   },
   {
+    name: "add_transactions",
+    title: "Lançar vários de uma vez",
+    description:
+      "Vários lançamentos numa chamada (ex.: os itens de um print ou de um extrato), cada um como em add_transaction. " +
+      "Todos são conferidos antes: se um tiver erro, nenhum é enviado. dry_run: true mostra o que seria lançado e os " +
+      "possíveis duplicados (mesmo valor e tipo em até 3 dias, em qualquer conta), sem enviar nada. Reenviar o mesmo lote não duplica.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        items: {
+          type: "array", minItems: 1, maxItems: 20,
+          items: {
+            type: "object",
+            properties: {
+              type: { type: "string", enum: ["expense", "income"] },
+              amount: amountField,
+              description: { type: "string", minLength: 1, maxLength: 80 },
+              account_id: { type: "string" },
+              category_id: { type: "string" },
+              date: { ...dateField, description: "AAAA-MM-DD; padrão: hoje" },
+              note: { type: "string", maxLength: 200 },
+              subcategory: { type: "string", maxLength: 60 },
+              status: { type: "string", enum: ["paid", "pending"] },
+              due_date: dateField,
+              kind: { type: "string", enum: ["normal", "extraordinary"] },
+            },
+            required: ["type", "amount", "description", "account_id", "category_id"],
+            additionalProperties: false,
+          },
+        },
+        dry_run: { type: "boolean", description: "true: só confere e mostra; nada é enviado" },
+      },
+      required: ["items"],
+      additionalProperties: false,
+    },
+  },
+  {
     name: "add_transfer",
     title: "Transferir entre contas",
     description:
@@ -436,10 +473,18 @@ export async function callAction(name: string, rawArgs: unknown, ledger: Ledger,
   if (key !== undefined && (typeof key !== "string" || !key.trim() || key.length > 120)) {
     throw new ToolInputError("idempotency_key deve ter de 1 a 120 caracteres.");
   }
+  if (name === "add_transactions") return await addMany(args, ledger, today, rawDeps, key as string | undefined);
   const seen: { kind?: string; id?: string; deduplicated?: boolean } = {};
   const deps = guarded(rawDeps, key as string | undefined, seen);
   const l = await withPending(ledger, args, rawDeps);
   const result = await dispatchAction(name, args, l, today, deps);
+  if (name === "add_transaction") {
+    const twins = similarTransactions(l, args);
+    if (twins.length) {
+      result.possible_duplicates = twins;
+      result.duplicate_note = "Já existe lançamento com o mesmo valor em até 3 dias. Se for o mesmo gasto, desfaça este com undo_request ou apague o outro.";
+    }
+  }
   if (seen.id && typeof result.request_id === "string") {
     const prefix = createdIdPrefix[seen.kind ?? ""];
     if (prefix && !result.new_id) result.new_id = `${prefix}${seen.id}`;
@@ -449,6 +494,79 @@ export async function callAction(name: string, rawArgs: unknown, ledger: Ledger,
     }
   }
   return result;
+}
+
+/// Entries already in the ledger that look like [args]: same type and
+/// amount, within 3 days, in any account (an iFood paid by Pix but typed as
+/// card is still the same lunch).
+export function similarTransactions(l: Ledger, args: Args) {
+  const cents = typeof args.amount === "number" ? Math.round(args.amount * 100) : NaN;
+  const day = typeof args.date === "string" ? Date.parse(`${args.date}T12:00:00Z`) : NaN;
+  if (!Number.isFinite(cents) || !Number.isFinite(day)) return [];
+  const names = new Map((l.accounts ?? []).map((a) => [text(a.id), text(a.name)]));
+  return (l.transactions ?? [])
+    .filter((t) => t.type === args.type && Math.round(Math.abs(Number(t.amount)) * 100) === cents &&
+      Math.abs(Date.parse(`${text(t.date).slice(0, 10)}T12:00:00Z`) - day) <= 3 * 86400000)
+    .slice(0, 3)
+    .map((t) => ({ id: t.id, date: text(t.date).slice(0, 10), description: t.description,
+      account: names.get(text(t.account_id)) ?? t.account_id }));
+}
+
+async function digest(text: string): Promise<string> {
+  const bytes = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(text));
+  return [...new Uint8Array(bytes)].slice(0, 12).map((b) => b.toString(16).padStart(2, "0")).join("");
+}
+
+/// add_transactions: every item is checked first (all or nothing), then each
+/// becomes its own request, in order. Keys come from the batch content, so
+/// resending the same batch never duplicates, while two equal items in it
+/// (two coffees) stay two entries.
+async function addMany(args: Args, ledger: Ledger, today: string, deps: ActionDeps, key?: string) {
+  only(args, ["items", "dry_run"]);
+  const items = args.items;
+  if (!Array.isArray(items) || items.length < 1 || items.length > 20) throw new ToolInputError("items: de 1 a 20 lançamentos.");
+  if (args.dry_run !== undefined && typeof args.dry_run !== "boolean") throw new ToolInputError("dry_run deve ser verdadeiro ou falso.");
+  const l = await withPending(ledger, args, deps);
+  const dry: ActionDeps = { ...deps, enqueue: async () => ({ id: "00000000-0000-4000-8000-000000000000", status: "pending" }) };
+  const checked = [];
+  for (let i = 0; i < items.length; i++) {
+    const item = items[i];
+    if (!item || typeof item !== "object" || Array.isArray(item)) throw new ToolInputError(`Item ${i + 1}: formato inválido.`);
+    try {
+      await dispatchAction("add_transaction", { ...(item as Args) }, l, today, dry);
+    } catch (error) {
+      throw new ToolInputError(`Item ${i + 1}: ${error instanceof Error ? error.message : "inválido"} Nada foi enviado.`);
+    }
+    const it = item as Args;
+    const twins = similarTransactions(l, { ...it, date: it.date ?? today });
+    const inBatch = items.slice(0, i).findIndex((o) => {
+      const other = o as Args;
+      return other.type === it.type && other.amount === it.amount && (other.date ?? today) === (it.date ?? today);
+    });
+    checked.push({
+      index: i + 1, type: it.type, amount: it.amount, description: it.description, date: it.date ?? today,
+      account_id: it.account_id,
+      ...(twins.length ? { possible_duplicates: twins } : {}),
+      ...(inBatch >= 0 ? { same_as_item: inBatch + 1 } : {}),
+    });
+  }
+  if (args.dry_run === true) {
+    return {
+      dry_run: true, items: checked,
+      note: "Prévia: nada foi enviado. Confira os possíveis duplicados e chame de novo sem dry_run.",
+    };
+  }
+  const base = key ?? `lote-${await digest(JSON.stringify(items))}`;
+  const requests = [];
+  for (let i = 0; i < items.length; i++) {
+    const r = await callAction("add_transaction", { ...(items[i] as Args), idempotency_key: `${base}#${i + 1}` }, ledger, today, deps);
+    requests.push({ index: i + 1, request_id: r.request_id, new_id: r.new_id, deduplicated: r.deduplicated ?? undefined,
+      possible_duplicates: checked[i].possible_duplicates });
+  }
+  return {
+    status: "pendente", requests,
+    message: `${items.length} pedidos enviados ao Nexo, gravados na ordem. Confira com get_request_status ou list_requests.`,
+  };
 }
 
 async function dispatchAction(name: string, args: Args, l: Ledger, today: string,
