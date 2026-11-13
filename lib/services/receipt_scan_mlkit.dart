@@ -13,6 +13,11 @@ void wireReceiptScan() {
         source: ImageSource.camera, imageQuality: 85, maxWidth: 1600);
     return shot == null ? null : File(shot.path);
   };
+  ReceiptScan.galleryPicker = () async {
+    final shot = await ImagePicker()
+        .pickImage(source: ImageSource.gallery, maxWidth: 1800);
+    return shot == null ? null : File(shot.path);
+  };
   ReceiptScan.recognizer = (file) async {
     final recognizer = TextRecognizer(script: TextRecognitionScript.latin);
     try {

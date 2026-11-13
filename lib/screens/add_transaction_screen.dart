@@ -12,6 +12,7 @@ import '../services/entry_suggestions.dart';
 import 'transfer_screen.dart';
 import '../services/entry_defaults.dart';
 import '../services/category_memory.dart';
+import '../services/order_print_parser.dart';
 import '../services/receipt_scan.dart';
 import '../utils/snackbar.dart';
 import '../widgets/nexo_brand.dart';
@@ -130,6 +131,99 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
     });
     showAppSnackbar(context,
         'Lido do cupom${reading.hasTotal ? '' : ' (sem total)'}: confira e salve.');
+  }
+
+  /// What the last print said, shown above the form until saving.
+  OrderPrint? _print;
+
+  /// A screenshot (an iFood order, a transfer receipt) fills the form; the
+  /// account follows how it was paid. Nothing is saved without the person.
+  Future<void> _readPrint() async {
+    final reading = await ReceiptScan.scanPrint();
+    if (reading == null || !mounted) return;
+    if (!reading.hasTotal) {
+      showAppSnackbar(context,
+          'Não achei um valor no print. Use o print da tela "Detalhes do pedido", com o total visível.');
+      return;
+    }
+    final app = context.read<AppProvider>();
+    final usable = app.accounts.where((a) => !a.isGold).toList();
+    final byPayment = switch (reading.payment) {
+      PrintPayment.credit => usable.where((a) => a.type == 'credit').toList(),
+      PrintPayment.pix ||
+      PrintPayment.debit =>
+        usable.where((a) => a.type != 'credit').toList(),
+      _ => <Account>[],
+    };
+    final account = byPayment.isEmpty
+        ? null
+        : EntryDefaults.recentAccount(byPayment, app.transactions,
+                app.transactionMetadata, 'expense') ??
+            byPayment.first;
+    setState(() {
+      _print = reading;
+      _amountCtrl.text = reading.total!.toStringAsFixed(2).replaceAll('.', ',');
+      final name = reading.merchant;
+      final description = reading.app == 'ifood'
+          ? (name == null ? 'iFood' : 'iFood · $name')
+          : (name ?? '');
+      if (description.isNotEmpty) {
+        _descriptionCtrl.text = description.length > 60
+            ? description.substring(0, 60)
+            : description;
+        if (!_categoryTouched) {
+          final id = _memory.suggest(_descriptionCtrl.text, type: _type) ??
+              (reading.app == 'ifood'
+                  ? _memory.suggest('iFood', type: _type)
+                  : null);
+          if (id != null) _categoryId = id;
+        }
+      }
+      if (reading.date != null) _date = reading.date!;
+      if (account != null) {
+        _accountId = account.id;
+        _currency = account.currency;
+      }
+    });
+  }
+
+  Widget _printNote(BuildContext context) {
+    final r = _print!;
+    final unsure = !r.reliable;
+    final tone = unsure ? NexoTones.warning(context) : NexoTones.info(context);
+    final parts = [
+      if (r.merchant != null) r.merchant!,
+      if (r.date != null)
+        '${r.date!.day.toString().padLeft(2, '0')}/${r.date!.month.toString().padLeft(2, '0')}',
+      if (r.paymentLabel != null) 'pago com ${r.paymentLabel}',
+    ];
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+          color: tone.withValues(alpha: 0.12),
+          borderRadius: BorderRadius.circular(14)),
+      child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Icon(unsure ? Icons.help_outline : Icons.image_search_outlined,
+            color: tone),
+        const SizedBox(width: 10),
+        Expanded(
+            child: Text(
+                [
+                  '${r.app == 'ifood' ? 'Lido do print do iFood' : 'Lido do print'}${parts.isEmpty ? '' : ': ${parts.join(' · ')}'}.',
+                  if (unsure) ...r.doubts,
+                  unsure
+                      ? 'Confira valor, data e conta antes de salvar.'
+                      : 'Confira e salve.',
+                ].join(' '),
+                style: Theme.of(context).textTheme.bodyMedium)),
+        IconButton(
+            tooltip: 'Fechar aviso',
+            visualDensity: VisualDensity.compact,
+            onPressed: () => setState(() => _print = null),
+            icon: const Icon(Icons.close, size: 18)),
+      ]),
+    );
   }
 
   /// Categories the history confirmed for this description come first.
@@ -593,6 +687,14 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
                   style: TextStyle(fontWeight: FontWeight.w600),
                 ),
                 actions: [
+                  if (!isEdit &&
+                      _type == 'expense' &&
+                      ReceiptScan.printAvailable)
+                    IconButton(
+                      tooltip: 'Ler print (pedido do iFood ou comprovante)',
+                      onPressed: _saving ? null : _readPrint,
+                      icon: const Icon(Icons.image_search_outlined),
+                    ),
                   if (!isEdit && ReceiptScan.available)
                     IconButton(
                       tooltip: 'Fotografar cupom ou comprovante',
@@ -654,6 +756,7 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
               body: ListView(
                 padding: EdgeInsets.fromLTRB(horizontal, 8, horizontal, 32),
                 children: [
+                  if (_print != null) _printNote(context),
                   LayoutBuilder(
                       builder: (context, c) => SegmentedButton<String>(
                             showSelectedIcon: false,

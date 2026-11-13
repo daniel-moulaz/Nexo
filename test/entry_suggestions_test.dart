@@ -12,6 +12,7 @@ import 'package:nexo/models/transaction_metadata.dart';
 import 'package:nexo/providers/app_provider.dart';
 import 'package:nexo/screens/add_transaction_screen.dart';
 import 'package:nexo/services/entry_suggestions.dart';
+import 'package:nexo/services/receipt_scan.dart';
 
 AppTransaction _tx(String id, String description, DateTime date,
         {String type = 'expense',
@@ -143,6 +144,87 @@ void main() {
               .widget<ChoiceChip>(find.widgetWithText(ChoiceChip, 'Ontem'))
               .selected,
           isTrue);
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets(
+        'an iFood print fills the form, picks the Pix account, and asks to check',
+        (tester) async {
+      tester.view.physicalSize = const Size(360, 1400);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      ReceiptScan.galleryPicker = () async => File('print.png');
+      ReceiptScan.recognizer = (_) async => [
+            'Detalhes do pedido',
+            'Lanchonete Fictícia',
+            'Pedido nº 12',
+            '12/11/2026',
+            'Subtotal R\$ 35,90',
+            'Taxa de entrega Grátis',
+            'Total R\$ 35,90',
+            'Pix',
+          ].join('\n');
+      ReceiptScan.picker = null;
+      addTearDown(() {
+        ReceiptScan.galleryPicker = null;
+        ReceiptScan.recognizer = null;
+      });
+      final app = AppProvider();
+      app.settings.languageCode = 'pt';
+      app.settings.currency = 'BRL';
+      app.accounts = [
+        Account(
+            id: 'card',
+            name: 'Cartão',
+            type: 'credit',
+            balance: 0,
+            currency: 'BRL',
+            colorValue: 0),
+        Account(
+            id: 'bank',
+            name: 'Banco',
+            type: 'bank',
+            balance: 100,
+            currency: 'BRL',
+            colorValue: 0),
+      ];
+      app.categories = [
+        AppCategory(
+            id: 'food',
+            name: 'Alimentação',
+            type: 'expense',
+            colorValue: 0xffcc6633),
+      ];
+      app.transactions = [
+        _tx('old', 'Mercado', DateTime.now(), account: 'card')
+      ];
+      await tester.pumpWidget(ChangeNotifierProvider.value(
+          value: app,
+          child: MaterialApp(
+              locale: const Locale('pt'),
+              localizationsDelegates: AppLocalizations.localizationsDelegates,
+              supportedLocales: AppLocalizations.supportedLocales,
+              theme: ThemeData(useMaterial3: true),
+              home: const AddTransactionScreen())));
+      await tester.pump();
+      await tester
+          .tap(find.byTooltip('Ler print (pedido do iFood ou comprovante)'));
+      await tester.pumpAndSettle();
+      expect(
+          tester
+              .widget<TextField>(find.byType(TextField).first)
+              .controller!
+              .text,
+          '35,90');
+      expect(find.text('iFood · Lanchonete Fictícia'), findsOneWidget);
+      expect(
+          find.textContaining(
+              'Lido do print do iFood: Lanchonete Fictícia · 12/11 · pago com Pix'),
+          findsOneWidget);
+      expect(find.text('Banco • Banco'), findsOneWidget,
+          reason: 'Pix leaves the card for the bank account');
+      expect(find.text('Cartão • Cartão de crédito'), findsNothing);
       expect(tester.takeException(), isNull);
     });
   });
