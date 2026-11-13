@@ -72,7 +72,9 @@ abstract final class Diagnostics {
 
   /// Numbers, long tokens and paths out; the shape of the error stays.
   static String scrub(String text) {
-    var s = text.replaceAll(RegExp(r'[A-Za-z]:\\[^\s]+'), '<caminho>');
+    // SQLite errors carry the statement's values (descriptions, names).
+    var s = text.replaceAll(RegExp(r'args \[.*', dotAll: true), 'args <dados>');
+    s = s.replaceAll(RegExp(r'[A-Za-z]:\\[^\s]+'), '<caminho>');
     s = s.replaceAll(RegExp(r'[A-Za-z0-9_\-]{24,}'), '<token>');
     s = s.replaceAll(RegExp(r'\d[\d.,:/-]*'), '#');
     s = s.replaceAll(RegExp(r'\s+'), ' ').trim();

@@ -17,6 +17,13 @@ void main() {
     expect(Diagnostics.scrub(r'cannot open C:\Users\x\nexo.db'),
         'cannot open <caminho>');
     expect(Diagnostics.scrub('palavra ' * 60).length, 161);
+    // A SQLite refusal keeps its reason, never the values it tried to write.
+    expect(
+        Diagnostics.scrub("DatabaseException(table accounts has no column named "
+            "note) sql 'INSERT INTO accounts (id, name) VALUES (?, ?)' "
+            "args [conta-x, Banco da Maria]"),
+        "DatabaseException(table accounts has no column named note) sql "
+        "'INSERT INTO accounts (id, name) VALUES (?, ?)' args <dados>");
   });
 
   test('counts per area, newest first, and survives a reload', () async {
