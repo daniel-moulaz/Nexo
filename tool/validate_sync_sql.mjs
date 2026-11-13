@@ -840,6 +840,30 @@ try {
       await denies(() => user(A, tx => rpc(tx, 'nexo_market_store', [rows([['2026-11-13', 5]]), 'quote']), role), '42501');
     }
   });
+  await test('security sweep: no table of any Nexo schema is readable by another person or anonymously', async () => {
+    const tables = (await db.query(`select table_schema, table_name from information_schema.tables
+      where table_type = 'BASE TABLE' and (table_schema like 'nexo%' or table_schema = 'public')`)).rows;
+    assert.ok(tables.length >= 10, `found ${tables.length} tables`);
+    const leaks = [];
+    for (const { table_schema: schema, table_name: name } of tables) {
+      const total = Number((await db.query(`select count(*) as n from "${schema}"."${name}"`)).rows[0].n);
+      for (const [who, role] of [[B, 'authenticated'], [null, 'anon']]) {
+        try {
+          const seen = await user(who, tx => tx.query(`select * from "${schema}"."${name}"`), role);
+          // Without an owner column, any row seen by a stranger is a leak.
+          const foreign = seen.rows.filter((r) => !('owner_id' in r) || r.owner_id !== B);
+          if (foreign.length) leaks.push(`${role} lê ${foreign.length}/${total} de ${schema}.${name}`);
+        } catch {
+          // Refused: what we want.
+        }
+      }
+    }
+    assert.deepEqual(leaks, []);
+    // And every function a person may call refuses an anonymous caller.
+    const open = (await db.query(`select p.proname from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+      where n.nspname = 'public' and p.proname like 'nexo%' and has_function_privilege('anon', p.oid, 'execute')`)).rows;
+    assert.deepEqual(open.map((r) => r.proname), [], 'anonymous may call no Nexo function');
+  });
   console.log(`SQL LAB: ${passed} tests passed; synthetic local data only.`);
 } finally {
   await db.close();
